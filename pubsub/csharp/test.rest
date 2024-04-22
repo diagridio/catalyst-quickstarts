@@ -1,0 +1,8 @@
+### Publish/Subscribe API 
+
+POST http://localhost:5001/pubsub/orders
+Content-Type: application/json
+
+{
+    "orderId": 190
+}
