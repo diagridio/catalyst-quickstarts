@@ -334,7 +334,7 @@ paket-files/
 # Python Tools for Visual Studio (PTVS)
 __pycache__/
 *.pyc
-*/venv
+*/python/**/venv
 
 # Cake - Uncomment if you are using it
 # tools/**
@@ -409,9 +409,7 @@ FodyWeavers.xsd
 ### Java ###
 # Compiled class file
 *.class
-java/target
-pubsub/java/*/target
-state/java/*/target
+*/java/**/target
 
 # Log file
 
