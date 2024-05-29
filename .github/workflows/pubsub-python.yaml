@@ -3,7 +3,7 @@ name: Build and Push PubSub Python Docker Image
 on:
   push:
     branches:
-      - main
+      - golang
     paths:
       - 'pubsub/javascript/**'
 

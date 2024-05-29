@@ -3,7 +3,7 @@ name: Build and Push KeyValue JavaScript Docker Image
 on:
   push:
     branches:
-      - main
+      - golang
     paths:
       - 'keyvalue/javascript/**'
 

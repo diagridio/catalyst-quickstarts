@@ -3,7 +3,7 @@ name: Build and Push PubSub Java Docker Image
 on:
   push:
     branches:
-      - main
+      - golang
     paths:
       - 'pubsub/java/**'
 

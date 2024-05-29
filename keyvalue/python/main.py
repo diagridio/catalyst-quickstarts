@@ -17,7 +17,7 @@ kvstore_name = os.getenv('KVSTORE_NAME', 'kvstore')
 
 @app.get('/')
 async def helloworld():
-    return {"Hello World"}
+    return {"Hello  World"}
 
 @app.post('/kv/orders')
 def create_kv(order: Order):

@@ -19,7 +19,7 @@ app.MapPost("/kv/orders", async (Order order) =>
     try
     {
         await client.SaveStateAsync(KVStoreName, order.OrderId.ToString(), order);
-        app.Logger.LogInformation("Save KV Successful. Order saved: {order}", order.OrderId);
+        app.Logger.LogInformation("Save KV Successful.  Order saved: {order}", order.OrderId);
         return Results.StatusCode(200);
     }
     catch (Exception ex)

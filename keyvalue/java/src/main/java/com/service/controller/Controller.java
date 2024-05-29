@@ -39,7 +39,7 @@ public class Controller {
         return Mono.fromSupplier(() -> {
             try {
                 Void response = client.saveState(KVSTORE_NAME, "" + order.getOrderId(), order).block();
-                logger.info("Save KV Successful. Order saved: " + order.getOrderId());
+                logger.info("Save KV Successful.  Order saved: " + order.getOrderId());
                 return ResponseEntity.ok("SUCCESS");
             } catch (Exception e) {
                 logger.error("Error occurred while saving order: " + order.getOrderId());

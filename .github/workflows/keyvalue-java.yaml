@@ -3,7 +3,7 @@ name: Build and Push KeyValue Java Docker Image
 on:
   push:
     branches:
-      - main
+      - golang
     paths:
       - 'keyvalue/java/**'
 
