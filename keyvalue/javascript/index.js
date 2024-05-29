@@ -36,7 +36,7 @@ app.get('/kv/orders/:orderId', async function (req, res) {
   const keyName = "order" + req.params.orderId
   try {
     const order = await client.state.get(kvName, keyName)
-    console.log("Retrieved order: ", order)
+    console.log("Retrieved  order: ", order)
     res.json(order)
   } catch (error) {
     console.log("Error retrieving order: " + req.params.orderId);
