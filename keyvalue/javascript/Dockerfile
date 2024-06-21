@@ -1,11 +1,38 @@
-FROM node:lts-alpine
-ENV NODE_ENV=production
-EXPOSE 5001
-ENV PORT 5001
-WORKDIR /usr/src/app
-COPY ["package.json", "package-lock.json*", "npm-shrinkwrap.json*", "./"]
-RUN npm install --production --silent && mv node_modules ../
+# Use a base image
+FROM node:16
+
+# Set the working directory 
+WORKDIR /app
+
+# Install Diagrid CLI 
+RUN curl -o- https://downloads.diagrid.io/cli/install.sh | bash
+
+
+# Ensure the Diagrid CLI is executable globally
+RUN mv ./diagrid /usr/local/bin/diagrid || echo "Diagrid binary not found!"
+
+RUN chmod +x /usr/local/bin/diagrid
+
+# Copy sample code
 COPY . .
-RUN chown -R node /usr/src/app
-USER node
-CMD ["npm", "start"]
+
+# Install Node.js dependencies
+RUN npm install
+
+# Create the directory for Diagrid credentials
+RUN mkdir -p /root/.diagrid
+
+# Copy the credentials file into the container
+COPY ./creds /root/.diagrid
+
+# Copy the entrypoint script
+COPY entrypoint.sh /usr/local/bin/
+
+# Make the entrypoint script executable
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
+# Set the entrypoint script to run when the container starts
+ENTRYPOINT ["entrypoint.sh"]
+
+# Expose the application port
+EXPOSE 5001
