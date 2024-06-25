@@ -22,9 +22,6 @@ RUN npm install
 # Create the directory for Diagrid credentials
 RUN mkdir -p /root/.diagrid
 
-# Copy the credentials file into the container
-COPY ./creds /root/.diagrid
-
 # Copy the entrypoint script
 COPY entrypoint.sh /usr/local/bin/
 

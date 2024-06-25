@@ -17,6 +17,12 @@ Before you proceed with the tutorial, ensure you have the appropriate prerequisi
 
 ### Run Quickstart with Docker Container
 
+Use the Diagrid CLI to login for authentication:
+
+```sh
+diagrid login
+```
+
 
 <!-- STEP
 name: Docker Build
@@ -43,7 +49,7 @@ Also, it prepares basic CLI commands to run this quickstart in `entrypoint.sh`:
 
 Run it by:
 ```sh
-docker run -it -p 5001:5001 kv-javascript-project-container
+docker run -v ~/.diagrid/creds:/root/.diagrid/creds -it -p 5001:5001 kv-javascript-project-container
 ```
 
 Then you can interact with Catalyst APIs with [this reference](https://docs.diagrid.io/catalyst/local-tutorials/key-value#interact-with-catalyst-apis)

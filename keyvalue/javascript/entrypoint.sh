@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 # Create a project
 echo "Creating project..."
 diagrid project create kv-javascript-project-container --deploy-managed-kv
