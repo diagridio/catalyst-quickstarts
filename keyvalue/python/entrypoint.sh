@@ -1,11 +1,11 @@
 #!/bin/bash
 # Create a project
 echo "Creating project..."
-diagrid project create kv-javascript-project-container --deploy-managed-kv
+diagrid project create kv-python-project-container --deploy-managed-kv
 
 # Set this project as the default project
 echo "Setting default project..."
-diagrid project use kv-javascript-project-container
+diagrid project use kv-python-project-container
 
 # Create an AppID
 echo "Creating AppID..."
@@ -16,4 +16,4 @@ sleep 30
 
 # Connect the application to Catalyst 
 echo "Starting the application..."
-diagrid dev start --app-id orderapp --env PORT=5001 "npm run start"
+diagrid dev start --app-id orderapp --env PORT=5001 "uvicorn main:app --host 0.0.0.0 --port 5001"
