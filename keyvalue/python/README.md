@@ -1,7 +1,7 @@
 ## Key/Value Store - Python Quickstart
 
-It's easy to get started with Key/Value Store in Python!
-With a few commands using the Diagrid CLI, you can create a new project, download the quickstart files, and start developing.
+It's easy to get started with Key/Value Store in python!
+With a few commands using the Diagrid CLI, you can create a new project and start developing.
 
 This tutorial introduces how to run the Key/Value Store quickstart both locally and with Docker.
 

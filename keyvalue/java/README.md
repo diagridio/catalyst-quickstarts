@@ -1,6 +1,6 @@
-## Key/Value Store - Javascript Quickstart
+## Key/Value Store - Java Quickstart
 
-It's easy to get started with Key/Value Store in javascript!
+It's easy to get started with Key/Value Store in Java!
 With a few commands using the Diagrid CLI, you can create a new project and start developing.
 
 This tutorial introduces how to run the Key/Value Store quickstart both locally and with Docker.
@@ -11,7 +11,8 @@ Before you proceed with the tutorial, ensure you have the appropriate prerequisi
 
 - Install [Diagrid CLI](https://docs.diagrid.io/catalyst/references/cli-reference/intro/)
 - Install [Git](https://git-scm.com/downloads)
-- Install latest [Node.js](https://nodejs.org/en/)
+- Install latest Java 11+ [Oracle JDK](https://www.oracle.com/java/technologies/downloads/) or [Open JDK](https://jdk.java.net/)
+- Install [Apache Maven 3.9.5+](https://maven.apache.org/install.html)
 - Install latest [Docker](https://docs.docker.com/engine/install/)
 
 
@@ -31,10 +32,10 @@ tags:
 -->
 
 
-Build docker image, which downloads the Diagrid CLI and installs javascript dependencies. 
+Build docker image, which downloads the Diagrid CLI and installs java dependencies. 
 
 ```sh
-docker build -t kv-javascript-project-container .
+docker build -t kv-java-project-container .
 ```
 
 
@@ -49,7 +50,7 @@ Also, it prepares basic CLI commands to run this quickstart in `entrypoint.sh`:
 
 Run it by:
 ```sh
-docker run -v ~/.diagrid/creds:/root/.diagrid/creds -it -p 5001:5001 kv-javascript-project-container
+docker run -v ~/.diagrid/creds:/root/.diagrid/creds -it -p 5001:5001 kv-java-project-container
 ```
 
 Then you can interact with Catalyst APIs with [this reference](https://docs.diagrid.io/catalyst/local-tutorials/key-value#interact-with-catalyst-apis)
@@ -91,14 +92,14 @@ tags:
 expected_stdout_lines:
   - "✓  Your request has been successfully submitted!"
   - "○  Check the status of your resource by running the following command:"
-  - "✎  diagrid project get kv-javascript-project-local"
-  - "○  Setting default project to kv-javascript-project-local"
+  - "✎  diagrid project get kv-java-project-local"
+  - "○  Setting default project to kv-java-project-local"
 -->
 
 
 If you do not have an existing project available within your organization, create a new Catalyst project and deploy the default key/value store.
 ```sh
-diagrid project create kv-javascript-project-local --deploy-managed-kv
+diagrid project create kv-java-project-local --deploy-managed-kv
 ```
 
 <!-- END_STEP -->
@@ -113,7 +114,7 @@ tags:
 
 To set this project as the default project in the Diagrid CLI, run:
 ```sh
-diagrid project use kv-javascript-project-local
+diagrid project use kv-java-project-local
 ```
 
 
@@ -129,7 +130,7 @@ tags:
 expected_stdout_lines:
   - "✓  Your request has been successfully submitted!"
   - "○  Check the status of your resource by running the following command:"
-  - "✎  diagrid appid get orderapp --project kv-javascript-project-local"
+  - "✎  diagrid appid get orderapp --project kv-java-project-local"
 -->
 
 
@@ -156,10 +157,10 @@ tags:
 -->
 
 
-Navigate to the root directory of the javascript app and clean install all node dependencies.
+Navigate to the root directory of the java app and clean install all node dependencies.
 
 ```sh
-npm ci
+mvn clean install
 ```
 
 
@@ -169,7 +170,7 @@ npm ci
 Run the diagrid dev start command:
 
 ```sh
-diagrid dev start --app-id orderapp --env PORT=5001 "npm run start"
+diagrid dev start --app-id orderapp --env PORT=5001 "java -jar target/Main-0.0.1-SNAPSHOT.jar --port=5001"
 ```
 
 
