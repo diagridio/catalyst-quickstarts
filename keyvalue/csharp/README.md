@@ -1,6 +1,6 @@
-## Key/Value Store - Python Quickstart
+## Key/Value Store - .Net Quickstart
 
-It's easy to get started with Key/Value Store in python!
+It's easy to get started with Key/Value Store in .Net!
 With a few commands using the Diagrid CLI, you can create a new project and start developing.
 
 This tutorial introduces how to run the Key/Value Store quickstart both locally and with Docker.
@@ -11,7 +11,7 @@ Before you proceed with the tutorial, ensure you have the appropriate prerequisi
 
 - Install [Diagrid CLI](https://docs.diagrid.io/catalyst/references/cli-reference/intro/)
 - Install [Git](https://git-scm.com/downloads)
-- Install latest [Python 3.11+](https://www.python.org/downloads/)
+- Install latest [.Net 6+ SDK](https://dotnet.microsoft.com/en-us/download)
 - Install latest [Docker](https://docs.docker.com/engine/install/)
 
 
@@ -31,10 +31,10 @@ tags:
 -->
 
 
-Build docker image, which downloads the Diagrid CLI and installs python dependencies. 
+Build docker image, which downloads the Diagrid CLI and installs .Net dependencies. 
 
 ```sh
-docker build -t kv-python-project-container .
+docker build -t kv-csharp-project-container .
 ```
 
 
@@ -49,7 +49,7 @@ Also, it prepares basic CLI commands to run this quickstart in `entrypoint.sh`:
 
 Run it by:
 ```sh
-docker run -v ~/.diagrid/creds:/root/.diagrid/creds -it -p 5001:5001 kv-python-project-container
+docker run -v ~/.diagrid/creds:/root/.diagrid/creds -it -p 5001:5001 kv-csharp-project-container
 ```
 
 Then you can interact with Catalyst APIs with [this reference](https://docs.diagrid.io/catalyst/local-tutorials/key-value#interact-with-catalyst-apis)
@@ -91,14 +91,14 @@ tags:
 expected_stdout_lines:
   - "✓  Your request has been successfully submitted!"
   - "○  Check the status of your resource by running the following command:"
-  - "✎  diagrid project get kv-python-project-local"
-  - "○  Setting default project to kv-python-project-local"
+  - "✎  diagrid project get kv-csharp-project-local"
+  - "○  Setting default project to kv-csharp-project-local"
 -->
 
 
 If you do not have an existing project available within your organization, create a new Catalyst project and deploy the default key/value store.
 ```sh
-diagrid project create kv-python-project-local --deploy-managed-kv
+diagrid project create kv-csharp-project-local --deploy-managed-kv
 ```
 
 <!-- END_STEP -->
@@ -113,7 +113,7 @@ tags:
 
 To set this project as the default project in the Diagrid CLI, run:
 ```sh
-diagrid project use kv-python-project-local
+diagrid project use kv-csharp-project-local
 ```
 
 
@@ -129,7 +129,7 @@ tags:
 expected_stdout_lines:
   - "✓  Your request has been successfully submitted!"
   - "○  Check the status of your resource by running the following command:"
-  - "✎  diagrid appid get orderapp --project kv-python-project-local"
+  - "✎  diagrid appid get orderapp --project kv-csharp-project-local"
 -->
 
 
@@ -156,18 +156,10 @@ tags:
 -->
 
 
-Navigate to the root directory of the python app and install alldependencies.
+Navigate to the root directory of the csharp app and install all dependencies.
 
 ```sh
-python -m venv venv
-source venv/bin/activate 
-
-pip install --upgrade pip && pip install certifi
-
-source venv/bin/activate && pip install --no-cache-dir -r requirements.txt
-
-export REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
-export SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
+dotnet build
 ```
 
 
@@ -177,7 +169,7 @@ export SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
 Run the diagrid dev start command:
 
 ```sh
-diagrid dev start --app-id orderapp --env PORT=5001 "uvicorn main:app --port 5001"
+diagrid dev start --app-id orderapp "dotnet run --urls=http://localhost:5001"
 ```
 
 

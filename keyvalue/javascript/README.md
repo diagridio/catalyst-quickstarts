@@ -156,7 +156,7 @@ tags:
 -->
 
 
-Navigate to the root directory of the javascript app and clean install all node dependencies.
+Navigate to the root directory of the javascript app and install all dependencies.
 
 ```sh
 npm ci

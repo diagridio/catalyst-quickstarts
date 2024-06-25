@@ -157,7 +157,7 @@ tags:
 -->
 
 
-Navigate to the root directory of the java app and clean install all node dependencies.
+Navigate to the root directory of the java app and install all dependencies.
 
 ```sh
 mvn clean install
