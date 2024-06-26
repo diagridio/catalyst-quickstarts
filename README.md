@@ -16,12 +16,14 @@ There are 2 support ways to use the quickstart:
 
 3. Go to the directory where the README.md is, then:
 
-- if run the quickstart locally, then:
-  - run `mm.py README.md -t local`
-  - run `diagrid dev start` for Pub/Sub, or `diagrid dev start --app-id orderapp "uvicorn main:app --port 5001"` for Key/Value Store
-- if run the quickstart in container, then:
+**Run the quickstart in container (Recommended way)** 
   - run `mm.py README.md -t container`
   - run `docker run -v ~/.diagrid/creds:/root/.diagrid/creds -it -p 5001:5001 <image-name>` as guided in README.
+
+**Run the quickstart locally** 
+  - run `mm.py README.md -t local`
+  - run `diagrid dev start` for Pub/Sub, or `diagrid dev start --app-id orderapp "uvicorn main:app --port 5001"` for Key/Value Store
+
 
 
 
