@@ -44,7 +44,7 @@ docker build -t pubsub-javascript-project-container .
 Also, it prepares basic CLI commands to run this quickstart in `entrypoint.sh`:
 - Create a project
 - Set this project as the default project
-- Create 2 AppIDs: publisher and consumer
+- Create 2 AppIDs: publisher and subscriber
 - Create a subscription
 - Start your application 
 
@@ -121,7 +121,7 @@ diagrid project use pubsub-javascript-project-local
 <!-- END_STEP -->
 
 
-#### Create Application Identity
+##### Create Application Identity
 <!-- STEP
 name: Create AppID 
 sleep: 30
@@ -133,23 +133,22 @@ expected_stdout_lines:
   - "✎  diagrid appid get publisher --project pubsub-javascript-project-local"
   - "✓  Your request has been successfully submitted!"
   - "○  Check the status of your resource by running the following command:"
-  - "✎  diagrid appid get consumer --project pubsub-javascript-project-local"
+  - "✎  diagrid appid get subscriber --project pubsub-javascript-project-local"
 -->
 
-
-In Diagrid Catalyst, each application is represented via a corresponding remote identity, known as an App ID.
-An App ID functions as the single point of contact for all interactions between a specific application and the Catalyst APIs.
-Before diving into the application code, create an App ID in Diagrid Catalyst to represent the stateful order application.
+In Diagrid Catalyst, each application is represented by a remote identity, known as an App ID.
+An App ID functions as the single point of contact for all interactions between an application and the Catalyst APIs.
+Before diving into the application code, create two App IDs in Diagrid Catalyst, one to represent the publishing app, and one to represent the subscribing app.
 
 ```sh
 diagrid appid create publisher
-diagrid appid create consumer
+diagrid appid create subscriber
 ```
 
 
 <!-- END_STEP -->
 
-#### Create Pub/Sub Topic Subscription
+##### Create Pub/Sub Topic Subscription
 <!-- STEP
 name: Create Subscription 
 sleep: 20
@@ -159,12 +158,12 @@ expected_stdout_lines:
   - "✓  Your request has been successfully submitted!"
 -->
 
-With the Diagrid Pub/Sub Broker already provisioned in your project, the next step is to create a topic subscription through which the consumer App ID can subscribe to messages sent by the publisher.
+With the Diagrid Pub/Sub Broker already provisioned in your project, the next step is to create a topic subscription through which the subscriber App ID can subscribe to messages sent by the publisher.
 
-Use the following command to ensure all messages sent to the orders topic in the message broker are routed to the /pubsub/neworders endpoint of the consumer application:
+Use the following command to ensure all messages sent to the orders topic in the message broker are routed to the /pubsub/neworders endpoint of the subscriber application:
 
 ```sh
-diagrid subscription create pubsub-consumer --connection pubsub --topic orders --route /pubsub/neworders --scopes consumer
+diagrid subscription create pubsub-subscriber --connection pubsub --topic orders --route /pubsub/neworders --scopes subscriber
 ```
 
 
@@ -172,8 +171,6 @@ diagrid subscription create pubsub-consumer --connection pubsub --topic orders -
 
 
 #### Connect your applications to Catalyst
-
-
 
 <!-- STEP
 name: Scaffold Dev Config
@@ -190,10 +187,12 @@ chmod +x scaffold.sh
 ./scaffold.sh
 ```
 
+This script needs Python installed, if you don't have the environment, you can also finish this step manually by following the [tutorial](https://docs.diagrid.io/catalyst/local-tutorials/publish-subscribe#connect-your-applications-to-catalyst)
 
 <!-- END_STEP -->
 
-Run your applications and connect the consumer App ID to the local consumer app using the following command:
+
+Then run your applications and connect the subscriber App ID to the local subscriber app using the following command:
 ```sh
 diagrid dev start 
 ```

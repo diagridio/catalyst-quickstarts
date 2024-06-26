@@ -1,12 +1,14 @@
+import os
 import yaml
 
-yaml_file = "dev-pubsub-javascript-project-local.yaml"
+config_file = os.getenv('CONFIG_FILE', 'dev-pubsub-javascript-project-local.yaml')
 
-with open(yaml_file, 'r') as file:
-    data = yaml.safe_load(file)
+with open(config_file, 'r') as file:
+    config_data = yaml.load(file, Loader=yaml.FullLoader)
+    print(config_data)
 
-for app in data['apps']:
-    if app['appId'] == 'consumer':
+for app in config_data['apps']:
+    if app['appId'] == 'subscriber':
         app['appPort'] = 5002
         app['workDir'] = './subscriber'
         app['env']['PORT'] = 5002
@@ -17,14 +19,15 @@ for app in data['apps']:
 
     app['command'] = ['npm', 'run', 'start']
 
-data = {
-    'project': data['project'],
-    'apps': data['apps'],
-    'appLogDestination': data.get('appLogDestination', '')
+updated_data = {
+    'project': config_data['project'],
+    'apps': config_data['apps'],
+    'appLogDestination': config_data.get('appLogDestination', '')
 }
 
-with open(yaml_file, 'w') as file:
-    yaml.safe_dump(data, file, default_flow_style=False, sort_keys=False)
+with open(config_file, 'w') as file:
+    yaml.safe_dump(updated_data, file, default_flow_style=False, sort_keys=False)
 
 print("YAML file has been updated.")
+
 
