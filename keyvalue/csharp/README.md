@@ -11,7 +11,7 @@ Before you proceed with the tutorial, ensure you have the appropriate prerequisi
 
 - Install [Diagrid CLI](https://docs.diagrid.io/catalyst/references/cli-reference/intro/)
 - Install [Git](https://git-scm.com/downloads)
-- Install latest [.Net 6+ SDK](https://dotnet.microsoft.com/en-us/download)
+- Install latest [.Net 8+ SDK](https://dotnet.microsoft.com/en-us/download)
 - Install latest [Docker](https://docs.docker.com/engine/install/)
 
 

@@ -1,11 +1,11 @@
 #!/bin/bash
 # Create a project
 echo "Creating project..."
-diagrid project create kv-javascript-project-container --deploy-managed-kv
+diagrid project create kv-csharp-project-container --deploy-managed-kv
 
 # Set this project as the default project
 echo "Setting default project..."
-diagrid project use kv-javascript-project-container
+diagrid project use kv-csharp-project-container
 
 # Create an AppID
 echo "Creating AppID..."
