@@ -1,29 +1,19 @@
 #!/bin/bash
 # Install dependencies
 cd publisher 
-python3 -m venv venv
-source venv/bin/activate
-pip install --upgrade pip
-pip install certifi
-pip install --no-cache-dir -r requirements.txt
-
+mvn clean install
 echo "Dependencies installed in publisher directory."
 
 cd ../subscriber
-python3 -m venv venv
-source venv/bin/activate
-pip install --upgrade pip
-pip install certifi
-pip install --no-cache-dir -r requirements.txt
-
+mvn clean install
 echo "Dependencies installed in subscriber directory."
 
 cd ..
 
 # Check if the dev file already exists and remove it if it does
-if [ -f "dev-pubsub-python-project-local.yaml" ]; then
+if [ -f "dev-pubsub-java-project-local.yaml" ]; then
     echo "Existing dev config file found. Deleting..."
-    rm "dev-pubsub-python-project-local.yaml"
+    rm "dev-pubsub-java-project-local.yaml"
 fi
 
 # Scaffold config file

@@ -10,6 +10,12 @@ echo "Dependencies installed in subscriber directory."
 
 cd ..
 
+# Check if the dev file already exists and remove it if it does
+if [ -f "dev-pubsub-javascript-project-local.yaml" ]; then
+    echo "Existing dev config file found. Deleting..."
+    rm "dev-pubsub-javascript-project-local.yaml"
+fi
+
 # Scaffold config file
 diagrid dev scaffold
 
