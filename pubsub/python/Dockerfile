@@ -24,16 +24,6 @@ RUN chmod +x /app/scaffold.sh /app/scaffold.py
 # Set the config file name 
 ENV CONFIG_FILE="dev-pubsub-python-project-container.yaml"
 
-# Install virtualenv
-RUN pip install virtualenv
-
-# Ensure the venv directory is clear before creating a new virtual environment
-RUN if [ -d "/app/venv" ]; then rm -rf /app/venv; fi
-RUN virtualenv --clear /app/venv
-
-# Install PyYAML in the virtual environment
-RUN /app/venv/bin/pip install pyyaml
-
 # Copy the entrypoint script
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh 
