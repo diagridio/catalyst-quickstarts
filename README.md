@@ -22,8 +22,9 @@ There are 2 support ways to use the quickstart:
 
 **Run the quickstart locally** 
   - run `mm.py README.md -t local`
-  - run `diagrid dev start` for Pub/Sub, or `diagrid dev start --app-id orderapp "uvicorn main:app --port 5001"` for Key/Value Store
-
-
-
-
+  - for Pub/Sub, run `diagrid dev start` 
+  - for Key/Value Store:
+    - .Net: `diagrid dev start --app-id orderapp "dotnet run --urls=http://localhost:5001"`
+    - Python: `diagrid dev start --app-id orderapp "uvicorn main:app --port 5001"`
+    - Javascript: `diagrid dev start --app-id orderapp --env PORT=5001 "npm run start"`
+    - Java: `diagrid dev start --app-id orderapp "java -jar target/Main-0.0.1-SNAPSHOT.jar --port=5001"`
