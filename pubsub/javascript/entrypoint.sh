@@ -26,4 +26,4 @@ echo "Scaffolding dev config file..."
 
 # Connect the application to Catalyst 
 echo "Starting the application..."
-diagrid dev start
+diagrid dev start -f "$CONFIG_FILE"
