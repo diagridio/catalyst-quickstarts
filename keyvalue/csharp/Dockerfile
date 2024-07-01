@@ -1,17 +1,34 @@
-FROM mcr.microsoft.com/dotnet/sdk:6.0 AS build-env
+# Use a .NET base image
+FROM mcr.microsoft.com/dotnet/sdk:8.0
+
+# Set the working directory
 WORKDIR /app
 
-# Copy everything
-COPY . ./
-# Restore as distinct layers
-RUN dotnet restore
-# Build and publish a release
-RUN dotnet publish -c Release -o out
+# Install Diagrid CLI
+RUN curl -o- https://downloads.diagrid.io/cli/install.sh | bash
 
-# Build runtime image
-FROM mcr.microsoft.com/dotnet/aspnet:6.0
-WORKDIR /app
+# Ensure the Diagrid CLI is executable globally
+RUN mv ./diagrid /usr/local/bin/diagrid || echo "Diagrid binary not found!"
+RUN chmod +x /usr/local/bin/diagrid
+
+# Copy the project files
+COPY . .
+
+# Build the project and its dependencies
+RUN dotnet build
+
+# Create the directory for Diagrid credentials
+RUN mkdir -p /root/.diagrid
+
+# Copy the entrypoint script
+COPY entrypoint.sh /usr/local/bin/
+
+# Make the entrypoint script executable
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
+# Set the entrypoint script to run when the container starts
+ENTRYPOINT ["entrypoint.sh"]
+
+# Expose the application port
 EXPOSE 5001
-ENV ASPNETCORE_URLS=http://+:5001
-COPY --from=build-env /app/out .
-ENTRYPOINT ["dotnet", "csharp.dll"]
+
