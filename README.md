@@ -1,6 +1,6 @@
 ## Catalyst Quickstarts
 
-The Diagrid Catalyst Quickstart allows you to more easily create starter Catalyst resources and connect from code.
+The Diagrid Catalyst Quickstart allows you to seamlessly create starter Catalyst resources and connect from code.
 
 There are 2 support ways to use the quickstart: 
 
