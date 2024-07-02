@@ -38,7 +38,7 @@ echo "Creating Subscription..."
 diagrid subscription create pubsub-subscriber --connection pubsub --topic orders --route /pubsub/neworders --scopes subscriber
 
 
-echo "Wating for App ID publisher and subscriber get ready..."
+echo "Waiting for App ID publisher and subscriber to get ready..."
 check_appid_status publisher
 check_appid_status subscriber
 
