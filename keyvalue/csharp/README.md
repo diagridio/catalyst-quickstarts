@@ -173,4 +173,4 @@ diagrid dev start --app-id orderapp "dotnet run --urls=http://localhost:5001"
 ```
 
 
-Then you can interact with Catalyst APIs with [this reference](https://docs.diagrid.io/catalyst/local-tutorials/key-value#interact-with-catalyst-apis)
+Then you can interact with Catalyst APIs with [this local tutorial](https://docs.diagrid.io/catalyst/local-tutorials/key-value#interact-with-catalyst-apis)
