@@ -31,7 +31,7 @@ diagrid project use kv-csharp-project-container
 echo "Creating App ID..."
 diagrid appid create orderapp
 
-echo "Wating for AppID get ready..."
+echo "Waiting for App ID to become ready..."
 check_appid_status orderapp
 
 # Connect the application to Catalyst 
