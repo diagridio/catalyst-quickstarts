@@ -181,7 +181,7 @@ tags:
 -->
 
 
-Install the dependencies and set up your local Catalyst development environment by running the following :
+Install the dependencies and set up your local Catalyst development environment by running the following:
 
 ```sh
 chmod +x scaffold.sh
