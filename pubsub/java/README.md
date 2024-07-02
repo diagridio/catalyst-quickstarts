@@ -199,4 +199,4 @@ diagrid dev start
 ```
 
 
-Then you can interact with Catalyst APIs with [this reference](https://docs.diagrid.io/catalyst/local-tutorials/key-value#interact-with-catalyst-apis)
+Then you can interact with Catalyst APIs with [this local tutorial](https://docs.diagrid.io/catalyst/local-tutorials/key-value#interact-with-catalyst-apis)
