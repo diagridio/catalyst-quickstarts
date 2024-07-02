@@ -78,24 +78,28 @@ app.MapGet("/workflow/status/{id}", async ([FromRoute] string id) =>
 });
 
 // Get completed workflow output
-app.MapGet("/workflow/output/{id}", async (string id) =>
+app.MapGet("/workflow/output/{id}", async ([FromRoute] string id) =>
 {
     try
     {
         WorkflowState state = await workflowClient.GetWorkflowStateAsync(id);
         if (state != null)
         {
+            app.Logger.LogInformation("Retrieved workflow state for {id}.", id);
             var output = state.ReadOutputAs<OrderResult>();
+            app.Logger.LogInformation("Output: {output}", output);
             return Results.Ok(output.Message);
         }
         else
         {
-            return Results.NoContent();
+            app.Logger.LogInformation("Workflow with id {id} does not exist", id);
+            return Results.StatusCode(204);
         }
     }
     catch (Exception ex)
     {
-        return Results.Problem(ex.Message);
+        app.Logger.LogError("Error occurred while getting the output of the workflow: {id}. Exception: {exception}", id, ex.InnerException);
+        return Results.StatusCode(500);
     }
 });
 
