@@ -44,7 +44,7 @@ docker build -t kv-csharp-project-container .
 Also, it prepares basic CLI commands to run this quickstart in `entrypoint.sh`:
 - Create a project
 - Set this project as the default project
-- Create an AppID
+- Create an App ID
 - Start your application 
 
 Run it by:
