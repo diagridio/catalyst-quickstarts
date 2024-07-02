@@ -98,7 +98,7 @@ expected_stdout_lines:
 -->
 
 
-If you do not have an existing project available within your organization, create a new Catalyst project and deploy the default key/value store.
+If you do not have an existing project available within your organization, create a new Catalyst project and deploy the default Pub/Sub.
 ```sh
 diagrid project create pubsub-java-project-local --deploy-managed-pubsub
 ```
