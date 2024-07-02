@@ -20,11 +20,11 @@ fi
 diagrid dev scaffold
 
 # Create and activate a virtual environment
-python3 -m venv venv
-source venv/bin/activate
+python3 -m venv diagrid-venv
+source diagrid-venv/bin/activate
 
 # Install necessary packages
 pip install pyyaml
 
 # Run the Python script to update dev config file 
-python scaffold.py
+python3 scaffold.py

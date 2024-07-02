@@ -5,7 +5,7 @@ The Diagrid Catalyst Quickstart allows you to seamlessly create starter Catalyst
 There are 2 support ways to use the quickstart: 
 
 1. use Diagrid CLI with the quickstart command `diagrid project quickstart --type <kv | pubsub> --language <csharp | python | java | javascript>` 
-2. run the README.md of each sub directory of this repo
+2.[run the README.md of each sub directory of this repo](#howToRunREADME.md)
  
 
 ### How to run README.md
