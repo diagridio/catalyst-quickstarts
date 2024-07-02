@@ -188,7 +188,7 @@ chmod +x scaffold.sh
 ./scaffold.sh
 ```
 
-This script needs Python installed, if you don't have the environment, you can also finish this step manually by following the [tutorial](https://docs.diagrid.io/catalyst/local-tutorials/publish-subscribe#connect-your-applications-to-catalyst)
+This script needs Python installed, if you don't have the environment, you can also finish this step manually by following the [local tutorial](https://docs.diagrid.io/catalyst/local-tutorials/publish-subscribe#connect-your-applications-to-catalyst)
 
 <!-- END_STEP -->
 
