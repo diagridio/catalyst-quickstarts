@@ -32,7 +32,7 @@ diagrid project use kv-python-project-container
 echo "Creating App ID orderapp..."
 diagrid appid create orderapp
 
-echo "Wating for App ID orderapp get ready..."
+echo "Waiting for App ID orderapp to get ready..."
 check_appid_status orderapp
 
 # Connect the application to Catalyst 
