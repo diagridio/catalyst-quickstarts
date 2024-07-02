@@ -1,52 +1,54 @@
-using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Dapr.Client;
-using Microsoft.AspNetCore.Mvc;
 using Dapr.Workflow;
-using BasicWorkflowSamples;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using Microsoft.AspNetCore.Mvc;
+using WorkflowConsoleApp.Activities;
+using WorkflowConsoleApp.Models;
+using WorkflowConsoleApp.Workflows;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add workflow 
+// Add Dapr workflow services
 builder.Services.AddDaprWorkflow(options =>
 {
-    options.RegisterWorkflow<HelloWorldWorkflow>();
-    options.RegisterActivity<CreateGreetingActivity>();
+    options.RegisterWorkflow<OrderProcessingWorkflow>();
+    options.RegisterActivity<NotifyActivity>();
+    options.RegisterActivity<ReserveInventoryActivity>();
+    options.RegisterActivity<ProcessPaymentActivity>();
+    options.RegisterActivity<UpdateInventoryActivity>();
 });
 
 var app = builder.Build();
 
-// Catalyst: Ensure environment variable DAPR_GRPC_ENDPOINT and DAPR_API_TOKEN is set before this point
 var client = new DaprClientBuilder().Build();
 var workflowClient = app.Services.GetRequiredService<DaprWorkflowClient>();
 
-var DaprApiToken = Environment.GetEnvironmentVariable("DAPR_API_TOKEN") ?? "";
-var WorkflowStateStore = Environment.GetEnvironmentVariable("WORKFLOW_STORE") ?? "kvstore";
-
 // Dapr will send serialized event object vs. being raw CloudEvent
 app.UseCloudEvents();
+
 #region Workflow API
 
 // Start new workflow
-app.MapPost("/workflow/start", async (Greeting greeting) =>
+app.MapPost("/workflow/start", async (OrderPayload order) =>
 {
-    // Store state in managed diagrid state store 
     var guid = Guid.NewGuid();
     try
     {
         await workflowClient.ScheduleNewWorkflowAsync(
-            name: nameof(HelloWorldWorkflow),
-            input: greeting.Input,
+            name: nameof(OrderProcessingWorkflow),
+            input: order,
             instanceId: guid.ToString());
-        
-        app.Logger.LogInformation("Started a new HelloWorld Workflow with id {guid} and input {input}", guid, greeting.Input);
-        return Results.Ok(guid);
+
+        return Results.Ok(new { WorkflowId = guid });
     }
     catch (Exception ex)
     {
-        app.Logger.LogError("Error occurred while starting workflow: {guid}. Exception: {exception}", guid, ex.InnerException);
-        return Results.StatusCode(500);
+        return Results.Problem(ex.Message);
     }
 });
 
@@ -55,10 +57,9 @@ app.MapGet("/workflow/status/{id}", async ([FromRoute] string id) =>
 {
     try
     {
-        WorkflowState state = await workflowClient.GetWorkflowStateAsync(
-            instanceId: id);
+        WorkflowState state = await workflowClient.GetWorkflowStateAsync(instanceId: id);
         app.Logger.LogInformation("STATE: {state}", state.ToString());
-         if (state != null)
+        if (state != null)
         {
             app.Logger.LogInformation("Get Workflow status successful. Workflow Runtime Status is: {status} ", state.RuntimeStatus);
             return Results.Ok(state);
@@ -77,29 +78,24 @@ app.MapGet("/workflow/status/{id}", async ([FromRoute] string id) =>
 });
 
 // Get completed workflow output
-app.MapGet("/workflow/output/{id}", async ([FromRoute] string id) =>
+app.MapGet("/workflow/output/{id}", async (string id) =>
 {
     try
     {
-        WorkflowState state = await workflowClient.GetWorkflowStateAsync(
-            instanceId: id);
-        app.Logger.LogInformation("STATE: {state}", state.ToString());
-        var output = state.ReadOutputAs<String>();
-         if (state != null)
+        WorkflowState state = await workflowClient.GetWorkflowStateAsync(id);
+        if (state != null)
         {
-            app.Logger.LogInformation("Get Workflow output successful. Workflow Output is: {output} ", output);
-            return Results.Ok(output);
+            var output = state.ReadOutputAs<OrderResult>();
+            return Results.Ok(output.Message);
         }
         else
         {
-            app.Logger.LogInformation("Workflow with id {id} does not exist", id);
-            return Results.StatusCode(204);
+            return Results.NoContent();
         }
     }
     catch (Exception ex)
     {
-        app.Logger.LogError("Error occurred while getting the output of the workflow: {id}. Exception: {exception}", id, ex.InnerException);
-        return Results.StatusCode(500);
+        return Results.Problem(ex.Message);
     }
 });
 
@@ -107,5 +103,7 @@ app.MapGet("/workflow/output/{id}", async ([FromRoute] string id) =>
 
 app.Run();
 
-public record Order([property: JsonPropertyName("orderId")] int OrderId);
-public record Greeting([property: JsonPropertyName("input")] string Input);
+public record Order(int OrderId);
+public record OrderPayload(string Name, int Quantity);
+public record OrderResult(bool Processed, string Message);
+
