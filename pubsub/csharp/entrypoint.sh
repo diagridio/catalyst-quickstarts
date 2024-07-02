@@ -7,7 +7,7 @@ check_appid_status() {
     while [ $attempt -le $max_attempts ]; do
         status=$(diagrid appid get $appid_name | grep 'Status:' | awk '{print $2}')
         echo "Attempt $attempt: Current status of $appid_name: $status"
-        if [ "$status" == "ready" ]; then
+        if echo "$status" | grep -q "ready"; then
             break
         fi
         if [ $attempt -eq $max_attempts ]; then

@@ -1,24 +1,23 @@
 #!/bin/bash
 # Install dependencies
-cd publisher 
-python3 -m venv diagrid-venv
-source diagrid-venv/bin/activate
-pip install --upgrade pip
-pip install certifi
-pip install --no-cache-dir -r requirements.txt
+setup_venv_and_install() {
+    local dir=$1
+    cd $dir
+    python3 -m venv diagrid-venv
+    source diagrid-venv/bin/activate
+    pip install --upgrade pip
+    pip install certifi
+    pip install --no-cache-dir -r requirements.txt
+    source diagrid-venv/bin/activate
+    echo "Dependencies installed in $dir directory."
+    cd ..
+}
 
-echo "Dependencies installed in publisher directory."
+# Install dependencies for publisher
+setup_venv_and_install "publisher"
 
-cd ../subscriber
-python3 -m venv diagrid-venv
-source diagrid-venv/bin/activate
-pip install --upgrade pip
-pip install certifi
-pip install --no-cache-dir -r requirements.txt
-
-echo "Dependencies installed in subscriber directory."
-
-cd ..
+# Install dependencies for subscriber
+setup_venv_and_install "subscriber"
 
 # Check if the dev file already exists and remove it if it does
 if [ -f "dev-pubsub-python-project-local.yaml" ]; then
