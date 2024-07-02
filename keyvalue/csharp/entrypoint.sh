@@ -28,10 +28,10 @@ echo "Setting default project..."
 diagrid project use kv-csharp-project-container
 
 # Create an AppID
-echo "Creating App ID..."
+echo "Creating App ID orderapp..."
 diagrid appid create orderapp
 
-echo "Waiting for App ID to become ready..."
+echo "Waiting for App ID orderapp to become ready..."
 check_appid_status orderapp
 
 # Connect the application to Catalyst 

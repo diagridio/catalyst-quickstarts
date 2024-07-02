@@ -44,7 +44,7 @@ docker build -t kv-javascript-project-container .
 Also, it prepares basic CLI commands to run this quickstart in `entrypoint.sh`:
 - Create a project
 - Set this project as the default project
-- Create an AppID
+- Create an App ID
 - Start your application 
 
 Run it by:
@@ -122,7 +122,7 @@ diagrid project use kv-javascript-project-local
 
 ##### Create Application Identity
 <!-- STEP
-name: Create AppID 
+name: Create App ID 
 sleep: 30
 tags:
   - local

@@ -123,7 +123,7 @@ diagrid project use kv-java-project-local
 
 ##### Create Application Identity
 <!-- STEP
-name: Create AppID 
+name: Create App ID 
 sleep: 30
 tags:
   - local

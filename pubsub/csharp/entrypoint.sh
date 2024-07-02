@@ -29,7 +29,7 @@ echo "Setting default project..."
 diagrid project use pubsub-csharp-project-container
 
 # Create AppIDs
-echo "Creating AppID..."
+echo "Creating App ID publisher and subscriber..."
 diagrid appid create publisher
 diagrid appid create subscriber
 
@@ -38,7 +38,7 @@ echo "Creating Subscription..."
 diagrid subscription create pubsub-subscriber --connection pubsub --topic orders --route /pubsub/neworders --scopes subscriber
 
 
-echo "Wating for AppIDs get ready..."
+echo "Wating for App ID publisher and subscriber get ready..."
 check_appid_status publisher
 check_appid_status subscriber
 

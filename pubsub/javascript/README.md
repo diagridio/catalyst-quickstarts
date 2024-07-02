@@ -44,7 +44,7 @@ docker build -t pubsub-javascript-project-container .
 Also, it prepares basic CLI commands to run this quickstart in `entrypoint.sh`:
 - Create a project
 - Set this project as the default project
-- Create 2 AppIDs: publisher and subscriber
+- Create 2 App ID: publisher and subscriber
 - Create a subscription
 - Start your application 
 
@@ -123,7 +123,7 @@ diagrid project use pubsub-javascript-project-local
 
 ##### Create Application Identity
 <!-- STEP
-name: Create AppID 
+name: Create App ID 
 sleep: 30
 tags:
   - local
