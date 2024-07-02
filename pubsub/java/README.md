@@ -54,7 +54,7 @@ Run it by:
 docker run -v ~/.diagrid/creds:/root/.diagrid/creds -it -p 5001:5001 pubsub-java-project-container
 ```
 
-Then you can interact with Catalyst APIs with [this reference](https://docs.diagrid.io/catalyst/local-tutorials/key-value#interact-with-catalyst-apis)
+Then you can interact with Catalyst APIs with [this local tutorial](https://docs.diagrid.io/catalyst/local-tutorials/publish-subscribe#interact-with-catalyst-apis)
 
 
 
@@ -199,4 +199,4 @@ diagrid dev start
 ```
 
 
-Then you can interact with Catalyst APIs with [this local tutorial](https://docs.diagrid.io/catalyst/local-tutorials/key-value#interact-with-catalyst-apis)
+Then you can interact with Catalyst APIs with [this local tutorial](https://docs.diagrid.io/catalyst/local-tutorials/publish-subscribe#interact-with-catalyst-apis)
