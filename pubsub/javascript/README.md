@@ -68,7 +68,7 @@ diagrid login
 ```
 
 The Diagrid CLI is compatible with both products: Catalyst and Conductor.
-If you have access to both products, If you have access to both products, you can choose which set of commands to use by specifying the product name with the command:
+If you have access to both products, then you can choose which set of commands to use by specifying the product name with the command:
 
 ```sh
 diagrid product use catalyst
