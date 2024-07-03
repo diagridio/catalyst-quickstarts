@@ -87,7 +87,7 @@ app.MapGet("/workflow/output/{id}", async ([FromRoute] string id) =>
         {
             app.Logger.LogInformation("Retrieved workflow state for {id}.", id);
             var output = state.ReadOutputAs<OrderResult>();
-            app.Logger.LogInformation("Output: {output}", output);
+            app.Logger.LogInformation("Workflow output is: {output} ", output);
             return Results.Ok(output.Message);
         }
         else
