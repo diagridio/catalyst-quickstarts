@@ -27,6 +27,9 @@ namespace WorkflowConsoleApp.Workflows
                 await context.CallActivityAsync(
                     nameof(NotifyActivity),
                     new Notification($"Insufficient inventory for {order.Name}"));
+
+                context.SetCustomStatus("Stopped order process due to insufficient inventory");
+
                 return new OrderResult(false, "Order failed due to insufficient inventory");
             }
 
@@ -47,6 +50,9 @@ namespace WorkflowConsoleApp.Workflows
                 await context.CallActivityAsync(
                     nameof(NotifyActivity),
                     new Notification($"Order {orderId} Failed! You are now getting a refund"));
+
+                context.SetCustomStatus("Stopped order process due to error in inventory update");
+
                 return new OrderResult(false, "Order failed during inventory update");
             }
 
