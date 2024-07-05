@@ -73,10 +73,10 @@ def main():
     check_python_installed()
     
     print("Creating project...")
-    run_command("diagrid project create pubsub-javascript-project-local --deploy-managed-pubsub")
+    run_command("diagrid project create pubsub-python-project-local --deploy-managed-pubsub")
 
     print("Setting default project...")
-    run_command("diagrid project use pubsub-javascript-project-local", check=True)
+    run_command("diagrid project use pubsub-python-project-local", check=True)
 
     print("Creating App ID publisher and subscriber...")
     run_command("diagrid appid create publisher", check=True)
@@ -90,7 +90,7 @@ def main():
     check_appid_status("subscriber")
 
     # Check if the dev file already exists and remove it if it does
-    config_file = "dev-pubsub-javascript-project-local.yaml"
+    config_file = "dev-pubsub-python-project-local.yaml"
     if os.path.isfile(config_file):
         print(f"Existing dev config file found: {config_file}")
         try:
