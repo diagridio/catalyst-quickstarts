@@ -82,8 +82,7 @@ app.MapGet("/workflow/output/{id}", async ([FromRoute] string id) =>
         WorkflowState state = await workflowClient.GetWorkflowStateAsync(id);
         if (state != null)
         {
-            app.Logger.LogInformation("Retrieved workflow status for {id}.", id);
-            app.Logger.LogInformation("Workflow Runtime Status is: {status} ", state.RuntimeStatus);
+            app.Logger.LogInformation("Retrieved workflow output for {id}.", id);
             var output = state.ReadOutputAs<OrderResult>();
             app.Logger.LogInformation("Workflow output is: {output} ", output);
             return Results.Ok(output.Message);
@@ -111,7 +110,6 @@ app.MapPost("/workflow/terminate/{id}", async ([FromRoute] string id) =>
         if (state != null)
         {
             app.Logger.LogInformation("Terminated workflow with id {id}.", id);
-            app.Logger.LogInformation("Workflow Runtime Status is: {status} ", state.RuntimeStatus);
             return Results.Ok(state);
         }
         else
@@ -137,7 +135,6 @@ app.MapPost("/workflow/pause/{id}", async ([FromRoute] string id) =>
         if (state != null)
         {
             app.Logger.LogInformation("Paused workflow with id {id}.", id);
-            app.Logger.LogInformation("Workflow Runtime Status is: {status} ", state.RuntimeStatus);
             return Results.Ok(state);
         }
         else
@@ -163,7 +160,6 @@ app.MapPost("/workflow/resume/{id}", async ([FromRoute] string id) =>
         if (state != null)
         {
             app.Logger.LogInformation("Resumed workflow with id {id}.", id);
-            app.Logger.LogInformation("Workflow Runtime Status is: {status} ", state.RuntimeStatus);
             return Results.Ok(state);
 
         }
