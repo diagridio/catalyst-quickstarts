@@ -21,6 +21,44 @@ def run_command(command, check=False):
             return None
     return result.stdout.strip()
 
+def check_java_installed():
+    java_check = run_command("java -version", check=True)
+    if java_check is None:
+        print("Error: Java 11+ must be installed to run this script.")
+        sys.exit(1)
+    
+    try:
+        version_line = java_check.split('\n')[0]
+        version_str = version_line.split()[1].strip('"')
+        major_version = int(version_str.split('.')[0])
+        if major_version < 11:
+            print(f"Error: Java 11 or higher is required. Found version: {version_str}")
+            sys.exit(1)
+    except (IndexError, ValueError):
+        print(f"Error: Unable to determine Java version from output: {java_check.strip()}")
+        sys.exit(1)
+    
+    print(f"Java version: {version_str}")
+
+def check_maven_installed():
+    maven_check = run_command("mvn -version", check=True)
+    if maven_check is None:
+        print("Error: Apache Maven 3.9.5+ must be installed to run this script.")
+        sys.exit(1)
+    
+    try:
+        version_line = [line for line in maven_check.split('\n') if 'Apache Maven' in line][0]
+        version_str = version_line.split()[2]
+        major_version, minor_version, patch_version = map(int, version_str.split('.'))
+        if (major_version, minor_version, patch_version) < (3, 9, 5):
+            print(f"Error: Apache Maven 3.9.5 or higher is required. Found version: {version_str}")
+            sys.exit(1)
+    except (IndexError, ValueError):
+        print(f"Error: Unable to determine Maven version from output: {maven_check.strip()}")
+        sys.exit(1)
+    
+    print(f"Apache Maven version: {version_str}")
+
 def check_appid_status(appid_name):
     max_attempts = 5
     attempt = 1
