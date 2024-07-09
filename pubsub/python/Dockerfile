@@ -19,7 +19,7 @@ RUN curl -o- https://downloads.diagrid.io/cli/install.sh | bash && \
 RUN mkdir -p /root/.diagrid
 
 # Make scripts executable
-RUN chmod +x /app/scaffold.sh /app/scaffold.py
+RUN chmod +x /app/scaffold.py
 
 # Set the config file name 
 ENV CONFIG_FILE="dev-pubsub-python-project-container.yaml"

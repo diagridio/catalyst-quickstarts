@@ -12,7 +12,6 @@ logging.basicConfig(level=logging.INFO)
 class Order(BaseModel):
     orderId: int
 
-
 class CloudEvent(BaseModel):
     datacontenttype: str
     source: str
@@ -25,8 +24,12 @@ class CloudEvent(BaseModel):
     type: str
     traceid: str
 
-
 @app.post('/pubsub/neworders')
 def consume_orders(event: CloudEvent):
-    logging.info('Order received : %s' % event.data['orderId'])
+    order_id = event.data.get('orderId') or event.data.get('key')
+    if order_id:
+        logging.info('Order received: %s' % order_id)
+    else:
+        logging.error('Missing key in event data: orderId or key')
+        raise HTTPException(status_code=400, detail="Missing key in event data: orderId or key")
     return {'success': True}

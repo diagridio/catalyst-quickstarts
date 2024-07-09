@@ -1,51 +1,23 @@
 #!/bin/bash
-check_appid_status() {
-    local appid_name=$1
-    local max_attempts=5
-    local attempt=1
-
-    while [ $attempt -le $max_attempts ]; do
-        status=$(diagrid appid get $appid_name | grep 'Status:' | awk '{print $2}')
-        echo "Attempt $attempt: Current status of $appid_name: $status"
-        if echo "$status" | grep -q "ready"; then
-            break
-        fi
-        if [ $attempt -eq $max_attempts ]; then
-            echo "Max attempts reached. $appid_name is not ready."
-            exit 1
-        fi
-        echo "Waiting for 10 seconds..."
-        sleep 10
-        attempt=$((attempt + 1))
-    done
+setup_venv_and_install() {
+    local dir=$1
+    cd $dir
+    python3 -m venv diagrid-venv
+    source diagrid-venv/bin/activate
+    pip install --upgrade pip
+    pip install certifi
+    pip install --no-cache-dir -r requirements.txt
+    source diagrid-venv/bin/activate
+    echo "Dependencies installed in $dir directory."
+    cd ..
 }
 
-# Create a project
-echo "Creating project..."
-diagrid project create pubsub-python-project-container --deploy-managed-pubsub
+# Create a project and set up the environment
+python3 run.py --project-name pubsub-python-project-container --config-file "$CONFIG_FILE" --is-container
 
-# Set this project as the default project
-echo "Setting default project..."
-diagrid project use pubsub-python-project-container
+# Install deps
+setup_venv_and_install "publisher"
+setup_venv_and_install "subscriber"
 
-# Create AppIDs
-echo "Creating App ID publisher and subscriber..."
-diagrid appid create publisher
-diagrid appid create subscriber
-
-# Create Subscription
-echo "Creating Subscription..."
-diagrid subscription create pubsub-subscriber --connection pubsub --topic orders --route /pubsub/neworders --scopes subscriber
-
-
-echo "Waiting for App ID publisher and subscriber to get ready..."
-check_appid_status publisher
-check_appid_status subscriber
-
-# Scaffold dev config file 
-echo "Scaffolding dev config file..."
-./scaffold.sh
-
-# Connect the application to Catalyst 
-echo "Starting the application..."
+# Start the application
 diagrid dev start -f "$CONFIG_FILE"
