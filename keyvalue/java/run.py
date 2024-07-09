@@ -120,9 +120,9 @@ def scaffold_and_update_config(config_file):
 
 def main():
     parser = argparse.ArgumentParser(description="Run the setup script for Diagrid projects.")
-    parser.add_argument('--project-name', type=str, default="pubsub-java-project-local",
+    parser.add_argument('--project-name', type=str, default="kv-java-project-local",
                         help="The name of the project to create/use.")
-    parser.add_argument('--config-file', type=str, default="dev-pubsub-java-project-local.yaml",
+    parser.add_argument('--config-file', type=str, default="dev-kv-java-project-local.yaml",
                         help="The name of the config file to scaffold and use.")
     parser.add_argument('--is-container', action='store_true',
                         help="Flag to indicate if the script is running inside a container.")
@@ -137,21 +137,17 @@ def main():
     check_maven_installed()
     
     print("Creating project...")
-    run_command(f"diagrid project create {project_name} --deploy-managed-pubsub")
+    run_command(f"diagrid project create {project_name} --deploy-managed-kv")
 
     print("Setting default project...")
     run_command(f"diagrid project use {project_name}", check=True)
 
-    print("Creating App ID publisher and subscriber...")
-    run_command("diagrid appid create publisher", check=True)
-    run_command("diagrid appid create subscriber", check=True)
+    print("Creating App ID orderapp...")
+    run_command("diagrid appid create orderapp", check=True)
 
-    print("Creating Subscription...")
-    run_command("diagrid subscription create pubsub-subscriber --connection pubsub --topic orders --route /pubsub/neworders --scopes subscriber", check=True)
 
-    print("Waiting for App ID publisher and subscriber to get ready...")
-    check_appid_status("publisher")
-    check_appid_status("subscriber")
+    print("Waiting for App ID orderapp to get ready...")
+    check_appid_status("orderapp")
 
     # Check if the dev file already exists and remove it if it does
     if os.path.isfile(config_file):

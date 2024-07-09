@@ -1,6 +1,4 @@
 #!/bin/bash
-chmod +x scaffold.py
-
 # Create a project and set up the environment
 python3 run.py --project-name kv-csharp-project-container --config-file "$CONFIG_FILE" --is-container
 
