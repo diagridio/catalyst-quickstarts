@@ -18,7 +18,7 @@ WORKDIR /app
 COPY . .
 
 # Make scripts executable
-RUN chmod +x /app/scaffold.sh /app/scaffold.py
+RUN chmod +x /app/scaffold.py
 
 # Install Diagrid CLI
 RUN curl -o- https://downloads.diagrid.io/cli/install.sh | bash && \
