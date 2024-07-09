@@ -105,11 +105,11 @@ def main():
     print("Setting default project...")
     run_command(f"diagrid project use {project_name}", check=True)
 
-    print("Creating App ID publisher and subscriber...")
+    print("Creating App ID orderapp...")
     run_command("diagrid appid create orderapp", check=True)
 
 
-    print("Waiting for App ID publisher and subscriber to get ready...")
+    print("Waiting for App ID orderapp to get ready...")
     check_appid_status("orderapp")
 
     # Check if the dev file already exists and remove it if it does
