@@ -105,7 +105,7 @@ def main():
     config_file = args.config_file
     is_container = args.is_container
 
-    print("Checking JavaScript dependencies...")
+    print("Checking CSharp dependencies...")
     check_dotnet_installed()
     
     print("Creating project...")

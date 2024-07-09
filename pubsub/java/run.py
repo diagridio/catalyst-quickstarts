@@ -22,7 +22,7 @@ def run_command(command, check=False):
     return result.stdout.strip()
 
 def check_java_installed():
-    java_check = run_command("java -version", check=True)
+    java_check = run_command("java --version", check=True)
     if java_check is None:
         print("Error: Java 11+ must be installed to run this script.")
         sys.exit(1)
@@ -41,7 +41,7 @@ def check_java_installed():
     print(f"Java version: {version_str}")
 
 def check_maven_installed():
-    maven_check = run_command("mvn -version", check=True)
+    maven_check = run_command("mvn --version", check=True)
     if maven_check is None:
         print("Error: Apache Maven 3.9.5+ must be installed to run this script.")
         sys.exit(1)
@@ -58,6 +58,7 @@ def check_maven_installed():
         sys.exit(1)
 
     print(f"Apache Maven version: {version_str}")
+
 def check_appid_status(appid_name):
     max_attempts = 5
     attempt = 1
@@ -124,8 +125,9 @@ def main():
     config_file = args.config_file
     is_container = args.is_container
 
-    print("Checking JavaScript dependencies...")
-    check_dotnet_installed()
+    print("Checking Java dependencies...")
+    check_java_installed()
+    check_maven_installed()
     
     print("Creating project...")
     run_command(f"diagrid project create {project_name} --deploy-managed-pubsub")
