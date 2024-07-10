@@ -21,50 +21,14 @@ def run_command(command, check=False):
             return None
     return result.stdout.strip()
 
-def check_java_installed():
-    java_check = run_command("java --version", check=True)
-    if java_check is None:
-        print("Error: Java 11+ must be installed to run this script.")
+def check_js_installed():
+    node_check = run_command("node -v")
+    npm_check = run_command("npm -v")
+    if node_check is None or npm_check is None:
+        print("Error: Node.js and npm must be installed to run this script.")
         sys.exit(1)
-
-    try:
-        version_line = java_check.split('\n')[0]
-        version_str = version_line.split()[1].strip('"')
-        major_version = int(version_str.split('.')[0])
-        if major_version < 11:
-            print(f"Error: Java 11 or higher is required. Found version: {version_str}")
-            sys.exit(1)
-    except (IndexError, ValueError):
-        print(f"Error: Unable to determine Java version from output: {java_check.strip()}")
-        sys.exit(1)
-
-    print(f"Java version: {version_str}")
-
-def check_maven_installed(is_container):
-    if is_container:
-        print("Skipping Maven version check since the script is running inside a container.")
-        return
-
-    maven_check = run_command("mvn --version", check=True)
-    if maven_check is None:
-        print("Error: Apache Maven 3.9.5+ must be installed to run this script.")
-        sys.exit(1)
-
-    try:
-        version_line = next((line for line in maven_check.split('\n') if 'Apache Maven' in line), None)
-        if version_line is None:
-            raise ValueError("Maven version line not found in the output.")
-        
-        version_str = version_line.split()[2]
-        major_version, minor_version, patch_version = map(int, version_str.split('.'))
-        if (major_version, minor_version, patch_version) < (3, 9, 5):
-            print(f"Error: Apache Maven 3.9.5 or higher is required. Found version: {version_str}")
-            sys.exit(1)
-    except (IndexError, ValueError) as e:
-        print(f"Error: Unable to determine Maven version from output: '{maven_check.strip()}' due to {str(e)}")
-        sys.exit(1)
-
-    print(f"Apache Maven version: {version_str} confirmed suitable for use.")
+    print(f"Node.js version: {node_check.strip()}")
+    print(f"npm version: {npm_check.strip()}")
 
 def check_appid_status(appid_name):
     max_attempts = 5
@@ -120,9 +84,9 @@ def scaffold_and_update_config(config_file):
 
 def main():
     parser = argparse.ArgumentParser(description="Run the setup script for Diagrid projects.")
-    parser.add_argument('--project-name', type=str, default="pubsub-java-project-local",
+    parser.add_argument('--project-name', type=str, default="kv-javascript-project-local",
                         help="The name of the project to create/use.")
-    parser.add_argument('--config-file', type=str, default="dev-pubsub-java-project-local.yaml",
+    parser.add_argument('--config-file', type=str, default="dev-kv-javascript-project-local.yaml",
                         help="The name of the config file to scaffold and use.")
     parser.add_argument('--is-container', action='store_true',
                         help="Flag to indicate if the script is running inside a container.")
@@ -132,26 +96,21 @@ def main():
     config_file = args.config_file
     is_container = args.is_container
 
-    print("Checking Java dependencies...")
-    check_java_installed()
-    check_maven_installed()
+    print("Checking JavaScript dependencies...")
+    check_js_installed()
     
     print("Creating project...")
-    run_command(f"diagrid project create {project_name} --deploy-managed-pubsub")
+    run_command(f"diagrid project create {project_name} --deploy-managed-kv")
 
     print("Setting default project...")
     run_command(f"diagrid project use {project_name}", check=True)
 
-    print("Creating App ID publisher and subscriber...")
-    run_command("diagrid appid create publisher", check=True)
-    run_command("diagrid appid create subscriber", check=True)
+    print("Creating App ID orderapp...")
+    run_command("diagrid appid create orderapp", check=True)
 
-    print("Creating Subscription...")
-    run_command("diagrid subscription create pubsub-subscriber --connection pubsub --topic orders --route /pubsub/neworders --scopes subscriber", check=True)
 
-    print("Waiting for App ID publisher and subscriber to get ready...")
-    check_appid_status("publisher")
-    check_appid_status("subscriber")
+    print("Waiting for App ID orderapp to get ready...")
+    check_appid_status("orderapp")
 
     # Check if the dev file already exists and remove it if it does
     if os.path.isfile(config_file):

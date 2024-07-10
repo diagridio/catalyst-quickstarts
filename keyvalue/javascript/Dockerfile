@@ -1,35 +1,37 @@
-# Use a base image
-FROM node:lts
+# Use an official Python base image
+FROM python:3.12
 
-# Set the working directory 
+# Install Node.js
+RUN apt-get update && apt-get install -y curl gnupg && \
+  curl -fsSL https://deb.nodesource.com/setup_16.x | bash - && \
+  apt-get install -y nodejs
+
+# Set the working directory
 WORKDIR /app
-
-# Install Diagrid CLI 
-RUN curl -o- https://downloads.diagrid.io/cli/install.sh | bash
-
-
-# Ensure the Diagrid CLI is executable globally
-RUN mv ./diagrid /usr/local/bin/diagrid || echo "Diagrid binary not found!"
-
-RUN chmod +x /usr/local/bin/diagrid
 
 # Copy sample code
 COPY . .
 
-# Install Node.js dependencies
-RUN npm install
+# Install Diagrid CLI
+RUN curl -o- https://downloads.diagrid.io/cli/install.sh | bash && \
+  mv ./diagrid /usr/local/bin/diagrid && \
+  chmod +x /usr/local/bin/diagrid
 
 # Create the directory for Diagrid credentials
 RUN mkdir -p /root/.diagrid
 
-# Copy the entrypoint script
-COPY entrypoint.sh /usr/local/bin/
+# Make scripts executable
+RUN chmod +x /app/scaffold.py
 
-# Make the entrypoint script executable
-RUN chmod +x /usr/local/bin/entrypoint.sh
+# Set the config file name 
+ENV CONFIG_FILE="dev-kv-javascript-project-container.yaml"
+
+# Copy the entrypoint script
+COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh 
 
 # Set the entrypoint script to run when the container starts
-ENTRYPOINT ["entrypoint.sh"]
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 
 # Expose the application port
 EXPOSE 5001
