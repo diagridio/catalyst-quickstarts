@@ -14,6 +14,10 @@ app = FastAPI()
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
+workflowName = "order_processing_workflow"
+workflowComponent = "dapr"
+instanceId = str(uuid4())
+
 @asynccontextmanager
 async def app_lifespan(app: FastAPI):
     workflow_runtime = WorkflowRuntime()
@@ -23,6 +27,7 @@ async def app_lifespan(app: FastAPI):
     workflow_runtime.register_activity(process_payment_activity)
     workflow_runtime.register_activity(update_inventory_activity)
     workflow_runtime.start()
+    sleep(2)
 
     yield
 
@@ -31,7 +36,7 @@ def start_workflow(order: OrderPayload):
     try:
         with DaprClient() as d:
             order_dict = json.dumps(order.model_dump(by_alias=True))
-            resp = d.start_workflow(workflow_component="dapr", workflow_name="order_processing_workflow", input=order_dict)
+            resp = d.start_workflow(workflow_component=workflowComponent, workflow_name=workflowName, input=order_dict, instance_id=instanceId)
             return {"message": "Workflow started successfully", "workflow_id": resp.instance_id}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -40,9 +45,38 @@ def start_workflow(order: OrderPayload):
 def get_workflow_status(workflow_id: str):
     try:
         with DaprClient() as d:
-            state = d.get_workflow(instance_id=workflow_id, workflow_component="dapr")
+            state = d.get_workflow(instance_id=instanceId, workflow_component=workflowComponent)
             if not state:
                 return {"error": "Workflow not found", "workflow_id": workflow_id}
             return {"workflow_id": workflow_id, "status": state.runtime_status}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/workflow/terminate/{workflow_id}")
+def terminate_workflow():
+    try:
+        with DaprClient() as d:
+            d.terminate_workflow(instance_id=instanceId, workflow_component=workflowComponent)
+            return {"message": "Workflow terminated successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/workflow/pause/{workflow_id}")
+def pause_workflow():
+    try:
+        with DaprClient() as d:
+            d.pause_workflow(instance_id=instanceId, workflow_component=workflowComponent)
+            return {"message": "Workflow paused successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/workflow/resume/{workflow_id}")
+def resume_workflow():
+    try:
+        with DaprClient() as d:
+            d.resume_workflow(instance_id=instanceId, workflow_component=workflowComponent)
+            return {"message": "Workflow resumed successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
