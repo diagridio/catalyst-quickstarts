@@ -21,11 +21,11 @@ class InventoryItem:
 @dataclass
 class InventoryRequest:
     request_id: str
-    item_name: str
-    quantity: int
+    Name: str
+    Quantity: int
 
     def __str__(self):
-        return f"InventoryRequest(request_id={self.request_id}, item_name={self.item_name}, quantity={self.quantity})"
+        return f"InventoryRequest(request_id={self.request_id}, item_name={self.Name}, quantity={self.Quantity})"
 
 @dataclass
 class InventoryResult:
@@ -39,10 +39,10 @@ class InventoryResult:
 class PaymentRequest:
     request_id: str
     item_being_purchased: str
-    quantity: int
+    Quantity: int
   
     def __str__(self):
-        return f"PaymentRequest(request_id={self.request_id}, item_being_purchased={self.item_being_purchased}, quantity={self.quantity})"
+        return f"PaymentRequest(request_id={self.request_id}, item_being_purchased={self.item_being_purchased}, quantity={self.Quantity})"
 
 @dataclass
 class OrderResult:
