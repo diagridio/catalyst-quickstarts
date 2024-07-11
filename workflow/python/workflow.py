@@ -8,9 +8,6 @@ logging.basicConfig(level=logging.INFO)
 # Mocked inventory in memory
 inventory = {"Car": 50}
 
-# def notify_activity(ctx: WorkflowActivityContext, input: Notification):
-#     logger.info(f"Notification: {input.message}")
-
 def notify_activity(ctx: WorkflowActivityContext, input: Notification):
     logger = logging.getLogger('NotifyActivity')
     logger.info(input.message)
@@ -19,7 +16,8 @@ def process_payment_activity(ctx: WorkflowActivityContext, input: PaymentRequest
     logger = logging.getLogger('ProcessPaymentActivity')
     logger.info('Processing payment: '+f'{input.request_id}'+' for '
                 +f'{input.Quantity}' +' ' +f'{input.item_being_purchased}')
-    time.sleep(2)  # Simulate payment processing delay
+    # Simulate payment processing delay
+    time.sleep(2)  
     logger.info(f'Payment for request ID {input.request_id} processed successfully')
 
 def reserve_inventory_activity(ctx: WorkflowActivityContext, input: InventoryRequest) -> InventoryResult:
