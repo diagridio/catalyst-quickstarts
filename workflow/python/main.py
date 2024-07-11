@@ -1,25 +1,21 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-from uuid import uuid4
 import json
 import logging
 from dapr.clients import DaprClient
 from dapr.ext.workflow import WorkflowRuntime
 from workflow import order_processing_workflow, notify_activity, reserve_inventory_activity, process_payment_activity, update_inventory_activity
+from model import OrderPayload
 
 app = FastAPI()
 
-class OrderPayload(BaseModel):
-    item_name: str
-    quantity: int
-
 @app.post("/workflow/start")
 def start_workflow(order: OrderPayload):
-    workflow_id = str(uuid4())
     try:
         with DaprClient() as d:
-            d.start_workflow(workflow_component="dapr", workflow_name="order_processing_workflow", input=order.json())
-        return {"message": "Workflow started successfully", "workflow_id": workflow_id}
+            order_dict = order.model_dump(by_alias=True)
+            resp = d.start_workflow(workflow_component="dapr", workflow_name="OrderProcessingWorkflow", input=order_dict)
+        return {"message": "Workflow started successfully", "workflow_id": resp.instance_id}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -47,4 +43,3 @@ def startup_event():
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=5001)
-
