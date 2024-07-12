@@ -8,7 +8,7 @@ with open(config_file, 'r') as file:
 for app in config_data['apps']:
     if app['appId'] == 'workflow-app':
         app['workDir'] = '.'
-        app['command'] = ['uvicorn', 'main:app', '--port', '5001']
+        app['command'] = ['uvicorn', 'main:app', '--host','0.0.0.0', '--port', '5001']
         app['env']['PORT'] = 5001
 
 with open(config_file, 'w') as file:

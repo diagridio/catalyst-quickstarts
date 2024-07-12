@@ -36,6 +36,9 @@ RUN mkdir -p /root/.diagrid
 # Copy the entrypoint script
 COPY entrypoint.sh /usr/local/bin/
 
+# Set the config file name
+ENV CONFIG_FILE="dev-workflow-python-project-container.yaml"
+
 # Make the entrypoint script executable
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
