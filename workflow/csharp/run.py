@@ -109,7 +109,7 @@ def main():
     check_dotnet_installed()
     
     print("Creating project...")
-    run_command(f"diagrid project create {project_name} --deploy-managed-workflow")
+    run_command(f"diagrid project create {project_name} --enable-managed-workflow")
 
     print("Setting default project...")
     run_command(f"diagrid project use {project_name}", check=True)
