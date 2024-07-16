@@ -1,7 +1,7 @@
 dapr==1.14.0-rc.4
 dapr-ext-workflow
 fastapi==0.109.1
-grpcio==1.62.0
+grpcio==1.63.0
 pydantic==2.4.2
 requests==2.32.0
 uvicorn==0.23.2
