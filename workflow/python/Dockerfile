@@ -22,9 +22,10 @@ RUN chmod +x /usr/local/bin/diagrid
 COPY . .
 
 # Activate virtual environment and update pip and install certifi
-RUN ./venv/bin/pip install --upgrade pip
-RUN ./venv/bin/pip install certifi
-RUN ./venv/bin/pip install --no-cache-dir -r requirements.txt
+RUN . venv/bin/activate \
+  && pip install --upgrade pip \
+  && pip install certifi \
+  && pip install --no-cache-dir -r requirements.txt
 
 # Ensure Python uses the correct certificates
 ENV REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
