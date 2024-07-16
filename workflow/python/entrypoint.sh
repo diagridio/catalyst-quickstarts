@@ -8,7 +8,6 @@ source diagrid-venv/bin/activate
 pip install --upgrade pip
 pip install certifi
 pip install --no-cache-dir -r requirements.txt
-source diagrid-venv/bin/activate
 echo "Dependencies installed."
 
 # Start the application
