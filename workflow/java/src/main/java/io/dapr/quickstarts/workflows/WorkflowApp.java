@@ -14,6 +14,7 @@ import io.dapr.workflows.client.DaprWorkflowClient;
 import io.dapr.workflows.client.WorkflowInstanceStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import io.dapr.quickstarts.workflows.models.*;
 import io.dapr.quickstarts.workflows.activities.*;
@@ -21,6 +22,9 @@ import io.dapr.quickstarts.workflows.activities.*;
 @SpringBootApplication
 @RestController
 public class WorkflowApp {
+
+  @Autowired
+  private WorkflowRuntime workflowRuntime;
 
   private static final Logger logger = LoggerFactory.getLogger(NotifyActivity.class);
   private DaprWorkflowClient workflowClient;
@@ -34,16 +38,9 @@ public class WorkflowApp {
     logger.info(String.format("Received request to start workflow for item: %s with quantity: %d", order.getItemName(),
         order.getQuantity()));
 
-    // Register
-    WorkflowRuntimeBuilder builder = new WorkflowRuntimeBuilder().registerWorkflow(OrderProcessingWorkflow.class);
-    builder.registerActivity(NotifyActivity.class);
-    builder.registerActivity(ProcessPaymentActivity.class);
-    builder.registerActivity(ReserveInventoryActivity.class);
-    builder.registerActivity(UpdateInventoryActivity.class);
-
-    try (WorkflowRuntime runtime = builder.build()) {
-      logger.info("Start workflow runtime");
-      runtime.start(false);
+    if (workflowRuntime == null) {
+      logger.error("Workflow runtime is not initialized");
+      throw new IllegalStateException("Workflow runtime is not initialized");
     }
 
     workflowClient = new DaprWorkflowClient();
