@@ -18,12 +18,7 @@ public class OrderProcessingWorkflow extends Workflow {
   public WorkflowStub create() {
     return ctx -> {
       String orderId = ctx.getInstanceId();
-      logger.info("Starting Workflow: " + ctx.getName());
-      logger.info("Instance ID(order ID): " + orderId);
-      logger.info("Current Orchestration Time: " + ctx.getCurrentInstant());
-
       OrderPayload order = ctx.getInput(OrderPayload.class);
-      logger.info("Received Order: " + order.toString());
       OrderResult orderResult = new OrderResult();
       orderResult.setProcessed(false);
 
