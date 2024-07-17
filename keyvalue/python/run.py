@@ -75,7 +75,7 @@ def scaffold_and_update_config(config_file):
         sys.exit(1)
 
     # Create and activate a virtual environment
-    env_name = "diagrid-venv"
+    env_name = "venv"
     if os.path.exists(env_name):
         print(f"Existing virtual environment found: {env_name}")
         print(f"Deleting existing virtual environment: {env_name}")

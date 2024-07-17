@@ -2,12 +2,11 @@
 setup_venv_and_install() {
     local dir=$1
     cd $dir
-    python3 -m venv diagrid-venv
-    source diagrid-venv/bin/activate
+    python3 -m venv venv
+    source venv/bin/activate
     pip install --upgrade pip
     pip install certifi
     pip install --no-cache-dir -r requirements.txt
-    source diagrid-venv/bin/activate
     echo "Dependencies installed in $dir directory."
     cd ..
 }
