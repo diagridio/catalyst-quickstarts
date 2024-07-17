@@ -1,31 +1,22 @@
 package io.dapr.quickstarts.workflows;
 
-import org.slf4j.Logger;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
-
-import io.dapr.quickstarts.workflows.activities.NotifyActivity;
-import io.dapr.quickstarts.workflows.activities.ProcessPaymentActivity;
-import io.dapr.quickstarts.workflows.activities.ReserveInventoryActivity;
-import io.dapr.quickstarts.workflows.activities.UpdateInventoryActivity;
-import io.dapr.quickstarts.workflows.models.InventoryRequest;
-import io.dapr.quickstarts.workflows.models.InventoryResult;
-import io.dapr.quickstarts.workflows.models.Notification;
-import io.dapr.quickstarts.workflows.models.OrderPayload;
-import io.dapr.quickstarts.workflows.models.OrderResult;
-import io.dapr.quickstarts.workflows.models.PaymentRequest;
+import org.springframework.stereotype.Service;
 import io.dapr.workflows.Workflow;
 import io.dapr.workflows.WorkflowStub;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import io.dapr.quickstarts.workflows.models.*;
+import io.dapr.quickstarts.workflows.activities.*;
+
+@Service
 public class OrderProcessingWorkflow extends Workflow {
 
-  // In-memory inventory storage
-  public static final ConcurrentHashMap<String, AtomicInteger> inventory = new ConcurrentHashMap<>();
+  private static final Logger logger = LoggerFactory.getLogger(NotifyActivity.class);
 
   @Override
   public WorkflowStub create() {
     return ctx -> {
-      Logger logger = ctx.getLogger();
       String orderId = ctx.getInstanceId();
       logger.info("Starting Workflow: " + ctx.getName());
       logger.info("Instance ID(order ID): " + orderId);
@@ -72,6 +63,7 @@ public class OrderProcessingWorkflow extends Workflow {
         return;
       }
 
+      // Update the inventory
       inventoryResult = ctx
           .callActivity(UpdateInventoryActivity.class.getName(), inventoryRequest, InventoryResult.class).await();
       if (!inventoryResult.isSuccess()) {

@@ -1,18 +1,14 @@
 package io.dapr.quickstarts.workflows.models;
 
-public class InventoryRequest {
+import com.fasterxml.jackson.annotation.JsonProperty;
 
-  private String requestId;
+public class OrderPayload {
+
+  @JsonProperty("Name")
   private String itemName;
+  
+  @JsonProperty("Quantity")
   private int quantity;
-
-  public String getRequestId() {
-    return requestId;
-  }
-
-  public void setRequestId(String requestId) {
-    this.requestId = requestId;
-  }
 
   public String getItemName() {
     return itemName;
@@ -32,6 +28,7 @@ public class InventoryRequest {
 
   @Override
   public String toString() {
-    return "InventoryRequest [requestId=" + requestId + ", itemName=" + itemName + ", quantity=" + quantity + "]";
+    return "OrderPayload [itemName=" + itemName + ", quantity=" + quantity + "]";
   }
+
 }

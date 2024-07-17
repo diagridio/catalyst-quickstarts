@@ -2,8 +2,8 @@ package io.dapr.quickstarts.workflows.models;
 
 public class PaymentRequest {
   private String requestId;
-  private String itemBeingPurchased;
   private int quantity;
+  private String itemBeingPurchased;
 
   public String getRequestId() {
     return requestId;
@@ -11,14 +11,6 @@ public class PaymentRequest {
 
   public void setRequestId(String requestId) {
     this.requestId = requestId;
-  }
-
-  public String getItemBeingPurchased() {
-    return itemBeingPurchased;
-  }
-
-  public void setItemBeingPurchased(String itemBeingPurchased) {
-    this.itemBeingPurchased = itemBeingPurchased;
   }
 
   public int getQuantity() {
@@ -29,10 +21,17 @@ public class PaymentRequest {
     this.quantity = quantity;
   }
 
-  @Override
-  public String toString() {
-    return "PaymentRequest [requestId=" + requestId + ", itemBeingPurchased=" + itemBeingPurchased +
-        ", quantity=" + quantity + "]";
+  public String getItemBeingPurchased() {
+    return itemBeingPurchased;
   }
 
+  public void setItemBeingPurchased(String itemBeingPurchased) {
+    this.itemBeingPurchased = itemBeingPurchased;
+  }
+
+  @Override
+  public String toString() {
+    return "PaymentRequest [requestId=" + requestId + ", itemBeingPurchased=" + itemBeingPurchased
+        + ", quantity=" + quantity + "]";
+  }
 }

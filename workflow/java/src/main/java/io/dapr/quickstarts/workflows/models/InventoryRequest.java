@@ -1,9 +1,17 @@
 package io.dapr.quickstarts.workflows.models;
 
-public class OrderPayload {
-
+public class InventoryRequest {
+  private String requestId;
   private String itemName;
   private int quantity;
+
+  public String getRequestId() {
+    return requestId;
+  }
+
+  public void setRequestId(String requestId) {
+    this.requestId = requestId;
+  }
 
   public String getItemName() {
     return itemName;
@@ -23,7 +31,6 @@ public class OrderPayload {
 
   @Override
   public String toString() {
-    return "OrderPayload [itemName=" + itemName + ", quantity=" + quantity + "]";
+    return "InventoryRequest [requestId=" + requestId + ", itemName=" + itemName + ", quantity=" + quantity + "]";
   }
-
 }
