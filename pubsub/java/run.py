@@ -90,7 +90,7 @@ def check_appid_status(appid_name):
             print(f"Max attempts reached. {appid_name} is not ready.")
             sys.exit(1)
         
-        print("Waiting for 10 seconds...")
+        print("Waiting for project subresource status to become ready...")
         time.sleep(10)
         attempt += 1
 

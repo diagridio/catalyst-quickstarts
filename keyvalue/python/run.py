@@ -63,7 +63,7 @@ def check_appid_status(appid_name):
             print(f"Max attempts reached. {appid_name} is not ready.")
             sys.exit(1)
         
-        print("Waiting for 10 seconds...")
+        print("Waiting for project subresource status to become ready...")
         time.sleep(10)
         attempt += 1
 
@@ -75,7 +75,7 @@ def scaffold_and_update_config(config_file):
         sys.exit(1)
 
     # Create and activate a virtual environment
-    env_name = "diagrid-venv"
+    env_name = "venv"
     if os.path.exists(env_name):
         print(f"Existing virtual environment found: {env_name}")
         print(f"Deleting existing virtual environment: {env_name}")

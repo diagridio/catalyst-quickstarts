@@ -21,23 +21,23 @@ def run_command(command, check=False):
             return None
     return result.stdout.strip()
 
-def check_dotnet_installed():
-    version_check = run_command("dotnet --version")
-    if version_check is None:
-        print("Error: .NET SDK must be installed to run this script.")
+def check_python_installed():
+    python_check = run_command("python3 --version", check=True)
+    if python_check is None:
+        print("Error: Python 3.11+ must be installed to run this script.")
         sys.exit(1)
-
+    
     try:
-        version_parts = version_check.strip().split('.')
-        major_version = int(version_parts[0])
-        if major_version < 8:
-            print(f"Error: .NET SDK version 8 or higher is required. Found version: {version_check.strip()}")
+        version_str = python_check.split()[1]
+        major_version, minor_version = map(int, version_str.split('.')[:2])
+        if major_version < 3 or (major_version == 3 and minor_version < 11):
+            print(f"Error: Python 3.11 or higher is required. Found version: {version_str}")
             sys.exit(1)
     except (IndexError, ValueError):
-        print(f"Error: Unable to determine .NET SDK version from output: {version_check.strip()}")
+        print(f"Error: Unable to determine Python version from output: {python_check.strip()}")
         sys.exit(1)
-
-    print(f".NET SDK version: {version_check.strip()}")
+    
+    print(f"Python version: {version_str}")
 
 def check_appid_status(appid_name):
     max_attempts = 5
@@ -75,7 +75,7 @@ def scaffold_and_update_config(config_file):
         sys.exit(1)
 
     # Create and activate a virtual environment
-    env_name = "diagrid-venv"
+    env_name = "venv"
     if os.path.exists(env_name):
         print(f"Existing virtual environment found: {env_name}")
         print(f"Deleting existing virtual environment: {env_name}")
@@ -93,9 +93,9 @@ def scaffold_and_update_config(config_file):
 
 def main():
     parser = argparse.ArgumentParser(description="Run the setup script for Diagrid projects.")
-    parser.add_argument('--project-name', type=str, default="workflow-csharp-project-local",
+    parser.add_argument('--project-name', type=str, default="workflow-python-project-local",
                         help="The name of the project to create/use.")
-    parser.add_argument('--config-file', type=str, default="dev-workflow-csharp-project-local.yaml",
+    parser.add_argument('--config-file', type=str, default="dev-workflow-python-project-local.yaml",
                         help="The name of the config file to scaffold and use.")
     parser.add_argument('--is-container', action='store_true',
                         help="Flag to indicate if the script is running inside a container.")
@@ -105,8 +105,8 @@ def main():
     config_file = args.config_file
     is_container = args.is_container
 
-    print("Checking CSharp dependencies...")
-    check_dotnet_installed()
+    print("Checking Python dependencies...")
+    check_python_installed()
     
     print("Creating project...")
     run_command(f"diagrid project create {project_name} --enable-managed-workflow")
