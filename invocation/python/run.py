@@ -114,7 +114,7 @@ def main():
     print("Setting default project...")
     run_command(f"diagrid project use {project_name}", check=True)
 
-    print("Creating App ID publisher and subscriber...")
+    print("Creating App ID caller and target...")
     run_command("diagrid appid create caller", check=True)
     run_command("diagrid appid create target", check=True)
 
