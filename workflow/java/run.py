@@ -40,7 +40,7 @@ def check_java_installed():
 
     print(f"Java version: {version_str}")
 
-def check_maven_installed(is_container):
+def check_maven_installed(is_container=False):
     if is_container:
         print("Skipping Maven version check since the script is running inside a container.")
         return
