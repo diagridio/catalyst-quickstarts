@@ -40,7 +40,7 @@ def check_java_installed():
 
     print(f"Java version: {version_str}")
 
-def check_maven_installed(is_container=False):
+def check_maven_installed(is_container):
     if is_container:
         print("Skipping Maven version check since the script is running inside a container.")
         return
@@ -118,23 +118,23 @@ def scaffold_and_update_config(config_file):
     print("Running scaffold.py to update the dev config file...")
     run_command(f"./{env_name}/bin/python scaffold.py", check=True)
 
-def main():
-    parser = argparse.ArgumentParser(description="Run the setup script for Diagrid projects.")
-    parser.add_argument('--project-name', type=str, default="workflow-java-project-local",
-                        help="The name of the project to create/use.")
-    parser.add_argument('--config-file', type=str, default="dev-workflow-java-project-local.yaml",
-                        help="The name of the config file to scaffold and use.")
-    parser.add_argument('--is-container', action='store_true',
-                        help="Flag to indicate if the script is running inside a container.")
-    args = parser.parse_args()
 
+def parse_arguments():
+    parser = argparse.ArgumentParser(description="Run the setup script for Diagrid projects.")
+    parser.add_argument('--project-name', type=str, required=True, help="The name of the project to create/use.")
+    parser.add_argument('--config-file', type=str, required=True, help="The configuration file for the project.")
+    parser.add_argument('--is-container', action='store_true', help="Flag to indicate if the script is running inside a container.")
+    return parser.parse_args()
+
+def main():
+    args = parse_arguments()
     project_name = args.project_name
     config_file = args.config_file
     is_container = args.is_container
 
     print("Checking Java dependencies...")
     check_java_installed()
-    check_maven_installed()
+    check_maven_installed(is_container)
     
     print("Creating project...")
     run_command(f"diagrid project create {project_name} --enable-managed-workflow")
