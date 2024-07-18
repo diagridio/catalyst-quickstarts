@@ -6,7 +6,8 @@
   <parent>
     <groupId>org.springframework.boot</groupId>
     <artifactId>spring-boot-starter-parent</artifactId>
-    <version>3.3.1</version>
+    <!-- Use the last 2.x version that supports Java 11 -->
+    <version>2.7.4</version>
     <relativePath /> <!-- lookup parent from repository -->
   </parent>
 
@@ -15,22 +16,11 @@
   <version>0.0.1-SNAPSHOT</version>
   <name>Main</name>
   <description>Demo project for Catalyst</description>
-  <url />
-  <licenses>
-    <license />
-  </licenses>
-  <developers>
-    <developer />
-  </developers>
-  <scm>
-    <connection />
-    <developerConnection />
-    <tag />
-    <url />
-  </scm>
+
   <properties>
     <java.version>11</java.version>
   </properties>
+
   <dependencies>
     <dependency>
       <groupId>org.springframework.boot</groupId>
@@ -48,6 +38,7 @@
       <artifactId>spring-boot-starter-web</artifactId>
     </dependency>
 
+    <!-- Check for a compatible version of Dapr SDK that works with Java 11 -->
     <dependency>
       <groupId>io.dapr</groupId>
       <artifactId>dapr-sdk-workflows</artifactId>
@@ -63,5 +54,5 @@
       </plugin>
     </plugins>
   </build>
-
 </project>
+
