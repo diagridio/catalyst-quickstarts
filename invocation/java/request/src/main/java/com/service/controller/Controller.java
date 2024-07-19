@@ -70,13 +70,6 @@ public class Controller {
       }
     });
   }
-
-  // Service to be invoked
-  @PostMapping(path = "/invoke/neworders", consumes = MediaType.ALL_VALUE)
-  public ResponseEntity<Order> reply(@RequestBody Order order) {
-    System.out.println("Request received : " + order.getOrderId());
-    return ResponseEntity.ok(order);
-  }
 }
 
 @Getter
