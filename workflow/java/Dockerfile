@@ -17,6 +17,9 @@ WORKDIR /app
 # Copy sample code
 COPY . .
 
+# Install deps
+RUN mvn clean install
+
 # Make scripts executable
 RUN chmod +x /app/scaffold.py
 
