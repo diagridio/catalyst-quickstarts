@@ -11,5 +11,7 @@ cd ../reply
 dotnet build
 echo "Dependencies installed in reply directory."
 
+cd ..
+
 # Start the application
 diagrid dev start -f "$CONFIG_FILE"
