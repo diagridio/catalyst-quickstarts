@@ -42,9 +42,3 @@ async def send_order(order: Order):
     except grpc.RpcError as err:
         logging.error(f"ErrorCode={err.code()}")
         raise HTTPException(status_code=500, detail=err.details())
-
-
-@app.post('/invoke/neworders')
-def receive_order(order: Order):
-    logging.info('Request received : ' + str(order))
-    return str(order)

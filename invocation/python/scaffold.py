@@ -10,11 +10,11 @@ with open(config_file, 'r') as file:
 for app in config_data['apps']:
     if app['appId'] == 'target':
         app['appPort'] = 5002
-        app['workDir'] = '.'
+        app['workDir'] = './reply'
         app['command'] = ['uvicorn', 'main:app', '--host', '0.0.0.0', '--port', '5002']
     elif app['appId'] == 'caller':
         app['appPort'] = 5001
-        app['workDir'] = '.'
+        app['workDir'] = './request'
         app['command'] = ['uvicorn', 'main:app', '--host', '0.0.0.0', '--port', '5001']
 
 
