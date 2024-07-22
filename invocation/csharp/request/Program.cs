@@ -43,16 +43,6 @@ app.MapPost("/invoke/orders", async (Order order) =>
     }
 });
 
-app.MapPost("/invoke/neworders", (Order order) =>
-{
-    app.Logger.LogInformation("Request received : {order}", order);
-    return Results.Ok(order);
-});
-
 app.Run();
 
 public record Order([property: JsonPropertyName("orderId")] int OrderId);
-public record Greeting([property: JsonPropertyName("input")] string Input);
-
-
-

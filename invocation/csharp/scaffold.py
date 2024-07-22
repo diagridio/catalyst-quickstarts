@@ -10,11 +10,11 @@ with open(config_file, 'r') as file:
 for app in config_data['apps']:
     if app['appId'] == 'target':
         app['appPort'] = 5002
-        app['workDir'] = '.'
+        app['workDir'] = './reply'
         app['env']['ASPNETCORE_URLS'] = 'http://0.0.0.0:5002'
     elif app['appId'] == 'caller':
         app['appPort'] = 5001
-        app['workDir'] = '.'
+        app['workDir'] = './request'
         app['env']['ASPNETCORE_URLS'] = 'http://0.0.0.0:5001'
 
     app['command'] = ['dotnet', 'run']
