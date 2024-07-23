@@ -26,7 +26,7 @@ public class WorkflowApp {
   @Autowired
   private WorkflowRuntime workflowRuntime;
 
-  private static final Logger logger = LoggerFactory.getLogger(NotifyActivity.class);
+  private static final Logger logger = LoggerFactory.getLogger(WorkflowApp.class);
   private DaprWorkflowClient workflowClient;
 
   public static void main(String[] args) {
@@ -35,7 +35,7 @@ public class WorkflowApp {
 
   @PostMapping("/workflow/start")
   public ResponseEntity<String> startWorkflow(@RequestBody OrderPayload order) {
-    logger.info(String.format("Received request to start workflow for item: %s with quantity: %d", order.getItemName(),
+    logger.info("Received request to start workflow for item: {} with quantity: {}", order.getItemName(),
         order.getQuantity()));
 
     if (workflowRuntime == null) {

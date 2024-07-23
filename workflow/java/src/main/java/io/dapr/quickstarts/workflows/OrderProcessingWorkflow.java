@@ -12,7 +12,7 @@ import io.dapr.quickstarts.workflows.activities.*;
 @Service
 public class OrderProcessingWorkflow extends Workflow {
 
-  private static final Logger logger = LoggerFactory.getLogger(NotifyActivity.class);
+  private static final Logger logger = LoggerFactory.getLogger(OrderProcessingWorkflow.class);
 
   @Override
   public WorkflowStub create() {
