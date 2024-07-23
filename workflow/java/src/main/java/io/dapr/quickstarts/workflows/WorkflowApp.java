@@ -9,7 +9,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RestController;
 import io.dapr.workflows.runtime.WorkflowRuntime;
-import io.dapr.workflows.runtime.WorkflowRuntimeBuilder;
 import io.dapr.workflows.client.DaprWorkflowClient;
 import io.dapr.workflows.client.WorkflowInstanceStatus;
 import org.slf4j.Logger;
@@ -17,7 +16,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import io.dapr.quickstarts.workflows.models.*;
-import io.dapr.quickstarts.workflows.activities.*;
 
 @SpringBootApplication
 @RestController
@@ -36,7 +34,7 @@ public class WorkflowApp {
   @PostMapping("/workflow/start")
   public ResponseEntity<String> startWorkflow(@RequestBody OrderPayload order) {
     logger.info("Received request to start workflow for item: {} with quantity: {}", order.getItemName(),
-        order.getQuantity()));
+        order.getQuantity());
 
     if (workflowRuntime == null) {
       logger.error("Workflow runtime is not initialized");
