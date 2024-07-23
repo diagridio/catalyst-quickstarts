@@ -10,7 +10,7 @@ import io.dapr.quickstarts.workflows.models.*;
 
 public class ReserveInventoryActivity implements WorkflowActivity {
 
-  private static final Logger logger = LoggerFactory.getLogger(NotifyActivity.class);
+  private static final Logger logger = LoggerFactory.getLogger(ReserveInventoryActivity.class);
 
   @Override
   public Object run(WorkflowActivityContext ctx) {
