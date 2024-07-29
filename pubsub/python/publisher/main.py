@@ -30,3 +30,7 @@ async def publish_orders(order: Order):
         except grpc.RpcError as err:
             logging.error(
                 f"Error occurred while publishing order: {err.code()}")
+
+@app.get('/')
+async def read_root():
+    return {"message": "Publisher is running"}
