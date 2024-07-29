@@ -42,3 +42,7 @@ async def send_order(order: Order):
     except grpc.RpcError as err:
         logging.error(f"ErrorCode={err.code()}")
         raise HTTPException(status_code=500, detail=err.details())
+
+@app.get('/')
+async def read_root():
+    return {"message": "Request is running"}
