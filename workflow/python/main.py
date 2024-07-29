@@ -23,6 +23,10 @@ workflow_runtime.register_activity(process_payment_activity)
 workflow_runtime.register_activity(update_inventory_activity)
 workflow_runtime.start()
 
+@app.get('/')
+async def read_root():
+    return {"message": "Workflow is running"}
+
 @app.post("/workflow/start")
 def start_workflow(order: OrderPayload):
     try:
