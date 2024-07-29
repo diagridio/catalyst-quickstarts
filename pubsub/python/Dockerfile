@@ -21,9 +21,6 @@ RUN mkdir -p /root/.diagrid
 # Make scripts executable
 RUN chmod +x /app/scaffold.py
 
-# Set the config file name 
-ENV CONFIG_FILE="dev-pubsub-python-project-container.yaml"
-
 # Copy the entrypoint script
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh 

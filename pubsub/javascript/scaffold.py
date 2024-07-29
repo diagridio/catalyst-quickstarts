@@ -1,7 +1,7 @@
 import os
 import yaml
 
-config_file = os.getenv('CONFIG_FILE', 'dev-pubsub-javascript-project-local.yaml')
+config_file = os.getenv('CONFIG_FILE')
 
 with open(config_file, 'r') as file:
     config_data = yaml.load(file, Loader=yaml.FullLoader)
