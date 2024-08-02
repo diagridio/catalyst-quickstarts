@@ -119,11 +119,16 @@ def scaffold_and_update_config(config_file):
     run_command(f"./{env_name}/bin/python scaffold.py", check=True)
 
 def main():
+    prj_name = os.getenv('QUICKSTART_PROJECT_NAME')
+
+    config_file_name = f"dev-{prj_name}.yaml"
+    os.environ['CONFIG_FILE'] = config_file_name
+
     parser = argparse.ArgumentParser(description="Run the setup script for Diagrid projects.")
-    parser.add_argument('--project-name', type=str, default="kv-java-project-local",
+    parser.add_argument('--project-name', type=str, default=prj_name,
                         help="The name of the project to create/use.")
-    parser.add_argument('--config-file', type=str, default="dev-kv-java-project-local.yaml",
-                        help="The name of the config file to scaffold and use.")
+    parser.add_argument('--config-file', type=str, default=config_file_name,
+                       help="The name of the config file to scaffold and use.")
     parser.add_argument('--is-container', action='store_true',
                         help="Flag to indicate if the script is running inside a container.")
     args = parser.parse_args()
@@ -134,7 +139,7 @@ def main():
 
     print("Checking Java dependencies...")
     check_java_installed()
-    check_maven_installed()
+    check_maven_installed(is_container)
     
     print("Creating project...")
     run_command(f"diagrid project create {project_name} --deploy-managed-kv")

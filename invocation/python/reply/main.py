@@ -14,3 +14,7 @@ class Order(BaseModel):
 def receive_order(order: Order):
     logging.info('Request received : ' + str(order))
     return str(order)
+
+@app.get('/')
+async def read_root():
+    return {"message": "Reply is running"}

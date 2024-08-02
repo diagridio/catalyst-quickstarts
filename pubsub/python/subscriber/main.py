@@ -2,7 +2,6 @@ from dapr.clients import DaprClient
 from pydantic import BaseModel
 from cloudevents.sdk.event import v1
 from fastapi import FastAPI, HTTPException
-import os
 import logging
 
 app = FastAPI()
@@ -33,3 +32,7 @@ def consume_orders(event: CloudEvent):
         logging.error('Missing key in event data: orderId or key')
         raise HTTPException(status_code=400, detail="Missing key in event data: orderId or key")
     return {'success': True}
+
+@app.get('/')
+async def read_root():
+    return {"message": "Subscriber is running"}

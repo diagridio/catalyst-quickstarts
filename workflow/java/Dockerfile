@@ -31,9 +31,6 @@ RUN curl -o- https://downloads.diagrid.io/cli/install.sh | bash && \
 # Create the directory for Diagrid credentials
 RUN mkdir -p /root/.diagrid
 
-# Set the config file name 
-ENV CONFIG_FILE="dev-workflow-java-project-container.yaml"
-
 # Copy the entrypoint script
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh 
