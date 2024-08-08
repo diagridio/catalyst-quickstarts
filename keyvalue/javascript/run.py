@@ -5,15 +5,17 @@ import time
 import argparse
 
 def error(message):
-    print(f"Error: {message}")
+    print(f"Error: {message}", file=sys.stderr)
     sys.exit(1)
 
 def run_command(command, check=False):
     print(f"Running:  {command}")
     result = subprocess.run(command, shell=True, capture_output=True, text=True)
     if result.returncode != 0:
-        print(f"Stdout: {result.stdout.strip()}")
-        print(f"Stderr: {result.stderr.strip()}")
+        if "Resource already exists" in result.stdout:
+            error("Resource already exists")
+        if "Max attempts reached" in result.stdout:
+            error("Max attempts reached. App ID is not ready.")
         if check:
             sys.exit(1)
         return None
@@ -45,7 +47,8 @@ def check_appid_status(appid_name):
         
         print(f"Attempt {attempt}: Current status of {appid_name}: {status}")
         if status and (status.lower() == "ready" or status.lower() == "available"):
-            break
+            return
+
         if attempt == max_attempts:
             error(f"Max attempts reached. {appid_name} is not ready.")
         
