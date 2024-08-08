@@ -9,11 +9,9 @@ def error(message):
     sys.exit(1)
 
 def run_command(command, check=False):
-    print(f"Running command: {command}")
+    print(f"Running:  {command}")
     result = subprocess.run(command, shell=True, capture_output=True, text=True)
     if result.returncode != 0:
-        print(f"Error running command: {command}")
-        print(f"Return code: {result.returncode}")
         print(f"Stdout: {result.stdout.strip()}")
         print(f"Stderr: {result.stderr.strip()}")
         if check:
