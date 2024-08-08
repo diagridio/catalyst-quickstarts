@@ -12,13 +12,9 @@ def run_command(command, check=False):
         print(f"Return code: {result.returncode}")
         print(f"Stdout: {result.stdout.strip()}")
         print(f"Stderr: {result.stderr.strip()}")
-        if "resource already exists" in result.stdout.lower() or "resource already exists" in result.stderr.lower():
-            print(f"Skipping error: {result.stderr.strip() or result.stdout.strip()}")
-            return result.stdout.strip()
-        else:
-            if check:
-                sys.exit(1)
-            return None
+        if check:
+            sys.exit(1)
+        return None
     return result.stdout.strip()
 
 def check_python_installed():
