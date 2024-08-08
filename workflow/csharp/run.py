@@ -4,6 +4,10 @@ import sys
 import time
 import argparse
 
+def error(message):
+    print(f"Error: {message}")
+    sys.exit(1)
+
 def run_command(command, check=False):
     print(f"Running command: {command}")
     result = subprocess.run(command, shell=True, capture_output=True, text=True)
@@ -20,18 +24,15 @@ def run_command(command, check=False):
 def check_dotnet_installed():
     version_check = run_command("dotnet --version")
     if version_check is None:
-        print("Error: .NET SDK must be installed to run this script.")
-        sys.exit(1)
+        error("Error: .NET SDK must be installed to run this script.")
 
     try:
         version_parts = version_check.strip().split('.')
         major_version = int(version_parts[0])
         if major_version < 8:
-            print(f"Error: .NET SDK version 8 or higher is required. Found version: {version_check.strip()}")
-            sys.exit(1)
+            error(f"Error: .NET SDK version 8 or higher is required. Found version: {version_check.strip()}")
     except (IndexError, ValueError):
-        print(f"Error: Unable to determine .NET SDK version from output: {version_check.strip()}")
-        sys.exit(1)
+        error(f"Error: Unable to determine .NET SDK version from output: {version_check.strip()}")
 
     print(f".NET SDK version: {version_check.strip()}")
 
@@ -42,8 +43,7 @@ def check_appid_status(appid_name):
     while attempt <= max_attempts:
         status_output = run_command(f"diagrid appid get {appid_name}")
         if status_output is None:
-            print(f"Failed to get status for {appid_name}")
-            sys.exit(1)
+            error(f"Failed to get status for {appid_name}")
         
         status_lines = status_output.split('\n')
         status = None
@@ -56,8 +56,7 @@ def check_appid_status(appid_name):
         if status and (status.lower() == "ready" or status.lower() == "available"):
             break
         if attempt == max_attempts:
-            print(f"Max attempts reached. {appid_name} is not ready.")
-            sys.exit(1)
+            error(f"Max attempts reached. {appid_name} is not ready.")
         
         print("Waiting for project subresource status to become ready...")
         time.sleep(10)
@@ -67,8 +66,7 @@ def scaffold_and_update_config(config_file):
     print("Scaffolding config file...")
     scaffold_output = run_command("diagrid dev scaffold", check=True)
     if scaffold_output is None:
-        print("Failed to scaffold the config file.")
-        sys.exit(1)
+        error("Failed to scaffold the config file.")
 
     # Create and activate a virtual environment
     env_name = "diagrid-venv"
@@ -129,8 +127,7 @@ def main():
             os.remove(config_file)
             print(f"Deleted existing config file: {config_file}")
         except Exception as e:
-            print(f"Error deleting file {config_file}: {e}")
-            sys.exit(1)
+            error(f"Error deleting file {config_file}: {e}")
 
     print("Scaffolding and updating config file...")
     scaffold_and_update_config(config_file)
