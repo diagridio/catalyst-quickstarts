@@ -42,7 +42,7 @@ def check_js_installed():
         spinner.ok("✅")
 
 
-def check_appid_status(appid_name):
+def check_appid_status(project_name, appid_name):
     max_attempts = 8
     attempt = 1
     last_status = None
@@ -50,7 +50,7 @@ def check_appid_status(appid_name):
     waiting_msg = f"Waiting for App ID {appid_name} to get ready..."
     with yaspin(Spinners.dots, text=waiting_msg) as spinner:
         while attempt <= max_attempts:
-            status_output = run_command(f"diagrid appid get {appid_name}")
+            status_output = run_command(f"diagrid appid get {appid_name} -p {project_name}")
 
             if status_output is None:
                 # Update and print the spinner text with attempt count
@@ -149,19 +149,7 @@ def main():
                 print(f"{e.stderr}")
             sys.exit(1)
 
-    check_appid_status("orderapp")
-
-    # Check if the dev file already exists and remove it if it does
-    if os.path.isfile(config_file):
-        print(f"Existing dev config file found: {config_file}")
-        try:
-            os.remove(config_file)
-            print(f"Deleted existing config file: {config_file}")
-        except Exception as e:
-            with yaspin(text=f"Error deleting file {config_file}") as spinner:
-                error(spinner, f"Error deleting file {config_file}: {e}")
-
-    scaffold_and_update_config(config_file)
+    check_appid_status(project_name, "orderapp")
 
     print("Setting default project...")
     with yaspin(text="") as spinner:
@@ -176,6 +164,20 @@ def main():
             if e.stderr:
                 print(f"{e.stderr}")
             sys.exit(1)
+
+    # Check if the dev file already exists and remove it if it does
+    if os.path.isfile(config_file):
+        print(f"Existing dev config file found: {config_file}")
+        try:
+            os.remove(config_file)
+            print(f"Deleted existing config file: {config_file}")
+        except Exception as e:
+            with yaspin(text=f"Error deleting file {config_file}") as spinner:
+                error(spinner, f"Error deleting file {config_file}: {e}")
+
+    scaffold_and_update_config(config_file)
+
+
 
 
 if __name__ == "__main__":
