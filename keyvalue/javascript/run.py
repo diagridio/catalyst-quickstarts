@@ -41,8 +41,8 @@ def check_appid_status(appid_name):
             status_output = run_command(f"diagrid appid get {appid_name}")
             
             if status_output is None:
-                spinner.fail("❌")
-                error(spinner, f"Failed to get status for {appid_name}")
+                spinner.fail("❌ Failed to get status for {appid_name}")
+                sys.exit(1)
             
             # Use the print to flush the output here so thet it won't get stuck 
             print(f"Running attempt {attempt}/{max_attempts}")
@@ -63,8 +63,8 @@ def check_appid_status(appid_name):
             time.sleep(10)
             attempt += 1
 
-    spinner.fail("❌")
-    error(spinner, f"Max attempts reached. {appid_name} is not ready. Final status: {last_status}")
+    spinner.fail(f"❌ Max attempts reached. {appid_name} is not ready. Final status: {last_status}")
+    sys.exit(1)
 
 def scaffold_and_update_config(config_file):
     with yaspin(text="Scaffolding and updating config file...") as spinner:
