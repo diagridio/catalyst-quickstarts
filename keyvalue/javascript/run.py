@@ -36,7 +36,8 @@ def check_appid_status(appid_name):
     attempt = 1
     last_status = None
 
-    with yaspin(Spinners.dots, text=f"Waiting for App ID {appid_name} to get ready...") as spinner:
+    waiting_msg = f"Waiting for App ID {appid_name} to get ready..."
+    with yaspin(Spinners.dots, text=waiting_msg) as spinner:
         while attempt <= max_attempts:
             status_output = run_command(f"diagrid appid get {appid_name}")
             
@@ -45,7 +46,7 @@ def check_appid_status(appid_name):
                 sys.exit(1)
             
             # Use the print to flush the output here so thet it won't get stuck 
-            print(f"Running attempt {attempt}/{max_attempts}")
+            spinner.text = f"{waiting_msg} ({attempt}/{max_attempts})"
             
             status_lines = status_output.split('\n')
             status = None
