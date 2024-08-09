@@ -23,10 +23,13 @@ def run_command(command, check=False):
     
     if result.returncode != 0:
         if check:
-            raise subprocess.CalledProcessError(result.returncode, command)
+            raise subprocess.CalledProcessError(
+                result.returncode, command, output=result.stdout, stderr=result.stderr
+            )
         return None
 
     return result.stdout.strip()
+
 
 def check_js_installed():
     with yaspin(text="Checking JavaScript dependencies...") as spinner:
@@ -125,9 +128,12 @@ def main():
             spinner.ok("✅ Project created successfully")
         except subprocess.CalledProcessError as e:
             spinner.fail("❌ Failed to create project")
-            print(e)
+            print(f"Error: {e}")
+            if e.output:
+                print(f"{e.output}")
+            if e.stderr:
+                print(f"{e.stderr}")
             sys.exit(1)
-
 
     print("Creating App ID orderapp...")
     with yaspin(text="") as spinner:
@@ -136,7 +142,11 @@ def main():
             spinner.ok("✅ App ID orderapp created successfully")
         except subprocess.CalledProcessError as e:
             spinner.fail("❌ Failed to create App ID orderapp")
-            print(e)
+            print(f"Error: {e}")
+            if e.output:
+                print(f"{e.output}")
+            if e.stderr:
+                print(f"{e.stderr}")
             sys.exit(1)
 
     check_appid_status("orderapp")
@@ -160,10 +170,13 @@ def main():
             spinner.ok("✅ Default project set successfully")
         except subprocess.CalledProcessError as e:
             spinner.fail("❌ Failed to set default project")
-            print(e)
+            print(f"Error: {e}")
+            if e.output:
+                print(f"{e.output}")
+            if e.stderr:
+                print(f"{e.stderr}")
             sys.exit(1)
 
 
 if __name__ == "__main__":
     main()
-
