@@ -6,6 +6,13 @@ import argparse
 from yaspin import yaspin
 from yaspin.spinners import Spinners
 
+NODEJS_INSTRUCTIONS = """
+Node.js and npm must be installed to run this script. Full instructions can
+be found on the Node.js web site:
+
+  https://nodejs.org/en/download
+"""
+
 def error(spinner, message):
     spinner.fail("❌")
     print(f"Error: {message}", file=sys.stderr)
@@ -26,7 +33,7 @@ def check_js_installed():
         node_check = run_command("node -v")
         npm_check = run_command("npm -v")
         if node_check is None or npm_check is None:
-            error(spinner, "Error: Node.js and npm must be installed to run this script.")
+            error(spinner, NODEJS_INSTRUCTIONS)
         print(f"Node.js version: {node_check.strip()}")
         print(f"npm version: {npm_check.strip()}")
         spinner.ok("✅")
