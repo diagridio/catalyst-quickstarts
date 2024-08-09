@@ -38,8 +38,9 @@ def check_js_installed():
         print(f"npm version: {npm_check.strip()}")
         spinner.ok("✅")
 
+
 def check_appid_status(appid_name):
-    max_attempts = 8
+    max_attempts = 5
     attempt = 1
     last_status = None
 
@@ -47,14 +48,11 @@ def check_appid_status(appid_name):
     with yaspin(Spinners.dots, text=waiting_msg) as spinner:
         while attempt <= max_attempts:
             status_output = run_command(f"diagrid appid get {appid_name}")
-            
+
             if status_output is None:
                 spinner.fail("❌ Failed to get status for {appid_name}")
                 sys.exit(1)
-            
-            # Use the print to flush the output here so thet it won't get stuck 
-            spinner.text = f"{waiting_msg} ({attempt}/{max_attempts})"
-            
+
             status_lines = status_output.split('\n')
             status = None
             for line in status_lines:
@@ -62,17 +60,19 @@ def check_appid_status(appid_name):
                     status = line.split('Status:')[1].strip()
                     last_status = status
                     break
-            
+
+            # Update and print the spinner text with attempt count
+            spinner.write(f"{waiting_msg} (Attempt {attempt}/{max_attempts})\n")
+
             if status and (status.lower() == "ready" or status.lower() == "available"):
                 spinner.ok(f"✅ App ID {appid_name} is ready")
-                return
+                return 
 
-            spinner.text = f"Waiting for App ID {appid_name} to get ready..."
             time.sleep(10)
             attempt += 1
 
-    spinner.fail(f"❌ Max attempts reached. {appid_name} is not ready. Final status: {last_status}")
-    sys.exit(1)
+        spinner.fail(f"❌ Max attempts reached. {appid_name} is not ready. Final status: {last_status}")
+        sys.exit(1)
 
 def scaffold_and_update_config(config_file):
     with yaspin(text="Scaffolding and updating config file...") as spinner:
@@ -116,14 +116,26 @@ def main():
 
     check_js_installed()
     
-    with yaspin(text="Creating project...") as spinner:
-        run_command(f"diagrid project create {project_name} --deploy-managed-kv")
+    print("Creating project...")
+    with yaspin(text="") as spinner:
+        try:
+            run_command(f"diagrid project create {project_name} --deploy-managed-kv", check=True)
+            spinner.ok("✅ Project created successfully")
+        except subprocess.CalledProcessError as e:
+            spinner.fail("❌ Failed to create project")
+            print(e)
+            sys.exit(1)
 
-    with yaspin(text="Setting default project...") as spinner:
-        run_command(f"diagrid project use {project_name}", check=True)
 
-    with yaspin(text="Creating App ID orderapp...") as spinner:
-        run_command("diagrid appid create orderapp", check=True)
+    print("Creating App ID orderapp...")
+    with yaspin(text="") as spinner:
+        try:
+            run_command(f"diagrid appid create -p {project_name} orderapp", check=True)
+            spinner.ok("✅ App ID orderapp created successfully")
+        except subprocess.CalledProcessError as e:
+            spinner.fail("❌ Failed to create App ID orderapp")
+            print(e)
+            sys.exit(1)
 
     check_appid_status("orderapp")
 
@@ -138,6 +150,17 @@ def main():
                 error(spinner, f"Error deleting file {config_file}: {e}")
 
     scaffold_and_update_config(config_file)
+
+    print("Setting default project...")
+    with yaspin(text="") as spinner:
+        try:
+            run_command(f"diagrid project use {project_name}", check=True)
+            spinner.ok("✅ Default project set successfully")
+        except subprocess.CalledProcessError as e:
+            spinner.fail("❌ Failed to set default project")
+            print(e)
+            sys.exit(1)
+
 
 if __name__ == "__main__":
     main()
