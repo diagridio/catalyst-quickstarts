@@ -53,8 +53,8 @@ def check_appid_status(project_name, appid_name):
             status_output = run_command(f"diagrid appid get {appid_name} -p {project_name}")
 
             if status_output is None:
-                # Update and print the spinner text with attempt count
-                spinner.write(f"{waiting_msg} (Attempt {attempt}/{max_attempts})\n")
+                # Update and print the spinner text
+                spinner.write(f"{waiting_msg}\n")
 
             else:
                 status_lines = status_output.split('\n')
@@ -70,8 +70,8 @@ def check_appid_status(project_name, appid_name):
                     return 
 
                 else:
-                    # Update and print the spinner text with attempt count
-                    spinner.write(f"{waiting_msg} (Attempt {attempt}/{max_attempts})\n")
+                    # Update and print the spinner text
+                    spinner.write(f"{waiting_msg}\n")
 
             time.sleep(10)
             attempt += 1
