@@ -40,7 +40,7 @@ def check_js_installed():
 
 
 def check_appid_status(appid_name):
-    max_attempts = 5
+    max_attempts = 8
     attempt = 1
     last_status = None
 
@@ -50,23 +50,25 @@ def check_appid_status(appid_name):
             status_output = run_command(f"diagrid appid get {appid_name}")
 
             if status_output is None:
-                spinner.fail("❌ Failed to get status for {appid_name}")
-                sys.exit(1)
+                # Update and print the spinner text with attempt count
+                spinner.write(f"{waiting_msg} (Attempt {attempt}/{max_attempts})\n")
 
-            status_lines = status_output.split('\n')
-            status = None
-            for line in status_lines:
-                if 'Status:' in line:
-                    status = line.split('Status:')[1].strip()
-                    last_status = status
-                    break
+            else:
+                status_lines = status_output.split('\n')
+                status = None
+                for line in status_lines:
+                    if 'Status:' in line:
+                        status = line.split('Status:')[1].strip()
+                        last_status = status
+                        break
 
-            # Update and print the spinner text with attempt count
-            spinner.write(f"{waiting_msg} (Attempt {attempt}/{max_attempts})\n")
+                if status and (status.lower() == "ready" or status.lower() == "available"):
+                    spinner.ok(f"✅ App ID {appid_name} is ready")
+                    return 
 
-            if status and (status.lower() == "ready" or status.lower() == "available"):
-                spinner.ok(f"✅ App ID {appid_name} is ready")
-                return 
+                else:
+                    # Update and print the spinner text with attempt count
+                    spinner.write(f"{waiting_msg} (Attempt {attempt}/{max_attempts})\n")
 
             time.sleep(10)
             attempt += 1
