@@ -117,7 +117,6 @@ def main():
     with yaspin(text="Creating App ID orderapp...") as spinner:
         run_command("diagrid appid create orderapp", check=True)
 
-    print("Waiting for App ID orderapp to get ready...")
     check_appid_status("orderapp")
 
     # Check if the dev file already exists and remove it if it does
