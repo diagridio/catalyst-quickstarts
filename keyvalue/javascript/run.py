@@ -101,13 +101,10 @@ def main():
                         help="The name of the project to create/use.")
     parser.add_argument('--config-file', type=str, default=config_file_name,
                        help="The name of the config file to scaffold and use.")
-    parser.add_argument('--is-container', action='store_true',
-                        help="Flag to indicate if the script is running inside a container.")
     args = parser.parse_args()
 
     project_name = args.project_name
     config_file = args.config_file
-    is_container = args.is_container
 
     check_js_installed()
     
