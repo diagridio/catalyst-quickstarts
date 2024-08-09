@@ -32,7 +32,7 @@ def check_js_installed():
         spinner.ok("✅")
 
 def check_appid_status(appid_name):
-    max_attempts = 5
+    max_attempts = 8
     attempt = 1
     last_status = None
 
