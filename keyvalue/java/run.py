@@ -6,7 +6,7 @@ import argparse
 from yaspin import yaspin
 from yaspin.spinners import Spinners
 
-NODEJS_INSTRUCTIONS = """
+JAVA_INSTRUCTIONS = """
 Java 11+ and Apache Maven 3.9.5+ must be installed to run this script. Full instructions can
 be found on the official web sites:
 
