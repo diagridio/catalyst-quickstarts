@@ -3,85 +3,130 @@ import subprocess
 import sys
 import time
 import argparse
+from yaspin import yaspin
+from yaspin.spinners import Spinners
 
-def error(message):
-    print(f"Error: {message}")
+def error(spinner, message):
+    spinner.fail("❌")
+    print(f"Error: {message}", file=sys.stderr)
     sys.exit(1)
 
 def run_command(command, check=False):
-    print(f"Running:  {command}")
     result = subprocess.run(command, shell=True, capture_output=True, text=True)
+    
     if result.returncode != 0:
-        print(f"Stdout: {result.stdout.strip()}")
-        print(f"Stderr: {result.stderr.strip()}")
         if check:
-            sys.exit(1)
+            raise subprocess.CalledProcessError(
+                result.returncode, command, output=result.stdout, stderr=result.stderr
+            )
         return None
+
     return result.stdout.strip()
 
-def check_python_installed():
-    python_check = run_command("python3 --version", check=True)
-    if python_check is None:
-        error("Error: Python 3.11+ must be installed to run this script.")
-    
-    try:
-        version_str = python_check.split()[1]
-        major_version, minor_version = map(int, version_str.split('.')[:2])
-        if major_version < 3 or (major_version == 3 and minor_version < 11):
-            error(f"Error: Python 3.11 or higher is required. Found version: {version_str}")
-    except (IndexError, ValueError):
-        error(f"Error: Unable to determine Python version from output: {python_check.strip()}")
-    
-    print(f"Python version: {version_str}")
 
-def check_appid_status(appid_name):
-    max_attempts = 5
+def create_project(project_name):
+    with yaspin(text="") as spinner:
+        try:
+            run_command(f"diagrid project create {project_name} --deploy-managed-kv", check=True)
+            spinner.ok("✅ Project created successfully")
+        except subprocess.CalledProcessError as e:
+            spinner.fail("❌ Failed to create project")
+            print(f"Error: {e}")
+            if e.output:
+                print(f"{e.output}")
+            if e.stderr:
+                print(f"{e.stderr}")
+            sys.exit(1)
+
+def create_appid(project_name, appid_name):
+    with yaspin(text="") as spinner:
+        try:
+            run_command(f"diagrid appid create -p {project_name} {appid_name}", check=True)
+            spinner.ok(f"✅ App ID {appid_name} created successfully")
+        except subprocess.CalledProcessError as e:
+            spinner.fail(f"❌ Failed to create App ID {appid_name}")
+            print(f"Error: {e}")
+            if e.output:
+                print(f"{e.output}")
+            if e.stderr:
+                print(f"{e.stderr}")
+            sys.exit(1)
+
+
+def check_appid_status(project_name, appid_name):
+    max_attempts = 8
     attempt = 1
+    last_status = None
 
-    while attempt <= max_attempts:
-        status_output = run_command(f"diagrid appid get {appid_name}")
-        if status_output is None:
-            error(f"Failed to get status for {appid_name}")
-        
-        status_lines = status_output.split('\n')
-        status = None
-        for line in status_lines:
-            if 'Status:' in line:
-                status = line.split('Status:')[1].strip()
-                break
-        
-        print(f"Attempt {attempt}: Current status of {appid_name}: {status}")
-        if status and (status.lower() == "ready" or status.lower() == "available"):
-            break
-        if attempt == max_attempts:
-            error(f"Max attempts reached. {appid_name} is not ready.")
-        
-        print("Waiting for project subresource status to become ready...")
-        time.sleep(10)
-        attempt += 1
+    waiting_msg = f"Waiting for App ID {appid_name} to get ready..."
+    with yaspin(Spinners.dots, text=waiting_msg) as spinner:
+        while attempt <= max_attempts:
+            status_output = run_command(f"diagrid appid get {appid_name} -p {project_name}")
+
+            if status_output is None:
+                # Update and print the spinner text
+                spinner.write(f"{waiting_msg}\n")
+
+            else:
+                status_lines = status_output.split('\n')
+                status = None
+                for line in status_lines:
+                    if 'Status:' in line:
+                        status = line.split('Status:')[1].strip()
+                        last_status = status
+                        break
+
+                if status and (status.lower() == "ready" or status.lower() == "available"):
+                    spinner.ok(f"✅ App ID {appid_name} is ready")
+                    return 
+
+                else:
+                    # Update and print the spinner text
+                    spinner.write(f"{waiting_msg}\n")
+
+            time.sleep(10)
+            attempt += 1
+
+        spinner.fail(f"❌ Max attempts reached. {appid_name} is not ready. Final status: {last_status}")
+        sys.exit(1)
+
+def set_default_project(project_name):
+    with yaspin(text="") as spinner:
+        try:
+            run_command(f"diagrid project use {project_name}", check=True)
+            spinner.ok("✅ Default project set successfully")
+        except subprocess.CalledProcessError as e:
+            spinner.fail("❌ Failed to set default project")
+            print(f"Error: {e}")
+            if e.output:
+                print(f"{e.output}")
+            if e.stderr:
+                print(f"{e.stderr}")
+            sys.exit(1)
 
 def scaffold_and_update_config(config_file):
-    print("Scaffolding config file...")
-    scaffold_output = run_command("diagrid dev scaffold", check=True)
-    if scaffold_output is None:
-        error("Failed to scaffold the config file.")
+    with yaspin(text="Scaffolding and updating config file...") as spinner:
+        scaffold_output = run_command("diagrid dev scaffold", check=True)
+        if scaffold_output is None:
+            error(spinner, "Failed to scaffold the config file.")
 
-    # Create and activate a virtual environment
-    env_name = "venv"
-    if os.path.exists(env_name):
-        print(f"Existing virtual environment found: {env_name}")
-        print(f"Deleting existing virtual environment: {env_name}")
-        run_command(f"rm -rf {env_name}", check=True)
+        # Create and activate a virtual environment
+        env_name = "diagrid-venv"
+        if os.path.exists(env_name):
+            print(f"Existing virtual environment found: {env_name}")
+            print(f"Deleting existing virtual environment: {env_name}")
+            run_command(f"rm -rf {env_name}", check=True)
 
-    print(f"Creating virtual environment: {env_name}")
-    run_command(f"python3 -m venv {env_name}", check=True)
+        print(f"Creating virtual environment: {env_name}")
+        run_command(f"python3 -m venv {env_name}", check=True)
 
-    print(f"Installing pyyaml in the virtual environment: {env_name}")
-    run_command(f"./{env_name}/bin/pip install pyyaml", check=True)
+        print(f"Installing pyyaml in the virtual environment: {env_name}")
+        run_command(f"./{env_name}/bin/pip install pyyaml", check=True)
 
-    # Run the Python script to update the dev config file
-    print("Running scaffold.py to update the dev config file...")
-    run_command(f"./{env_name}/bin/python scaffold.py", check=True)
+        # Run the Python script to update the dev config file
+        print("Running scaffold.py to update the dev config file...")
+        run_command(f"./{env_name}/bin/python scaffold.py", check=True)
+        spinner.ok("✅")
 
 def main():
     prj_name = os.getenv('QUICKSTART_PROJECT_NAME')
@@ -94,31 +139,24 @@ def main():
                         help="The name of the project to create/use.")
     parser.add_argument('--config-file', type=str, default=config_file_name,
                        help="The name of the config file to scaffold and use.")
-    parser.add_argument('--is-container', action='store_true',
-                        help="Flag to indicate if the script is running inside a container.")
     args = parser.parse_args()
 
     project_name = args.project_name
     config_file = args.config_file
-    is_container = args.is_container
 
-    print("Checking Python dependencies...")
-    check_python_installed()
-    
     print("Creating project...")
-    run_command(f"diagrid project create {project_name}")
+    create_project(prj_name)
+
+    print("Creating App ID caller...")
+    create_appid(prj_name, "caller")
+    print("Creating App ID target...")
+    create_appid(prj_name, "target")
+
+    check_appid_status(project_name, "caller")
+    check_appid_status(project_name, "target")
 
     print("Setting default project...")
-    run_command(f"diagrid project use {project_name}", check=True)
-
-    print("Creating App ID caller and target...")
-    run_command("diagrid appid create caller", check=True)
-    run_command("diagrid appid create target", check=True)
-
-
-    print("Waiting for App ID caller and target to get ready...")
-    check_appid_status("caller")
-    check_appid_status("target")
+    set_default_project(prj_name)
 
     # Check if the dev file already exists and remove it if it does
     if os.path.isfile(config_file):
@@ -127,10 +165,13 @@ def main():
             os.remove(config_file)
             print(f"Deleted existing config file: {config_file}")
         except Exception as e:
-            error(f"Error deleting file {config_file}: {e}")
+            with yaspin(text=f"Error deleting file {config_file}") as spinner:
+                error(spinner, f"Error deleting file {config_file}: {e}")
 
-    print("Scaffolding and updating config file...")
     scaffold_and_update_config(config_file)
+
+
+
 
 if __name__ == "__main__":
     main()
