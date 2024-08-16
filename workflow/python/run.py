@@ -41,10 +41,10 @@ def create_project(project_name):
 def create_appid(project_name):
     with yaspin(text="") as spinner:
         try:
-            run_command(f"diagrid appid create -p {project_name} orderapp", check=True)
-            spinner.ok("✅ App ID orderapp created successfully")
+            run_command(f"diagrid appid create -p {project_name} workflow-app", check=True)
+            spinner.ok("✅ App ID workflow-app created successfully")
         except subprocess.CalledProcessError as e:
-            spinner.fail("❌ Failed to create App ID orderapp")
+            spinner.fail("❌ Failed to create App ID workflow-app")
             print(f"Error: {e}")
             if e.output:
                 print(f"{e.output}")
