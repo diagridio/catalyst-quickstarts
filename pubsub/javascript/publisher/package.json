@@ -1,19 +1,19 @@
 {
-    "name": "javascript",
-    "version": "1.0.0",
-    "description": "",
-    "main": "index.js",
-    "type": "module",
-    "scripts": {
-        "start": "node --trace-deprecation index.js"
-    },
-    "keywords": [],
-    "author": "",
-    "license": "ISC",
-    "dependencies": {
-        "@dapr/dapr": "^3.2.0",
-        "axios": "^1.5.1",
-        "body-parser": "^1.20.2",
-        "cloudevents": "^8.0.0"
-    }
+  "name": "javascript",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node --trace-deprecation index.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@dapr/dapr": "^3.2.0",
+    "axios": "^1.7.4",
+    "body-parser": "^1.20.2",
+    "cloudevents": "^8.0.0"
+  }
 }
