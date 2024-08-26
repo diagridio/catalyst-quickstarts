@@ -48,6 +48,20 @@ def check_dotnet_installed():
         print(f".NET SDK version: {version_check.strip()}")
         spinner.ok("✅")
 
+def create_project(project_name):
+    with yaspin(text="") as spinner:
+        try:
+            run_command(f"diagrid project create {project_name} --deploy-managed-pubsub", check=True)
+            spinner.ok("✅ Project created successfully")
+        except subprocess.CalledProcessError as e:
+            spinner.fail("❌ Failed to create project")
+            print(f"Error: {e}")
+            if e.output:
+                print(f"{e.output}")
+            if e.stderr:
+                print(f"{e.stderr}")
+            sys.exit(1)
+
 
 def create_appid(project_name, appid_name):
     with yaspin(text="") as spinner:
