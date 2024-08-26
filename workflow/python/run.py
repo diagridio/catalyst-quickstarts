@@ -27,7 +27,7 @@ def run_command(command, check=False):
 def create_project(project_name):
     with yaspin(text="") as spinner:
         try:
-            run_command(f"diagrid project create {project_name} --deploy-managed-kv", check=True)
+            run_command(f"diagrid project create {project_name} --enable-managed-workflow", check=True)
             spinner.ok("✅ Project created successfully")
         except subprocess.CalledProcessError as e:
             spinner.fail("❌ Failed to create project")
