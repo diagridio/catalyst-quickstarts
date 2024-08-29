@@ -4,7 +4,7 @@ import { DaprClient, CommunicationProtocolEnum} from "@dapr/dapr";
 
 const appPort = process.env.PORT || 5001; 
 const daprApiToken = process.env.DAPR_API_TOKEN || "";
-const kvName = process.env.STATESORE_NAME || "kvstore"; 
+const stateStoreName = process.env.STATESORE_NAME || "kvstore"; 
 
 const app = express()
 
@@ -23,11 +23,11 @@ app.post('/order', async function (req, res) {
     }]
 
   try {
-    await client.state.save(kvName, state);
-    console.log("Order saved successfully: " + req.body.orderId);
+    await client.state.save(stateStoreName, state);
+    console.log("Save state item successful. Order saved: " + req.body.orderId);
     res.sendStatus(200);
   } catch (error) {
-    console.log("Error saving order: " + req.body.orderId);
+    console.log("Error occurred while saving state item: " + req.body.orderId);
     res.status(500).send(error);
   }
 });
@@ -35,11 +35,11 @@ app.post('/order', async function (req, res) {
 app.get('/order/:orderId', async function (req, res) {
   const keyName = "order" + req.params.orderId
   try {
-    const order = await client.state.get(kvName, keyName)
-    console.log("Retrieved order: ", order)
+    const order = await client.state.get(stateStoreName, keyName)
+    console.log("Get state item successful. Order retrieved: ", order)
     res.json(order)
   } catch (error) {
-    console.log("Error retrieving order: " + req.params.orderId);
+    console.log("Error occurred while retrieving state item: " + req.params.orderId);
     res.status(500).send(error);
   }
 });
@@ -47,11 +47,11 @@ app.get('/order/:orderId', async function (req, res) {
 app.delete('/order/:orderId', async function (req, res) {
   const keyName = "order" + req.params.orderId
   try {
-    await client.state.delete(kvName, keyName)
-    console.log("Deleted order: ", req.params.orderId)
+    await client.state.delete(stateStoreName, keyName)
+    console.log("Delete state item successful. Order deleted: ", req.params.orderId)
     res.sendStatus(200);
   } catch (error) {
-    console.log("Error deleting order: " + req.params.orderId);
+    console.log("Error occurred while deleting state item: " + req.params.orderId);
     res.status(500).send(error);
   }
 });
