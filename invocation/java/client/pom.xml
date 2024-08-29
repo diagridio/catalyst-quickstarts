@@ -10,10 +10,10 @@
     <relativePath /> <!-- lookup parent from repository -->
   </parent>
   <groupId>com.service</groupId>
-  <artifactId>Reply</artifactId>
+  <artifactId>client</artifactId>
   <version>0.0.1-SNAPSHOT</version>
-  <name>Reply</name>
-  <description>Diagrid Catalyst Java Reply Quickstart</description>
+  <name>client</name>
+  <description>Catalyst Service Invocation Quickstart: Client </description>
   <properties>
     <java.version>11</java.version>
   </properties>

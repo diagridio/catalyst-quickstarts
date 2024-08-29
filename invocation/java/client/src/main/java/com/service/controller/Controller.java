@@ -33,7 +33,7 @@ public class Controller {
   private static final String DAPR_HTTP_ENDPOINT = System.getenv().getOrDefault("DAPR_HTTP_ENDPOINT",
       "http://localhost");
   private static final String DAPR_API_TOKEN = System.getenv().getOrDefault("DAPR_API_TOKEN", "");
-  private static final String INVOKE_TARGET_APPID = System.getenv().getOrDefault("INVOKE_APPID", "target");
+  private static final String INVOKE_APPID = System.getenv().getOrDefault("INVOKE_APPID", "target");
 
   @PostConstruct
   public void init() {
@@ -45,7 +45,7 @@ public class Controller {
   }
 
   // Invoke another service
-  @PostMapping(path = "/invoke/orders", consumes = MediaType.ALL_VALUE)
+  @PostMapping(path = "/order", consumes = MediaType.ALL_VALUE)
   public Mono<ResponseEntity> request(@RequestBody(required = true) Order order) {
     return Mono.fromSupplier(() -> {
       try {
@@ -54,15 +54,15 @@ public class Controller {
 
         HttpRequest request = HttpRequest.newBuilder()
             .POST(HttpRequest.BodyPublishers.ofString(obj.toString()))
-            .uri(URI.create(DAPR_HTTP_ENDPOINT + "/invoke/neworders"))
+            .uri(URI.create(DAPR_HTTP_ENDPOINT + "/neworder"))
             .header("dapr-api-token", DAPR_API_TOKEN)
             .header("Content-Type", "application/json")
-            .header("dapr-app-id", INVOKE_TARGET_APPID)
+            .header("dapr-app-id", INVOKE_APPID)
             .build();
 
         HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
         JSONObject jsonObject = new JSONObject(response.body());
-        logger.info("Invoke Successful. Reply received: " + jsonObject.getInt("orderId"));
+        logger.info("Invoke Successful. Response received: " + jsonObject.getInt("orderId"));
         return ResponseEntity.ok("SUCCESS");
       } catch (Exception e) {
         logger.error("Error occurred while invoking App ID. " + e);
