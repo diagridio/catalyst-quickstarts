@@ -25,7 +25,7 @@ async def publish_orders(order: Order):
                 data=order.model_dump_json(),
                 data_content_type='application/json',
             )
-            logging.info('Publish Successful. Order published: %s' %
+            logging.info('Publish successful. Order published: %s' %
                          order.orderId)
             return {'success': True}
         except grpc.RpcError as err:
