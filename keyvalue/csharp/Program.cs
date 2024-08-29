@@ -15,16 +15,15 @@ var KVStoreName = Environment.GetEnvironmentVariable("KVSTORE_NAME") ?? "kvstore
 // Save state 
 app.MapPost("/order", async (Order order) =>
 {
-    // Store state in managed diagrid state store 
     try
     {
         await client.SaveStateAsync(KVStoreName, order.OrderId.ToString(), order);
-        app.Logger.LogInformation("Save KV Successful. Order saved: {order}", order.OrderId);
+        app.Logger.LogInformation("Save state item successful. Order saved: {order}", order.OrderId);
         return Results.StatusCode(200);
     }
     catch (Exception ex)
     {
-        app.Logger.LogError("Error occurred while saving order: {orderId}. Exception: {exception}", order.OrderId, ex.InnerException);
+        app.Logger.LogError("Error occurred while saving state item: {orderId}. Exception: {exception}", order.OrderId, ex.InnerException);
         return Results.StatusCode(500);
     }
 });
@@ -39,18 +38,18 @@ app.MapGet("/order/{orderId}", async ([FromRoute] int orderId) =>
         var kv = await client.GetStateAsync<Order>(KVStoreName, orderId.ToString());
         if (kv != null)
         {
-            app.Logger.LogInformation("Get KV Successful. Order retrieved: {order}", orderId.ToString());
+            app.Logger.LogInformation("Get state item successful. Order retrieved: {order}", orderId.ToString());
             return Results.Ok(kv);
         }
         else
         {
-            app.Logger.LogInformation("Key {key} does not exist", orderId.ToString());
+            app.Logger.LogInformation("State item with key {key} does not exist", orderId.ToString());
             return Results.StatusCode(204);
         }
     }
     catch (Exception ex)
     {
-        app.Logger.LogError("Error occurred while retrieving order: {order}. Exception: {exception}", orderId.ToString(), ex.InnerException);
+        app.Logger.LogError("Error occurred while retrieving state item: {order}. Exception: {exception}", orderId.ToString(), ex.InnerException);
         return Results.StatusCode(500);
     }
 
@@ -63,12 +62,12 @@ app.MapDelete("/order/{orderId}", async ([FromRoute] int orderId) =>
     try
     {
         await client.DeleteStateAsync(KVStoreName, orderId.ToString());
-        app.Logger.LogInformation("Delete KV Successful. Order deleted: {order}", orderId.ToString());
+        app.Logger.LogInformation("Delete state item successful. Order deleted: {order}", orderId.ToString());
         return Results.StatusCode(200);
     }
     catch (Exception ex)
     {
-        app.Logger.LogError("Error occurred while deleting order: {order}. Exception: {exception}", orderId.ToString(), ex.InnerException);
+        app.Logger.LogError("Error occurred while deleting state item: {order}. Exception: {exception}", orderId.ToString(), ex.InnerException);
         return Results.StatusCode(500);
     }
 });
