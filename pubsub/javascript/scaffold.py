@@ -13,7 +13,6 @@ for app in config_data['apps']:
         app['workDir'] = './subscriber'
         app['env']['PORT'] = 5002
     elif app['appId'] == 'publisher':
-        app['appPort'] = 5001
         app['workDir'] = './publisher'
         app['env']['PORT'] = 5001
 
@@ -28,6 +27,6 @@ updated_data = {
 with open(config_file, 'w') as file:
     yaml.safe_dump(updated_data, file, default_flow_style=False, sort_keys=False)
 
-print("YAML file has been updated.")
+print("Dev config file has been updated")
 
 

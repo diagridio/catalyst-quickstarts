@@ -12,7 +12,7 @@ const client = new DaprClient({daprApiToken: daprApiToken, communicationProtocol
 
 app.use(bodyParser.json({ type: '*/*' })) 
 
-app.post('/pubsub/neworders', (req, res) => {
+app.post('/neworder', (req, res) => {
   console.log("Order received: " + JSON.stringify(req.body.data))
   res.sendStatus(200);
 });
