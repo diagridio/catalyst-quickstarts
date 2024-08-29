@@ -6,10 +6,8 @@ import argparse
 from yaspin import yaspin
 from yaspin.spinners import Spinners
 
-NODEJS_INSTRUCTIONS = """
-Node.js and npm must be installed for quickstart:
-  https://nodejs.org/en/download
-"""
+NODEJS_INSTRUCTIONS = """ Node.js and npm must be installed for quickstart: https://nodejs.org/en/download """
+
 
 def error(spinner, message):
     spinner.fail("❌")
