@@ -16,7 +16,7 @@ if (process.env.PORT) {
 }
 
 app.post('/neworder', (req, res) => {
-  console.log("Request received: %s", JSON.stringify(req.body))
+  console.log("Invocation received with data: %s", JSON.stringify(req.body))
   res.sendStatus(200);
 });
 

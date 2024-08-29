@@ -4,10 +4,9 @@ import axios from "axios";
 
 const daprApiToken = process.env.DAPR_API_TOKEN || "";
 const daprHttpEndpoint = process.env.DAPR_HTTP_ENDPOINT || "http://localhost";
-const invokeAppID = process.env.INVOKE_APPID || "target";
+const invokeAppID = process.env.INVOKE_APPID || "server";
 
 const app = express()
-
 
 app.use(bodyParser.json({ type: '*/*' }))
 
@@ -31,7 +30,7 @@ app.post('/order', async function(req, res) {
   let order = req.body
 
   try {
-    await axios.post(`${daprHttpEndpoint}/v1.0/invoke/neworder`, order, config);
+    await axios.post(`${daprHttpEndpoint}/neworder`, order, config);
     console.log("Invocation successful with status code: %d ", res.statusCode);
     res.sendStatus(200);
   } catch (error) {
