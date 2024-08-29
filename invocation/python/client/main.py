@@ -1,4 +1,3 @@
-from dapr.clients import DaprClient
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import logging
@@ -10,14 +9,13 @@ app = FastAPI()
 
 logging.basicConfig(level=logging.INFO)
 
-
 class Order(BaseModel):
     orderId: int
 
 # Set up required inputs for http client to perform service invocation
 base_url = os.getenv('DAPR_HTTP_ENDPOINT', 'http://localhost')
 dapr_api_token = os.getenv('DAPR_API_TOKEN', '')
-invoke_appid = os.getenv('INVOKE_APPID', '')
+invoke_appid = os.getenv('INVOKE_APPID', 'server')
 
 @app.post('/order')
 async def send_order(order: Order):
@@ -36,7 +34,7 @@ async def send_order(order: Order):
             return str(order)
         else:
             logging.error(
-                'Error occurred while invoking %s: %s' % invoke_appid, result.reason)
+                'Error occurred while invoking App ID: %s' % result.reason)
             raise HTTPException(status_code=500, detail=result.reason)
 
     except grpc.RpcError as err:
