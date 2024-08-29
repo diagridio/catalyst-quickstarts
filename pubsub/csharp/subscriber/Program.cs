@@ -13,7 +13,7 @@ app.UseCloudEvents();
 #region Subscription Target Endpoint
 
 // Subscribe to messages 
-app.MapPost("/pubsub/neworders", (Order order) =>
+app.MapPost("/neworder", (Order order) =>
 {
     app.Logger.LogInformation("Order received: {orderId}", order.OrderId);
     return Results.Ok(order);
