@@ -10,9 +10,9 @@ var app = builder.Build();
 
 var logger = app.Logger;
 
-app.MapPost("/invoke/neworders", (Order order) =>
+app.MapPost("/neworder", (Order order) =>
 {
-    logger.LogInformation("Request received: {OrderId}", order.OrderId);
+    logger.LogInformation("Invocation received with data: {OrderId}", order.OrderId);
     return Results.Ok(order);
 });
 

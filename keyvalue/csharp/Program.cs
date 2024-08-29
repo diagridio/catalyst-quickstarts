@@ -13,7 +13,7 @@ var client = new DaprClientBuilder().Build();
 var KVStoreName = Environment.GetEnvironmentVariable("KVSTORE_NAME") ?? "kvstore";
 
 // Save state 
-app.MapPost("/kv/orders", async (Order order) =>
+app.MapPost("/order", async (Order order) =>
 {
     // Store state in managed diagrid state store 
     try
@@ -31,7 +31,7 @@ app.MapPost("/kv/orders", async (Order order) =>
 
 
 //Retrieve state
-app.MapGet("/kv/orders/{orderId}", async ([FromRoute] int orderId) =>
+app.MapGet("/order/{orderId}", async ([FromRoute] int orderId) =>
 {
     // Store state in managed diagrid state store 
     try
@@ -57,7 +57,7 @@ app.MapGet("/kv/orders/{orderId}", async ([FromRoute] int orderId) =>
 });
 
 // Delete state 
-app.MapDelete("/kv/orders/{orderId}", async ([FromRoute] int orderId) =>
+app.MapDelete("/order/{orderId}", async ([FromRoute] int orderId) =>
 {
     // Store state in managed diagrid state store 
     try

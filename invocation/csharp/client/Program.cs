@@ -10,20 +10,19 @@ var app = builder.Build();
 var client = new DaprClientBuilder().Build();
 
 var DaprApiToken = Environment.GetEnvironmentVariable("DAPR_API_TOKEN") ?? "";
-var InvokeTargetAppID = Environment.GetEnvironmentVariable("INVOKE_APPID") ?? "target";
+var InvokeAppId = Environment.GetEnvironmentVariable("INVOKE_APPID") ?? "server";
 
-// Invoke another service
-app.MapPost("/invoke/orders", async (Order order) =>
+
+app.MapPost("/order", async (Order order) =>
 {
     try
     {
-        // Create invoke client for the "target" App ID
-        var httpClient = DaprClient.CreateInvokeHttpClient(InvokeTargetAppID);
+        var httpClient = DaprClient.CreateInvokeHttpClient(InvokeAppId);
         httpClient.DefaultRequestHeaders.Add("dapr-api-token", DaprApiToken);
         var orderJson = JsonSerializer.Serialize(order);
         var content = new StringContent(orderJson, Encoding.UTF8, "application/json");
 
-        var response = await httpClient.PostAsync("/invoke/neworders", content);
+        var response = await httpClient.PostAsync("/neworder", content);
 
         if (response.IsSuccessStatusCode)
         {
@@ -38,7 +37,7 @@ app.MapPost("/invoke/orders", async (Order order) =>
     }
     catch (Exception ex)
     {
-        app.Logger.LogError("Error occurred while invoking App ID: {exception}", ex.InnerException);
+        app.Logger.LogError("Error occurred while invoking {appID}: {exception}", InvokeAppId, ex.InnerException);
         return Results.StatusCode(500);
     }
 });
