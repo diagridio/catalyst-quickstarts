@@ -4,7 +4,7 @@ import axios from "axios";
 
 const daprApiToken = process.env.DAPR_API_TOKEN || "";
 const daprHttpEndpoint = process.env.DAPR_HTTP_ENDPOINT || "http://localhost";
-const invokeTargetAppID = process.env.INVOKE_APPID || "target";
+const invokeAppID = process.env.INVOKE_APPID || "target";
 
 const app = express()
 
@@ -21,21 +21,21 @@ if (process.env.PORT) {
   console.warn("Note: Using the default port for multiple apps will cause port conflicts.")
 }
 
-app.post('/invoke/orders', async function(req, res) {
+app.post('/order', async function(req, res) {
   let config = {
     headers: {
-      "dapr-app-id": invokeTargetAppID,
+      "dapr-app-id": invokeAppID,
       "dapr-api-token": daprApiToken
     }
   };
   let order = req.body
 
   try {
-    await axios.post(`${daprHttpEndpoint}/invoke/neworders`, order, config);
+    await axios.post(`${daprHttpEndpoint}/v1.0/invoke/neworder`, order, config);
     console.log("Invocation successful with status code: %d ", res.statusCode);
     res.sendStatus(200);
   } catch (error) {
-    console.log("Error invoking app at " + `${daprHttpEndpoint}/invoke/neworders`);
+    console.log("Error invoking app at " + `${daprHttpEndpoint}/neworder`);
     res.status(500).send(error);
   }
 

@@ -15,7 +15,7 @@ if (process.env.PORT) {
   console.warn("Note: Using the default port for multiple apps will cause port conflicts.")
 }
 
-app.post('/invoke/neworders', (req, res) => {
+app.post('/neworder', (req, res) => {
   console.log("Request received: %s", JSON.stringify(req.body))
   res.sendStatus(200);
 });

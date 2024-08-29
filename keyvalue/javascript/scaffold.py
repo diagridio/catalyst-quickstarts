@@ -14,6 +14,6 @@ for app in config_data['apps']:
 with open(config_file, 'w') as file:
     yaml.safe_dump(config_data, file, default_flow_style=False, sort_keys=False)
 
-print("Dev config file has been updated.")
+print("Dev config file has been updated")
 
 

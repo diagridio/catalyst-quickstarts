@@ -1,0 +1,31 @@
+project: js-invoke-1
+apps:
+- appId: client
+  appPort: 0
+  env:
+    DAPR_API_TOKEN: diagrid://v1/778474a8-81cf-4f66-ab5a-247f500e6cc2/384874/js-invoke-1/client/68f6e617-120e-48be-8f1d-10c8acd567f9
+    DAPR_APP_ID: client
+    DAPR_CLIENT_TIMEOUT_SECONDS: 10
+    DAPR_GRPC_ENDPOINT: https://grpc-prj384874.api.dev.cloud.diagrid.io:443
+    DAPR_HTTP_ENDPOINT: https://http-prj384874.api.dev.cloud.diagrid.io
+    PORT: 5001
+  workDir: ./client
+  command:
+  - npm
+  - run
+  - start
+- appId: server
+  appPort: 5002
+  env:
+    DAPR_API_TOKEN: diagrid://v1/778474a8-81cf-4f66-ab5a-247f500e6cc2/384874/js-invoke-1/server/86f0045c-4746-4655-9526-c30b59ed4879
+    DAPR_APP_ID: server
+    DAPR_CLIENT_TIMEOUT_SECONDS: 10
+    DAPR_GRPC_ENDPOINT: https://grpc-prj384874.api.dev.cloud.diagrid.io:443
+    DAPR_HTTP_ENDPOINT: https://http-prj384874.api.dev.cloud.diagrid.io
+    PORT: 5002
+  workDir: ./server
+  command:
+  - npm
+  - run
+  - start
+appLogDestination: ''
