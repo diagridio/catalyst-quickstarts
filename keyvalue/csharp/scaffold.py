@@ -6,7 +6,7 @@ with open(config_file, 'r') as file:
     config_data = yaml.load(file, Loader=yaml.FullLoader)
 
 for app in config_data['apps']:
-    if app['appId'] == 'orderapp':
+    if app['appId'] == 'order-app':
         app['workDir'] = '.'
         app['command'] = ['dotnet', 'run']
         app['env']['PORT'] = 5001
