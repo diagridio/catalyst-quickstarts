@@ -11,11 +11,10 @@ for app in config_data['apps']:
     if app['appId'] == 'server':
         app['appPort'] = 5002
         app['workDir'] = './server'
-        app['command'] = ['uvicorn', 'main:app', '--host', '0.0.0.0', '--port', '5002']
+        app['command'] = ['uvicorn', 'main:app', '--host', '127.0.0.1', '--port', '5002']
     elif app['appId'] == 'client':
-        app['appPort'] = 5001
         app['workDir'] = './client'
-        app['command'] = ['uvicorn', 'main:app', '--host', '0.0.0.0', '--port', '5001']
+        app['command'] = ['uvicorn', 'main:app', '--host', '127.0.0.1', '--port', '5001']
 
 
 updated_data = {
