@@ -9,10 +9,10 @@
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
 	<groupId>com.service</groupId>
-	<artifactId>Subscriber</artifactId>
+	<artifactId>subscriber</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name>Subscriber</name>
-	<description>Diagrid Catalyst Java Subscriber Quickstart</description>
+	<name>subscriber</name>
+	<description>Catalyst Pubsub Quickstart: Subscriber</description>
 	<properties>
 		<java.version>11</java.version>
 	</properties>

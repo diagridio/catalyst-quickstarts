@@ -19,8 +19,7 @@ public class Controller {
     
     private static final Logger logger = LoggerFactory.getLogger(Controller.class);
 
-    // Subscribe to messages
-    @PostMapping(path = "/pubsub/neworders", consumes = MediaType.ALL_VALUE)
+    @PostMapping(path = "/neworder", consumes = MediaType.ALL_VALUE)
     public Mono<ResponseEntity> subscribe(@RequestBody(required = false) CloudEvent<Order> cloudEvent) {
         return Mono.fromSupplier(() -> {
             try {

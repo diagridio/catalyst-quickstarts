@@ -30,14 +30,14 @@ public class Controller {
     }
 
     // Publish messages 
-    @PostMapping(path = "/pubsub/orders", consumes = MediaType.ALL_VALUE)
+    @PostMapping(path = "/order", consumes = MediaType.ALL_VALUE)
     public Mono<ResponseEntity> publish(@RequestBody(required = true) Order order) {
         return Mono.fromSupplier(() -> {
 
             // Publish an event/message using Dapr PubSub
             try {
                 client.publishEvent(PUBSUB_NAME, "orders", order).block();
-                logger.info("Publish Successful. Order published: " + order.getOrderId());
+                logger.info("Publish successful. Order published: " + order.getOrderId());
                 return ResponseEntity.ok("SUCCESS");
             } catch (Exception e) {
                 logger.error("Error occurred while publishing order: " + order.getOrderId());
