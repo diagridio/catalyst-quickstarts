@@ -13,14 +13,15 @@ class Order(BaseModel):
     orderId: int
 
 pubsub_name = os.getenv('PUBSUB_NAME', 'pubsub')
+topic_name = os.getenv('TOPIC_NAME', 'orders')
 
-@app.post('/pubsub/orders')
+@app.post('/order')
 async def publish_orders(order: Order):
     with DaprClient() as d:
         try:
             result = d.publish_event(
                 pubsub_name=pubsub_name,
-                topic_name='orders',
+                topic_name=topic_name,
                 data=order.model_dump_json(),
                 data_content_type='application/json',
             )
@@ -33,4 +34,4 @@ async def publish_orders(order: Order):
 
 @app.get('/')
 async def read_root():
-    return {"message": "Publisher is running"}
+    return {"message": "Publisher app is running"}

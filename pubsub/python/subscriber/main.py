@@ -23,7 +23,7 @@ class CloudEvent(BaseModel):
     type: str
     traceid: str
 
-@app.post('/pubsub/neworders')
+@app.post('/neworder')
 def consume_orders(event: CloudEvent):
     order_id = event.data.get('orderId') or event.data.get('key')
     if order_id:
@@ -35,4 +35,4 @@ def consume_orders(event: CloudEvent):
 
 @app.get('/')
 async def read_root():
-    return {"message": "Subscriber is running"}
+    return {"message": "Subscriber app is running"}

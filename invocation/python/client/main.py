@@ -17,15 +17,15 @@ class Order(BaseModel):
 # Set up required inputs for http client to perform service invocation
 base_url = os.getenv('DAPR_HTTP_ENDPOINT', 'http://localhost')
 dapr_api_token = os.getenv('DAPR_API_TOKEN', '')
-invoke_target_appid = os.getenv('INVOKE_APPID', 'target')
+invoke_appid = os.getenv('INVOKE_APPID', '')
 
-@app.post('/invoke/orders')
+@app.post('/order')
 async def send_order(order: Order):
-    headers = {'dapr-app-id': invoke_target_appid, 'dapr-api-token': dapr_api_token,
+    headers = {'dapr-app-id': invoke_appid, 'dapr-api-token': dapr_api_token,
                'content-type': 'application/json'}
     try:
         result = requests.post(
-            url='%s/invoke/neworders' % (base_url),
+            url='%s/neworder' % (base_url),
             data=order.model_dump_json(),
             headers=headers
         )
@@ -36,7 +36,7 @@ async def send_order(order: Order):
             return str(order)
         else:
             logging.error(
-                'Error occurred while invoking App ID: %s' % result.reason)
+                'Error occurred while invoking %s: %s' % invoke_appid, result.reason)
             raise HTTPException(status_code=500, detail=result.reason)
 
     except grpc.RpcError as err:
@@ -45,4 +45,4 @@ async def send_order(order: Order):
 
 @app.get('/')
 async def read_root():
-    return {"message": "Request is running"}
+    return {"message": "Client app is running"}
