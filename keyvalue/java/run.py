@@ -31,42 +31,44 @@ def run_command(command, check=False):
     return result.stdout.strip()
 
 def check_java_installed():
-    with yaspin(text="Checking Java installation...") as spinner:
+    with yaspin(text="Checking Java dependency...") as spinner:
         java_check = run_command("java --version", check=True)
         if java_check is None:
-            error(spinner, "Error: Java 11+ must be installed to run this script.")
+            error(spinner, "Java 11+ is required for quickstart")
 
         try:
             version_line = java_check.split('\n')[0]
             version_str = version_line.split()[1].strip('"')
             major_version = int(version_str.split('.')[0])
             if major_version < 11:
-                error(spinner, f"Error: Java 11+ is required for quickstart. Found version: {version_str}")
+                error(spinner, f"Java 11+ is required for quickstart. Found version: {version_str}")
         except (IndexError, ValueError):
-            error(spinner, f"Error: Unable to determine Java version from output: {java_check.strip()}")
+            error(spinner, f"Java 11+ is required for quickstart. Unable to determine Java version: {java_check.strip()}")
 
         spinner.ok("✅")
+        print(f"Supported version found: {version_str}")
+
 
 def check_maven_installed():
-    with yaspin(text="Checking Maven installation...") as spinner:
+    with yaspin(text="Checking Maven dependency...") as spinner:
         maven_check = run_command("mvn --version", check=True)
         if maven_check is None:
-            error(spinner, "Error: Apache Maven 3.9.5+ must be installed for quickstart.")
+            error(spinner, "Apache Maven 3.9.5+ is required for quickstart")
 
         try:
             version_line = next((line for line in maven_check.split('\n') if 'Apache Maven' in line), None)
             if version_line is None:
-                raise ValueError("Maven version line not found in the output.")
+                raise ValueError("Apache Maven 3.9.5+ is required for quickstart. Unable to determine Maven version")
             
             version_str = version_line.split()[2]
             major_version, minor_version, patch_version = map(int, version_str.split('.'))
             if (major_version, minor_version, patch_version) < (3, 9, 5):
-                error(spinner, f"Error: Apache Maven 3.9.5+ is required for quickstart. Found version: {version_str}")
+                error(spinner, f"Apache Maven 3.9.5+ is required for quickstart. Found version: {version_str}")
         except (IndexError, ValueError) as e:
-            error(spinner, f"Error: Unable to determine Maven version from output: '{maven_check.strip()}' due to {str(e)}")
+            error(spinner, f"Apache Maven 3.9.5+ is required for quickstart. Unable to determine Maven version: '{maven_check.strip()}' due to {str(e)}")
 
-        print(f"Apache Maven version: {version_str}")
         spinner.ok("✅")
+        spinner.write(f"Supported version found: {version_str}")
 
 def create_project(project_name):
     with yaspin(text=f"Creating project {project_name}...") as spinner:
@@ -74,12 +76,11 @@ def create_project(project_name):
             run_command(f"diagrid project create {project_name} --deploy-managed-kv", check=True)
             spinner.ok("✅")
         except subprocess.CalledProcessError as e:
-            spinner.fail("❌ Failed to create project")
-            print(f"Error: {e}")
+            spinner.fail("❌")
             if e.output:
-                print(f"{e.output}")
+                spinner.write(f"Error: {e.output}")
             if e.stderr:
-                print(f"{e.stderr}")
+                spinner.write(f"Error: {e.stderr}")
             sys.exit(1)
 
 def create_appid(project_name, appid_name):
@@ -88,12 +89,11 @@ def create_appid(project_name, appid_name):
             run_command(f"diagrid appid create -p {project_name} {appid_name}",check=True)
             spinner.ok("✅")
         except subprocess.CalledProcessError as e:
-            spinner.fail(f"❌ Failed to create App ID {appid_name}")
-            print(f"Error: {e}")
+            spinner.fail(f"❌")
             if e.output:
-                print(f"{e.output}")
+                print(f"Error: {e.output}")
             if e.stderr:
-                print(f"{e.stderr}")
+                print(f"Error: {e.stderr}")
             sys.exit(1)
 
 def check_appid_status(project_name, appid_name):
@@ -101,7 +101,7 @@ def check_appid_status(project_name, appid_name):
     attempt = 1
     last_status = None
     
-    with yaspin(text=f"Waiting for App ID {appid_name} to become ready. This may take 1-2 minutes...") as spinner:
+    with yaspin(text=f"Waiting for App ID {appid_name} to become ready. This may take 1-2 minutes...", timer=True) as spinner:
         while attempt <= max_attempts:
             status_output = run_command(f"diagrid appid get {appid_name} -p {project_name}")
 
@@ -120,21 +120,23 @@ def check_appid_status(project_name, appid_name):
             time.sleep(10)
             attempt += 1
 
-        spinner.fail(f"❌ {appid_name} is not ready. Once current status {last_status} becomes ready, you can proceed.")
+        spinner.fail("❌")
+        spinner.write(f"App ID {appid_name} is still provisioning")
+        spinner.write(f"Run `diagrid appid get {appid_name} --project {project_name}` and proceed with quickstart once in ready status")
         sys.exit(1)
 
 def set_default_project(project_name):
-    with yaspin(text=f"Setting default project as {project_name}...") as spinner:
+    with yaspin(text=f"Setting default project to {project_name}...") as spinner:
         try:
             run_command(f"diagrid project use {project_name}", check=True)
             spinner.ok("✅")
         except subprocess.CalledProcessError as e:
-            spinner.fail("❌ Failed to set default project")
-            print(f"Error: {e}")
+            spinner.fail("❌")
+            spinner.write("Failed to set default project")
             if e.output:
-                print(f"{e.output}")
+                spinner.write(f"{e.output}")
             if e.stderr:
-                print(f"{e.stderr}")
+                spinner.write(f"{e.stderr}")
             sys.exit(1)
 
 def scaffold_and_update_config(config_file):
@@ -146,18 +148,18 @@ def scaffold_and_update_config(config_file):
         # Create and activate a virtual environment
         env_name = "diagrid-venv"
         if os.path.exists(env_name):
-            # print(f"Existing virtual environment found: {env_name}")
-            # print(f"Deleting existing virtual environment: {env_name}")
+            # spinner.write(f"Existing virtual environment found: {env_name}")
+            # spinner.write(f"Deleting existing virtual environment: {env_name}")
             run_command(f"rm -rf {env_name}", check=True)
 
-        # print(f"Creating virtual environment: {env_name}")
+        # spinner.write(f"Creating virtual environment: {env_name}")
         run_command(f"python3 -m venv {env_name}", check=True)
 
-        # print(f"Installing pyyaml in the virtual environment: {env_name}")
+        # spinner.write(f"Installing pyyaml in the virtual environment: {env_name}")
         run_command(f"./{env_name}/bin/pip install pyyaml", check=True)
 
         # Run the Python script to update the dev config file
-        # print("Updating dev config file...")
+        # spinner.write("Updating dev config file...")
         run_command(f"./{env_name}/bin/python scaffold.py", check=True)
         spinner.ok("✅")
 
@@ -178,16 +180,21 @@ def main():
     appid_name = "order-app"
     config_file = args.config_file
 
+    # Check for app dependencies
     check_java_installed()
     check_maven_installed()
 
+    # Create new Catalyst project
     create_project(prj_name)
 
-    set_default_project(prj_name)
-
+    # Create new Catalyst APP ID
     create_appid(prj_name, appid_name)
 
+    # Wait for App ID to be in ready state
     check_appid_status(project_name, appid_name)
+
+    # Set default project 
+    set_default_project(prj_name)
 
     # Check if the dev file already exists and remove it if it does
     if os.path.isfile(config_file):
@@ -199,8 +206,8 @@ def main():
             with yaspin(text=f"Error deleting file {config_file}") as spinner:
                 error(spinner, f"Error deleting file {config_file}: {e}")
 
+    # Scaffold dev config
     scaffold_and_update_config(config_file)
-
 
 
 if __name__ == "__main__":
