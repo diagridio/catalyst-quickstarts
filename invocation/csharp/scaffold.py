@@ -11,11 +11,10 @@ for app in config_data['apps']:
     if app['appId'] == 'server':
         app['appPort'] = 5002
         app['workDir'] = './server'
-        app['env']['ASPNETCORE_URLS'] = 'http://0.0.0.0:5002'
+        app['env']['ASPNETCORE_URLS'] = 'http://127.0.0.1:5002'
     elif app['appId'] == 'client':
-        app['appPort'] = 5001
         app['workDir'] = './client'
-        app['env']['ASPNETCORE_URLS'] = 'http://0.0.0.0:5001'
+        app['env']['ASPNETCORE_URLS'] = 'http://127.0.0.1:5001'
 
     app['command'] = ['dotnet', 'run']
 
