@@ -4,7 +4,7 @@ import { DaprClient, CommunicationProtocolEnum} from "@dapr/dapr";
 
 const appPort = process.env.PORT || 5001; 
 const daprApiToken = process.env.DAPR_API_TOKEN || "";
-const kvName = process.env.KVSTORE_NAME || "kvstore"; 
+const kvName = process.env.STATESORE_NAME || "kvstore"; 
 
 const app = express()
 
@@ -12,7 +12,7 @@ const client = new DaprClient({daprApiToken: daprApiToken, communicationProtocol
 
 app.use(bodyParser.json({ type: '*/*' })) 
 
-app.post('/kv/orders', async function (req, res) {
+app.post('/order', async function (req, res) {
   req.accepts('application/json')
 
   const keyName = "order" + req.body.orderId
@@ -32,7 +32,7 @@ app.post('/kv/orders', async function (req, res) {
   }
 });
 
-app.get('/kv/orders/:orderId', async function (req, res) {
+app.get('/order/:orderId', async function (req, res) {
   const keyName = "order" + req.params.orderId
   try {
     const order = await client.state.get(kvName, keyName)
@@ -44,7 +44,7 @@ app.get('/kv/orders/:orderId', async function (req, res) {
   }
 });
 
-app.delete('/kv/orders/:orderId', async function (req, res) {
+app.delete('/order/:orderId', async function (req, res) {
   const keyName = "order" + req.params.orderId
   try {
     await client.state.delete(kvName, keyName)
