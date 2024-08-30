@@ -14,7 +14,7 @@ public class Controller {
   private static final Logger logger = LoggerFactory.getLogger(Controller.class);
 
   @PostMapping(path = "/neworder", consumes = MediaType.APPLICATION_JSON_VALUE)
-  public ResponseEntity<Order> reply(@RequestBody Order order) {
+  public ResponseEntity<Order> neworder(@RequestBody Order order) {
     logger.info("Invocation received with data " + order.getOrderId());
     return ResponseEntity.ok(order);
   }

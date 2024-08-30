@@ -46,7 +46,7 @@ public class Controller {
 
   // Invoke another service
   @PostMapping(path = "/order", consumes = MediaType.ALL_VALUE)
-  public Mono<ResponseEntity> request(@RequestBody(required = true) Order order) {
+  public Mono<ResponseEntity> order(@RequestBody(required = true) Order order) {
     return Mono.fromSupplier(() -> {
       try {
         JSONObject obj = new JSONObject();
