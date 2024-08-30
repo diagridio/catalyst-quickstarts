@@ -13,7 +13,6 @@ for app in config_data['apps']:
         app['workDir'] = './subscriber'
         app['command'] = ['java', '-jar', 'target/subscriber-0.0.1-SNAPSHOT.jar', '--port=5002']
     elif app['appId'] == 'publisher':
-        app['appPort'] = 5001
         app['workDir'] = './publisher'
         app['command'] = ['java', '-jar', 'target/publisher-0.0.1-SNAPSHOT.jar', '--port=5001']
 
