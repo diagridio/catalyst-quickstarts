@@ -130,7 +130,7 @@ def main():
     args = parser.parse_args()
 
     project_name = args.project_name
-    appid_name = "order-wf"
+    appid_name = "order-workflow"
     config_file = args.config_file
 
     # Create new Catalyst project

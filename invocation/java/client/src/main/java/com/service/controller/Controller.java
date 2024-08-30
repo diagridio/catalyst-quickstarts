@@ -33,7 +33,7 @@ public class Controller {
   private static final String DAPR_HTTP_ENDPOINT = System.getenv().getOrDefault("DAPR_HTTP_ENDPOINT",
       "http://localhost");
   private static final String DAPR_API_TOKEN = System.getenv().getOrDefault("DAPR_API_TOKEN", "");
-  private static final String INVOKE_APPID = System.getenv().getOrDefault("INVOKE_APPID", "target");
+  private static final String INVOKE_APPID = System.getenv().getOrDefault("INVOKE_APPID", "server");
 
   @PostConstruct
   public void init() {
