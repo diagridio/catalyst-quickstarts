@@ -6,6 +6,11 @@ import argparse
 from yaspin import yaspin
 from yaspin.spinners import Spinners
 
+PYTHON_INSTRUCTIONS = """ 
+Download here ⬇️
+https://www.python.org/downloads/
+"""
+
 def error(spinner, message):
     spinner.fail("❌")
     print(f"Error: {message}", file=sys.stderr)
@@ -22,6 +27,24 @@ def run_command(command, check=False):
         return None
 
     return result.stdout.strip()
+
+def check_python_installed():
+    with yaspin(text="Checking Python dependency...") as spinner:
+        version_check = run_command("python3 --version")
+        if version_check is None:
+            error(spinner, f"Python 3.11+ is required for quickstart. {PYTHON_INSTRUCTIONS}")
+        try:
+            version_parts = version_check.strip("Python").split('.')
+            major_version = int(version_parts[0])
+            minor_version = int(version_parts[1])
+            print(major_version, minor_version)
+            if major_version < 3 and minor_version > 11:
+                error(spinner, f"Python 3.11+ is required for quickstart. Found version: {version_check.strip()} {PYTHON_INSTRUCTIONS}")
+        except (IndexError, ValueError):
+            error(spinner, f"Python 3.11+ is required for quickstart. Unable to determine Python version: {version_check.strip()} {PYTHON_INSTRUCTIONS}")
+        spinner.ok("✅")
+        spinner.write(f"Supported version found: {version_check.strip()}")
+        
 
 def create_project(project_name):
     with yaspin(text=f"Creating project {project_name}...") as spinner:
@@ -147,6 +170,8 @@ def main():
 
     project_name = args.project_name
     config_file = args.config_file
+
+    check_python_installed()
 
     create_project(prj_name)
 

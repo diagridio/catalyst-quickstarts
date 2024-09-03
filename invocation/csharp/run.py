@@ -7,8 +7,8 @@ from yaspin import yaspin
 from yaspin.spinners import Spinners
 
 CSHARP_INSTRUCTIONS = """
-.NET 8.0+ must be installed for quickstart: 
-  https://dotnet.microsoft.com/en-us/download
+Download here ⬇️
+https://dotnet.microsoft.com/en-us/download
 """
 
 def error(spinner, message):
@@ -33,14 +33,14 @@ def check_dotnet_installed():
     with yaspin(text="Checking .NET dependency...") as spinner:
         version_check = run_command("dotnet --version")
         if version_check is None:
-            error(spinner, f".NET 8.0+ is required for quickstart")
+            error(spinner, f".NET 8.0+ is required for quickstart. {CSHARP_INSTRUCTIONS}")
         try:
             version_parts = version_check.strip().split('.')
             major_version = int(version_parts[0])
             if major_version < 8:
-                error(spinner, f".NET 8.0+ is required for quickstart. Found version: {version_check.strip()}")
+                error(spinner, f".NET 8.0+ is required for quickstart. Found version: {version_check.strip()} {CSHARP_INSTRUCTIONS}")
         except (IndexError, ValueError):
-            error(spinner, f".NET 8.0+ is required for quickstart. Unable to determine .NET version: {version_check.strip()}")
+            error(spinner, f".NET 8.0+ is required for quickstart. Unable to determine .NET version: {version_check.strip()} {CSHARP_INSTRUCTIONS}")
         spinner.ok("✅")
         spinner.write(f"Supported version found: {version_check.strip()}")
 

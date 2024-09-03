@@ -6,13 +6,17 @@ import argparse
 from yaspin import yaspin
 from yaspin.spinners import Spinners
 
-JAVA_INSTRUCTIONS = """
-Java 11+ and Apache Maven 3.9.5+ must be installed for quickstart:
-  Oracle JDK: https://www.oracle.com/java/technologies/downloads/
-  Open JDK: https://jdk.java.net/
-  Apache Maven: https://maven.apache.org/install.html
+MVN_INSTRUCTIONS = """
+Download here ⬇️
+Apache Maven - https://maven.apache.org/install.html
 """
 
+JAVA_INSTRUCTIONS = """
+Download here ⬇️
+Oracle JDK - https://www.oracle.com/java/technologies/downloads/ 
+Open JDK - https://jdk.java.net/
+"""
+  
 def error(spinner, message):
     spinner.fail("❌")
     print(f"Error: {message}", file=sys.stderr)
@@ -35,16 +39,16 @@ def check_java_installed():
     with yaspin(text="Checking Java dependency...") as spinner:
         java_check = run_command("java --version")
         if java_check is None:
-            error(spinner, "Java 11+ is required for quickstart")
+            error(spinner,f"Java 11+ is required for quickstart. {JAVA_INSTRUCTIONS}")
 
         try:
             version_line = java_check.split('\n')[0]
             version_str = version_line.split()[1].strip('"')
             major_version = int(version_str.split('.')[0])
             if major_version < 11:
-                error(spinner, f"Java 11+ is required for quickstart. Found version: {version_str}")
+                error(spinner, f"Java 11+ is required for quickstart. Found version: {version_str} {JAVA_INSTRUCTIONS}")
         except (IndexError, ValueError):
-            error(spinner, f"Java 11+ is required for quickstart. Unable to determine Java version: {java_check.strip()}")
+            error(spinner, f"Java 11+ is required for quickstart. Unable to determine Java version: {java_check.strip()} {JAVA_INSTRUCTIONS}")
 
         spinner.ok("✅")
         print(f"Supported version found: {version_str}")
@@ -54,7 +58,7 @@ def check_maven_installed():
     with yaspin(text="Checking Maven dependency...") as spinner:
         maven_check = run_command("mvn --version")
         if maven_check is None:
-            error(spinner, "Apache Maven 3.9.5+ is required for quickstart")
+            error(spinner, f"Apache Maven 3.9.5+ is required for quickstart. {MVN_INSTRUCTIONS}")
 
         try:
             version_line = next((line for line in maven_check.split('\n') if 'Apache Maven' in line), None)
@@ -64,13 +68,12 @@ def check_maven_installed():
             version_str = version_line.split()[2]
             major_version, minor_version, patch_version = map(int, version_str.split('.'))
             if (major_version, minor_version, patch_version) < (3, 9, 5):
-                error(spinner, f"Apache Maven 3.9.5+ is required for quickstart. Found version: {version_str}")
+                error(spinner, f"Apache Maven 3.9.5+ is required for quickstart. Found version: {version_str} {MVN_INSTRUCTIONS}")
         except (IndexError, ValueError) as e:
-            error(spinner, f"Apache Maven 3.9.5+ is required for quickstart. Unable to determine Maven version: '{maven_check.strip()}' due to {str(e)}")
+            error(spinner, f"Apache Maven 3.9.5+ is required for quickstart. Unable to determine Maven version: {maven_check.strip()} {MVN_INSTRUCTIONS}")
 
         spinner.ok("✅")
         spinner.write(f"Supported version found: {version_str}")
-
 
 def create_project(project_name):
     with yaspin(text=f"Creating project {project_name}...") as spinner:
@@ -196,6 +199,9 @@ def main():
 
     project_name = args.project_name
     config_file = args.config_file
+
+    check_java_installed()
+    check_maven_installed()
 
     create_appid(prj_name, "client")
     create_appid(prj_name, "server")

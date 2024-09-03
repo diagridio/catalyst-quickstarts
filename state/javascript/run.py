@@ -6,8 +6,11 @@ import argparse
 from yaspin import yaspin
 from yaspin.spinners import Spinners
 
-NODEJS_INSTRUCTIONS = """ Node.js and npm must be installed for quickstart: https://nodejs.org/en/download """
 
+NODEJS_INSTRUCTIONS = """ 
+Download here ⬇️
+https://nodejs.org/en/download 
+"""
 
 def error(spinner, message):
     spinner.fail("❌")
@@ -31,7 +34,7 @@ def check_js_installed():
         node_check = run_command("node -v")
         npm_check = run_command("npm -v")
         if node_check is None or npm_check is None:
-            error(spinner, NODEJS_INSTRUCTIONS)
+            error(spinner, f"Node.js and npm must be installed for quickstart. {NODEJS_INSTRUCTIONS}")
         spinner.ok("✅")
         spinner.write(f"Supported Node.js version found: {node_check.strip()}")
         spinner.write(f"Supported npm version found: {npm_check.strip()}")
