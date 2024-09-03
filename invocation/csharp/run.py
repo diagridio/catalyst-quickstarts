@@ -127,7 +127,7 @@ def scaffold_and_update_config(config_file):
         if os.path.exists(env_name):
             # spinner.write(f"Existing virtual environment found: {env_name}")
             # spinner.write(f"Deleting existing virtual environment: {env_name}")
-            run_command(f"rm -rf {eßnv_name}", check=True)
+            run_command(f"rm -rf {env_name}", check=True)
 
         # spinner.write(f"Creating virtual environment: {env_name}")
         run_command(f"python3 -m venv {env_name}", check=True)
