@@ -33,7 +33,7 @@ def run_command(command, check=False):
 
 def check_java_installed():
     with yaspin(text="Checking Java dependency...") as spinner:
-        java_check = run_command("java --version", check=True)
+        java_check = run_command("java --version")
         if java_check is None:
             error(spinner, "Java 11+ is required for quickstart")
 
@@ -52,7 +52,7 @@ def check_java_installed():
 
 def check_maven_installed():
     with yaspin(text="Checking Maven dependency...") as spinner:
-        maven_check = run_command("mvn --version", check=True)
+        maven_check = run_command("mvn --version")
         if maven_check is None:
             error(spinner, "Apache Maven 3.9.5+ is required for quickstart")
 

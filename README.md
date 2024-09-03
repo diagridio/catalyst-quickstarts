@@ -1,8 +1,8 @@
-## Catalyst Quickstarts
+# Catalyst Quickstarts
 
-This repo contains the code and scripts used to to create Catalyst quickstart projects via the  `diagrid project quickstart create` command
+This repo contains the code and scripts used to create Catalyst quickstart projects via the  `diagrid project quickstart create` command
 
-### Getting Started
+## Getting Started
 
 To get started with a Catalyst quickstart project, visit the following docs:
 
