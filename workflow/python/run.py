@@ -37,7 +37,7 @@ def check_python_installed():
             version_parts = version_check.strip("Python").split('.')
             major_version = int(version_parts[0])
             minor_version = int(version_parts[1])
-            print(major_version, minor_version)
+
             if major_version < 3 and minor_version > 11:
                 error(spinner, f"Python 3.11+ is required for quickstart. Found version: {version_check.strip()} {PYTHON_INSTRUCTIONS}")
         except (IndexError, ValueError):
