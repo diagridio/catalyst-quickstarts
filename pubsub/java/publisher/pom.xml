@@ -9,10 +9,10 @@
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
 	<groupId>com.service</groupId>
-	<artifactId>Publisher</artifactId>
+	<artifactId>publisher</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name>Publisher</name>
-	<description>Diagrid Catalyst Java Publisher Quickstart</description>
+	<name>publisher</name>
+	<description> Catalyst Pubsub Quickstart: Publisher</description>
 	<properties>
 		<java.version>11</java.version>
 	</properties>

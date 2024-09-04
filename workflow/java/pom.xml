@@ -12,10 +12,10 @@
   </parent>
 
   <groupId>com.service</groupId>
-  <artifactId>Main</artifactId>
+  <artifactId>workflow-app</artifactId>
   <version>0.0.1-SNAPSHOT</version>
-  <name>Main</name>
-  <description>Demo project for Catalyst</description>
+  <name>workflow-app</name>
+  <description>Catalyst Workflow Quickstart</description>
 
   <properties>
     <java.version>11</java.version>

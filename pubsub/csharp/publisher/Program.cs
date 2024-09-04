@@ -12,7 +12,7 @@ var PubSubName = Environment.GetEnvironmentVariable("PUBSUB_NAME") ?? "pubsub";
 #region Publish API 
 
 // Publish messages 
-app.MapPost("/pubsub/orders", async (Order order) =>
+app.MapPost("/order", async (Order order) =>
 {
     // Publish order to Diagrid pubsub, topic: orders 
     try

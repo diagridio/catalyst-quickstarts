@@ -8,21 +8,20 @@ const appPort = process.env.PORT || 5001;
 const app = express()
 
 const daprApiToken = process.env.DAPR_API_TOKEN || "";
-
 const client = new DaprClient({daprApiToken: daprApiToken, communicationProtocol: CommunicationProtocolEnum.HTTP});
 
 app.use(bodyParser.json({ type: '*/*' })) 
 
 //#region Pub/Sub API
 
-app.post('/pubsub/orders', async function (req, res) {
+app.post('/order', async function (req, res) {
     let order = req.body
     try {
       await client.pubsub.publish(pubSubName, "orders", order);
-      console.log("Published data: " + order.orderId);
+      console.log("Publish successful. Order published: " + order.orderId);
       res.sendStatus(200);
     } catch (error){
-      console.log("Error publishing order: " + order.orderId);
+      console.log("Error occurred while publishing order: " + order.orderId);
       res.status(500).send(error);
     }
 });

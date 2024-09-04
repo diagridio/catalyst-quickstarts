@@ -1,17 +1,12 @@
-## Catalyst Quickstarts
+# Catalyst Quickstarts
 
-The Diagrid Catalyst Quickstart allows you to seamlessly create starter Catalyst resources and connect from code.
+This repo contains the code and scripts used to create Catalyst quickstart projects via the  `diagrid project quickstart create` command
 
-There are 2 support ways to use the quickstart: 
+## Getting Started
 
-**Run the quickstart in container**
-1. install Docker
-2. run `diagrid project quickstart --type <kv|pubsub> --language <csharp|java|javascript|python> --container`
+To get started with a Catalyst quickstart project, visit the following docs:
 
-The container will set up all dev env and dependencies for you.
-
-**Run the quickstart on host** 
-1. run `diagrid project quickstart --type <kv|pubsub> --language <csharp|java|javascript|python>`
-2. follow the instructions to install dependencies and run `diagrid dev start -f <dev config file>`
-
-This requires the user to have corresponding dev env on the host.
+- [Pub/Sub](https://diagrid.ws/pubsub-qs): Send and receive messges using Diagrid Pub/Sub Service
+- [State](https://diagrid.ws/state-qs): Manage key/value pairs using Diagrid KV Store
+- [Service Invocation](https://diagrid.ws/invocation-qs): Implement the request/reply pattern
+- [Workflow](https://diagrid.ws/workflow-qs): Execute stateful workflows using managed workflow store
