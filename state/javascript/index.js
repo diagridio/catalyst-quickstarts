@@ -1,14 +1,13 @@
 import express from 'express';
 import bodyParser from 'body-parser';
-import { DaprClient, CommunicationProtocolEnum} from "@dapr/dapr";
+import { DaprClient} from "@dapr/dapr";
 
 const appPort = process.env.PORT || 5001; 
-const daprApiToken = process.env.DAPR_API_TOKEN || "";
 const stateStoreName = process.env.STATESORE_NAME || "kvstore"; 
 
 const app = express()
 
-const client = new DaprClient({daprApiToken: daprApiToken, communicationProtocol: CommunicationProtocolEnum.HTTP});
+const client = new DaprClient();
 
 app.use(bodyParser.json({ type: '*/*' })) 
 
@@ -36,8 +35,15 @@ app.get('/order/:orderId', async function (req, res) {
   const keyName = "order" + req.params.orderId
   try {
     const order = await client.state.get(stateStoreName, keyName)
-    console.log("Get state item successful. Order retrieved: ", order)
-    res.json(order)
+    console.log(order)
+    if(!order) {      
+      console.log("State item with key does not exist: " + keyName);
+      res.status(200);
+    }
+    else {
+      console.log("Get state item successful. Order retrieved: ", order )
+      res.json(order)
+    }
   } catch (error) {
     console.log("Error occurred while retrieving state item: " + req.params.orderId);
     res.status(500).send(error);
