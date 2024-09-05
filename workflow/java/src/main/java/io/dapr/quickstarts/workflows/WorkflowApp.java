@@ -25,7 +25,7 @@ public class WorkflowApp {
   private WorkflowRuntime workflowRuntime;
 
   private static final Logger logger = LoggerFactory.getLogger(WorkflowApp.class);
-  private DaprWorkflowClient workflowClient;
+  private DaprWorkflowClient workflowClient = new DaprWorkflowClient();
 
   public static void main(String[] args) {
     SpringApplication.run(WorkflowApp.class, args);
@@ -40,8 +40,6 @@ public class WorkflowApp {
       logger.error("Workflow runtime is not initialized");
       throw new IllegalStateException("Workflow runtime is not initialized");
     }
-
-    workflowClient = new DaprWorkflowClient();
 
     // Run the workflow
     try {
