@@ -1,8 +1,7 @@
 from fastapi import FastAPI, HTTPException
 import logging
 import uvicorn
-from dapr.clients import DaprClient
-from dapr.ext.workflow import WorkflowRuntime
+from dapr.ext.workflow import WorkflowRuntime, DaprWorkflowClient
 from workflow import order_processing_workflow, notify_activity, reserve_inventory_activity, process_payment_activity, update_inventory_activity
 from model import OrderPayload
 
@@ -23,6 +22,8 @@ workflow_runtime.register_activity(process_payment_activity)
 workflow_runtime.register_activity(update_inventory_activity)
 workflow_runtime.start()
 
+workflow_client = DaprWorkflowClient()
+
 @app.get('/')
 async def read_root():
     return {"message": "Workflow is running"}
@@ -30,10 +31,9 @@ async def read_root():
 @app.post("/workflow/start")
 def start_workflow(order: OrderPayload):
     try:
-        with DaprClient() as d:
-            order_dict = order.dict(by_alias=True)
-            resp = d.start_workflow(workflow_component=workflowComponent, workflow_name=workflowName, input=order_dict)
-            return {"message": "Workflow started successfully", "workflow_id": resp.instance_id}
+        order_dict = order.dict(by_alias=True)
+        workflow_id = workflow_client.schedule_new_workflow(workflow=order_processing_workflow, input=order_dict)
+        return {"message": "Workflow started successfully", "workflow_id": workflow_id}
     except Exception as e:
         logger.error(f"Failed to start workflow: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -41,11 +41,10 @@ def start_workflow(order: OrderPayload):
 @app.get("/workflow/status/{workflow_id}")
 def get_workflow_status(workflow_id: str):
     try:
-        with DaprClient() as d:
-            state = d.get_workflow(instance_id=workflow_id, workflow_component=workflowComponent)
-            if not state:
-                return {"error": "Workflow not found", "workflow_id": workflow_id}
-            return {"workflow_id": workflow_id, "status": state.runtime_status}
+        state = workflow_client.get_workflow_state(instance_id=workflow_id)
+        if not state:
+            return {"error": "Workflow not found", "workflow_id": workflow_id}
+        return {"workflow_id": workflow_id, "status": state.runtime_status}
     except Exception as e:
         logger.error(f"Failed to get workflow status: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -53,9 +52,8 @@ def get_workflow_status(workflow_id: str):
 @app.post("/workflow/terminate/{workflow_id}")
 def terminate_workflow(workflow_id: str):
     try:
-        with DaprClient() as d:
-            d.terminate_workflow(instance_id=workflow_id, workflow_component=workflowComponent)
-            return {"message": "Workflow terminated successfully"}
+        workflow_client.terminate_workflow(instance_id=workflow_id)
+        return {"message": "Workflow terminated successfully"}
     except Exception as e:
         logger.error(f"Failed to terminate workflow: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -63,9 +61,8 @@ def terminate_workflow(workflow_id: str):
 @app.post("/workflow/pause/{workflow_id}")
 def pause_workflow(workflow_id: str):
     try:
-        with DaprClient() as d:
-            d.pause_workflow(instance_id=workflow_id, workflow_component=workflowComponent)
-            return {"message": "Workflow paused successfully"}
+        workflow_client.pause_workflow(instance_id=workflow_id)
+        return {"message": "Workflow paused successfully"}
     except Exception as e:
         logger.error(f"Failed to pause workflow: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -73,9 +70,8 @@ def pause_workflow(workflow_id: str):
 @app.post("/workflow/resume/{workflow_id}")
 def resume_workflow(workflow_id: str):
     try:
-        with DaprClient() as d:
-            d.resume_workflow(instance_id=workflow_id, workflow_component=workflowComponent)
-            return {"message": "Workflow resumed successfully"}
+        workflow_client.resume_workflow(instance_id=workflow_id)
+        return {"message": "Workflow resumed successfully"}
     except Exception as e:
         logger.error(f"Failed to resume workflow: {e}")
         raise HTTPException(status_code=500, detail=str(e))

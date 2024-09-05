@@ -1,13 +1,6 @@
-using System.Text.Json;
-using System.Text.Json.Serialization;
 using Dapr.Workflow;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.Mvc;
 using WorkflowConsoleApp.Activities;
-using WorkflowConsoleApp.Models;
 using WorkflowConsoleApp.Workflows;
 
 var builder = WebApplication.CreateBuilder(args);
