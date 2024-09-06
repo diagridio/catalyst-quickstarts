@@ -1,14 +1,13 @@
 import express from 'express';
 import bodyParser from 'body-parser';
-import { DaprClient, CommunicationProtocolEnum} from "@dapr/dapr";
+import { DaprClient} from "@dapr/dapr";
 
 const pubSubName = process.env.PUBSUB_NAME || "pubsub"; 
 const appPort = process.env.PORT || 5001; 
 
 const app = express()
 
-const daprApiToken = process.env.DAPR_API_TOKEN || "";
-const client = new DaprClient({daprApiToken: daprApiToken, communicationProtocol: CommunicationProtocolEnum.HTTP});
+const client = new DaprClient();
 
 app.use(bodyParser.json({ type: '*/*' })) 
 

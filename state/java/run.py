@@ -8,7 +8,7 @@ from yaspin.spinners import Spinners
 
 MVN_INSTRUCTIONS = """
 Download here ⬇️
-Apache Maven - https://maven.apache.org/install.html
+Apache Maven - https://maven.apache.org/download.cgi
 """
 
 JAVA_INSTRUCTIONS = """

@@ -15,7 +15,9 @@ https://nodejs.org/en/download
 def error(spinner, message):
     spinner.fail("❌")
     print(f"Error: {message}", file=sys.stderr)
-    sys.exit(1component run_command(command, check=False):
+    sys.exit(1)
+
+def run_command(command, check=False):
     result = subprocess.run(command, shell=True, capture_output=True, text=True)
     
     if result.returncode != 0:
