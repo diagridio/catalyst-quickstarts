@@ -75,6 +75,17 @@ def resume_workflow(workflow_id: str):
     except Exception as e:
         logger.error(f"Failed to resume workflow: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+    
+@app.get("/workflow/output/{workflow_id}")
+def get_workflow_status(workflow_id: str):
+    try:
+        state = workflow_client.get_workflow_state(instance_id=workflow_id)
+        if not state:
+            return {"error": "Workflow not found", "workflow_id": workflow_id}
+        return {"workflow_id": workflow_id, "status": state.runtime_status}
+    except Exception as e:
+        logger.error(f"Failed to get workflow status: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=5001)
