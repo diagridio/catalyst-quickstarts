@@ -203,9 +203,6 @@ def main():
     check_java_installed()
     check_maven_installed()
 
-    create_appid(prj_name, "client")
-    create_appid(prj_name, "server")
-
     create_project(prj_name)
 
     create_appid(prj_name, "publisher")
