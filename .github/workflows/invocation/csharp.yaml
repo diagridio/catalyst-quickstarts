@@ -2,10 +2,10 @@ name: csharp invocation quickstart
 
 on:
   push:
-    branches: [main]
+    branches: [ongoing-fixes]
   pull_request:
     branches:
-      - main
+      - ongoing-fixes
     paths:
       - .github/workflows/invocation/csharp.yaml
       - invocation/csharp/*
@@ -17,7 +17,7 @@ jobs:
       contents: "read"
       id-token: "write"
     environment: shared-production
-    # Only run on main repo (not on forks)
+    # Only run on ongoing-fixes repo (not on forks)
     if: github.repository_owner == 'diagridio'
     steps:
       - uses: actions/checkout@v3
