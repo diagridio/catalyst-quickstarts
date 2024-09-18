@@ -30,7 +30,7 @@ jobs:
       - name: build local
         run: |
           cd invocation/csharp
-          donet build ./client && dotnet build ./server
+          dotnet build ./client && dotnet build ./server
 
       - name: build client image
         run: |
