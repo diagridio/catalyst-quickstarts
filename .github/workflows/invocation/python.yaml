@@ -1,0 +1,73 @@
+name: python invocation quickstart
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches:
+      - main
+    paths:
+      - .github/workflows/invocation/python.yaml
+      - invocation/python/*
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: "read"
+      id-token: "write"
+    environment: shared-production
+    # Only run on main repo (not on forks)
+    if: github.repository_owner == 'diagridio'
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: build local
+        run: |
+          cd python
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt --target ./client && pip install -r requirements.txt --target ./server
+
+      - name: build client image
+        run: |
+          cd python
+          docker buildx build --platform linux/amd64 -t invoke-python-client .
+
+      - name: build server image
+        run: |
+          cd python
+          docker buildx build --platform linux/amd64 -t invoke-python-server .
+
+      - name: Configure AWS credentials
+        if: github.event_name != 'pull_request'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_CI_ROLE }}
+          aws-region: ${{ vars.AWS_CI_REGION }}
+
+      - name: Login to Amazon ECR
+        if: github.event_name != 'pull_request'
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+        with:
+          registry-type: public
+
+      - name: push client image
+        if: github.event_name != 'pull_request'
+        env:
+          PUBLIC_ECR: "${{ steps.login-ecr.outputs.registry }}/${{ vars.AWS_PUBLIC_ECR_ALIAS }}/invoke-python-client"
+        run: |
+          docker tag invoke-python-client:latest $PUBLIC_ECR:latest
+          docker push $PUBLIC_ECR:latest
+
+      - name: push server image
+        if: github.event_name != 'pull_request'
+        env:
+          PUBLIC_ECR: "${{ steps.login-ecr.outputs.registry }}/${{ vars.AWS_PUBLIC_ECR_ALIAS }}/invoke-python-server"
+        run: |
+          docker tag invoke-python-server:latest $PUBLIC_ECR:latest
+          docker push $PUBLIC_ECR:latest

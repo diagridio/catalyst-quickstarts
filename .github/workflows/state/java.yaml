@@ -1,0 +1,58 @@
+name: java state quickstart
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches:
+      - main
+    paths:
+      - .github/workflows/state/java.yaml
+      - state/java/*
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: "read"
+      id-token: "write"
+    environment: shared-production
+    # Only run on main repo (not on forks)
+    if: github.repository_owner == 'diagridio'
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-java@v3
+        with:
+          distribution: "temurin"
+          java-version: "11"
+
+      - name: build local
+        run: |
+          cd state/java
+          mvn clean install
+
+      - name: build order-app image
+        run: |
+          cd state/java/client
+          docker buildx build --platform linux/amd64 -t state-java .
+
+      - name: Configure AWS credentials
+        if: github.event_name != 'pull_request'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_CI_ROLE }}
+          aws-region: ${{ vars.AWS_CI_REGION }}
+      - name: Login to Amazon ECR
+        if: github.event_name != 'pull_request'
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+        with:
+          registry-type: public
+
+      - name: push order-app image
+        if: github.event_name != 'pull_request'
+        env:
+          PUBLIC_ECR: "${{ steps.login-ecr.outputs.registry }}/${{ vars.AWS_PUBLIC_ECR_ALIAS }}/state-java"
+        run: |
+          docker tag state-java:latest  $PUBLIC_ECR:latest
+          docker push $PUBLIC_ECR:latest
