@@ -3,9 +3,6 @@ name: java invocation quickstart
 on:
   push:
     branches: [main]
-  pull_request:
-    branches:
-      - main
     paths:
       - .github/workflows/invoke_java.yaml
       - invocation/java/*
