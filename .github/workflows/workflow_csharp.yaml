@@ -31,7 +31,7 @@ jobs:
           cd workflow/csharp
           dotnet build
 
-      - name: build container
+      - name: build order-workflow image
         run: |
           cd workflow/csharp
           docker buildx build --platform linux/amd64 -t workflow-csharp .

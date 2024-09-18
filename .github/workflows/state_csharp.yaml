@@ -1,4 +1,4 @@
-name: csharp invocation quickstart
+name: csharp state quickstart
 
 on:
   push:
@@ -31,7 +31,7 @@ jobs:
           cd state/csharp
           dotnet build
 
-      - name: build container
+      - name: build order-app image
         run: |
           cd state/csharp
           docker buildx build --platform linux/amd64 -t state-csharp .
