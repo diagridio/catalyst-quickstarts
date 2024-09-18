@@ -2,10 +2,11 @@ name: csharp invocation quickstart
 
 on:
   push:
-    branches: [ongoing-fixes]
+    branches:
+      - "ongoing-fixes"
   pull_request:
     branches:
-      - ongoing-fixes
+      - "ongoing-fixes"
     paths:
       - .github/workflows/invocation/csharp.yaml
       - invocation/csharp/*
