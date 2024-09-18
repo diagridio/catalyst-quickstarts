@@ -1,14 +1,15 @@
-name: java invocation quickstart
+name: csharp invocation quickstart
 
 on:
   push:
-    branches: [main]
+    branches:
+      - "ongoing-fixes"
   pull_request:
     branches:
-      - main
+      - "ongoing-fixes"
     paths:
-      - .github/workflows/invocation/java.yaml
-      - invocation/java/*
+      - .github/workflows/invoke_csharp.yaml
+      - invocation/csharp/*
 
 jobs:
   build:
@@ -17,29 +18,29 @@ jobs:
       contents: "read"
       id-token: "write"
     environment: shared-production
-    # Only run on main repo (not on forks)
+    # Only run on ongoing-fixes repo (not on forks)
     if: github.repository_owner == 'diagridio'
     steps:
       - uses: actions/checkout@v3
-      - uses: actions/setup-java@v3
+
+      - uses: actions/setup-dotnet@v3
         with:
-          distribution: "temurin"
-          java-version: "11"
+          dotnet-version: "8.0.x"
 
       - name: build local
         run: |
-          cd invocation/java
-          mvn clean install -f ./client && mvn clean install -f ./server
+          cd invocation/csharp
+          donet build ./client && dotnet build ./server
 
-      - name: build client container
+      - name: build client image
         run: |
-          cd invocation/java/client
-          docker buildx build --platform linux/amd64 -t invoke-java-client .
+          cd invocation/csharp/client
+          docker buildx build --platform linux/amd64 -t invoke-csharp-client .
 
-      - name: build server container
+      - name: build server image
         run: |
-          cd invocation/java/server
-          docker buildx build --platform linux/amd64 -t invoke-java-server .
+          cd invocation/csharp/server
+          docker buildx build --platform linux/amd64 -t invoke-csharp-server .
 
       - name: Configure AWS credentials
         if: github.event_name != 'pull_request'
@@ -47,6 +48,7 @@ jobs:
         with:
           role-to-assume: ${{ vars.AWS_CI_ROLE }}
           aws-region: ${{ vars.AWS_CI_REGION }}
+
       - name: Login to Amazon ECR
         if: github.event_name != 'pull_request'
         id: login-ecr
@@ -57,15 +59,15 @@ jobs:
       - name: push client image
         if: github.event_name != 'pull_request'
         env:
-          PUBLIC_ECR: "${{ steps.login-ecr.outputs.registry }}/${{ vars.AWS_PUBLIC_ECR_ALIAS }}/invoke-java-client"
+          PUBLIC_ECR: "${{ steps.login-ecr.outputs.registry }}/${{ vars.AWS_PUBLIC_ECR_ALIAS }}/invoke-csharp-client"
         run: |
-          docker taginvoke-java-client:latest  $PUBLIC_ECR:latest
+          docker tag invoke-csharp-client:latest $PUBLIC_ECR:latest
           docker push $PUBLIC_ECR:latest
 
       - name: push server image
         if: github.event_name != 'pull_request'
         env:
-          PUBLIC_ECR: "${{ steps.login-ecr.outputs.registry }}/${{ vars.AWS_PUBLIC_ECR_ALIAS }}/invoke-java-server"
+          PUBLIC_ECR: "${{ steps.login-ecr.outputs.registry }}/${{ vars.AWS_PUBLIC_ECR_ALIAS }}/invoke-csharp-server"
         run: |
-          docker tag invoke-java-server:latest  $PUBLIC_ECR:latest
+          docker tag invoke-csharp-server:latest $PUBLIC_ECR:latest
           docker push $PUBLIC_ECR:latest

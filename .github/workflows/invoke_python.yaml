@@ -7,7 +7,7 @@ on:
     branches:
       - main
     paths:
-      - .github/workflows/invocation/python.yaml
+      - .github/workflows/invoke_python.yaml
       - invocation/python/*
 
 jobs:

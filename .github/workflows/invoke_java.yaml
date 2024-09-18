@@ -1,4 +1,4 @@
-name: csharp pubsub quickstart
+name: java invocation quickstart
 
 on:
   push:
@@ -7,8 +7,8 @@ on:
     branches:
       - main
     paths:
-      - .github/workflows/pubsub/csharp.yaml
-      - pubsub/csharp/*
+      - .github/workflows/invoke_java.yaml
+      - invocation/java/*
 
 jobs:
   build:
@@ -21,25 +21,25 @@ jobs:
     if: github.repository_owner == 'diagridio'
     steps:
       - uses: actions/checkout@v3
-
-      - uses: actions/setup-dotnet@v3
+      - uses: actions/setup-java@v3
         with:
-          dotnet-version: "8.0.x"
+          distribution: "temurin"
+          java-version: "11"
 
       - name: build local
         run: |
-          cd pubsub/csharp
-          donet build ./publisher && dotnet build ./subscriber
+          cd invocation/java
+          mvn clean install -f ./client && mvn clean install -f ./server
 
-      - name: build publisher image
+      - name: build client container
         run: |
-          cd pubsub/csharp/publisher
-          docker buildx build --platform linux/amd64 -t pubsub-csharp-publisher .
+          cd invocation/java/client
+          docker buildx build --platform linux/amd64 -t invoke-java-client .
 
-      - name: build subscriber image
+      - name: build server container
         run: |
-          cd pubsub/csharp/subscriber
-          docker buildx build --platform linux/amd64 -t pubsub-csharp-subscriber .
+          cd invocation/java/server
+          docker buildx build --platform linux/amd64 -t invoke-java-server .
 
       - name: Configure AWS credentials
         if: github.event_name != 'pull_request'
@@ -47,7 +47,6 @@ jobs:
         with:
           role-to-assume: ${{ vars.AWS_CI_ROLE }}
           aws-region: ${{ vars.AWS_CI_REGION }}
-
       - name: Login to Amazon ECR
         if: github.event_name != 'pull_request'
         id: login-ecr
@@ -55,18 +54,18 @@ jobs:
         with:
           registry-type: public
 
-      - name: push publisher image
+      - name: push client image
         if: github.event_name != 'pull_request'
         env:
-          PUBLIC_ECR: "${{ steps.login-ecr.outputs.registry }}/${{ vars.AWS_PUBLIC_ECR_ALIAS }}/pubsub-csharp-publisher"
+          PUBLIC_ECR: "${{ steps.login-ecr.outputs.registry }}/${{ vars.AWS_PUBLIC_ECR_ALIAS }}/invoke-java-client"
         run: |
-          docker tag pubsub-csharp-publisher:latest $PUBLIC_ECR:latest
+          docker taginvoke-java-client:latest  $PUBLIC_ECR:latest
           docker push $PUBLIC_ECR:latest
 
-      - name: push subscriber image
+      - name: push server image
         if: github.event_name != 'pull_request'
         env:
-          PUBLIC_ECR: "${{ steps.login-ecr.outputs.registry }}/${{ vars.AWS_PUBLIC_ECR_ALIAS }}/pubsub-csharp-subscriber"
+          PUBLIC_ECR: "${{ steps.login-ecr.outputs.registry }}/${{ vars.AWS_PUBLIC_ECR_ALIAS }}/invoke-java-server"
         run: |
-          docker tag pubsub-csharp-subscriber:latest $PUBLIC_ECR:latest
+          docker tag invoke-java-server:latest  $PUBLIC_ECR:latest
           docker push $PUBLIC_ECR:latest

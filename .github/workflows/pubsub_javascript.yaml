@@ -7,7 +7,7 @@ on:
     branches:
       - main
     paths:
-      - .github/workflows/pubsub/javascript.yaml
+      - .github/workflows/pubsub_javascript.yaml
       - pubsub/javascript/*
 
 jobs:

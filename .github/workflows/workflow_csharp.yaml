@@ -1,4 +1,4 @@
-name: csharp invocation quickstart
+name: csharp workflow quickstart
 
 on:
   push:
@@ -7,8 +7,8 @@ on:
     branches:
       - main
     paths:
-      - .github/workflows/state/csharp.yaml
-      - state/csharp/*
+      - .github/workflows/workflow_csharp.yaml
+      - workflow/csharp/*
 
 jobs:
   build:
@@ -28,13 +28,13 @@ jobs:
 
       - name: build local
         run: |
-          cd state/csharp
+          cd workflow/csharp
           dotnet build
 
       - name: build container
         run: |
-          cd state/csharp
-          docker buildx build --platform linux/amd64 -t state-csharp .
+          cd workflow/csharp
+          docker buildx build --platform linux/amd64 -t workflow-csharp .
 
       - name: Configure AWS credentials
         if: github.event_name != 'pull_request'
@@ -53,7 +53,7 @@ jobs:
       - name: push container
         if: github.event_name != 'pull_request'
         env:
-          PUBLIC_ECR: "${{ steps.login-ecr.outputs.registry }}/${{ vars.AWS_PUBLIC_ECR_ALIAS }}/state-csharp-"
+          PUBLIC_ECR: "${{ steps.login-ecr.outputs.registry }}/${{ vars.AWS_PUBLIC_ECR_ALIAS }}/workflow-csharp"
         run: |
-          docker tag state-csharp:latest $PUBLIC_ECR:latest
+          docker tag workflow-csharp:latest $PUBLIC_ECR:latest
           docker push $PUBLIC_ECR:latest

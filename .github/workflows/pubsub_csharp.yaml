@@ -1,15 +1,14 @@
-name: csharp invocation quickstart
+name: csharp pubsub quickstart
 
 on:
   push:
-    branches:
-      - "ongoing-fixes"
+    branches: [main]
   pull_request:
     branches:
-      - "ongoing-fixes"
+      - main
     paths:
-      - .github/workflows/invocation/csharp.yaml
-      - invocation/csharp/*
+      - .github/workflows/pubsub_csharp.yaml
+      - pubsub/csharp/*
 
 jobs:
   build:
@@ -18,7 +17,7 @@ jobs:
       contents: "read"
       id-token: "write"
     environment: shared-production
-    # Only run on ongoing-fixes repo (not on forks)
+    # Only run on main repo (not on forks)
     if: github.repository_owner == 'diagridio'
     steps:
       - uses: actions/checkout@v3
@@ -29,18 +28,18 @@ jobs:
 
       - name: build local
         run: |
-          cd invocation/csharp
-          donet build ./client && dotnet build ./server
+          cd pubsub/csharp
+          donet build ./publisher && dotnet build ./subscriber
 
-      - name: build client image
+      - name: build publisher image
         run: |
-          cd invocation/csharp/client
-          docker buildx build --platform linux/amd64 -t invoke-csharp-client .
+          cd pubsub/csharp/publisher
+          docker buildx build --platform linux/amd64 -t pubsub-csharp-publisher .
 
-      - name: build server image
+      - name: build subscriber image
         run: |
-          cd invocation/csharp/server
-          docker buildx build --platform linux/amd64 -t invoke-csharp-server .
+          cd pubsub/csharp/subscriber
+          docker buildx build --platform linux/amd64 -t pubsub-csharp-subscriber .
 
       - name: Configure AWS credentials
         if: github.event_name != 'pull_request'
@@ -56,18 +55,18 @@ jobs:
         with:
           registry-type: public
 
-      - name: push client image
+      - name: push publisher image
         if: github.event_name != 'pull_request'
         env:
-          PUBLIC_ECR: "${{ steps.login-ecr.outputs.registry }}/${{ vars.AWS_PUBLIC_ECR_ALIAS }}/invoke-csharp-client"
+          PUBLIC_ECR: "${{ steps.login-ecr.outputs.registry }}/${{ vars.AWS_PUBLIC_ECR_ALIAS }}/pubsub-csharp-publisher"
         run: |
-          docker tag invoke-csharp-client:latest $PUBLIC_ECR:latest
+          docker tag pubsub-csharp-publisher:latest $PUBLIC_ECR:latest
           docker push $PUBLIC_ECR:latest
 
-      - name: push server image
+      - name: push subscriber image
         if: github.event_name != 'pull_request'
         env:
-          PUBLIC_ECR: "${{ steps.login-ecr.outputs.registry }}/${{ vars.AWS_PUBLIC_ECR_ALIAS }}/invoke-csharp-server"
+          PUBLIC_ECR: "${{ steps.login-ecr.outputs.registry }}/${{ vars.AWS_PUBLIC_ECR_ALIAS }}/pubsub-csharp-subscriber"
         run: |
-          docker tag invoke-csharp-server:latest $PUBLIC_ECR:latest
+          docker tag pubsub-csharp-subscriber:latest $PUBLIC_ECR:latest
           docker push $PUBLIC_ECR:latest

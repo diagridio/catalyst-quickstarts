@@ -1,4 +1,4 @@
-name: python pubsub quickstart
+name: python state quickstart
 
 on:
   push:
@@ -7,8 +7,8 @@ on:
     branches:
       - main
     paths:
-      - .github/workflows/pubsub/python.yaml
-      - pubsub/python/*
+      - .github/workflows/state_python.yaml
+      - state/python/*
 
 jobs:
   build:
@@ -30,17 +30,12 @@ jobs:
         run: |
           cd python
           python -m pip install --upgrade pip
-          pip install -r requirements.txt --target ./publisher && pip install -r requirements.txt --target ./subscriber
+          pip install -r requirements.txt
 
-      - name: build publisher image
+      - name: build order-app image
         run: |
           cd python
-          docker buildx build --platform linux/amd64 -t pubsub-python-publisher .
-
-      - name: build subscriber image
-        run: |
-          cd python
-          docker buildx build --platform linux/amd64 -t pubsub-python-subscriber .
+          docker buildx build --platform linux/amd64 -t state-python .
 
       - name: Configure AWS credentials
         if: github.event_name != 'pull_request'
@@ -56,18 +51,10 @@ jobs:
         with:
           registry-type: public
 
-      - name: push publisher image
+      - name: push order-app image
         if: github.event_name != 'pull_request'
         env:
-          PUBLIC_ECR: "${{ steps.login-ecr.outputs.registry }}/${{ vars.AWS_PUBLIC_ECR_ALIAS }}/pubsub-python-publisher"
+          PUBLIC_ECR: "${{ steps.login-ecr.outputs.registry }}/${{ vars.AWS_PUBLIC_ECR_ALIAS }}/state-python"
         run: |
-          docker tag pubsub-python-publisher:latest $PUBLIC_ECR:latest
-          docker push $PUBLIC_ECR:latest
-
-      - name: push subscriber image
-        if: github.event_name != 'pull_request'
-        env:
-          PUBLIC_ECR: "${{ steps.login-ecr.outputs.registry }}/${{ vars.AWS_PUBLIC_ECR_ALIAS }}/pubsub-python-subscriber"
-        run: |
-          docker tag pubsub-python-subscriber:latest $PUBLIC_ECR:latest
+          docker tag state-python:latest $PUBLIC_ECR:latest
           docker push $PUBLIC_ECR:latest

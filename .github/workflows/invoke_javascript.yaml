@@ -7,7 +7,7 @@ on:
     branches:
       - main
     paths:
-      - .github/workflows/invocation/javascript.yaml
+      - .github/workflows/invoke_javascript.yaml
       - invocation/javascript/*
 
 jobs:
