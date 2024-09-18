@@ -4,9 +4,6 @@ on:
   push:
     branches:
       - "ongoing-fixes"
-  pull_request:
-    branches:
-      - "ongoing-fixes"
     paths:
       - .github/workflows/invoke_csharp.yaml
       - invocation/csharp/*
