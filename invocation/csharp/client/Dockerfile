@@ -14,4 +14,4 @@ WORKDIR /app
 EXPOSE 5001
 ENV ASPNETCORE_URLS=http://+:5001
 COPY --from=build-env /app/out .
-ENTRYPOINT ["dotnet", "csharp.dll"]
+ENTRYPOINT ["dotnet", "client.dll"]
