@@ -1,9 +1,9 @@
-namespace WorkflowConsoleApp.Activities
+namespace WorkflowApp.Activities
 {
     using System.Threading.Tasks;
     using Dapr.Workflow;
     using Microsoft.Extensions.Logging;
-    using WorkflowConsoleApp.Models;
+    using WorkflowApp.Models;
     using System;
 
     public class ProcessPaymentActivity : WorkflowActivity<PaymentRequest, object?>

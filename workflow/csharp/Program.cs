@@ -1,7 +1,7 @@
 using Dapr.Workflow;
 using Microsoft.AspNetCore.Mvc;
-using WorkflowConsoleApp.Activities;
-using WorkflowConsoleApp.Workflows;
+using WorkflowApp.Activities;
+using WorkflowApp.Workflows;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -78,7 +78,7 @@ app.MapGet("/workflow/output/{id}", async ([FromRoute] string id) =>
             app.Logger.LogInformation("Retrieved workflow output for {id}.", id);
             var output = state.ReadOutputAs<OrderResult>();
             app.Logger.LogInformation("Workflow output is: {output} ", output);
-            return Results.Ok(output.Message);
+            return Results.Ok(output!.Message);
         }
         else
         {
