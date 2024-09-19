@@ -3,7 +3,13 @@ name: java invocation quickstart
 on:
   push:
     branches:
-      - "ongoing-fixes"
+      - main
+    paths:
+      - .github/workflows/invoke_java.yaml
+      - invocation/java/**
+  pull_request:
+    branches:
+      - main
     paths:
       - .github/workflows/invoke_java.yaml
       - invocation/java/**
@@ -15,7 +21,7 @@ jobs:
       contents: "read"
       id-token: "write"
     environment: shared-production
-    # Only run on main repo (not on forks)
+
     if: github.repository_owner == 'diagridio'
     steps:
       - uses: actions/checkout@v3
@@ -44,14 +50,17 @@ jobs:
           registry-type: public
 
       - name: Set up Docker Buildx
+        if: github.event_name != 'pull_request'
         uses: docker/setup-buildx-action@v3.6.1
 
       - name: build and push client container
+        if: github.event_name != 'pull_request'
         working-directory: invocation/java/client
         run: |
           docker buildx build --platform linux/amd64,linux/arm64 -t ${{ steps.login-ecr.outputs.registry }}/${{ vars.AWS_PUBLIC_ECR_ALIAS }}/invoke-java-client-qs . --push
 
       - name: build and push server container
+        if: github.event_name != 'pull_request'
         working-directory: invocation/java/server
         run: |
           docker buildx build --platform linux/amd64,linux/arm64 -t ${{ steps.login-ecr.outputs.registry }}/${{ vars.AWS_PUBLIC_ECR_ALIAS }}/invoke-java-server-qs . --push

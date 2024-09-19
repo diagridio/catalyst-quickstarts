@@ -3,7 +3,13 @@ name: csharp state quickstart
 on:
   push:
     branches:
-      - "ongoing-fixes"
+      - main
+    paths:
+      - .github/workflows/state_csharp.yaml
+      - state/csharp/**
+  pull_request:
+    branches:
+      - main
     paths:
       - .github/workflows/state_csharp.yaml
       - state/csharp/**
@@ -15,7 +21,7 @@ jobs:
       contents: "read"
       id-token: "write"
     environment: shared-production
-    # Only run on main repo (not on forks)
+
     if: github.repository_owner == 'diagridio'
     steps:
       - uses: actions/checkout@v3
@@ -44,9 +50,11 @@ jobs:
           registry-type: public
 
       - name: Set up Docker Buildx
+        if: github.event_name != 'pull_request'
         uses: docker/setup-buildx-action@v3.6.1
 
       - name: build and push order-app image
+        if: github.event_name != 'pull_request'
         working-directory: state/csharp
         run: |
           docker buildx build --platform linux/amd64,linux/arm64 -t ${{ steps.login-ecr.outputs.registry }}/${{ vars.AWS_PUBLIC_ECR_ALIAS }}/state-csharp-qs . --push
