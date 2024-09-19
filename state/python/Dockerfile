@@ -1,5 +1,5 @@
 # Use the official Python base image
-FROM python:3.12-alpine
+FROM --platform=$BUILDPLATFORM python:3.12-alpine
 
 # Set the working directory inside the container
 WORKDIR /app
