@@ -17,10 +17,6 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    permissions:
-      contents: "read"
-      id-token: "write"
-    environment: shared-production
 
     if: github.repository_owner == 'diagridio'
     steps:
@@ -39,6 +35,10 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     if: github.event_name != 'pull_request'
+    permissions:
+      contents: "read"
+      id-token: "write"
+    environment: shared-production
     steps:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
