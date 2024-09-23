@@ -67,32 +67,6 @@ app.MapGet("/workflow/status/{id}", async ([FromRoute] string id) =>
     }
 });
 
-// Get completed workflow output
-app.MapGet("/workflow/output/{id}", async ([FromRoute] string id) =>
-{
-    try
-    {
-        WorkflowState state = await workflowClient.GetWorkflowStateAsync(id);
-        if (state != null)
-        {
-            app.Logger.LogInformation("Retrieved workflow output for {id}.", id);
-            var output = state.ReadOutputAs<OrderResult>();
-            app.Logger.LogInformation("Workflow output is: {output} ", output);
-            return Results.Ok(output!.Message);
-        }
-        else
-        {
-            app.Logger.LogInformation("Workflow with id {id} does not exist", id);
-            return Results.StatusCode(204);
-        }
-    }
-    catch (Exception ex)
-    {
-        app.Logger.LogError("Error occurred while getting the output of the workflow: {id}. Exception: {exception}", id, ex.InnerException);
-        return Results.StatusCode(500);
-    }
-});
-
 // Terminate workflow
 app.MapPost("/workflow/terminate/{id}", async ([FromRoute] string id) =>
 {
@@ -117,58 +91,6 @@ app.MapPost("/workflow/terminate/{id}", async ([FromRoute] string id) =>
         return Results.StatusCode(500);
     }
 });
-
-// Pause workflow
-app.MapPost("/workflow/pause/{id}", async ([FromRoute] string id) =>
-{
-    try
-    {
-        await workflowClient.SuspendWorkflowAsync(id);
-        WorkflowState state = await workflowClient.GetWorkflowStateAsync(instanceId: id);
-        if (state != null)
-        {
-            app.Logger.LogInformation("Paused workflow with id {id}.", id);
-            return Results.Ok(state);
-        }
-        else
-        {
-            app.Logger.LogInformation("Workflow with id {id} does not exist", id);
-            return Results.StatusCode(204);
-        }
-    }
-    catch (Exception ex)
-    {
-        app.Logger.LogError("Error occurred while pausing the workflow: {id}. Exception: {exception}", id, ex.InnerException);
-        return Results.StatusCode(500);
-    }
-});
-
-// Resume workflow
-app.MapPost("/workflow/resume/{id}", async ([FromRoute] string id) =>
-{
-    try
-    {
-        await workflowClient.ResumeWorkflowAsync(id);
-        WorkflowState state = await workflowClient.GetWorkflowStateAsync(instanceId: id);
-        if (state != null)
-        {
-            app.Logger.LogInformation("Resumed workflow with id {id}.", id);
-            return Results.Ok(state);
-
-        }
-        else
-        {
-            app.Logger.LogInformation("Workflow with id {id} does not exist", id);
-            return Results.StatusCode(204);
-        }
-    }
-    catch (Exception ex)
-    {
-        app.Logger.LogError("Error occurred while resuming the workflow: {id}. Exception: {exception}", id, ex.InnerException);
-        return Results.StatusCode(500);
-    }
-});
-
 
 #endregion
 

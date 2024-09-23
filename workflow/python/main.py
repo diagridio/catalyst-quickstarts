@@ -58,24 +58,6 @@ def terminate_workflow(workflow_id: str):
         logger.error(f"Failed to terminate workflow: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/workflow/pause/{workflow_id}")
-def pause_workflow(workflow_id: str):
-    try:
-        workflow_client.pause_workflow(instance_id=workflow_id)
-        return {"message": "Workflow paused successfully"}
-    except Exception as e:
-        logger.error(f"Failed to pause workflow: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.post("/workflow/resume/{workflow_id}")
-def resume_workflow(workflow_id: str):
-    try:
-        workflow_client.resume_workflow(instance_id=workflow_id)
-        return {"message": "Workflow resumed successfully"}
-    except Exception as e:
-        logger.error(f"Failed to resume workflow: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=5001)
 
