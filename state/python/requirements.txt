@@ -1,4 +1,4 @@
-dapr==1.134.0
+dapr==1.14.0
 fastapi==0.111.0
 grpcio==1.63.0
 pydantic==2.4.2
