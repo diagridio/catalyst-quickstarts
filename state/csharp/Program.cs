@@ -10,7 +10,7 @@ var app = builder.Build();
 
 var client = new DaprClientBuilder().Build();
 
-var stateStoreName = Environment.GetEnvironmentVariable("KVSTORE_NAME") ?? "kvstore";
+var stateStoreName = Environment.GetEnvironmentVariable("STATESTORE_NAME") ?? "kvstore";
 
 // Save state 
 app.MapPost("/order", async (Order order) =>

@@ -3,7 +3,7 @@ import bodyParser from 'body-parser';
 import { DaprClient} from "@dapr/dapr";
 
 const appPort = process.env.PORT || 5001; 
-const stateStoreName = process.env.STATESORE_NAME || "kvstore"; 
+const stateStoreName = process.env.STATESTORE_NAME || "kvstore"; 
 
 const app = express()
 

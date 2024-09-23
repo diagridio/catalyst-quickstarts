@@ -1,9 +1,9 @@
-namespace WorkflowConsoleApp.Activities
+namespace WorkflowApp.Activities
 {
     using System.Collections.Generic;
     using System.Threading.Tasks;
     using Dapr.Workflow;
-    using WorkflowConsoleApp.Models;
+    using WorkflowApp.Models;
     using Microsoft.Extensions.Logging;
 
     public class ReserveInventoryActivity : WorkflowActivity<InventoryRequest, InventoryResult>
