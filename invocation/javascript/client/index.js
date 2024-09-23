@@ -5,20 +5,11 @@ import axios from "axios";
 const daprApiToken = process.env.DAPR_API_TOKEN || "";
 const daprHttpEndpoint = process.env.DAPR_HTTP_ENDPOINT || "http://localhost";
 const invokeAppID = process.env.INVOKE_APPID || "server";
+const appPort = process.env.PORT || 5001; 
 
 const app = express()
 
 app.use(bodyParser.json({ type: '*/*' }))
-
-// Check if process.env.PORT is set
-let appPort;
-if (process.env.PORT) {
-  appPort = parseInt(process.env.PORT);
-} else {
-  appPort = 5003
-  console.warn("Warning: PORT environment variable not set for app. Defaulting to port", appPort);
-  console.warn("Note: Using the default port for multiple apps will cause port conflicts.")
-}
 
 app.post('/order', async function(req, res) {
   let config = {

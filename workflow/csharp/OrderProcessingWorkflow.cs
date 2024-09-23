@@ -1,9 +1,9 @@
 using System.Threading.Tasks;
 using Dapr.Workflow;
-using WorkflowConsoleApp.Activities;
-using WorkflowConsoleApp.Models;
+using WorkflowApp.Activities;
+using WorkflowApp.Models;
 
-namespace WorkflowConsoleApp.Workflows
+namespace WorkflowApp.Workflows
 {
     public class OrderProcessingWorkflow : Workflow<OrderPayload, OrderResult>
     {
@@ -20,7 +20,7 @@ namespace WorkflowConsoleApp.Workflows
             InventoryResult result = await context.CallActivityAsync<InventoryResult>(
                 nameof(ReserveInventoryActivity),
                 new InventoryRequest(orderId, order.Name, order.Quantity));
-            
+
             // If there is insufficient inventory, fail and let the user know 
             if (!result.Success)
             {
