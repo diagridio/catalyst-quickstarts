@@ -22,7 +22,10 @@ app.post('/order', async function (req, res) {
     }]
 
   try {
-    await client.state.save(stateStoreName, state);
+    const saveResponse = await client.state.save(stateStoreName, state);
+    if (saveResponse.error) {
+        throw saveResponse.error.message;
+    }
     console.log("Save state item successful. Order saved: " + req.body.orderId);
     res.sendStatus(200);
   } catch (error) {
@@ -53,7 +56,10 @@ app.get('/order/:orderId', async function (req, res) {
 app.delete('/order/:orderId', async function (req, res) {
   const keyName = "order" + req.params.orderId
   try {
-    await client.state.delete(stateStoreName, keyName)
+    const deleteResponse = await client.state.delete(stateStoreName, keyName)
+    if (deleteResponse.error) {
+        throw deleteResponse.error.message;
+    }
     console.log("Delete state item successful. Order deleted: ", req.params.orderId)
     res.sendStatus(200);
   } catch (error) {
