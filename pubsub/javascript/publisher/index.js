@@ -16,7 +16,10 @@ app.use(bodyParser.json({ type: '*/*' }))
 app.post('/order', async function (req, res) {
     let order = req.body
     try {
-      await client.pubsub.publish(pubSubName, "orders", order);
+      const publishResponse = await client.pubsub.publish(pubSubName, "orders", order);
+      if (publishResponse.error) {
+        throw publishResponse.error.message;
+      }
       console.log("Publish successful. Order published: " + order.orderId);
       res.sendStatus(200);
     } catch (error){
