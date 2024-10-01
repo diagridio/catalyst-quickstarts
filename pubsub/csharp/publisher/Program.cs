@@ -11,6 +11,14 @@ var PubSubName = Environment.GetEnvironmentVariable("PUBSUB_NAME") ?? "pubsub";
 
 #region Publish API 
 
+// Health check endpoint
+app.MapGet("/", () => 
+{
+    var healthMessage = "Health check passed. Everything is running smoothly! 🚀";
+    app.Logger.LogInformation("Health check result: {Message}", healthMessage);
+    return Results.Ok(healthMessage);
+});
+
 // Publish messages 
 app.MapPost("/order", async (Order order) =>
 {

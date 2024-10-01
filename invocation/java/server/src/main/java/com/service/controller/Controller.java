@@ -18,6 +18,14 @@ public class Controller {
     logger.info("Invocation received with data " + order.getOrderId());
     return ResponseEntity.ok(order);
   }
+
+    // Health check endpoint
+  @GetMapping(path = "/")
+  public ResponseEntity<String> healthCheck() {
+    String healthMessage = "Health check passed. Everything is running smoothly! 🚀";
+    logger.info("Health check result: {}", healthMessage);
+    return ResponseEntity.ok(healthMessage);
+  }
 }
 
 @Getter

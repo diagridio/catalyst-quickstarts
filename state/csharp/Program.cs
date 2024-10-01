@@ -12,6 +12,14 @@ var client = new DaprClientBuilder().Build();
 
 var stateStoreName = Environment.GetEnvironmentVariable("STATESTORE_NAME") ?? "kvstore";
 
+// Health check endpoint
+app.MapGet("/", () => 
+{
+    var healthMessage = "Health check passed. Everything is running smoothly! 🚀";
+    app.Logger.LogInformation("Health check result: {Message}", healthMessage);
+    return Results.Ok(healthMessage);
+});
+
 // Save state 
 app.MapPost("/order", async (Order order) =>
 {

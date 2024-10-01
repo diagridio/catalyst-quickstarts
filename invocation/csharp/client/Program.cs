@@ -12,6 +12,13 @@ var client = new DaprClientBuilder().Build();
 var DaprApiToken = Environment.GetEnvironmentVariable("DAPR_API_TOKEN") ?? "";
 var InvokeAppId = Environment.GetEnvironmentVariable("INVOKE_APPID") ?? "server";
 
+// Health check endpoint
+app.MapGet("/", () => 
+{
+    var healthMessage = "Health check passed. Everything is running smoothly! 🚀";
+    app.Logger.LogInformation("Health check result: {Message}", healthMessage);
+    return Results.Ok(healthMessage);
+});
 
 app.MapPost("/order", async (Order order) =>
 {
