@@ -7,6 +7,12 @@ const app = express()
 
 app.use(bodyParser.json({ type: '*/*' }))
 
+// Health check endpoint
+app.get('/', (req, res) => {
+  const healthMessage = "Health check passed. Everything is running smoothly! 🚀";
+  console.log("Health check result: %s", healthMessage);
+  res.status(200).send(healthMessage);
+});
 
 app.post('/neworder', (req, res) => {
   console.log("Invocation received with data: %s", JSON.stringify(req.body))

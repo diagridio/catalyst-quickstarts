@@ -44,6 +44,14 @@ public class Controller {
         .build();
   }
 
+  // Health check endpoint
+  @GetMapping(path = "/")
+  public ResponseEntity<String> healthCheck() {
+    String healthMessage = "Health check passed. Everything is running smoothly! 🚀";
+    logger.info("Health check result: {}", healthMessage);
+    return ResponseEntity.ok(healthMessage);
+  }
+
   // Invoke another service
   @PostMapping(path = "/order", consumes = MediaType.ALL_VALUE)
   public Mono<ResponseEntity> order(@RequestBody(required = true) Order order) {

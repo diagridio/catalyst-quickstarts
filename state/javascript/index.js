@@ -11,6 +11,13 @@ const client = new DaprClient();
 
 app.use(bodyParser.json({ type: '*/*' })) 
 
+// Health check endpoint
+app.get('/', (req, res) => {
+  const healthMessage = "Health check passed. Everything is running smoothly! 🚀";
+  console.log("Health check result: %s", healthMessage);
+  res.status(200).send(healthMessage);
+});
+
 app.post('/order', async function (req, res) {
   req.accepts('application/json')
 

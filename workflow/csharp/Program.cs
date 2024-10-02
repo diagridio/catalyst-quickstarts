@@ -23,6 +23,14 @@ app.UseCloudEvents();
 
 #region Workflow API
 
+// Health check endpoint
+app.MapGet("/", () => 
+{
+    var healthMessage = "Health check passed. Everything is running smoothly! 🚀";
+    app.Logger.LogInformation("Health check result: {Message}", healthMessage);
+    return Results.Ok(healthMessage);
+});
+
 // Start new workflow
 app.MapPost("/workflow/start", async (OrderPayload order) =>
 {

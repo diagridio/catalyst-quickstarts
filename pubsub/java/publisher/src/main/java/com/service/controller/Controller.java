@@ -29,6 +29,14 @@ public class Controller {
         client = new DaprClientBuilder().build();
     }
 
+    // Health check endpoint
+    @GetMapping(path = "/")
+    public ResponseEntity<String> healthCheck() {
+        String healthMessage = "Health check passed. Everything is running smoothly! 🚀";
+        logger.info("Health check result: {}", healthMessage);
+        return ResponseEntity.ok(healthMessage);
+    }
+
     // Publish messages 
     @PostMapping(path = "/order", consumes = MediaType.ALL_VALUE)
     public Mono<ResponseEntity> publish(@RequestBody(required = true) Order order) {

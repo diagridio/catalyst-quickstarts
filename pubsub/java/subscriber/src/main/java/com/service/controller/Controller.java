@@ -19,6 +19,14 @@ public class Controller {
     
     private static final Logger logger = LoggerFactory.getLogger(Controller.class);
 
+    // Health check endpoint
+    @GetMapping(path = "/")
+    public ResponseEntity<String> healthCheck() {
+        String healthMessage = "Health check passed. Everything is running smoothly! 🚀";
+        logger.info("Health check result: {}", healthMessage);
+        return ResponseEntity.ok(healthMessage);
+    }
+
     @PostMapping(path = "/neworder", consumes = MediaType.ALL_VALUE)
     public Mono<ResponseEntity> subscribe(@RequestBody(required = false) CloudEvent<Order> cloudEvent) {
         return Mono.fromSupplier(() -> {

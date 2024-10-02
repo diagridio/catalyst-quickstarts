@@ -16,6 +16,14 @@ app.MapPost("/neworder", (Order order) =>
     return Results.Ok(order);
 });
 
+// Health check endpoint
+app.MapGet("/", () => 
+{
+    var healthMessage = "Health check passed. Everything is running smoothly! 🚀";
+    app.Logger.LogInformation("Health check result: {Message}", healthMessage);
+    return Results.Ok(healthMessage);
+});
+
 app.Run();
 
 public record Order([property: JsonPropertyName("orderId")] int OrderId);
