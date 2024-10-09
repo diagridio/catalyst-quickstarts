@@ -10,21 +10,14 @@ import {
 } from './workflow.js';
 
 const app = express();
-const port = 5001;
-const host = '127.0.0.1';
+const port = process.env.PORT ?? 5001;
 
 app.use(bodyParser.json());
 
 console.log('Starting workflow runtime...');
 
-const workflowClient = new DaprWorkflowClient({
-  host,
-  port,
-});
-const workflowRuntime = new WorkflowRuntime({
-  host,
-  port,
-});
+const workflowClient = new DaprWorkflowClient();
+const workflowRuntime = new WorkflowRuntime();
 
 workflowRuntime
   .registerWorkflow(orderProcessingWorkflow)
