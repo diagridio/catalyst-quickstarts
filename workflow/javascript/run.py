@@ -133,8 +133,7 @@ def scaffold_and_update_config(config_file):
         spinner.ok("✅")
 
 def main():
-    # prj_name = os.getenv('QUICKSTART_PROJECT_NAME')
-    prj_name = "wf-js"
+    prj_name = os.getenv('QUICKSTART_PROJECT_NAME')
 
     config_file_name = f"dev-{prj_name}.yaml"
     os.environ['CONFIG_FILE'] = config_file_name
