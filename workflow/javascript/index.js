@@ -53,13 +53,9 @@ app.post('/workflow/start', async (req, res) => {
     const workflowId = await workflowClient.scheduleNewWorkflow(orderProcessingWorkflow, order);
     console.log(`Workflow scheduled with ID: ${workflowId}`);
 
-    const state = await workflowClient.waitForWorkflowCompletion(workflowId, undefined, 30);
-    console.log(`Workflow completed!`);
-
     res.json({
-      message: 'Workflow started and completed successfully',
+      message: 'Workflow started successfully',
       workflow_id: workflowId,
-      result: state?.serializedOutput,
     });
   } catch (e) {
     console.error(`Failed to start workflow: ${e}`);
