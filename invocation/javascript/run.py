@@ -66,7 +66,6 @@ def create_appid(project_name, appid_name):
                 spinner.write(f"Error: {e.stderr}")
             sys.exit(1)
 
-
 def check_appid_status(project_name, appid_name):
     max_attempts = 8
     attempt = 1
@@ -76,17 +75,20 @@ def check_appid_status(project_name, appid_name):
         while attempt <= max_attempts:
             status_output = run_command(f"diagrid appid get {appid_name} -p {project_name}")
 
-            status_lines = status_output.split('\n')
-            status = None
-            for line in status_lines:
-                if 'Status:' in line:
-                    status = line.split('Status:')[1].strip()
-                    last_status = status
-                    break
+            if status_output is None:
+                spinner.write(f"App ID {appid_name} is still provisioning. Retrying...") 
+            else:          
+                status_lines = status_output.split('\n')
+                status = None
+                for line in status_lines:
+                    if 'Status:' in line:
+                        status = line.split('Status:')[1].strip()
+                        last_status = status
+                        break
 
-            if status and (status.lower() == "ready" or status.lower() == "available"):
-                spinner.ok("✅")
-                return 
+                if status and (status.lower() == "ready" or status.lower() == "available"):
+                    spinner.ok("✅")
+                    return 
 
             time.sleep(10)
             attempt += 1
