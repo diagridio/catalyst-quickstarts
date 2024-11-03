@@ -81,7 +81,7 @@ def create_subscription(project_name, subscription_name, topic_name, route):
 
 
 def check_appid_status(project_name, appid_name):
-    max_attempts = 8
+    max_attempts = 12
     attempt = 1
     last_status = None
     
