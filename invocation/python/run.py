@@ -73,7 +73,7 @@ def create_appid(project_name, appid_name):
             sys.exit(1)
 
 def check_appid_status(project_name, appid_name):
-    max_attempts = 8
+    max_attempts = 12
     attempt = 1
     last_status = None
     
