@@ -4,5 +4,5 @@ grpcio==1.63.0
 pydantic==2.4.2
 requests==2.32.3
 uvicorn==0.23.2
-aiohttp==3.10.2
+aiohttp==3.10.11
 certifi>=2024.02.02
