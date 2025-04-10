@@ -3,4 +3,4 @@ kind: Pubsub
 metadata:
   name: pubsub
 spec:
-  createConnection: true
+  createComponent: true
