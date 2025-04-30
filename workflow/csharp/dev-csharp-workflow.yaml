@@ -1,0 +1,24 @@
+version: 1
+common:
+    appLogDestination: console
+    enableAppHealthCheck: false
+      # appHealthCheckPath: /healthz
+      # appHealthProbeInterval: 5
+      # appHealthProbeTimeout: 500
+      # appHealthThreshold: 3
+apps:
+    - appID: order-workflow
+      appPort: 0
+      appDirPath: .
+      command:
+      - dotnet
+      - run
+      appProtocol: http
+      logLevel: info
+      enableAppHealthCheck: false
+        # appHealthCheckPath: /healthz
+        # appHealthProbeInterval: 5
+        # appHealthProbeTimeout: 500
+        # appHealthThreshold: 3
+      appLogDestination: console
+ 

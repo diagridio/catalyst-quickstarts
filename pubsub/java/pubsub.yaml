@@ -1,0 +1,6 @@
+apiVersion: cra.diagrid.io/v1beta1
+kind: Pubsub
+metadata:
+  name: pubsub
+spec:
+  createComponent: true
