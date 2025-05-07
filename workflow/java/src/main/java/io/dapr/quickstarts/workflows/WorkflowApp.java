@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RestController;
 import io.dapr.workflows.runtime.WorkflowRuntime;
+import io.dapr.workflows.runtime.WorkflowRuntimeBuilder;
 import io.dapr.workflows.client.DaprWorkflowClient;
 import io.dapr.workflows.client.WorkflowInstanceStatus;
 import org.slf4j.Logger;
@@ -21,11 +22,18 @@ import io.dapr.quickstarts.workflows.models.*;
 @RestController
 public class WorkflowApp {
 
-  @Autowired
-  private WorkflowRuntime workflowRuntime;
+  private final WorkflowRuntime workflowRuntime;
+  private final DaprWorkflowClient workflowClient;
 
   private static final Logger logger = LoggerFactory.getLogger(WorkflowApp.class);
-  private DaprWorkflowClient workflowClient = new DaprWorkflowClient();
+
+  @Autowired
+  public WorkflowApp(WorkflowRuntimeBuilder workflowRuntimeBuilder, DaprWorkflowClient daprWorkflowClient) {
+    this.workflowRuntime = workflowRuntimeBuilder.build();
+    this.workflowClient = daprWorkflowClient;
+    this.workflowRuntime.start(false);
+    logger.info("Workflow runtime started.");
+  }
 
   public static void main(String[] args) {
     SpringApplication.run(WorkflowApp.class, args);
@@ -35,11 +43,6 @@ public class WorkflowApp {
   public ResponseEntity<String> startWorkflow(@RequestBody OrderPayload order) {
     logger.info("Received request to start workflow for item: {} with quantity: {}", order.getItemName(),
         order.getQuantity());
-
-    if (workflowRuntime == null) {
-      logger.error("Workflow runtime is not initialized");
-      throw new IllegalStateException("Workflow runtime is not initialized");
-    }
 
     // Run the workflow
     try {
