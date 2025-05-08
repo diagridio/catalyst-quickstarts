@@ -10,7 +10,7 @@ import io.dapr.quickstarts.workflows.models.*;
 import io.dapr.quickstarts.workflows.activities.*;
 
 @Service
-public class OrderProcessingWorkflow extends Workflow {
+public class OrderProcessingWorkflow implements Workflow {
 
   private static final Logger logger = LoggerFactory.getLogger(OrderProcessingWorkflow.class);
 
@@ -25,7 +25,7 @@ public class OrderProcessingWorkflow extends Workflow {
       // Notify the user that an order has come through
       Notification notification = new Notification();
       notification.setMessage("Received Order: " + order.toString());
-      ctx.callActivity(NotifyActivity.class.getName(), notification).await();
+      ctx.callActivity(NotifyActivity.class.getCanonicalName(), notification).await();
 
       // Determine if there is enough of the item available for purchase by checking
       // the inventory
@@ -34,12 +34,12 @@ public class OrderProcessingWorkflow extends Workflow {
       inventoryRequest.setItemName(order.getItemName());
       inventoryRequest.setQuantity(order.getQuantity());
       InventoryResult inventoryResult = ctx
-          .callActivity(ReserveInventoryActivity.class.getName(), inventoryRequest, InventoryResult.class).await();
+          .callActivity(ReserveInventoryActivity.class.getCanonicalName(), inventoryRequest, InventoryResult.class).await();
 
       // If there is insufficient inventory, fail and let the user know
       if (!inventoryResult.isSuccess()) {
         notification.setMessage("Insufficient inventory for order: " + order.getItemName());
-        ctx.callActivity(NotifyActivity.class.getName(), notification).await();
+        ctx.callActivity(NotifyActivity.class.getCanonicalName(), notification).await();
         ctx.complete(orderResult);
         return;
       }
@@ -50,28 +50,28 @@ public class OrderProcessingWorkflow extends Workflow {
       paymentRequest.setRequestId(orderId);
       paymentRequest.setItemBeingPurchased(order.getItemName());
       paymentRequest.setQuantity(order.getQuantity());
-      boolean isOK = ctx.callActivity(ProcessPaymentActivity.class.getName(), paymentRequest, boolean.class).await();
+      boolean isOK = ctx.callActivity(ProcessPaymentActivity.class.getCanonicalName(), paymentRequest, boolean.class).await();
       if (!isOK) {
         notification.setMessage("Payment failed for order: " + orderId);
-        ctx.callActivity(NotifyActivity.class.getName(), notification).await();
+        ctx.callActivity(NotifyActivity.class.getCanonicalName(), notification).await();
         ctx.complete(orderResult);
         return;
       }
 
       // Update the inventory
       inventoryResult = ctx
-          .callActivity(UpdateInventoryActivity.class.getName(), inventoryRequest, InventoryResult.class).await();
+          .callActivity(UpdateInventoryActivity.class.getCanonicalName(), inventoryRequest, InventoryResult.class).await();
       if (!inventoryResult.isSuccess()) {
         // If there is an error updating the inventory, let the user know
         notification.setMessage("Order failed to update inventory! : " + orderId);
-        ctx.callActivity(NotifyActivity.class.getName(), notification).await();
+        ctx.callActivity(NotifyActivity.class.getCanonicalName(), notification).await();
         ctx.complete(orderResult);
         return;
       }
 
       // Let user know their order was processed
       notification.setMessage("Order completed! : " + orderId);
-      ctx.callActivity(NotifyActivity.class.getName(), notification).await();
+      ctx.callActivity(NotifyActivity.class.getCanonicalName(), notification).await();
 
       // Complete the workflow with order result is processed
       orderResult.setProcessed(true);
