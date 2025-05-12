@@ -42,7 +42,7 @@
     <dependency>
       <groupId>io.dapr</groupId>
       <artifactId>dapr-sdk-workflows</artifactId>
-      <version>0.14.0</version>
+      <version>0.15.0-rc-1</version>
     </dependency>
   </dependencies>
 
