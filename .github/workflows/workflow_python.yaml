@@ -1,0 +1,61 @@
+name: python workflow quickstart
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/workflow_python.yaml
+      - workflow/python/**
+  pull_request:
+    branches:
+      - main
+    paths:
+      - .github/workflows/workflow_python.yaml
+      - workflow/python/**
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: "read"
+      id-token: "write"
+    environment: shared-production
+
+    if: github.repository_owner == 'diagridio'
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: build local
+        run: |
+          cd workflow/python
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Configure AWS credentials
+        if: github.event_name != 'pull_request'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_CI_ROLE }}
+          aws-region: ${{ vars.AWS_CI_REGION }}
+
+      - name: Login to Amazon ECR
+        if: github.event_name != 'pull_request'
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+        with:
+          registry-type: public
+
+      - name: Set up Docker Buildx
+        if: github.event_name != 'pull_request'
+        uses: docker/setup-buildx-action@v3.6.1
+
+      - name: build and push workflow-app image
+        if: github.event_name != 'pull_request'
+        working-directory: workflow/python
+        run: |
+          docker buildx build --platform linux/amd64,linux/arm64 -t ${{ steps.login-ecr.outputs.registry }}/${{ vars.AWS_PUBLIC_ECR_ALIAS }}/workflow-python-qs . --push
