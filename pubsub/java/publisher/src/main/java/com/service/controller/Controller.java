@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Mono;
-import javax.annotation.PostConstruct;
+import jakarta.annotation.PostConstruct;
 
 @RestController
 public class Controller {
