@@ -1,4 +1,4 @@
-name: csharp pubsub quickstart
+name: python workflow quickstart
 
 on:
   push:
@@ -8,8 +8,8 @@ on:
     branches:
       - main
     paths:
-      - .github/workflows/pubsub_csharp.yaml
-      - pubsub/csharp/**
+      - .github/workflows/workflow_python.yaml
+      - workflow/python/**
 
 jobs:
   build:
@@ -22,15 +22,16 @@ jobs:
     if: github.repository_owner == 'diagridio'
     steps:
       - uses: actions/checkout@v3
-
-      - uses: actions/setup-dotnet@v3
+      - uses: actions/setup-python@v4
         with:
-          dotnet-version: "8.0.x"
+          python-version: "3.12"
+          cache: "pip"
 
       - name: build local
         run: |
-          cd pubsub/csharp
-          dotnet build ./publisher && dotnet build ./subscriber
+          cd workflow/python
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
 
       - name: Configure AWS credentials
         if: github.event_name != 'pull_request'
@@ -50,14 +51,8 @@ jobs:
         if: github.event_name != 'pull_request'
         uses: docker/setup-buildx-action@v3.6.1
 
-      - name: build and push publisher image
+      - name: build and push workflow-app image
         if: github.event_name != 'pull_request'
-        working-directory: pubsub/csharp/publisher
+        working-directory: workflow/python
         run: |
-          docker buildx build --platform linux/amd64,linux/arm64 -t ${{ steps.login-ecr.outputs.registry }}/${{ vars.AWS_PUBLIC_ECR_ALIAS }}/pubsub-csharp-publisher-qs . --push
-
-      - name: build and push subscriber image
-        if: github.event_name != 'pull_request'
-        working-directory: pubsub/csharp/subscriber
-        run: |
-          docker buildx build --platform linux/amd64,linux/arm64 -t ${{ steps.login-ecr.outputs.registry }}/${{ vars.AWS_PUBLIC_ECR_ALIAS }}/pubsub-csharp-subscriber-qs . --push
+          docker buildx build --platform linux/amd64,linux/arm64 -t ${{ steps.login-ecr.outputs.registry }}/${{ vars.AWS_PUBLIC_ECR_ALIAS }}/workflow-python-qs . --push

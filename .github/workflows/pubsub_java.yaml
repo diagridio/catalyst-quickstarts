@@ -4,9 +4,6 @@ on:
   push:
     branches:
       - main
-    paths:
-      - .github/workflows/pubsub_java.yaml
-      - pubsub/java/**
   pull_request:
     branches:
       - main
@@ -28,7 +25,7 @@ jobs:
       - uses: actions/setup-java@v3
         with:
           distribution: "temurin"
-          java-version: "11"
+          java-version: "17"
 
       - name: build local
         run: |
