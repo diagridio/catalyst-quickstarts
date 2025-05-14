@@ -4,9 +4,6 @@ on:
   push:
     branches:
       - main
-    paths:
-      - .github/workflows/invoke_javascript.yaml
-      - invocation/javascript/**
   pull_request:
     branches:
       - main

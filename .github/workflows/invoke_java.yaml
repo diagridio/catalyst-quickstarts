@@ -4,9 +4,6 @@ on:
   push:
     branches:
       - main
-    paths:
-      - .github/workflows/invoke_java.yaml
-      - invocation/java/**
   pull_request:
     branches:
       - main

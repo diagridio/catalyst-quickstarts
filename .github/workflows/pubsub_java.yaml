@@ -4,9 +4,6 @@ on:
   push:
     branches:
       - main
-    paths:
-      - .github/workflows/pubsub_java.yaml
-      - pubsub/java/**
   pull_request:
     branches:
       - main

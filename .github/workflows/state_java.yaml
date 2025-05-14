@@ -4,9 +4,6 @@ on:
   push:
     branches:
       - main
-    paths:
-      - .github/workflows/state_java.yaml
-      - state/java/**
   pull_request:
     branches:
       - main

@@ -4,9 +4,6 @@ on:
   push:
     branches:
       - main
-    paths:
-      - .github/workflows/state_csharp.yaml
-      - state/csharp/**
   pull_request:
     branches:
       - main

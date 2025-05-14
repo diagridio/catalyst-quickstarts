@@ -4,9 +4,6 @@ on:
   push:
     branches:
       - main
-    paths:
-      - .github/workflows/workflow_javascript.yaml
-      - workflow/javascript/**
   pull_request:
     branches:
       - main
