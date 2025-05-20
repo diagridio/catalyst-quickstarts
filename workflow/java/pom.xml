@@ -37,10 +37,15 @@
       <artifactId>spring-boot-starter-web</artifactId>
     </dependency>
 
-    <!-- Check for a compatible version of Dapr SDK that works with Java 11 -->
     <dependency>
-      <groupId>io.dapr</groupId>
-      <artifactId>dapr-sdk-workflows</artifactId>
+      <groupId>io.dapr.spring</groupId>
+      <artifactId>dapr-spring-boot-starter</artifactId>
+      <version>0.15.0-rc-1</version>
+    </dependency>
+
+    <dependency>
+      <groupId>io.dapr.spring</groupId>
+      <artifactId>dapr-spring-workflows</artifactId>
       <version>0.15.0-rc-1</version>
     </dependency>
   </dependencies>

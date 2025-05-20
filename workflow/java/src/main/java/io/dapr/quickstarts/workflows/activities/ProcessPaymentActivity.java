@@ -5,7 +5,9 @@ import io.dapr.workflows.WorkflowActivity;
 import io.dapr.workflows.WorkflowActivityContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
 
+@Component
 public class ProcessPaymentActivity implements WorkflowActivity {
 
   private static final Logger logger = LoggerFactory.getLogger(ProcessPaymentActivity.class);
