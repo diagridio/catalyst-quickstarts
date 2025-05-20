@@ -23,8 +23,11 @@ public class WorkflowApp {
 
   @Autowired
   private WorkflowRuntime workflowRuntime;
+
+  @Autowired
+  private DaprWorkflowClient workflowClient;
+
   private static final Logger logger = LoggerFactory.getLogger(WorkflowApp.class);
-  private DaprWorkflowClient workflowClient = new DaprWorkflowClient();
 
   public static void main(String[] args) {
     SpringApplication.run(WorkflowApp.class, args);

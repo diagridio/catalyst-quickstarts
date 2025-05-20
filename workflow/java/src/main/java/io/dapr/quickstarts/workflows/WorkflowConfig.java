@@ -7,18 +7,9 @@ import io.dapr.workflows.runtime.WorkflowRuntimeBuilder;
 
 import io.dapr.quickstarts.workflows.activities.*;
 
-@Configuration
+// @Configuration
 public class WorkflowConfig {
-
-  @Bean
-  public WorkflowRuntime workflowRuntime() {
-    WorkflowRuntimeBuilder builder = new WorkflowRuntimeBuilder().registerWorkflow(OrderProcessingWorkflow.class);
-    builder.registerActivity(NotifyActivity.class);
-    builder.registerActivity(ProcessPaymentActivity.class);
-    builder.registerActivity(ReserveInventoryActivity.class);
-    builder.registerActivity(UpdateInventoryActivity.class);
-    WorkflowRuntime runtime = builder.build();
-    runtime.start(false);
-    return runtime;
-  }
+  // Configuration is handled by Spring's component scanning
+  // Workflows and activities are automatically registered as they are annotated
+  // with @Service and @Component
 }
