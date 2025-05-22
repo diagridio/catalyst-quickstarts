@@ -39,7 +39,6 @@ public class WorkflowApp {
     try {
       String instanceId = workflowClient.scheduleNewWorkflow(OrderProcessingWorkflow.class, order);
       logger.info("Workflow execution started successfully for item: {} {}", order.getQuantity(), order.getItemName());
-      logger.info("Workflow runtime started");
       return ResponseEntity.ok("Workflow started successfully, workflow_id: " + instanceId);
     } catch (Exception e) {
       logger.error("Error starting workflow for item: {} {}", order.getQuantity(), order.getItemName(), e);
