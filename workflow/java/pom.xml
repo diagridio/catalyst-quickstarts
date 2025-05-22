@@ -42,12 +42,6 @@
       <artifactId>dapr-spring-boot-starter</artifactId>
       <version>0.15.0-rc-5</version>
     </dependency>
-
-    <dependency>
-      <groupId>io.dapr.spring</groupId>
-      <artifactId>dapr-spring-workflows</artifactId>
-      <version>0.15.0-rc-5</version>
-    </dependency>
   </dependencies>
 
   <build>
