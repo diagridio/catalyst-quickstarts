@@ -8,10 +8,9 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RestController;
-import io.dapr.workflows.runtime.WorkflowRuntime;
-import io.dapr.workflows.runtime.WorkflowRuntimeBuilder;
 import io.dapr.workflows.client.DaprWorkflowClient;
 import io.dapr.workflows.client.WorkflowInstanceStatus;
+import io.dapr.spring.workflows.config.EnableDaprWorkflows;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,20 +19,13 @@ import io.dapr.quickstarts.workflows.models.*;
 
 @SpringBootApplication
 @RestController
+@EnableDaprWorkflows
 public class WorkflowApp {
 
-  private final WorkflowRuntime workflowRuntime;
-  private final DaprWorkflowClient workflowClient;
+  @Autowired
+  private DaprWorkflowClient workflowClient;
 
   private static final Logger logger = LoggerFactory.getLogger(WorkflowApp.class);
-
-  @Autowired
-  public WorkflowApp(WorkflowRuntimeBuilder workflowRuntimeBuilder, DaprWorkflowClient daprWorkflowClient) {
-    this.workflowRuntime = workflowRuntimeBuilder.build();
-    this.workflowClient = daprWorkflowClient;
-    this.workflowRuntime.start(false);
-    logger.info("Workflow runtime started.");
-  }
 
   public static void main(String[] args) {
     SpringApplication.run(WorkflowApp.class, args);
@@ -44,7 +36,6 @@ public class WorkflowApp {
     logger.info("Received request to start workflow for item: {} with quantity: {}", order.getItemName(),
         order.getQuantity());
 
-    // Run the workflow
     try {
       String instanceId = workflowClient.scheduleNewWorkflow(OrderProcessingWorkflow.class, order);
       logger.info("Workflow execution started successfully for item: {} {}", order.getQuantity(), order.getItemName());
@@ -75,7 +66,6 @@ public class WorkflowApp {
   public ResponseEntity<String> terminateWorkflow(@PathVariable String workflowId) {
     try {
       workflowClient.terminateWorkflow(workflowId, null);
-
       logger.info("Workflow terminated successfully for ID: {}", workflowId);
       return ResponseEntity.ok("Workflow terminated successfully");
     } catch (Exception e) {
