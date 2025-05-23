@@ -7,16 +7,19 @@ WORKDIR /app
 # Expose the port on which the application will run
 EXPOSE 5001
 
-# Copy the requirements file to the working directory
+# Copy requirements first so Docker cache is efficient
 COPY requirements.txt .
 
-# Install the Python dependencies
-RUN pip install -r requirements.txt
+# Install build deps, pip install and clean up
+RUN apk add --no-cache --virtual .build-deps \
+  build-base linux-headers \
+  && pip install --no-cache-dir -r requirements.txt \
+  && apk del .build-deps
 
-# Copy the application code to the working directory
+# Copy the rest of the application code
 COPY . .
 
-ENV UVICORN_PORT 5001
+ENV UVICORN_PORT=5001
 
 # Run the FastAPI application using uvicorn server
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0"]
