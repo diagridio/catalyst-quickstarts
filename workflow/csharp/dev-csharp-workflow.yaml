@@ -16,9 +16,10 @@ apps:
       - run
     appProtocol: http
     logLevel: info
-    enableAppHealthCheck: false
     env:
       ASPNETCORE_URLS: "http://+:5001"
+    enableAppHealthCheck:
+      false
       # appHealthCheckPath: /healthz
       # appHealthProbeInterval: 5
       # appHealthProbeTimeout: 500
