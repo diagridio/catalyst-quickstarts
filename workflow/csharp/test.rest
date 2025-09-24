@@ -1,0 +1,33 @@
+### Workflow API Test Suite
+### Based on Diagrid Catalyst Workflow Quickstart
+### https://docs.diagrid.io/catalyst/quickstart/workflow
+
+### Health Check
+GET http://localhost:5001/
+
+###
+
+### Start Workflow
+// @name startWorkflow
+POST http://localhost:5001/workflow/start
+Content-Type: application/json
+
+{
+  "name": "Car",
+  "quantity": 25
+}
+
+###
+
+### Get Workflow Status
+### Uses the workflow ID from the previous start request
+@instanceId={{startWorkflow.response.body.instance_id}}
+GET http://localhost:5001/workflow/status/{{instanceId}}
+
+###
+
+### Terminate Workflow
+### Uses the workflow ID from the previous start request
+
+@instanceId={{startWorkflow.response.body.instance_id}}
+POST http://localhost:5001/workflow/terminate/{{instanceId}}

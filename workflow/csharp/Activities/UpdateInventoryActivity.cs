@@ -7,7 +7,7 @@ namespace WorkflowApp.Activities
     using System;
     using System.Collections.Generic;
 
-    public class UpdateInventoryActivity : WorkflowActivity<PaymentRequest, object?>
+    public class UpdateInventoryActivity : WorkflowActivity<InventoryRequest, object?>
     {
         readonly ILogger logger;
 
@@ -16,25 +16,25 @@ namespace WorkflowApp.Activities
             this.logger = loggerFactory.CreateLogger<UpdateInventoryActivity>();
         }
 
-        public override async Task<object?> RunAsync(WorkflowActivityContext context, PaymentRequest req)
+        public override async Task<object?> RunAsync(WorkflowActivityContext context, InventoryRequest req)
         {
             this.logger.LogInformation(
-                "Checking Inventory for: Order# {requestId} for {amount} {item}",
+                "Checking Inventory for: Order# {requestId} for {quantity} {item}",
                 req.RequestId,
-                req.Amount,
-                req.ItemBeingPurchased);
+                req.Quantity,
+                req.ItemName);
 
             // Simulate slow processing
             await Task.Delay(TimeSpan.FromSeconds(5));
 
             // Simulate inventory update
-            if (ReserveInventoryActivity.Inventory.TryGetValue(req.ItemBeingPurchased, out int available))
+            if (ReserveInventoryActivity.Inventory.TryGetValue(req.ItemName, out int available))
             {
-                if (available >= req.Amount)
+                if (available >= req.Quantity)
                 {
-                    ReserveInventoryActivity.Inventory[req.ItemBeingPurchased] -= req.Amount;
-                    this.logger.LogInformation($"There are now: {ReserveInventoryActivity.Inventory[req.ItemBeingPurchased]} {req.ItemBeingPurchased} left in stock");
-                    return Task.FromResult<object?>(null);
+                    ReserveInventoryActivity.Inventory[req.ItemName] -= req.Quantity;
+                    this.logger.LogInformation($"There are now: {ReserveInventoryActivity.Inventory[req.ItemName]} {req.ItemName} left in stock");
+                    return null;
                 }
             }
 

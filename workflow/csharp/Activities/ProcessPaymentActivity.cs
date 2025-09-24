@@ -18,19 +18,19 @@ namespace WorkflowApp.Activities
         public override async Task<object?> RunAsync(WorkflowActivityContext context, PaymentRequest req)
         {
             this.logger.LogInformation(
-                "Processing payment: {requestId} for {amount} {item}",
+                "Processing payment: {requestId} for {quantity} {item}",
                 req.RequestId,
-                req.Amount,
-                req.ItemBeingPurchased);
+                req.Quantity,
+                req.ItemName);
 
-            // Simulate slow processing
-            await Task.Delay(TimeSpan.FromSeconds(7));
+            // Simulate payment processing delay
+            await Task.Delay(TimeSpan.FromSeconds(2));
 
             this.logger.LogInformation(
                 "Payment for request ID '{requestId}' processed successfully",
                 req.RequestId);
 
-            return Task.FromResult<object?>(null);
+            return null;
         }
     }
 }

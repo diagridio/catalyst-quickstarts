@@ -32,7 +32,7 @@ namespace WorkflowApp.Activities
             if (Inventory.TryGetValue(req.ItemName, out int available) && available >= req.Quantity)
             {
                 this.logger.LogInformation("Inventory check successful for {amount} {item}", req.Quantity, req.ItemName);
-                return Task.FromResult(new InventoryResult(true));
+                return Task.FromResult(new InventoryResult(true, new InventoryItem(req.ItemName, available)));
             }
 
             this.logger.LogInformation("Inventory check failed for {amount} {item}", req.Quantity, req.ItemName);

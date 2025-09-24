@@ -43,7 +43,7 @@ namespace WorkflowApp.Workflows
                 // Update the inventory
                 await context.CallActivityAsync(
                     nameof(UpdateInventoryActivity),
-                    new PaymentRequest(orderId, order.Name, order.Quantity));
+                    new InventoryRequest(orderId, order.Name, order.Quantity));
             }
             catch
             {
