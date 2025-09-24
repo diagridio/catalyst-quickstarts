@@ -16,12 +16,10 @@ app.get("/", (req, res) => {
 
 app.post("/neworder", (req, res) => {
   console.log("Invocation received with data: %s", JSON.stringify(req.body));
-  res
-    .status(200)
-    .json({
-      message: "Order received successfully",
-      orderId: req.body.orderId,
-    });
+  res.status(200).json({
+    message: "Order received successfully",
+    orderId: req.body.orderId,
+  });
 });
 
 app.listen(appPort, () => console.log(`server listening at :${appPort}`));

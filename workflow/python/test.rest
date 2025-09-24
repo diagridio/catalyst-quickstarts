@@ -28,6 +28,7 @@ GET http://localhost:5001/workflow/status/{{instanceId}}
 
 ### Terminate Workflow
 ### Uses the workflow ID from the previous start request
-
 @instanceId={{startWorkflow.response.body.instanceId}}
 POST http://localhost:5001/workflow/terminate/{{instanceId}}
+
+###

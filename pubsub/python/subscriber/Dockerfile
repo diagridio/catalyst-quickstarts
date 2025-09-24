@@ -16,7 +16,7 @@ RUN pip install -r requirements.txt
 # Copy the application code to the working directory
 COPY . .
 
-ENV UVICORN_PORT 5002
+ENV UVICORN_PORT=5002
 
 # Run the FastAPI application using uvicorn server
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0"]

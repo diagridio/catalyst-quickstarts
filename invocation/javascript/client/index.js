@@ -35,23 +35,19 @@ app.post("/order", async function (req, res) {
       config
     );
     console.log("Invocation successful with status code: %d ", response.status);
-    res
-      .status(200)
-      .json({
-        message: "Invocation successful",
-        orderId: order.orderId,
-        targetApp: invokeAppID,
-      });
+    res.status(200).json({
+      message: "Invocation successful",
+      orderId: order.orderId,
+      targetApp: invokeAppID,
+    });
   } catch (error) {
     console.log("Error invoking app at " + `${daprHttpEndpoint}/neworder`);
-    res
-      .status(500)
-      .json({
-        error: {
-          code: "INVOCATION_ERROR",
-          message: "Failed to invoke service",
-        },
-      });
+    res.status(500).json({
+      error: {
+        code: "INVOCATION_ERROR",
+        message: "Failed to invoke service",
+      },
+    });
   }
 });
 
