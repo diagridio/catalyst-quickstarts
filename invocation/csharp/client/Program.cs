@@ -13,11 +13,11 @@ var DaprApiToken = Environment.GetEnvironmentVariable("DAPR_API_TOKEN") ?? "";
 var InvokeAppId = Environment.GetEnvironmentVariable("INVOKE_APPID") ?? "server";
 
 // Health check endpoint
-app.MapGet("/", () => 
+app.MapGet("/", () =>
 {
-    var healthMessage = "Health check passed. Everything is running smoothly! 🚀";
+    var healthMessage = "Health check passed. Everything is running smoothly!";
     app.Logger.LogInformation("Health check result: {Message}", healthMessage);
-    return Results.Ok(healthMessage);
+    return Results.Ok(new { status = "healthy", message = healthMessage });
 });
 
 app.MapPost("/order", async (Order order) =>
@@ -34,18 +34,18 @@ app.MapPost("/order", async (Order order) =>
         if (response.IsSuccessStatusCode)
         {
             app.Logger.LogInformation("Invocation successful with status code {statusCode}", response.StatusCode);
-            return Results.StatusCode(200);
+            return Results.Ok(new { message = "Invocation successful", orderId = order.OrderId, targetApp = InvokeAppId });
         }
         else
         {
             app.Logger.LogError("Invocation unsuccessful with status code {statusCode}", response.StatusCode);
-            return Results.StatusCode(500);
+            return Results.Json(new { error = new { code = "INVOCATION_ERROR", message = "Failed to invoke service" } }, statusCode: 500);
         }
     }
     catch (Exception ex)
     {
         app.Logger.LogError("Error occurred while invoking {appID}: {exception}", InvokeAppId, ex.InnerException);
-        return Results.StatusCode(500);
+        return Results.Json(new { error = new { code = "INVOCATION_ERROR", message = "Failed to invoke service" } }, statusCode: 500);
     }
 });
 

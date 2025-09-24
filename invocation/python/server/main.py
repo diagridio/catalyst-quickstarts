@@ -13,8 +13,10 @@ class Order(BaseModel):
 @app.post('/neworder')
 def receive_order(order: Order):
     logging.info('Invocation received with data: ' + str(order))
-    return str(order)
+    return {"message": "Order received successfully", "orderId": order.orderId}
 
 @app.get('/')
 async def read_root():
-    return {"message": "Server app is running"}
+    health_message = "Health check passed. Everything is running smoothly!"
+    logging.info("Health check result: %s", health_message)
+    return {"status": "healthy", "message": health_message}

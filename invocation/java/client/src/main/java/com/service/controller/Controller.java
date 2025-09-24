@@ -44,12 +44,33 @@ public class Controller {
         .build();
   }
 
+  // Helper methods for consistent responses
+  private JSONObject createSuccessResponse(String message, int orderId, String targetApp) {
+    JSONObject response = new JSONObject();
+    response.put("message", message);
+    response.put("orderId", orderId);
+    response.put("targetApp", targetApp);
+    return response;
+  }
+
+  private JSONObject createErrorResponse(String code, String message) {
+    JSONObject response = new JSONObject();
+    JSONObject error = new JSONObject();
+    error.put("code", code);
+    error.put("message", message);
+    response.put("error", error);
+    return response;
+  }
+
   // Health check endpoint
   @GetMapping(path = "/")
-  public ResponseEntity<String> healthCheck() {
-    String healthMessage = "Health check passed. Everything is running smoothly! 🚀";
+  public ResponseEntity<Object> healthCheck() {
+    String healthMessage = "Health check passed. Everything is running smoothly!";
     logger.info("Health check result: {}", healthMessage);
-    return ResponseEntity.ok(healthMessage);
+    JSONObject response = new JSONObject();
+    response.put("status", "healthy");
+    response.put("message", healthMessage);
+    return ResponseEntity.ok(response.toMap());
   }
 
   // Invoke another service
@@ -69,12 +90,16 @@ public class Controller {
             .build();
 
         HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-        JSONObject jsonObject = new JSONObject(response.body());
-        logger.info("Invoke Successful. Response received: " + jsonObject.getInt("orderId"));
-        return ResponseEntity.ok("SUCCESS");
+        if (response.statusCode() == 200) {
+          logger.info("Invoke Successful. Response received: " + order.getOrderId());
+          return ResponseEntity.ok(createSuccessResponse("Invocation successful", order.getOrderId(), INVOKE_APPID).toMap());
+        } else {
+          logger.error("Invocation unsuccessful with status code: " + response.statusCode());
+          return ResponseEntity.status(500).body(createErrorResponse("INVOCATION_ERROR", "Failed to invoke service").toMap());
+        }
       } catch (Exception e) {
         logger.error("Error occurred while invoking App ID. " + e);
-        throw new RuntimeException(e);
+        return ResponseEntity.status(500).body(createErrorResponse("INVOCATION_ERROR", "Failed to invoke service").toMap());
       }
     });
   }

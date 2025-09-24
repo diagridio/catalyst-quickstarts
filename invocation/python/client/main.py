@@ -31,16 +31,18 @@ async def send_order(order: Order):
         if result.ok:
             logging.info('Invocation successful with status code: %s' %
                          result.status_code)
-            return str(order)
+            return {"message": "Invocation successful", "orderId": order.orderId, "targetApp": invoke_appid}
         else:
             logging.error(
                 'Error occurred while invoking App ID: %s' % result.reason)
-            raise HTTPException(status_code=500, detail=result.reason)
+            raise HTTPException(status_code=500, detail={"error": {"code": "INVOCATION_ERROR", "message": "Failed to invoke service"}})
 
-    except grpc.RpcError as err:
-        logging.error(f"ErrorCode={err.code()}")
-        raise HTTPException(status_code=500, detail=err.details())
+    except Exception as err:
+        logging.error(f"Error occurred while invoking service: {err}")
+        raise HTTPException(status_code=500, detail={"error": {"code": "INVOCATION_ERROR", "message": "Failed to invoke service"}})
 
 @app.get('/')
 async def read_root():
-    return {"message": "Client app is running"}
+    health_message = "Health check passed. Everything is running smoothly!"
+    logging.info("Health check result: %s", health_message)
+    return {"status": "healthy", "message": health_message}

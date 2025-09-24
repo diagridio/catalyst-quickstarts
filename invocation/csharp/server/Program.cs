@@ -13,15 +13,15 @@ var logger = app.Logger;
 app.MapPost("/neworder", (Order order) =>
 {
     logger.LogInformation("Invocation received with data: {OrderId}", order.OrderId);
-    return Results.Ok(order);
+    return Results.Ok(new { message = "Order received successfully", orderId = order.OrderId });
 });
 
 // Health check endpoint
-app.MapGet("/", () => 
+app.MapGet("/", () =>
 {
-    var healthMessage = "Health check passed. Everything is running smoothly! 🚀";
+    var healthMessage = "Health check passed. Everything is running smoothly!";
     app.Logger.LogInformation("Health check result: {Message}", healthMessage);
-    return Results.Ok(healthMessage);
+    return Results.Ok(new { status = "healthy", message = healthMessage });
 });
 
 app.Run();

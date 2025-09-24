@@ -1,6 +1,19 @@
+### Invocation API Test Suite
+### Based on Diagrid Catalyst Invocation Quickstart
+### https://docs.diagrid.io/catalyst/quickstart/invocation
+
+### Health Check
+GET http://localhost:5001/
+
+###
+
+### Invoke Service Method
+// @name invokeService
 POST http://localhost:5001/order
 Content-Type: application/json
 
 {
     "orderId": 1
 }
+
+###
