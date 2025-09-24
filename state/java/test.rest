@@ -1,7 +1,17 @@
 
+### Save state item
 POST http://localhost:5001/order
 Content-Type: application/json
 
 {
-    "orderId": 1
+    "orderId": 4
 }
+
+
+### Get state item
+GET http://localhost:5001/order/4
+Content-Type: application/json
+
+### Delete state item 
+DELETE http://localhost:5001/order/4
+Content-Type: application/json

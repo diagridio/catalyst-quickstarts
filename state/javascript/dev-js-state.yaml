@@ -1,27 +1,28 @@
 version: 1
 common:
-    appLogDestination: console
-    resourcesPaths:
-      - kvstore.yaml
-    enableAppHealthCheck: false
+  appLogDestination: console
+  resourcesPaths:
+    - statestore.yaml
+  enableAppHealthCheck:
+    false
+    # appHealthCheckPath: /healthz
+    # appHealthProbeInterval: 5
+    # appHealthProbeTimeout: 500
+    # appHealthThreshold: 3
+apps:
+  - appID: order-app
+    appPort: 0
+    appDirPath: .
+    command:
+      - npm
+      - run
+      - start
+    appProtocol: http
+    logLevel: info
+    enableAppHealthCheck:
+      false
       # appHealthCheckPath: /healthz
       # appHealthProbeInterval: 5
       # appHealthProbeTimeout: 500
       # appHealthThreshold: 3
-apps:
-    - appID: order-app
-      appPort: 0
-      appDirPath: .
-      command:
-      - npm
-      - run
-      - start
-      appProtocol: http
-      logLevel: info
-      enableAppHealthCheck: false
-        # appHealthCheckPath: /healthz
-        # appHealthProbeInterval: 5
-        # appHealthProbeTimeout: 500
-        # appHealthThreshold: 3
-      appLogDestination: console
- 
+    appLogDestination: console

@@ -26,19 +26,45 @@ public class Controller {
     private static final Logger logger = LoggerFactory.getLogger(Controller.class);
     private DaprClient client;
 
-    private static final String STATESTORE_NAME = System.getenv().getOrDefault("STATESTORE_NAME", "kvstore");
+    private static final String STATESTORE_NAME = System.getenv().getOrDefault("STATESTORE_NAME", "statestore");
 
     @PostConstruct
     public void init() {
         client = new DaprClientBuilder().build();
     }
 
+    // Helper methods for consistent responses
+    private JSONObject createSuccessResponse(String id, String message) {
+        JSONObject response = new JSONObject();
+        response.put("id", id);
+        response.put("message", message);
+        return response;
+    }
+
+    private JSONObject createDataResponse(Object data) {
+        JSONObject response = new JSONObject();
+        response.put("data", data);
+        return response;
+    }
+
+    private JSONObject createErrorResponse(String code, String message) {
+        JSONObject response = new JSONObject();
+        JSONObject error = new JSONObject();
+        error.put("code", code);
+        error.put("message", message);
+        response.put("error", error);
+        return response;
+    }
+
     // Health check endpoint
     @GetMapping(path = "/")
-    public ResponseEntity<String> healthCheck() {
-        String healthMessage = "Health check passed. Everything is running smoothly! 🚀";
+    public ResponseEntity<Object> healthCheck() {
+        String healthMessage = "Health check passed. Everything is running smoothly!";
         logger.info("Health check result: {}", healthMessage);
-        return ResponseEntity.ok(healthMessage);
+        JSONObject response = new JSONObject();
+        response.put("status", "healthy");
+        response.put("message", healthMessage);
+        return ResponseEntity.ok(response.toMap());
     }
 
     // Save state
@@ -48,10 +74,10 @@ public class Controller {
             try {
                 Void response = client.saveState(STATESTORE_NAME, "" + order.getOrderId(), order).block();
                 logger.info("Save state item successful. Order saved: " + order.getOrderId());
-                return ResponseEntity.ok("SUCCESS");
+                return ResponseEntity.status(201).body(createSuccessResponse("" + order.getOrderId(), "Order created successfully").toMap());
             } catch (Exception e) {
                 logger.error("Error occurred while saving order: " + order.getOrderId());
-                throw new RuntimeException(e);
+                return ResponseEntity.status(500).body(createErrorResponse("INTERNAL_ERROR", "An internal server error occurred").toMap());
             }
         });
     }
@@ -64,11 +90,16 @@ public class Controller {
             try {
                 State<Order> response = client.getState(STATESTORE_NAME, "" + orderId, Order.class).block();
                 responseOrder = response.getValue();
-                logger.info("Get state item successful. Order retrieved: " + responseOrder);
-                return ResponseEntity.ok(responseOrder);
+                if (responseOrder != null) {
+                    logger.info("Get state item successful. Order retrieved: " + responseOrder);
+                    return ResponseEntity.ok(createDataResponse(responseOrder).toMap());
+                } else {
+                    logger.info("State item with key does not exist: " + orderId);
+                    return ResponseEntity.status(404).body(createErrorResponse("ORDER_NOT_FOUND", "Order with id '" + orderId + "' not found").toMap());
+                }
             } catch (Exception e) {
                 logger.error("Error occurred while retrieving order: " + responseOrder);
-                throw new RuntimeException(e);
+                return ResponseEntity.status(500).body(createErrorResponse("INTERNAL_ERROR", "An internal server error occurred").toMap());
             }
         });
     }
@@ -77,14 +108,13 @@ public class Controller {
     @DeleteMapping(path = "/order/{orderId}", consumes = MediaType.ALL_VALUE)
     public Mono<ResponseEntity> deleteState(@PathVariable String orderId) {
         return Mono.fromSupplier(() -> {
-
             try {
                 Void response = client.deleteState(STATESTORE_NAME, "" + orderId).block();
                 logger.info("Delete state item successful. Order deleted: " + orderId);
-                return ResponseEntity.ok("SUCCESS");
+                return ResponseEntity.noContent().build();
             } catch (Exception e) {
                 logger.error("Error occurred while deleting order: " + orderId);
-                throw new RuntimeException(e);
+                return ResponseEntity.status(500).body(createErrorResponse("INTERNAL_ERROR", "An internal server error occurred").toMap());
             }
         });
     }

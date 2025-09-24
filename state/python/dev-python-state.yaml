@@ -1,30 +1,31 @@
 version: 1
 common:
-    appLogDestination: console
-    resourcesPaths:
-      - kvstore.yaml
-    enableAppHealthCheck: false
-      # appHealthCheckPath: /healthz
-      # appHealthProbeInterval: 5
-      # appHealthProbeTimeout: 500
-      # appHealthThreshold: 3
+  appLogDestination: console
+  resourcesPaths:
+    - statestore.yaml
+  enableAppHealthCheck:
+    false
+    # appHealthCheckPath: /healthz
+    # appHealthProbeInterval: 5
+    # appHealthProbeTimeout: 500
+    # appHealthThreshold: 3
 apps:
-    - appID: order-app
-      appPort: 0
-      appDirPath: .
-      command:
+  - appID: order-app
+    appPort: 0
+    appDirPath: .
+    command:
       - uvicorn
       - main:app
       - --host
       - 127.0.0.1
       - --port
       - 5001
-      appProtocol: http
-      logLevel: info
-      enableAppHealthCheck: false
-        # appHealthCheckPath: /healthz
-        # appHealthProbeInterval: 5
-        # appHealthProbeTimeout: 500
-        # appHealthThreshold: 3
-      appLogDestination: console
- 
+    appProtocol: http
+    logLevel: info
+    enableAppHealthCheck:
+      false
+      # appHealthCheckPath: /healthz
+      # appHealthProbeInterval: 5
+      # appHealthProbeTimeout: 500
+      # appHealthThreshold: 3
+    appLogDestination: console
