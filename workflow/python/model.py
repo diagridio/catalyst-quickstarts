@@ -21,35 +21,36 @@ class InventoryItem:
 @dataclass
 class InventoryRequest:
     request_id: str
-    Name: str
-    Quantity: int
+    item_name: str
+    quantity: int
 
     def __str__(self):
-        return f"InventoryRequest(request_id={self.request_id}, item_name={self.Name}, quantity={self.Quantity})"
+        return f"InventoryRequest(request_id={self.request_id}, item_name={self.item_name}, quantity={self.quantity})"
 
 @dataclass
 class InventoryResult:
     success: bool
-    inventory_item: Optional[InventoryItem] = None
+    item: Optional[InventoryItem] = None
 
     def __str__(self):
-        return f"InventoryResult(success={self.success}, inventory_item={self.inventory_item})"
+        return f"InventoryResult(success={self.success}, item={self.item})"
 
 @dataclass
 class PaymentRequest:
     request_id: str
-    item_being_purchased: str
-    Quantity: int
+    item_name: str
+    quantity: int
   
     def __str__(self):
-        return f"PaymentRequest(request_id={self.request_id}, item_being_purchased={self.item_being_purchased}, quantity={self.Quantity})"
+        return f"PaymentRequest(request_id={self.request_id}, item_name={self.item_name}, quantity={self.quantity})"
 
 @dataclass
 class OrderResult:
     processed: bool
+    message: str = ""
 
     def __str__(self):
-        return f"OrderResult(processed={self.processed})"
+        return f"OrderResult(processed={self.processed}, message='{self.message}')"
 
 @dataclass
 class Notification:

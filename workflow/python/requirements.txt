@@ -1,4 +1,4 @@
-dapr==1.14.0rc1
+dapr==1.16.0
 dapr-ext-workflow
 fastapi==0.109.1
 grpcio==1.63.0
