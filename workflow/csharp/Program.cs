@@ -14,6 +14,8 @@
  * For more information, visit: https://docs.diagrid.io/catalyst/quickstart/workflow
  */
 
+
+using System.Text.Json;
 using Dapr.Workflow;
 using Microsoft.AspNetCore.Mvc;
 using WorkflowApp.Activities;
@@ -21,6 +23,23 @@ using WorkflowApp.Workflows;
 using WorkflowApp.Models;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Configure JSON serialization for camelCase
+builder.Services.Configure<Microsoft.AspNetCore.Http.Json.JsonOptions>(options =>
+{
+    options.SerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+    options.SerializerOptions.PropertyNameCaseInsensitive = true;
+});
+
+// Configure Dapr client with JSON serialization options
+builder.Services.AddDaprClient(daprBuilder =>
+{
+    daprBuilder.UseJsonSerializationOptions(new JsonSerializerOptions
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        PropertyNameCaseInsensitive = true
+    });
+});
 
 // Add Dapr workflow services
 // This registers all workflow components with the Dapr workflow runtime

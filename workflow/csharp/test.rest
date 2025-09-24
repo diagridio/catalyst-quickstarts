@@ -14,14 +14,14 @@ Content-Type: application/json
 
 {
   "name": "Car",
-  "quantity": 25
+  "quantity": 2
 }
 
 ###
 
 ### Get Workflow Status
 ### Uses the workflow ID from the previous start request
-@instanceId={{startWorkflow.response.body.instance_id}}
+@instanceId={{startWorkflow.response.body.instanceId}}
 GET http://localhost:5001/workflow/status/{{instanceId}}
 
 ###
@@ -29,5 +29,5 @@ GET http://localhost:5001/workflow/status/{{instanceId}}
 ### Terminate Workflow
 ### Uses the workflow ID from the previous start request
 
-@instanceId={{startWorkflow.response.body.instance_id}}
+@instanceId={{startWorkflow.response.body.instanceId}}
 POST http://localhost:5001/workflow/terminate/{{instanceId}}

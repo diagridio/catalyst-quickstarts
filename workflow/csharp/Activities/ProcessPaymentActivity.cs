@@ -30,7 +30,7 @@ namespace WorkflowApp.Activities
                 "Payment for request ID '{requestId}' processed successfully",
                 req.RequestId);
 
-            return null;
+            return new { success = true };
         }
     }
 }
