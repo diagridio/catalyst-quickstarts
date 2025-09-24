@@ -26,7 +26,7 @@ def reserve_inventory_activity(ctx: WorkflowActivityContext, input: InventoryReq
     available = inventory.get(input.item_name, 0)
     if available >= input.quantity:
         logger.info(f'{input.quantity} {input.item_name}(s) reserved. {available - input.quantity} left.')
-        return InventoryResult(success=True, item=InventoryItem(Name=input.item_name, Quantity=available))
+        return InventoryResult(success=True, item=InventoryItem(name=input.item_name, quantity=available))
 
     logger.info(f'Failed to reserve {input.quantity} {input.item_name}(s). Only {available} available.')
     return InventoryResult(success=False)
@@ -38,7 +38,7 @@ def update_inventory_activity(ctx: WorkflowActivityContext, input: InventoryRequ
     if available >= input.quantity:
         inventory[input.item_name] -= input.quantity
         logger.info(f'Updated {input.item_name} inventory to {inventory[input.item_name]} remaining.')
-        return InventoryResult(success=True, item=InventoryItem(Name=input.item_name, Quantity=inventory[input.item_name]))
+        return InventoryResult(success=True, item=InventoryItem(name=input.item_name, quantity=inventory[input.item_name]))
 
     logger.info(f'Not enough {input.item_name} in inventory for the request: only {available} remaining.')
     return InventoryResult(success=False)  
@@ -50,23 +50,23 @@ def order_processing_workflow(ctx: DaprWorkflowContext, order: dict):
     logger.info(f"Order received: {order_payload}")
 
     # Notify the user that an order has come through
-    notification_message = f"Received order {order_id} for {order_payload.Quantity} {order_payload.Name}"
+    notification_message = f"Received order {order_id} for {order_payload.quantity} {order_payload.name}"
     yield ctx.call_activity(notify_activity, input=Notification(message=notification_message))
 
     # Determine if there is enough of the item available for purchase by checking the inventory
-    result = yield ctx.call_activity(reserve_inventory_activity, input=InventoryRequest(request_id=order_id, item_name=order_payload.Name, quantity=order_payload.Quantity))
+    result = yield ctx.call_activity(reserve_inventory_activity, input=InventoryRequest(request_id=order_id, item_name=order_payload.name, quantity=order_payload.quantity))
 
     # If there is insufficient inventory, fail and let the user know 
     if not result.success:
-        yield ctx.call_activity(notify_activity, input=Notification(message=f"Insufficient inventory for {order_payload.Name}"))
+        yield ctx.call_activity(notify_activity, input=Notification(message=f"Insufficient inventory for {order_payload.name}"))
         return OrderResult(processed=False, message="Order failed due to insufficient inventory")
 
     # There is enough inventory available so the user can purchase the item(s). Process their payment
-    yield ctx.call_activity(process_payment_activity, input=PaymentRequest(request_id=order_id, item_name=order_payload.Name, quantity=order_payload.Quantity))
+    yield ctx.call_activity(process_payment_activity, input=PaymentRequest(request_id=order_id, item_name=order_payload.name, quantity=order_payload.quantity))
 
     # Update the inventory
     try:
-        yield ctx.call_activity(update_inventory_activity, input=InventoryRequest(request_id=order_id, item_name=order_payload.Name, quantity=order_payload.Quantity))
+        yield ctx.call_activity(update_inventory_activity, input=InventoryRequest(request_id=order_id, item_name=order_payload.name, quantity=order_payload.quantity))
     except Exception as e:
         logger.error(f"Error updating inventory: {e}")
         yield ctx.call_activity(notify_activity, input=Notification(message=f"Order {order_id} Failed! You are now getting a refund"))

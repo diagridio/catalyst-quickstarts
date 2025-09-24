@@ -3,8 +3,8 @@ from typing import Optional
 from pydantic import BaseModel
 
 class OrderPayload(BaseModel):
-    Name: str
-    Quantity: int
+    name: str
+    quantity: int
 
     class Config:
         populate_by_name = True
@@ -12,11 +12,11 @@ class OrderPayload(BaseModel):
 
 @dataclass
 class InventoryItem:
-    Name: str
-    Quantity: int
+    name: str
+    quantity: int
 
     def __str__(self):
-        return f"InventoryItem(item_name={self.Name}, quantity={self.Quantity})"
+        return f"InventoryItem(item_name={self.name}, quantity={self.quantity})"
 
 @dataclass
 class InventoryRequest:

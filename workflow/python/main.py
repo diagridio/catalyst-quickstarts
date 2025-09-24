@@ -59,12 +59,12 @@ async def read_root():
 def start_workflow(order: OrderPayload):
     try:
         instance_id = str(uuid.uuid4())
-        logger.info(f"Starting workflow for order {instance_id}: {order.Quantity} {order.Name}")
+        logger.info(f"Starting workflow for order {instance_id}: {order.quantity} {order.name}")
         
         workflow_client.schedule_new_workflow(workflow=order_processing_workflow, input=order.dict(), instance_id=instance_id)
         
         logger.info(f"Workflow execution started successfully for order {instance_id}")
-        return {"instance_id": instance_id}
+        return {"instanceId": instance_id}
     except Exception as e:
         logger.error(f"Error starting workflow: {e}")
         raise HTTPException(status_code=500, detail=str(e))
