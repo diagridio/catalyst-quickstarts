@@ -4,18 +4,26 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class OrderPayload {
 
-  @JsonProperty("Name")
-  private String itemName;
+  @JsonProperty("name")
+  private String name;
   
-  @JsonProperty("Quantity")
+  @JsonProperty("quantity")
   private int quantity;
 
+  public String getName() {
+    return name;
+  }
+
+  public void setName(String name) {
+    this.name = name;
+  }
+
   public String getItemName() {
-    return itemName;
+    return name;
   }
 
   public void setItemName(String itemName) {
-    this.itemName = itemName;
+    this.name = itemName;
   }
 
   public int getQuantity() {
@@ -28,7 +36,7 @@ public class OrderPayload {
 
   @Override
   public String toString() {
-    return "OrderPayload [itemName=" + itemName + ", quantity=" + quantity + "]";
+    return "OrderPayload [name=" + name + ", quantity=" + quantity + "]";
   }
 
 }
