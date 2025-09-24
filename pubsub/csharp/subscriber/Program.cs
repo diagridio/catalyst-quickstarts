@@ -16,15 +16,15 @@ app.UseCloudEvents();
 app.MapPost("/neworder", (Order order) =>
 {
     app.Logger.LogInformation("Order received: {orderId}", order.OrderId);
-    return Results.Ok(order);
+    return Results.Ok(new { message = "Message received successfully", orderId = order.OrderId });
 });
 
 // Health check endpoint
-app.MapGet("/", () => 
+app.MapGet("/", () =>
 {
-    var healthMessage = "Health check passed. Everything is running smoothly! 🚀";
+    var healthMessage = "Health check passed. Everything is running smoothly!";
     app.Logger.LogInformation("Health check result: {Message}", healthMessage);
-    return Results.Ok(healthMessage);
+    return Results.Ok(new { status = "healthy", message = healthMessage });
 });
 
 #endregion

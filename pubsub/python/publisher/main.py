@@ -15,7 +15,7 @@ class Order(BaseModel):
 pubsub_name = os.getenv('PUBSUB_NAME', 'pubsub')
 topic_name = os.getenv('TOPIC_NAME', 'orders')
 
-@app.post('/order')
+@app.post('/order', status_code=201)
 async def publish_orders(order: Order):
     with DaprClient() as d:
         try:
@@ -27,11 +27,14 @@ async def publish_orders(order: Order):
             )
             logging.info('Publish successful. Order published: %s' %
                          order.orderId)
-            return {'success': True}
+            return {"id": order.orderId, "message": "Message published successfully", "topic": "orders"}
         except grpc.RpcError as err:
             logging.error(
                 f"Error occurred while publishing order: {err.code()}")
+            raise HTTPException(status_code=500, detail={"error": {"code": "PUBLISH_ERROR", "message": "Failed to publish message"}})
 
 @app.get('/')
 async def read_root():
-    return {"message": "Publisher app is running"}
+    health_message = "Health check passed. Everything is running smoothly!"
+    logging.info("Health check result: %s", health_message)
+    return {"status": "healthy", "message": health_message}

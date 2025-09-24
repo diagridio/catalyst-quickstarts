@@ -1,4 +1,4 @@
-dapr==1.14.0
+dapr==1.16.0
 grpcio==1.63.0
 uvicorn==0.23.2
 pydantic==2.4.2

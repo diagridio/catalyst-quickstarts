@@ -29,27 +29,47 @@ public class Controller {
         client = new DaprClientBuilder().build();
     }
 
+    // Helper methods for consistent responses
+    private JSONObject createSuccessResponse(String id, String message, String topic) {
+        JSONObject response = new JSONObject();
+        response.put("id", id);
+        response.put("message", message);
+        response.put("topic", topic);
+        return response;
+    }
+
+    private JSONObject createErrorResponse(String code, String message) {
+        JSONObject response = new JSONObject();
+        JSONObject error = new JSONObject();
+        error.put("code", code);
+        error.put("message", message);
+        response.put("error", error);
+        return response;
+    }
+
     // Health check endpoint
     @GetMapping(path = "/")
-    public ResponseEntity<String> healthCheck() {
-        String healthMessage = "Health check passed. Everything is running smoothly! 🚀";
+    public ResponseEntity<Object> healthCheck() {
+        String healthMessage = "Health check passed. Everything is running smoothly!";
         logger.info("Health check result: {}", healthMessage);
-        return ResponseEntity.ok(healthMessage);
+        JSONObject response = new JSONObject();
+        response.put("status", "healthy");
+        response.put("message", healthMessage);
+        return ResponseEntity.ok(response.toMap());
     }
 
     // Publish messages 
     @PostMapping(path = "/order", consumes = MediaType.ALL_VALUE)
     public Mono<ResponseEntity> publish(@RequestBody(required = true) Order order) {
         return Mono.fromSupplier(() -> {
-
             // Publish an event/message using Dapr PubSub
             try {
                 client.publishEvent(PUBSUB_NAME, "orders", order).block();
                 logger.info("Publish successful. Order published: " + order.getOrderId());
-                return ResponseEntity.ok("SUCCESS");
+                return ResponseEntity.status(201).body(createSuccessResponse("" + order.getOrderId(), "Message published successfully", "orders").toMap());
             } catch (Exception e) {
                 logger.error("Error occurred while publishing order: " + order.getOrderId());
-                throw new RuntimeException(e);
+                return ResponseEntity.status(500).body(createErrorResponse("PUBLISH_ERROR", "Failed to publish message").toMap());
             }
         });
     }

@@ -5,6 +5,7 @@ import io.dapr.client.domain.CloudEvent;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
+import org.json.JSONObject;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -19,12 +20,23 @@ public class Controller {
     
     private static final Logger logger = LoggerFactory.getLogger(Controller.class);
 
+    // Helper methods for consistent responses
+    private JSONObject createSuccessResponse(String message, int orderId) {
+        JSONObject response = new JSONObject();
+        response.put("message", message);
+        response.put("orderId", orderId);
+        return response;
+    }
+
     // Health check endpoint
     @GetMapping(path = "/")
-    public ResponseEntity<String> healthCheck() {
-        String healthMessage = "Health check passed. Everything is running smoothly! 🚀";
+    public ResponseEntity<Object> healthCheck() {
+        String healthMessage = "Health check passed. Everything is running smoothly!";
         logger.info("Health check result: {}", healthMessage);
-        return ResponseEntity.ok(healthMessage);
+        JSONObject response = new JSONObject();
+        response.put("status", "healthy");
+        response.put("message", healthMessage);
+        return ResponseEntity.ok(response.toMap());
     }
 
     @PostMapping(path = "/neworder", consumes = MediaType.ALL_VALUE)
@@ -33,8 +45,9 @@ public class Controller {
             try {
                 int orderId = cloudEvent.getData().getOrderId();
                 logger.info("Order received: " + orderId);
-                return ResponseEntity.ok("SUCCESS");
+                return ResponseEntity.ok(createSuccessResponse("Message received successfully", orderId).toMap());
             } catch (Exception e) {
+                logger.error("Error occurred while processing order: " + e.getMessage());
                 throw new RuntimeException(e);
             }
         });

@@ -1,7 +1,19 @@
+### PubSub API Test Suite
+### Based on Diagrid Catalyst PubSub Quickstart
+### https://docs.diagrid.io/catalyst/quickstart/pubsub
 
+### Health Check
+GET http://localhost:5001/
+
+###
+
+### Publish Message
+// @name publishMessage
 POST http://localhost:5001/order
 Content-Type: application/json
 
 {
     "orderId": 1
 }
+
+###

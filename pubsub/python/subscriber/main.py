@@ -28,11 +28,13 @@ def consume_orders(event: CloudEvent):
     order_id = event.data.get('orderId') or event.data.get('key')
     if order_id:
         logging.info('Order received: %s' % order_id)
+        return {"message": "Message received successfully", "orderId": order_id}
     else:
         logging.error('Missing key in event data: orderId or key')
-        raise HTTPException(status_code=400, detail="Missing key in event data: orderId or key")
-    return {'success': True}
+        raise HTTPException(status_code=400, detail={"error": {"code": "MISSING_ORDER_ID", "message": "Missing key in event data: orderId or key"}})
 
 @app.get('/')
 async def read_root():
-    return {"message": "Subscriber app is running"}
+    health_message = "Health check passed. Everything is running smoothly!"
+    logging.info("Health check result: %s", health_message)
+    return {"status": "healthy", "message": health_message}
