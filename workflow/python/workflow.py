@@ -18,8 +18,9 @@ def process_payment_activity(ctx: WorkflowActivityContext, input: PaymentRequest
     # Simulate payment processing delay
     time.sleep(2)  
     logger.info(f'Payment for request ID {input.request_id} processed successfully')
+    return {"success": True}
 
-def reserve_inventory_activity(ctx: WorkflowActivityContext, input: InventoryRequest) -> InventoryResult:
+def reserve_inventory_activity(ctx: WorkflowActivityContext, input: InventoryRequest):
     logger.info(f'Verifying inventory for order {input.request_id}: {input.quantity} {input.item_name}')
 
     available = inventory.get(input.item_name, 0)
@@ -30,7 +31,7 @@ def reserve_inventory_activity(ctx: WorkflowActivityContext, input: InventoryReq
     logger.info(f'Failed to reserve {input.quantity} {input.item_name}(s). Only {available} available.')
     return InventoryResult(success=False)
 
-def update_inventory_activity(ctx: WorkflowActivityContext, input: InventoryRequest) -> InventoryResult:
+def update_inventory_activity(ctx: WorkflowActivityContext, input: InventoryRequest):
     logger.info(f'Updating inventory for order {input.request_id}: {input.quantity} {input.item_name}')
 
     available = inventory.get(input.item_name, 0)
