@@ -13,8 +13,8 @@ POST http://localhost:5001/workflow/start
 Content-Type: application/json
 
 {
-  "name": "Car",
-  "quantity": 2
+  "Name": "Car",
+  "Quantity": 2
 }
 
 ###
