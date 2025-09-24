@@ -15,7 +15,7 @@ public class ProcessPaymentActivity implements WorkflowActivity {
   @Override
   public Object run(WorkflowActivityContext ctx) {
     PaymentRequest paymentRequest = ctx.getInput(PaymentRequest.class);
-    logger.info("Processing payment: {} for {} {}", paymentRequest.getRequestId(), paymentRequest.getQuantity(), paymentRequest.getItemBeingPurchased());
+    logger.info("Processing payment: {} for {} {}", paymentRequest.getRequestId(), paymentRequest.getQuantity(), paymentRequest.getItemName());
 
     // Simulate payment processing delay
     try {

@@ -68,20 +68,20 @@ public class WorkflowApp {
    * Start new workflow - creates and schedules a new order processing workflow
    * POST /workflow/start
    * Body: { "name": "Car", "quantity": 2 }
-   * Returns: { "instance_id": "uuid" }
+   * Returns: { "instanceId": "uuid" }
    */
   @PostMapping("/workflow/start")
   public ResponseEntity<Object> startWorkflow(@RequestBody OrderPayload order) {
-    logger.info("Received request to start workflow for item: {} with quantity: {}", order.getItemName(), order.getQuantity());
+    logger.info("Received request to start workflow for item: {} with quantity: {}", order.getName(), order.getQuantity());
 
     try {
       instanceId = workflowClient.scheduleNewWorkflow(OrderProcessingWorkflow.class, order);
-      logger.info("Workflow execution started successfully for item: {} {}", order.getQuantity(), order.getItemName());
+      logger.info("Workflow execution started successfully for item: {} {}", order.getQuantity(), order.getName());
       java.util.Map<String, Object> response = new java.util.HashMap<>();
-      response.put("instance_id", instanceId);
+      response.put("instanceId", instanceId);
       return ResponseEntity.ok(response);
     } catch (Exception e) {
-      logger.error("Error starting workflow for item: {} {}", order.getQuantity(), order.getItemName(), e);
+      logger.error("Error starting workflow for item: {} {}", order.getQuantity(), order.getName(), e);
       return ResponseEntity.internalServerError().body("Failed to start workflow: " + e.getMessage());
     }
   }

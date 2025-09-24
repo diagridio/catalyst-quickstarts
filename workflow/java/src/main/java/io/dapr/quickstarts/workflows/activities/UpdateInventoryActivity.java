@@ -34,7 +34,7 @@ public class UpdateInventoryActivity implements WorkflowActivity {
           available - inventoryRequest.getQuantity());
       InventoryResult result = new InventoryResult();
       result.setSuccess(true);
-      result.setInventoryItem(new InventoryItem(inventoryItem.getName(), available - inventoryRequest.getQuantity()));
+      result.setItem(new InventoryItem(inventoryItem.getName(), available - inventoryRequest.getQuantity()));
       return result;
     }
 
@@ -42,7 +42,7 @@ public class UpdateInventoryActivity implements WorkflowActivity {
         available);
     InventoryResult result = new InventoryResult();
     result.setSuccess(false);
-    result.setInventoryItem(new InventoryItem(inventoryItem.getName(), available));
+    result.setItem(new InventoryItem(inventoryItem.getName(), available));
     return result;
   }
 }

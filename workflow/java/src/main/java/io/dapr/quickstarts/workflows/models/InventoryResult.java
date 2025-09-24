@@ -1,7 +1,11 @@
 package io.dapr.quickstarts.workflows.models;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 public class InventoryResult {
+  @JsonProperty("success")
   private boolean success;
+  @JsonProperty("item")
   private InventoryItem item;
 
   public boolean isSuccess() {
@@ -19,15 +23,7 @@ public class InventoryResult {
   public void setItem(InventoryItem item) {
     this.item = item;
   }
-
-  public InventoryItem getInventoryItem() {
-    return item;
-  }
-
-  public void setInventoryItem(InventoryItem inventoryItem) {
-    this.item = inventoryItem;
-  }
-
+  
   @Override
   public String toString() {
     return "InventoryResult [success=" + success + ", item=" + item + "]";

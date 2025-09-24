@@ -18,14 +18,6 @@ public class OrderPayload {
     this.name = name;
   }
 
-  public String getItemName() {
-    return name;
-  }
-
-  public void setItemName(String itemName) {
-    this.name = itemName;
-  }
-
   public int getQuantity() {
     return quantity;
   }

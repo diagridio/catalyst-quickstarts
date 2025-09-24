@@ -1,10 +1,13 @@
 package io.dapr.quickstarts.workflows.models;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.HashMap;
 import java.util.Map;
 
 public class InventoryItem {
+  @JsonProperty("name")
   private String name;
+  @JsonProperty("quantity")
   private int quantity;
 
   // Mock in-memory inventory

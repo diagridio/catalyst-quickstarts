@@ -1,8 +1,13 @@
 package io.dapr.quickstarts.workflows.models;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 public class PaymentRequest {
+  @JsonProperty("requestId")
   private String requestId;
+  @JsonProperty("itemName")
   private String itemName;
+  @JsonProperty("quantity")
   private int quantity;
 
   public String getRequestId() {
@@ -19,14 +24,6 @@ public class PaymentRequest {
 
   public void setItemName(String itemName) {
     this.itemName = itemName;
-  }
-
-  public String getItemBeingPurchased() {
-    return itemName;
-  }
-
-  public void setItemBeingPurchased(String itemBeingPurchased) {
-    this.itemName = itemBeingPurchased;
   }
 
   public int getQuantity() {
