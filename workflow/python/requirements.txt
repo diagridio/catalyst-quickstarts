@@ -1,9 +1,9 @@
 dapr==1.16.0
-dapr-ext-workflow
-fastapi==0.109.1
-grpcio==1.63.0
-pydantic==2.4.2
+dapr-ext-workflow==1.16.0
+fastapi==0.116.1
+grpcio==1.73.0
+pydantic==2.11.7
 requests>=2.32.4
-uvicorn==0.23.2
-certifi>=2024.02.02
+uvicorn==0.35.0
+certifi>=2024.8.30
 
