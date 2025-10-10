@@ -4,7 +4,6 @@ from fastapi.responses import Response
 from pydantic import BaseModel
 import logging
 import grpc
-import requests
 import os
 
 app = FastAPI()
