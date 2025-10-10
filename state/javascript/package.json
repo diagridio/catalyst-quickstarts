@@ -1,5 +1,5 @@
 {
-  "name": "javascript",
+  "name": "state",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
@@ -11,12 +11,8 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@dapr/dapr": "^3.5.2",
-    "axios": "^1.8.2",
+    "@dapr/dapr": "^3.6.1",
     "body-parser": "^1.20.2",
-    "cloudevents": "^8.0.2",
-    "express": "^4.21.0",
-    "send": "^0.19.0",
-    "serve-static": "^1.16.2"
+    "express": "^5.1.0"
   }
 }
