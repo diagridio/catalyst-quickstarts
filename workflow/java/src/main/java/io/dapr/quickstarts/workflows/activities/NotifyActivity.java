@@ -15,7 +15,7 @@ public class NotifyActivity implements WorkflowActivity {
   @Override
   public Object run(WorkflowActivityContext ctx) {
     Notification notification = ctx.getInput(Notification.class);
-    logger.info(notification.getMessage());
+    logger.info("Notification: {}", notification.getMessage());
     return null;
   }
 }
