@@ -10,3 +10,5 @@ To get started with a Catalyst quickstart project, visit the following docs:
 - [State](https://diagrid.ws/state-qs): Manage key-value pairs using Diagrid KV Store
 - [Service Invocation](https://diagrid.ws/invocation-qs): Implement the request/reply pattern
 - [Workflow](https://diagrid.ws/workflow-qs): Execute stateful workflows using managed workflow store
+- [Durable Agent](https://diagrid.ws/durable-agent-qs): Build AI agents with durable execution
+- [Multi-Agent](https://diagrid.ws/multi-agent-qs): Orchestrate multiple AI agents within a workflow
