@@ -20,6 +20,12 @@ Before you begin, ensure you have:
 
 ### Set up your local environment
 
+Navigate to the Python Directory
+
+```bash
+cd durable-agent/python
+```
+
 ```bash
 # Create a virtual environment
 python -m venv .venv
@@ -47,13 +53,8 @@ metadata:
 
 ## Running the Quickstart
 
-### 1. Navigate to the Python Directory
 
-```bash
-cd durable-agent/python
-```
-
-### 2. Deploy and Run the Agent
+### 1. Deploy and Run the Agent
 
 Deploy the agent to Catalyst with managed infrastructure:
 
@@ -68,17 +69,28 @@ This starts:
 - Three state stores: execution state, memory state, and registry state
 - OpenAI conversation component
 
-### 3. Trigger a Workflow
+### 2. Trigger a Workflow
 
 From another terminal, trigger the Agent via REST API:
 
 ```bash
-curl -i -X POST http://localhost:8001/start-workflow \
+curl -i -X POST http://localhost:5001/start-workflow \
   -H "Content-Type: application/json" \
   -d '{"task": "I want to find flights to London and Paris"}'
 ```
 
-Optionally, you can trigger the Agent over pubsub. For that you need to get Project URL and API token to publish to the pubsub broker in Catalyst
+This should call parallel tool call to find flights to these cities.
+
+But you can also search for hotels at the same too. Try this:
+
+```bash
+curl -i -X POST http://localhost:5001/start-workflow \
+  -H "Content-Type: application/json" \
+  -d '{"task":"I want to fly to Rome and Amsterdam and stay a few nights"}'
+```
+
+
+Alternatively, you can trigger the Durable Agent over pubsub too. For that you need to get Project URL and API token to publish to the pubsub broker in Catalyst
 
 
 ```
