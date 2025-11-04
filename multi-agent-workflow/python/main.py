@@ -102,8 +102,8 @@ def _run_async_in_thread(coro):
     
     return _thread_local.loop.run_until_complete(coro)
 
-@workflow_runtime.activity(name="expert_agent")
-def expert_agent(ctx, input_data: dict):
+@workflow_runtime.activity(name="triage_agent")
+def triage_agent(ctx, input_data: dict):
     name = input_data.get("customer")
     issue = input_data.get("issue")
     
