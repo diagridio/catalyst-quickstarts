@@ -1,8 +1,4 @@
-dapr==1.16.0
-dapr-ext-workflow==1.16.0
 dapr-agents>=0.9.3
-requests==2.32.4
-grpcio>=1.74.0
 fastapi==0.118.2
 uvicorn==0.37.0
 python-dotenv

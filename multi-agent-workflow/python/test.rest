@@ -6,9 +6,6 @@ POST http://localhost:5001/workflow/start
 Content-Type: application/json
 
 {
-  "workflowName": "customer_support_workflow",
-  "input": {
-    "customer": "Alice",
-    "issue": "My Dapr system fails to start in production."
-  }
+  "customer": "Alice",
+  "issue": "My Dapr system fails to start in production."
 }

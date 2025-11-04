@@ -42,14 +42,13 @@ pip install -r requirements.txt
 
 ### OpenAI API Key
 
-Update the `openai.yaml` file with your OpenAI API key:
+Locate the `openai.yaml` file in the `resources` folder and update it with your OpenAI API key:
 
 ```yaml
 metadata:
   - name: key
     value: "YOUR_OPENAI_API_KEY"
 ```
- 
 
 ## Running the Quickstart
 
