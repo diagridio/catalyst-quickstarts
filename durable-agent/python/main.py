@@ -67,9 +67,6 @@ async def main():
 
         # PubSub input for real-time interaction
         message_bus_name="message-pubsub",
-
-        # Agent discovery store
-        agents_registry_store_name="registry-state",
     )
 
     try:

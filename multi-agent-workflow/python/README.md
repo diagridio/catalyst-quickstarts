@@ -7,10 +7,9 @@ The workflow acts as a customer support system that triages support tickets and 
 
 * **Durable Execution**: Workflow state persisted using Dapr Workflows
 * **Multi-Agent Orchestration**: Triage and expert agents working in sequence
+* **Conversation Memory**: Agents maintain context across executions
 * **Tool Integration**: Hardcoded entitlement and environment lookup tools
 * **REST API**: Trigger workflows via a single HTTP endpoint
-* **State Management**: Multiple state stores for execution and agent memory
-* **Conversation Memory**: Agents maintain context across executions
 
 ## Prerequisites
 
@@ -20,21 +19,14 @@ Before you begin, ensure you have:
 2. Python 3.12 or later
 3. An OpenAI API key
 
-### Set up your local environment
+## Configuration
+
+
+### Navigate to the Python Directory
 
 ```bash
-# Create a virtual environment
-python -m venv .venv
-
-# Activate the virtual environment 
-source .venv/bin/activate  # On macOS/Linux
-# .venv\Scripts\activate   # On Windows
-
-# Install dependencies
-pip install -r requirements.txt
+cd multi-agent-workflow/python
 ```
-
-## Configuration
 
 ### OpenAI API Key
 
@@ -50,18 +42,12 @@ metadata:
 
 ## Running the Quickstart
 
-### 1. Navigate to the Python Directory
-
-```bash
-cd multi-agent/python
-```
-
-### 2. Deploy and Run the Workflow
+### 1. Deploy and Run the Workflow
 
 Deploy the workflow app to Catalyst with managed infrastructure:
 
 ```bash
-diagrid dev run -f dev-python-multi-agent.yaml --project dev-python-multi-agent
+diagrid dev run -f dev-python-multi-agent-workflow.yaml --project dev-python-multi-agent-workflow
 ```
 
 This starts:
@@ -71,7 +57,7 @@ This starts:
 * Two state stores: execution state and memory state
 * OpenAI conversation component
 
-### 3. Trigger a Workflow
+### 2. Trigger a Workflow
 
 From another terminal, trigger the workflow via REST API:
 

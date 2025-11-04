@@ -11,4 +11,4 @@ To get started with a Catalyst quickstart project, visit the following docs:
 - [Service Invocation](https://diagrid.ws/invocation-qs): Implement the request/reply pattern
 - [Workflow](https://diagrid.ws/workflow-qs): Execute stateful workflows using managed workflow store
 - [Durable Agent](https://diagrid.ws/durable-agent-qs): Build AI agents with durable execution
-- [Multi-Agent](https://diagrid.ws/multi-agent-qs): Orchestrate multiple AI agents within a workflow
+- [Multi-Agent Workflow](https://diagrid.ws/multi-agent-workflow-qs): Orchestrate multiple AI agents within a workflow
