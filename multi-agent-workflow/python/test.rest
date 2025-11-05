@@ -1,0 +1,11 @@
+### Multi-Agent Test Suite
+
+### Start Customer Support workflow
+// @timeout 60s
+POST http://localhost:5001/workflow/start
+Content-Type: application/json
+
+{
+  "customer": "Alice",
+  "issue": "My Dapr system fails to start in production."
+}
