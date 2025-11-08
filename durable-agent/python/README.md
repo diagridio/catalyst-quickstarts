@@ -15,8 +15,8 @@ This quickstart demonstrates how to build a durable agent using Dapr Agents and 
 Before you begin, ensure you have:
 
 1. [Diagrid CLI](https://docs.diagrid.io/catalyst/references/cli-reference/overview) installed
-2. Python 3.10 or later
-3. An OpenAI API key
+2. [Python 3.10+](https://www.python.org/downloads/)
+3. [An OpenAI API key](https://platform.openai.com/api-keys)
 
 ### Set up your local environment
 
@@ -40,6 +40,13 @@ pip install -r requirements.txt
 
 ## Configuration
 
+
+### Navigate to the Python Directory
+
+```bash
+cd multi-agent-workflow/python
+```
+
 ### OpenAI API Key
 
 Locate the `openai.yaml` file in the `resources` folder and update it with your OpenAI API key:
@@ -52,8 +59,13 @@ metadata:
 
 ## Running the Quickstart
 
-
 ### 1. Deploy and Run the Agent
+
+Login to Diagrid Catalyst using the following command:
+
+```bash
+diagrid login
+```
 
 Deploy the agent to Catalyst with managed infrastructure:
 
@@ -87,7 +99,7 @@ curl -i -X POST http://localhost:5001/start-workflow \
   -H "Content-Type: application/json" \
   -d '{"task":"I want to fly to Rome and Amsterdam and stay a few nights"}'
 ```
-
+**Optional: Asynchronous Trigger of Agent**
 
 Alternatively, you can trigger the Durable Agent over pubsub too. For that you need to get Project URL and API token to publish to the pubsub broker in Catalyst
 
@@ -102,9 +114,6 @@ curl -i -X POST $DAPR_HTTP_ENDPOINT/v1.0/publish/message-pubsub/travel-assistant
       -H "dapr-api-token: $PUBLISHER_API_TOKEN" \
       -d '{"task":"Find flights to Paris"}'
 ```
-
-
-
 
 The agent will:
 1. Process your flight request
