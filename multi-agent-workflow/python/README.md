@@ -24,7 +24,7 @@ Before you begin, ensure you have:
 Navigate to the Python Directory
 
 ```bash
-cd durable-agent/python
+cd multi-agent-workflow/python
 ```
 
 ```bash
@@ -40,13 +40,6 @@ pip install -r requirements.txt
 ```
 
 ## Configuration
-
-
-### Navigate to the Python Directory
-
-```bash
-cd multi-agent-workflow/python
-```
 
 ### OpenAI API Key
 

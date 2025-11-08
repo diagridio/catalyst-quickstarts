@@ -41,12 +41,6 @@ pip install -r requirements.txt
 ## Configuration
 
 
-### Navigate to the Python Directory
-
-```bash
-cd multi-agent-workflow/python
-```
-
 ### OpenAI API Key
 
 Locate the `openai.yaml` file in the `resources` folder and update it with your OpenAI API key:
