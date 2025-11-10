@@ -1,10 +1,10 @@
 ### Durable Agent API Test Suite
 
-### Start DurableAgent's workflow
-// @timeout 60s
+### Start DurableAgent's execution
+// @timeout 300s
 POST http://localhost:5001/start-workflow
 Content-Type: application/json
 
 {
-  "task": "I want to find flights to London and Paris"
+  "task": "Find me flights and hotels to London and Paris"
 }
