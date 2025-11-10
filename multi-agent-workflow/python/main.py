@@ -113,7 +113,9 @@ def triage_activity(ctx, input_data: dict):
         triage_agent.run(f"Customer: {name}. Issue: {issue}. Assess entitlement and urgency.")
     )
     response = future.result()
-    
+    if not response or not getattr(response, "content", None):
+        raise ValueError("Triage Agent returned no response.")
+
     print(f"Triage result: {response.content}")
     entitled = "true" in response.content.lower() or "yes" in response.content.lower()
     urgency = "urgent" if "urgent" in response.content.lower() else "normal"
