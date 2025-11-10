@@ -15,8 +15,8 @@ This quickstart demonstrates how to build a durable agent using Dapr Agents and 
 Before you begin, ensure you have:
 
 1. [Diagrid CLI](https://docs.diagrid.io/catalyst/references/cli-reference/overview) installed
-2. Python 3.10 or later
-3. An OpenAI API key
+2. [Python 3.10+](https://www.python.org/downloads/)
+3. [An OpenAI API key](https://platform.openai.com/api-keys)
 
 ### Set up your local environment
 
@@ -52,8 +52,13 @@ metadata:
 
 ## Running the Quickstart
 
-
 ### 1. Deploy and Run the Agent
+
+Login to Diagrid Catalyst using the following command:
+
+```bash
+diagrid login
+```
 
 Deploy the agent to Catalyst with managed infrastructure:
 
@@ -72,7 +77,6 @@ This starts:
 
 From another terminal, trigger the Agent via REST API:
 
-**Trigger via REST call**
 ```bash
 curl -i -X POST http://localhost:5001/start-workflow \
   -H "Content-Type: application/json" \
@@ -89,9 +93,6 @@ At a high-level, the agent will:
 5. At every step, persist execution state and conversation history to Catalyst
 6. Return flight and hotel options 
 
-
-
-**Try other queries **
 
 See this agent adapting other queries and generating different workflows on-the-fly.
 

@@ -16,17 +16,30 @@ The workflow acts as a customer support system that triages support tickets and 
 Before you begin, ensure you have:
 
 1. [Diagrid CLI](https://docs.diagrid.io/catalyst/references/cli-reference/overview) installed
-2. Python 3.12 or later
-3. An OpenAI API key
+2. [Python 3.10+](https://www.python.org/downloads/)
+3. [An OpenAI API key](https://platform.openai.com/api-keys)
 
-## Configuration
+### Set up your local environment
 
-
-### Navigate to the Python Directory
+Navigate to the Python Directory
 
 ```bash
 cd multi-agent-workflow/python
 ```
+
+```bash
+# Create a virtual environment
+python -m venv .venv
+
+# Activate the virtual environment 
+source .venv/bin/activate  # On macOS/Linux
+# .venv\Scripts\activate   # On Windows
+
+# Install dependencies
+pip install -r requirements.txt
+```
+
+## Configuration
 
 ### OpenAI API Key
 
@@ -38,11 +51,15 @@ metadata:
     value: "YOUR_OPENAI_API_KEY"
 ```
 
----
-
 ## Running the Quickstart
 
-### 1. Deploy and Run the Workflow
+### 1. Deploy and Run the Agent
+
+Login to Diagrid Catalyst using the following command:
+
+```bash
+diagrid login
+```
 
 Deploy the workflow app to Catalyst with managed infrastructure:
 
@@ -51,11 +68,10 @@ diagrid dev run -f dev-python-multi-agent-workflow.yaml --project dev-python-mul
 ```
 
 This starts:
-
-* REST endpoint on port 5001
-* Durable workflow engine with state persistence
-* Two state stores: execution state and memory state
-* OpenAI conversation component
+- REST endpoint on port 5001
+- Durable workflow engine with state persistence
+- Two state stores: execution state and memory state
+- OpenAI conversation component
 
 ### 2. Trigger a Workflow
 
@@ -113,7 +129,6 @@ The workflow combines several Dapr building blocks:
 2. **Agents**: Implement reasoning, tool usage, and contextual understanding
 3. **State Management**: Stores execution state and agent memory
 4. **Tools**:
-
    * `check_entitlement`: Returns `True` for “Alice”, `False` otherwise
    * `get_customer_environment`: Returns mock environment details for the customer
 
