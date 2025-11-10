@@ -72,46 +72,45 @@ This starts:
 
 From another terminal, trigger the Agent via REST API:
 
+**Trigger via REST call**
 ```bash
 curl -i -X POST http://localhost:5001/start-workflow \
   -H "Content-Type: application/json" \
-  -d '{"task": "I want to find flights to London and Paris"}'
+  -d '{"task": "Find me flights and hotels to London and Amsterdam"}'
 ```
 
-This should call parallel tool call to find flights to these cities.
+This should call two parallel tool call to find flights to both cities, followed by two parallel tool call to find hotels.
 
-But you can also search for hotels at the same too. Try this:
+At a high-level, the agent will:
+1. Process your flight and hotels request
+2. Execute the `search_flights` tool in parallel for both cities
+3. Return flight options with pricing to the LLM and plan next steps
+4. Execute the `search_hotels` tool in parallel for both cities
+5. At every step, persist execution state and conversation history to Catalyst
+6. Return flight and hotel options 
+
+
+
+**Try other queries **
+
+See this agent adapting other queries and generating different workflows on-the-fly.
+
+- Search for flights and hotels to a single destination.
 
 ```bash
 curl -i -X POST http://localhost:5001/start-workflow \
   -H "Content-Type: application/json" \
-  -d '{"task":"I want to fly to Rome and Amsterdam and stay a few nights"}'
+  -d '{"task": "Find me flights and hotels to London"}'
+```
+- Search for flights only to London and Amsterdam
+
+
+```bash
+curl -i -X POST http://localhost:5001/start-workflow \
+  -H "Content-Type: application/json" \
+  -d '{"task": "Find me flights only to London and Amsterdam"}'
 ```
 
-
-Alternatively, you can trigger the Durable Agent over pubsub too. For that you need to get Project URL and API token to publish to the pubsub broker in Catalyst
-
-
-```
-export DAPR_HTTP_ENDPOINT=$(diagrid project get -o json | jq -r '.status.endpoints.http.url')
-export PUBLISHER_API_TOKEN=$(diagrid appid get travel-assistant-agent  -o json  | jq -r '.status.apiToken')
-
-curl -i -X POST $DAPR_HTTP_ENDPOINT/v1.0/publish/message-pubsub/travel-assistant-agent \
-      -H "Content-Type: application/json" \
-      -H "cloudevent.type: TriggerAction" \
-      -H "dapr-api-token: $PUBLISHER_API_TOKEN" \
-      -d '{"task":"Find flights to Paris"}'
-```
-
-
-
-
-The agent will:
-1. Process your flight request
-2. Execute the `search_flights` tool 
-3. Return flight options with pricing
-4. Persist all state in Catalyst's managed key-value stores
-  
 ## Monitoring in Catalyst
 
 ### Check Workflow Execution

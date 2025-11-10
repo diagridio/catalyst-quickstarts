@@ -47,9 +47,9 @@ async def main():
         role="Travel Assistant",
         goal="Plan trips by searching flights first, then hotels only if flights are available",
         instructions=[
-            "Always search for flights first",
-            "If flights are found, immediately search for hotels at the same destination",
-            "If no flights are found, do NOT search for hotels",
+            "Always search for flights first, and after that for hotels",
+            "If flights are found, immediately search for hotels for the same destination",
+            "If no flights are found for a destination, do NOT search for hotels for that destination",
             "Complete all tool calls automatically without asking for user confirmation"
         ],
         tools=[search_flights, search_hotels],
