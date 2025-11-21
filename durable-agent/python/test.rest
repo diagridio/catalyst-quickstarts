@@ -2,7 +2,7 @@
 
 ### Start DurableAgent's execution
 // @timeout 300s
-POST http://localhost:5001/start-workflow
+POST http://localhost:5001/run
 Content-Type: application/json
 
 {
