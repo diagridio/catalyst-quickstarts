@@ -12,6 +12,12 @@ from dapr_agents.llm.dapr import DaprChatClient
 from dapr_agents.memory import ConversationDaprStateMemory
 from dotenv import load_dotenv
 from pydantic import BaseModel
+from dapr_agents.storage.daprstores.stateservice import StateStoreService
+
+from dapr_agents.agents.configs import (
+    AgentMemoryConfig,
+    AgentRegistryConfig,
+)
 
 # Thread pool for running async agent code
 thread_pool = ThreadPoolExecutor(max_workers=5)
@@ -44,8 +50,15 @@ triage_agent = Agent(
     ],
     llm=DaprChatClient(component_name="openai"),
     tools=[check_entitlement],
-    memory=ConversationDaprStateMemory(
-        store_name="memory-state", session_id=f"triage-session-{uuid.uuid4().hex[:8]}"
+    memory = AgentMemoryConfig(
+        store=ConversationDaprStateMemory(
+            store_name="statestore",
+            session_id=f"session-triage-{uuid.uuid4().hex[:8]}"
+        )
+    ),
+
+    registry = AgentRegistryConfig(
+        store=StateStoreService(store_name="statestore"),
     ),
 )
 
@@ -56,11 +69,9 @@ def get_customer_environment(customer_name: str) -> dict:
     """Return hardcoded environment details for a given customer."""
     return {
         "customer": customer_name,
-        "dapr_version": "1.16.0",
         "kubernetes_version": "1.34.0",
         "region": "us-west-2",
     }
-
 
 expert_agent = Agent(
     name="Expert Agent",
@@ -74,8 +85,15 @@ expert_agent = Agent(
     ],
     llm=DaprChatClient(component_name="openai"),
     tools=[get_customer_environment],
-    memory=ConversationDaprStateMemory(
-        store_name="memory-state", session_id=f"expert-session-{uuid.uuid4().hex[:8]}"
+    memory = AgentMemoryConfig(
+        store=ConversationDaprStateMemory(
+            store_name="statestore",
+            session_id=f"session-expert-{uuid.uuid4().hex[:8]}"
+        )
+    ),
+
+    registry = AgentRegistryConfig(
+        store=StateStoreService(store_name="statestore"),
     ),
 )
 
