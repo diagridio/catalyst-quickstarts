@@ -75,10 +75,11 @@ This starts:
 
 ### 2. Trigger a Workflow
 
+Confirm from the logs that "Travel Assistant Agent is running".
 From another terminal, trigger the Agent via REST API:
 
 ```bash
-curl -i -X POST http://localhost:5001/start-workflow \
+curl -i -X POST http://localhost:5001/run \
   -H "Content-Type: application/json" \
   -d '{"task": "Find me flights and hotels to London and Amsterdam"}'
 ```
@@ -99,7 +100,7 @@ See this agent adapting other queries and generating different workflows on-the-
 - Search for flights and hotels to a single destination.
 
 ```bash
-curl -i -X POST http://localhost:5001/start-workflow \
+curl -i -X POST http://localhost:5001/run \
   -H "Content-Type: application/json" \
   -d '{"task": "Find me flights and hotels to London"}'
 ```
@@ -107,7 +108,7 @@ curl -i -X POST http://localhost:5001/start-workflow \
 
 
 ```bash
-curl -i -X POST http://localhost:5001/start-workflow \
+curl -i -X POST http://localhost:5001/run \
   -H "Content-Type: application/json" \
   -d '{"task": "Find me flights only to London and Amsterdam"}'
 ```

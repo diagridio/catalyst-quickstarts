@@ -4,9 +4,19 @@ import uuid
 from typing import List
 from pydantic import BaseModel, Field
 from dapr_agents import tool, DurableAgent
-from dapr_agents.llm.dapr import DaprChatClient
+from dapr_agents.llm import DaprChatClient
 
+from dapr_agents.agents.configs import (
+    AgentExecutionConfig,
+    AgentMemoryConfig,
+    AgentPubSubConfig,
+    AgentRegistryConfig,
+    AgentStateConfig,
+)
 from dapr_agents.memory import ConversationDaprStateMemory
+from dapr_agents.storage.daprstores.stateservice import StateStoreService
+from dapr_agents.workflow.runners import AgentRunner
+
 from dotenv import load_dotenv
 
 # Define tool output models
@@ -40,7 +50,9 @@ def search_hotels(destination: str) -> List[HotelOption]:
         HotelOption(hotel_name="Seaside Resort", price_per_night=225.00),
     ]
 
-async def main():
+def main() -> None:
+    load_dotenv()
+    logging.basicConfig(level=logging.INFO)
 
     travel_assistant = DurableAgent(
         name="travel-assistant-agent",
@@ -56,33 +68,44 @@ async def main():
 
         llm = DaprChatClient(component_name="openai"),
 
-        # Execution state (workflow progress, retries, failure recovery)
-        state_store_name="statestore",
-        state_key="execution-headless",
-
-        # Long-term memory (preferences, past trips, context continuity)
-        memory=ConversationDaprStateMemory(
-            session_id=f"session-headless-{uuid.uuid4().hex[:8]}"
+        memory = AgentMemoryConfig(
+            store=ConversationDaprStateMemory(
+                store_name="statestore",
+                session_id=f"session-headless-{uuid.uuid4().hex[:8]}"
+            )
         ),
 
-        # PubSub input for real-time interaction
-        message_bus_name="message-pubsub",
+        state = AgentStateConfig(
+            store=StateStoreService(store_name="statestore"),
+        ),
 
-        # Agent discovery store
-        agents_registry_store_name="registry-state",
+        registry = AgentRegistryConfig(
+            store=StateStoreService(store_name="statestore"),
+        ),
+
+        pubsub = AgentPubSubConfig(
+            pubsub_name="pubsub",
+            agent_topic="travel.requests",
+            broadcast_topic="agents.broadcast",
+        )
     )
 
-    try:
-        # start REST endpoint
-        travel_assistant.as_service(port=5001)
-        await travel_assistant.start()
-        print("Travel Assistant Agent is running")
+    travel_assistant.start()
+    print("Travel Assistant Agent is running")
 
+    runner = AgentRunner()
+    try:
+        runner.serve(travel_assistant, port=5001)
     except Exception as e:
         print(f"Error starting service: {e}")
+        raise
+    finally:
+        runner.shutdown()
+        travel_assistant.stop()
 
 if __name__ == "__main__":
-    load_dotenv()
-    logging.basicConfig(level=logging.INFO)
-    asyncio.run(main())
+    try:
+        main()
+    except KeyboardInterrupt:
+        pass
 
