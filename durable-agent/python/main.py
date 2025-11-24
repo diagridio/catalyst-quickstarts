@@ -1,4 +1,3 @@
-import asyncio
 import logging
 import uuid
 from typing import List
@@ -7,7 +6,6 @@ from dapr_agents import tool, DurableAgent
 from dapr_agents.llm import DaprChatClient
 
 from dapr_agents.agents.configs import (
-    AgentExecutionConfig,
     AgentMemoryConfig,
     AgentPubSubConfig,
     AgentRegistryConfig,
@@ -17,7 +15,6 @@ from dapr_agents.memory import ConversationDaprStateMemory
 from dapr_agents.storage.daprstores.stateservice import StateStoreService
 from dapr_agents.workflow.runners import AgentRunner
 
-from dotenv import load_dotenv
 
 # Define tool output models
 class FlightOption(BaseModel):
@@ -51,7 +48,6 @@ def search_hotels(destination: str) -> List[HotelOption]:
     ]
 
 def main() -> None:
-    load_dotenv()
     logging.basicConfig(level=logging.INFO)
 
     travel_assistant = DurableAgent(
