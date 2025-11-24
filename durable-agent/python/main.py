@@ -80,7 +80,7 @@ def main() -> None:
         ),
 
         registry = AgentRegistryConfig(
-            store=StateStoreService(store_name="statestore"),
+            store=StateStoreService(store_name="registrystatestore"),
         ),
 
         pubsub = AgentPubSubConfig(
