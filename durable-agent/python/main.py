@@ -95,7 +95,7 @@ def main() -> None:
 
     runner = AgentRunner()
     try:
-        runner.serve(travel_assistant, port=5001)
+        runner.serve(travel_assistant, port=8001)
     except Exception as e:
         print(f"Error starting service: {e}")
         raise
