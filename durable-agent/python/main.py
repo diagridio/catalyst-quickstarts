@@ -84,7 +84,7 @@ def main() -> None:
         ),
 
         pubsub = AgentPubSubConfig(
-            pubsub_name="pubsub",
+            pubsub_name="messagepubsub",
             agent_topic="travel.requests",
             broadcast_topic="agents.broadcast",
         )
