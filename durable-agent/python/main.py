@@ -66,17 +66,17 @@ def main() -> None:
 
         memory = AgentMemoryConfig(
             store=ConversationDaprStateMemory(
-                store_name="registrystatestore",
+                store_name="statestore",
                 session_id=f"session-headless-{uuid.uuid4().hex[:8]}"
             )
         ),
 
         state = AgentStateConfig(
-            store=StateStoreService(store_name="registrystatestore"),
+            store=StateStoreService(store_name="statestore"),
         ),
 
         registry = AgentRegistryConfig(
-            store=StateStoreService(store_name="registrystatestore"),
+            store=StateStoreService(store_name="statestore"),
         ),
 
         pubsub = AgentPubSubConfig(
