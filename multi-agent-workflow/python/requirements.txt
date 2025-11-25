@@ -1,4 +1,1 @@
-dapr-agents>=0.10.1
-fastapi==0.118.2
-uvicorn==0.37.0
-python-dotenv
+dapr-agents>=0.10.2
