@@ -12,5 +12,7 @@ spec:
     value: ""
   - name: enableTLS
     value: "false"
+  - name: actorStateStore
+    value: "true"
   - name: keyPrefix
     value: none
