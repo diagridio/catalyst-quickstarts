@@ -5,7 +5,7 @@ FROM python:3.12-alpine
 WORKDIR /app
 
 # Expose the port on which the application will run
-EXPOSE 8001
+EXPOSE 5001
 
 # Copy requirements first so Docker cache is efficient
 COPY requirements.txt .
