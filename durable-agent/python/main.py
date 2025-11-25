@@ -80,7 +80,7 @@ def main() -> None:
         ),
 
         pubsub = AgentPubSubConfig(
-            pubsub_name="messagepubsub",
+            pubsub_name="pubsub",
             agent_topic="travel.requests",
             broadcast_topic="agents.broadcast",
         )
