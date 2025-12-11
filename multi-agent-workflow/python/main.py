@@ -48,7 +48,7 @@ triage_agent = Agent(
         "if the issue affects production, mark as URGENT, otherwise NORMAL.",
         "3. Return a JSON object with keys: entitled (bool) and urgency (string).",
     ],
-    llm=DaprChatClient(component_name="openai"),
+    llm=DaprChatClient(component_name="llm-provider"),
     tools=[check_entitlement],
     memory = AgentMemoryConfig(
         store=ConversationDaprStateMemory(
@@ -83,7 +83,7 @@ expert_agent = Agent(
         "Summarize the resolution in a customer-friendly message format, including urgency.",
         "Output a JSON with fields: environment, resolution, and customer_message.",
     ],
-    llm=DaprChatClient(component_name="openai"),
+    llm=DaprChatClient(component_name="llm-provider"),
     tools=[get_customer_environment],
     memory = AgentMemoryConfig(
         store=ConversationDaprStateMemory(
