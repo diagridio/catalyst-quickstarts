@@ -1,7 +1,7 @@
 apiVersion: dapr.io/v1alpha1
 kind: Component
 metadata:
-  name: openai
+  name: llm-provider
 spec:
   type: conversation.openai
   version: v1

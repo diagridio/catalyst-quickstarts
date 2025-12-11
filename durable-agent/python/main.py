@@ -62,7 +62,7 @@ def main() -> None:
         ],
         tools=[search_flights, search_hotels],
 
-        llm = DaprChatClient(component_name="openai"),
+        llm = DaprChatClient(component_name="llm-provider"),
 
         memory = AgentMemoryConfig(
             store=ConversationDaprStateMemory(
