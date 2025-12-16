@@ -110,7 +110,7 @@ curl -i -X POST http://localhost:5001/run \
 ```bash
 curl -i -X POST http://localhost:5001/run \
   -H "Content-Type: application/json" \
-  -d '{"task": "Find me flights only to London and Amsterdam"}'
+  -d '{"task": "Find me only flights to London and Amsterdam"}'
 ```
 
 ## Monitoring in Catalyst
