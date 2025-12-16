@@ -39,7 +39,7 @@ def check_entitlement(customer_name: str) -> bool:
 
 
 triage_agent = Agent(
-    name="Triage Agent",
+    name="triage-agent",
     role="Customer Support Triage Assistant",
     goal="Assess entitlement and urgency based on issue description.",
     instructions=[
@@ -52,13 +52,13 @@ triage_agent = Agent(
     tools=[check_entitlement],
     memory = AgentMemoryConfig(
         store=ConversationDaprStateMemory(
-            store_name="statestore",
+            store_name="agent-statestore",
             session_id=f"session-triage-{uuid.uuid4().hex[:8]}"
         )
     ),
 
     registry = AgentRegistryConfig(
-        store=StateStoreService(store_name="statestore"),
+        store=StateStoreService(store_name="agent-registry"),
     ),
 )
 
@@ -74,7 +74,7 @@ def get_customer_environment(customer_name: str) -> dict:
     }
 
 expert_agent = Agent(
-    name="Expert Agent",
+    name="expert-agent",
     role="Technical Troubleshooting Specialist",
     goal="Diagnose and summarize a customer issue into a professional response message.",
     instructions=[
@@ -87,13 +87,13 @@ expert_agent = Agent(
     tools=[get_customer_environment],
     memory = AgentMemoryConfig(
         store=ConversationDaprStateMemory(
-            store_name="statestore",
+            store_name="agent-statestore",
             session_id=f"session-expert-{uuid.uuid4().hex[:8]}"
         )
     ),
 
     registry = AgentRegistryConfig(
-        store=StateStoreService(store_name="statestore"),
+        store=StateStoreService(store_name="agent-registry"),
     ),
 )
 
