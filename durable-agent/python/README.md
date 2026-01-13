@@ -42,7 +42,7 @@ pip install -r requirements.txt
 
 ### OpenAI API Key
 
-Locate the `openai.yaml` file in the `resources` folder and update it with your OpenAI API key:
+Locate the `llm-provider.yaml` file in the `resources` folder and update it with your OpenAI API key:
 
 ```yaml
 metadata:
@@ -162,4 +162,3 @@ The agent:
 ## Testing with VS Code REST Client
 
 If you use VS Code with the REST Client extension, open `test.rest` and click "Send Request" above any request to test the API.
- 

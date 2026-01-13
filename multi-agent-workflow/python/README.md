@@ -43,7 +43,7 @@ pip install -r requirements.txt
 
 ### OpenAI API Key
 
-Locate the `openai.yaml` file in the `resources` folder and update it with your OpenAI API key:
+Locate the `llm-provider.yaml` file in the `resources` folder and update it with your OpenAI API key:
 
 ```yaml
 metadata:
