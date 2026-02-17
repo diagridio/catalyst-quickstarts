@@ -66,13 +66,13 @@ def main() -> None:
 
         memory = AgentMemoryConfig(
             store=ConversationDaprStateMemory(
-                store_name="agent-wfstatestore",
+                store_name="agent-workflow",
                 session_id=f"session-headless-{uuid.uuid4().hex[:8]}"
             )
         ),
 
         state = AgentStateConfig(
-            store=StateStoreService(store_name="agent-statestore"),
+            store=StateStoreService(store_name="agent-memory"),
         ),
 
         registry = AgentRegistryConfig(
