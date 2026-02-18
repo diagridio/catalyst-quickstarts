@@ -1,0 +1,13 @@
+version: 1
+common:
+  appLogDestination: console
+  resourcesPath: ./resources
+  enableAppHealthCheck: false
+  logLevel: info
+apps:
+  - appID: strands-agent
+    appDirPath: ./
+    appPort: 5001
+    appProtocol: http
+    command: ["python", "main.py"]
+

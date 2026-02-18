@@ -1,0 +1,3 @@
+diagrid[adk]
+fastapi
+uvicorn[standard]

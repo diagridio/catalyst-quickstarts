@@ -1,0 +1,3 @@
+diagrid[crewai]
+fastapi
+uvicorn[standard]

@@ -1,0 +1,10 @@
+### Durable Agent API Test Suite
+
+### Start DurableAgent's execution
+// @timeout 300s
+POST http://localhost:5001/run
+Content-Type: application/json
+
+{
+  "task": "Find me flights and hotels to London and Paris"
+}

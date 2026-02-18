@@ -1,0 +1,3 @@
+diagrid[strands]
+fastapi
+uvicorn[standard]
