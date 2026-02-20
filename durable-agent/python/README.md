@@ -5,7 +5,7 @@ This quickstart demonstrates how to build a durable agent using Dapr Agents and 
 ## What This Quickstart Demonstrates
 
 - **Durable Execution**: Agent state persisted using Dapr Workflows
-- **Tool Integration**: Flight search with simulated external API calls (50% chance of 20-second delay)
+- **Tool Integration**: Flight and hotel search with mock data
 - **State Management**: Multiple state stores for execution, memory, and agent registry
 - **REST API**: Trigger agent workflows via HTTP endpoints
 - **Conversation Memory**: Maintain context across multiple interactions
@@ -15,7 +15,7 @@ This quickstart demonstrates how to build a durable agent using Dapr Agents and 
 Before you begin, ensure you have:
 
 1. [Diagrid CLI](https://docs.diagrid.io/catalyst/references/cli-reference/overview) installed
-2. [Python 3.10+](https://www.python.org/downloads/)
+2. [Python 3.11+](https://www.python.org/downloads/)
 3. [An OpenAI API key](https://platform.openai.com/api-keys)
 
 ### Set up your local environment
@@ -28,10 +28,10 @@ cd durable-agent/python
 
 ```bash
 # Create a virtual environment
-python -m venv venv
+python3.11 -m venv .venv
 
 # Activate the virtual environment 
-source venv/bin/activate  # On macOS/Linux
+source .venv/bin/activate  # On macOS/Linux
 # .venv\Scripts\activate   # On Windows
 
 # Install dependencies
@@ -42,7 +42,7 @@ pip install -r requirements.txt
 
 ### OpenAI API Key
 
-Locate the `llm-provider.yaml` file in the `resources` folder and update it with your OpenAI API key:
+Locate the `agent-llm-provider.yaml` file in the `resources` folder and update it with your OpenAI API key:
 
 ```yaml
 metadata:
@@ -68,7 +68,7 @@ diagrid dev run -f dev-python-durable-agent.yaml --project dev-python-durable-ag
 ```
 
 This starts:
-- REST endpoint on port 5001
+- REST endpoint on port 8001
 - Durable workflow engine with state persistence
 - Three state stores: execution state, memory state, and registry state
 - OpenAI conversation component
@@ -79,7 +79,7 @@ Confirm from the logs that "Travel Assistant Agent is running".
 From another terminal, trigger the Agent via REST API:
 
 ```bash
-curl -i -X POST http://localhost:5001/run \
+curl -i -X POST http://localhost:8001/agent/run \
   -H "Content-Type: application/json" \
   -d '{"task": "Find me flights and hotels to London and Amsterdam"}'
 ```
@@ -100,7 +100,7 @@ See this agent adapting other queries and generating different workflows on-the-
 - Search for flights and hotels to a single destination.
 
 ```bash
-curl -i -X POST http://localhost:5001/run \
+curl -i -X POST http://localhost:8001/agent/run \
   -H "Content-Type: application/json" \
   -d '{"task": "Find me flights and hotels to London"}'
 ```
@@ -108,7 +108,7 @@ curl -i -X POST http://localhost:5001/run \
 
 
 ```bash
-curl -i -X POST http://localhost:5001/run \
+curl -i -X POST http://localhost:8001/agent/run \
   -H "Content-Type: application/json" \
   -d '{"task": "Find me only flights to London and Amsterdam"}'
 ```
@@ -125,22 +125,22 @@ curl -i -X POST http://localhost:5001/run \
 
 The agent uses three separate state stores:
 
-1. **statestore** - Execution state (workflow progress, retries)
-   - Go to Components → Key-Value Store → `statestore`
+1. **agent-runtimestatestore** - Execution state (workflow progress, retries)
+   - Go to Components → Key-Value Store → `agent-runtimestatestore`
    - View workflow execution state
 
-2. **memory-state** - Conversation memory
+2. **agent-memory** - Conversation memory
    - See conversation history and context
    - Track user preferences across sessions
 
-3. **registry-state** - Agent registry
+3. **agent-registry** - Agent registry
    - View registered agents and their metadata
    - Track agent discovery information
 
 ### View Application Architecture
 
 - In Catalyst dashboard → Application Map
-- See the travel-agent service and its dependencies
+- See the `travel-assistant-agent` service and its dependencies
 - Observe state store connections and workflow execution
 
 ## How It Works

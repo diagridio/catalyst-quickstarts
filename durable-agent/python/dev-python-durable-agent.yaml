@@ -7,7 +7,7 @@ common:
 apps:
   - appID: travel-assistant-agent
     appDirPath: ./
-    appPort: 5001
+    appPort: 8001
     appProtocol: http
     command: ["python", "main.py"]
 

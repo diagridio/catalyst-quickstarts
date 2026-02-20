@@ -1,19 +1,13 @@
+import asyncio
 import logging
-import uuid
 from typing import List
-from pydantic import BaseModel, Field
-from dapr_agents import tool, DurableAgent
-from dapr_agents.llm import DaprChatClient
 
-from dapr_agents.agents.configs import (
-    AgentMemoryConfig,
-    AgentPubSubConfig,
-    AgentRegistryConfig,
-    AgentStateConfig,
-)
-from dapr_agents.memory import ConversationDaprStateMemory
-from dapr_agents.storage.daprstores.stateservice import StateStoreService
+from pydantic import BaseModel, Field
+
+from dapr_agents import DurableAgent, tool
+from dapr_agents.llm import DaprChatClient
 from dapr_agents.workflow.runners import AgentRunner
+from dapr_agents.workflow.utils.core import wait_for_shutdown
 
 
 # Define tool output models
@@ -61,47 +55,20 @@ def main() -> None:
             "Complete all tool calls automatically without asking for user confirmation"
         ],
         tools=[search_flights, search_hotels],
-
-        llm = DaprChatClient(component_name="llm-provider"),
-
-        memory = AgentMemoryConfig(
-            store=ConversationDaprStateMemory(
-                store_name="agent-workflow",
-                session_id=f"session-headless-{uuid.uuid4().hex[:8]}"
-            )
-        ),
-
-        state = AgentStateConfig(
-            store=StateStoreService(store_name="agent-memory"),
-        ),
-
-        registry = AgentRegistryConfig(
-            store=StateStoreService(store_name="agent-registry"),
-        ),
-
-        pubsub = AgentPubSubConfig(
-            pubsub_name="agent-pubsub",
-            agent_topic="travel.requests",
-            broadcast_topic="agents.broadcast",
-        )
+        llm=DaprChatClient(component_name="agent-llm-provider"),
     )
 
-    travel_assistant.start()
     print("Travel Assistant Agent is running")
 
     runner = AgentRunner()
     try:
-        runner.serve(travel_assistant, port=5001)
-    except Exception as e:
-        print(f"Error starting service: {e}")
-        raise
+        runner.subscribe(travel_assistant)
+        runner.serve(travel_assistant, port=8001)
     finally:
         runner.shutdown()
-        travel_assistant.stop()
 
 if __name__ == "__main__":
     try:
         main()
     except KeyboardInterrupt:
-        pass
-
+        print("\nInterrupted by user. Exiting gracefully...")

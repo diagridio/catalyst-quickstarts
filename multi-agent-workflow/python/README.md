@@ -1,12 +1,12 @@
 # Customer Support Multi-Agent Workflow Quickstart
 
 This quickstart demonstrates how to build a durable, multi-agent workflow using Dapr Agents and Workflows.
-The workflow acts as a customer support system that triages support tickets and provides troubleshooting resolutions through two cooperating AI agents.
+The workflow acts as a customer support system that orchestrates two durable agents to triage support tickets and provide troubleshooting resolutions.
 
 ## What This Quickstart Demonstrates
 
 * **Durable Execution**: Workflow state persisted using Dapr Workflows
-* **Multi-Agent Orchestration**: Triage and expert agents working in sequence
+* **Multi-Agent Orchestration**: Workflow calls durable agents as child workflows
 * **Conversation Memory**: Agents maintain context across executions
 * **Tool Integration**: Hardcoded entitlement and environment lookup tools
 * **REST API**: Trigger workflows via a single HTTP endpoint
@@ -16,7 +16,7 @@ The workflow acts as a customer support system that triages support tickets and 
 Before you begin, ensure you have:
 
 1. [Diagrid CLI](https://docs.diagrid.io/catalyst/references/cli-reference/overview) installed
-2. [Python 3.10+](https://www.python.org/downloads/)
+2. [Python 3.11+](https://www.python.org/downloads/)
 3. [An OpenAI API key](https://platform.openai.com/api-keys)
 
 ### Set up your local environment
@@ -29,10 +29,10 @@ cd multi-agent-workflow/python
 
 ```bash
 # Create a virtual environment
-python -m venv venv
+python3.11 -m venv .venv
 
 # Activate the virtual environment 
-source venv/bin/activate  # On macOS/Linux
+source .venv/bin/activate  # On macOS/Linux
 # .venv\Scripts\activate   # On Windows
 
 # Install dependencies
@@ -43,12 +43,14 @@ pip install -r requirements.txt
 
 ### OpenAI API Key
 
-Locate the `llm-provider.yaml` file in the `resources` folder and update it with your OpenAI API key:
+Locate the `agent-llm-provider.yaml` file in the `resources` folder and update it with your OpenAI API key:
 
 ```yaml
 metadata:
   - name: key
     value: "YOUR_OPENAI_API_KEY"
+  - name: model
+    value: gpt-4.1-2025-04-14
 ```
 
 ## Running the Quickstart
@@ -68,17 +70,18 @@ diagrid dev run -f dev-python-multi-agent-workflow.yaml --project dev-python-mul
 ```
 
 This starts:
-- REST endpoint on port 5001
+- REST endpoint on port 8003 (workflow app)
 - Durable workflow engine with state persistence
-- Two state stores: execution state and memory state
-- OpenAI conversation component
+- Two durable agent apps (triage on 8001, expert on 8002)
+- State stores: `agent-runtimestatestore` (execution state), `agent-memory` (conversation memory), `agent-workflow` (workflow/actor state), and `agent-registry` (agent registry)
+- OpenAI conversation component (`agent-llm-provider`)
 
 ### 2. Trigger a Workflow
 
 From another terminal, trigger the workflow via REST API:
 
 ```bash
-curl -i -X POST http://localhost:5001/workflow/start \
+curl -i -X POST http://localhost:8003/workflow/start \
   -H "Content-Type: application/json" \
   -d '{"customer": "Alice", "issue": "My Dapr system fails to start in production."}'
 ```
@@ -101,14 +104,14 @@ The workflow will:
 
 ### Examine State Storage
 
-The workflow uses two state stores:
+The workflow uses multiple state stores:
 
-1. **statestore** - Execution state (workflow progress, retries)
+1. **agent-runtimestatestore** - Execution state (workflow progress, retries)
 
-   * Go to Components → Key-Value Store → `statestore`
+   * Go to Components → Key-Value Store → `agent-runtimestatestore`
    * View workflow execution data
 
-2. **memory-state** - Agent conversation memory
+2. **agent-memory** - Agent conversation memory
 
    * See agent reasoning context and history
    * Observe how memory persists across runs
@@ -116,7 +119,7 @@ The workflow uses two state stores:
 ### View Application Architecture
 
 * In Catalyst dashboard → **Application Map**
-* See the `customer-support-workflow` service and its dependencies
+* See the `customer-support-system` service and its dependencies
 * Observe connections to state stores and OpenAI component
 
 ---
@@ -135,8 +138,8 @@ The workflow combines several Dapr building blocks:
 The workflow:
 
 * Receives support requests via REST API
-* Uses the **Triage Agent** to validate entitlement and urgency
-* Uses the **Expert Agent** to analyze environment and generate a resolution
+* Calls the **Triage Agent** as a child workflow to validate entitlement and urgency
+* Calls the **Expert Agent** as a child workflow to analyze environment and generate a resolution
 * Returns a formatted message to the customer
 
 ---
