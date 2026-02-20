@@ -2,7 +2,7 @@
 
 ### Start Customer Support workflow
 // @timeout 60s
-POST http://localhost:5001/workflow/start
+POST http://localhost:8003/workflow/start
 Content-Type: application/json
 
 {

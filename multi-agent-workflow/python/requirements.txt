@@ -1,1 +1,1 @@
-dapr-agents>=0.10.5
+dapr-agents>=0.12.0
