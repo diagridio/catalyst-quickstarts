@@ -7,7 +7,9 @@ common:
 apps:
   - appID: langgraph-agent
     appDirPath: ./
-    appPort: 5001
+    appPort: 8888
     appProtocol: http
     command: ["python", "main.py"]
+    env:
+      APP_PORT: "8888"
 

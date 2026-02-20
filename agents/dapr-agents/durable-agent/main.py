@@ -1,4 +1,5 @@
 import logging
+import os
 import uuid
 from typing import List
 from pydantic import BaseModel, Field
@@ -16,92 +17,69 @@ from dapr_agents.storage.daprstores.stateservice import StateStoreService
 from dapr_agents.workflow.runners import AgentRunner
 
 
-# Define tool output models
-class FlightOption(BaseModel):
-    airline: str = Field(description="Airline name")
-    price: float = Field(description="Price in USD")
+class InvitationResult(BaseModel):
+    sent: int = Field(description="Number of invitations sent")
+    method: str = Field(description="Delivery method")
 
-class HotelOption(BaseModel):
-    hotel_name: str = Field(description="Hotel name")
-    price_per_night: float = Field(description="Price per night in USD")
 
-# Define tool input models
-class DestinationSchema(BaseModel):
-    destination: str = Field(description="Destination city name")
+class InvitationSchema(BaseModel):
+    guest_count: int = Field(description="Number of guests to invite")
+    event_type: str = Field(description="Type of event")
 
-# Define flight search tool with mock flight data
-@tool(args_model=DestinationSchema)
-def search_flights(destination: str) -> List[FlightOption]:
-    """Search for flights to the specified destination."""
+
+@tool(args_model=InvitationSchema)
+def send_invitations(guest_count: int, event_type: str) -> List[InvitationResult]:
+    """Send event invitations to guests."""
     return [
-        FlightOption(airline="SkyHighAir", price=450.00),
-        FlightOption(airline="GlobalWings", price=375.50),
+        InvitationResult(sent=int(guest_count * 0.7), method="email"),
+        InvitationResult(sent=int(guest_count * 0.3), method="physical mail"),
     ]
 
-# Define hotel search tool with mock hotel data
-@tool(args_model=DestinationSchema)
-def search_hotels(destination: str) -> List[HotelOption]:
-    """Search for hotels at the destination. Call this after finding flights."""
-    return [
-        HotelOption(hotel_name="Grand Plaza Hotel", price_per_night=180.00),
-        HotelOption(hotel_name="Seaside Resort", price_per_night=225.00),
-    ]
 
 def main() -> None:
-    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level=logging.DEBUG)
 
-    travel_assistant = DurableAgent(
-        name="travel-assistant-agent",
-        role="Travel Assistant",
-        goal="Plan trips by searching flights first, then hotels only if flights are available",
+    agent = DurableAgent(
+        name="invitations-manager",
+        role="Invitations Manager",
+        goal="Send event invitations to guests using the send_invitations tool. Report how many were sent by email and physical mail.",
         instructions=[
-            "Always search for flights first, and after that for hotels",
-            "If flights are found, immediately search for hotels for the same destination",
-            "If no flights are found for a destination, do NOT search for hotels for that destination",
-            "Complete all tool calls automatically without asking for user confirmation"
+            "When asked to send invitations, use the send_invitations tool with the guest count and event type.",
+            "Always report back the exact number of invitations sent and via which delivery method.",
         ],
-        tools=[search_flights, search_hotels],
-
-        llm = DaprChatClient(component_name="llm-provider"),
-
-        memory = AgentMemoryConfig(
+        tools=[send_invitations],
+        llm=DaprChatClient(component_name="llm-provider"),
+        memory=AgentMemoryConfig(
             store=ConversationDaprStateMemory(
                 store_name="agent-workflow",
-                session_id=f"session-headless-{uuid.uuid4().hex[:8]}"
+                session_id=f"session-invitations-{uuid.uuid4().hex[:8]}"
             )
         ),
-
-        state = AgentStateConfig(
+        state=AgentStateConfig(
             store=StateStoreService(store_name="agent-memory"),
         ),
-
-        registry = AgentRegistryConfig(
+        registry=AgentRegistryConfig(
             store=StateStoreService(store_name="agent-registry"),
         ),
-
-        pubsub = AgentPubSubConfig(
+        pubsub=AgentPubSubConfig(
             pubsub_name="agent-pubsub",
-            agent_topic="travel.requests",
+            agent_topic="events.invitations.requests",
             broadcast_topic="agents.broadcast",
-        )
+        ),
     )
 
-    travel_assistant.start()
-    print("Travel Assistant Agent is running")
+    agent.start()
 
     runner = AgentRunner()
     try:
-        runner.serve(travel_assistant, port=5001)
-    except Exception as e:
-        print(f"Error starting service: {e}")
-        raise
+        runner.serve(agent, port=int(os.environ.get("APP_PORT", "8006")))
     finally:
         runner.shutdown()
-        travel_assistant.stop()
+        agent.stop()
+
 
 if __name__ == "__main__":
     try:
         main()
     except KeyboardInterrupt:
         pass
-

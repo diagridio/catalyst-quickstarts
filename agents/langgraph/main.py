@@ -1,21 +1,24 @@
+import logging
 import os
 
-from langchain_openai import ChatOpenAI
+logging.basicConfig(level=logging.DEBUG)
+
 from langchain_core.messages import HumanMessage, ToolMessage
 from langchain_core.tools import tool
 from langgraph.graph import StateGraph, START, END, MessagesState
 from diagrid.agent.langgraph import DaprWorkflowGraphRunner
+from diagrid.agent.core.chat import DaprChatModel
 
 
 @tool
-def get_weather(city: str) -> str:
-    """Get current weather for a city."""
-    return f"Sunny in {city}, 72F"
+def check_availability(venue: str, date: str) -> str:
+    """Check venue availability for a specific date."""
+    return f"{venue} is available on {date}. Time slots: 9AM-1PM, 2PM-6PM, 6PM-11PM."
 
 
-tools = [get_weather]
+tools = [check_availability]
 tools_by_name = {t.name: t for t in tools}
-model = ChatOpenAI(model="gpt-4o-mini").bind_tools(tools)
+model = DaprChatModel(component_name="llm-provider").bind_tools(tools)
 
 
 def call_model(state: MessagesState) -> dict:
@@ -28,9 +31,7 @@ def call_tools(state: MessagesState) -> dict:
     results = []
     for tc in last_message.tool_calls:
         result = tools_by_name[tc["name"]].invoke(tc["args"])
-        results.append(
-            ToolMessage(content=str(result), tool_call_id=tc["id"])
-        )
+        results.append(ToolMessage(content=str(result), tool_call_id=tc["id"]))
     return {"messages": results}
 
 
@@ -48,8 +49,13 @@ graph.add_edge(START, "agent")
 graph.add_conditional_edges("agent", should_use_tools)
 graph.add_edge("tools", "agent")
 
-runner = DaprWorkflowGraphRunner(graph=graph.compile())
+runner = DaprWorkflowGraphRunner(
+    graph=graph.compile(),
+    name="schedule-planner",
+    role="Schedule Planner",
+    goal="Check venue date and time availability using the check_availability tool. Provide available time slots for a given venue and date.",
+)
 runner.serve(
-    port=int(os.environ.get("APP_PORT", "5001")),
+    port=int(os.environ.get("APP_PORT", "8005")),
     input_mapper=lambda req: {"messages": [HumanMessage(content=req["task"])]},
 )

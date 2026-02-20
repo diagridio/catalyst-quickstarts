@@ -5,9 +5,8 @@ common:
   enableAppHealthCheck: false
   logLevel: info
 apps:
-  - appID: travel-assistant-agent
+  - appID: dapr-agent
     appDirPath: ./
-    appPort: 5001
+    appPort: 8006
     appProtocol: http
     command: ["python", "main.py"]
-

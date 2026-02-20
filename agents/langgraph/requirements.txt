@@ -1,4 +1,3 @@
 diagrid[langgraph]
-langchain_openai
 fastapi
 uvicorn[standard]
