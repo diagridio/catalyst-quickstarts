@@ -1,0 +1,3 @@
+diagrid[agent-core]
+fastapi
+uvicorn[standard]

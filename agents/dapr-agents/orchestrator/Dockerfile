@@ -1,9 +1,11 @@
-FROM python:3.12-alpine
+FROM python:3.12-slim
 WORKDIR /app
 EXPOSE 8007
 COPY requirements.txt .
-RUN apk add --no-cache --virtual .build-deps build-base linux-headers \
-    && pip install --no-cache-dir -r requirements.txt \
-    && apk del .build-deps
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends build-essential \
+    && pip install -r requirements.txt \
+    && apt-get purge -y --auto-remove build-essential \
+    && rm -rf /var/lib/apt/lists/*
 COPY . .
 CMD ["python", "main.py"]
