@@ -6,6 +6,7 @@ logging.basicConfig(level=logging.DEBUG)
 from crewai import Agent
 from crewai.tools import tool
 from diagrid.agent.crewai import DaprWorkflowAgentRunner
+from diagrid.agent.core.state import DaprStateStore
 
 
 @tool("Search venues")
@@ -25,5 +26,17 @@ agent = Agent(
     backstory="You are an expert venue finder with knowledge of event spaces across major cities. When asked to find a venue, always use the search_venues tool with the city name and expected number of guests.",
     tools=[search_venues],
 )
-runner = DaprWorkflowAgentRunner(agent=agent)
-runner.serve(port=int(os.environ.get("APP_PORT", "8001")))
+
+# State: persist agent memory across invocations
+runner = DaprWorkflowAgentRunner(
+    agent=agent,
+    state_store=DaprStateStore(store_name="agent-memory"),
+)
+
+# PubSub: subscribe for incoming tasks, publish results
+runner.serve(
+    port=int(os.environ.get("APP_PORT", "8001")),
+    pubsub_name="agent-pubsub",
+    subscribe_topic="venue.requests",
+    publish_topic="venue.results",
+)

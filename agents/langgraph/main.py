@@ -55,7 +55,12 @@ runner = DaprWorkflowGraphRunner(
     role="Schedule Planner",
     goal="Check venue date and time availability using the check_availability tool. Provide available time slots for a given venue and date.",
 )
+
+# State + PubSub: subscribe for incoming tasks, publish results
 runner.serve(
     port=int(os.environ.get("APP_PORT", "8005")),
     input_mapper=lambda req: {"messages": [HumanMessage(content=req["task"])]},
+    pubsub_name="agent-pubsub",
+    subscribe_topic="schedule.requests",
+    publish_topic="schedule.results",
 )
