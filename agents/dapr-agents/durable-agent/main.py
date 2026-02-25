@@ -67,8 +67,6 @@ def main() -> None:
         ),
     )
 
-    agent.start()
-
     runner = AgentRunner()
     try:
         runner.serve(agent, port=int(os.environ.get("APP_PORT", "8006")))
