@@ -1,0 +1,15 @@
+version: 1
+common:
+  appLogDestination: console
+  resourcesPath: ./resources
+  enableAppHealthCheck: false
+  logLevel: info
+apps:
+  - appID: adk-agent
+    appDirPath: ./
+    appPort: 8888
+    appProtocol: http
+    command: ["python", "main.py"]
+    env:
+      APP_PORT: "8888"
+
