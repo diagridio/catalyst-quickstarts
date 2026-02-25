@@ -1,0 +1,3 @@
+diagrid[openai_agents]==0.1.12
+fastapi==0.129.0
+uvicorn[standard]==0.41.0
