@@ -5,7 +5,7 @@ FROM python:3.12-alpine
 WORKDIR /app
 
 # Expose the port on which the application will run
-EXPOSE 5001
+EXPOSE 8003
 
 # Copy requirements first so Docker cache is efficient
 COPY requirements.txt .
@@ -19,8 +19,8 @@ RUN apk add --no-cache --virtual .build-deps \
 # Copy the rest of the application code
 COPY . .
 
-ENV UVICORN_PORT=5001
+ENV UVICORN_PORT=8003
 
-# Run the Durable Agent
+# Run the Multi-Agent Workflow
 CMD ["python", "main.py"]
 
