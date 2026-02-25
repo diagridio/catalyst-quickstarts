@@ -1,0 +1,26 @@
+version: 1
+common:
+  resourcesPath: ./resources
+  logLevel: info
+  appLogDestination: console
+  daprdLogDestination: console
+
+apps:
+  - appID: customer-support-system
+    appDirPath: ./
+    appPort: 8003
+    appProtocol: http
+    command: [ "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8003" ]
+  - appID: triage-agent
+    appDirPath: ./
+    appPort: 8001
+    appProtocol: http
+    command: [ "python3", "triage_agent.py" ]
+  - appID: expert-agent
+    appDirPath: ./
+    appPort: 8002
+    appProtocol: http
+    command: [ "python3", "expert_agent.py" ]
+
+
+

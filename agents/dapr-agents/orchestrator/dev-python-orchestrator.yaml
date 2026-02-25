@@ -1,0 +1,12 @@
+version: 1
+common:
+  appLogDestination: console
+  resourcesPath: ./resources
+  enableAppHealthCheck: false
+  logLevel: info
+apps:
+  - appID: event-orchestrator
+    appDirPath: ./
+    appPort: 8007
+    appProtocol: http
+    command: ["python", "main.py"]
