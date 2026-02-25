@@ -67,7 +67,6 @@ def main() -> None:
         memory = AgentMemoryConfig(
             store=ConversationDaprStateMemory(
                 store_name="agent-workflow",
-                session_id=f"session-headless-{uuid.uuid4().hex[:8]}"
             )
         ),
 

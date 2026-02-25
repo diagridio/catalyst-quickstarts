@@ -26,8 +26,7 @@ def calculate_budget(items: str) -> str:
 
 # State: persist conversation history across invocations
 session_manager = DaprStateSessionManager(
-    store_name="agent-memory",
-    session_id="budget-analyst",
+    store_name="agent-memory"
 )
 
 agent = Agent(

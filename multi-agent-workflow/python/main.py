@@ -52,8 +52,7 @@ triage_agent = Agent(
     tools=[check_entitlement],
     memory = AgentMemoryConfig(
         store=ConversationDaprStateMemory(
-            store_name="agent-memory",
-            session_id=f"session-triage-{uuid.uuid4().hex[:8]}"
+            store_name="agent-memory"
         )
     ),
 
@@ -87,8 +86,7 @@ expert_agent = Agent(
     tools=[get_customer_environment],
     memory = AgentMemoryConfig(
         store=ConversationDaprStateMemory(
-            store_name="agent-memory",
-            session_id=f"session-expert-{uuid.uuid4().hex[:8]}"
+            store_name="agent-memory"
         )
     ),
 

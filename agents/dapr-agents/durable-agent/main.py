@@ -51,8 +51,7 @@ def main() -> None:
         llm=DaprChatClient(component_name="llm-provider"),
         memory=AgentMemoryConfig(
             store=ConversationDaprStateMemory(
-                store_name="agent-workflow",
-                session_id=f"session-invitations-{uuid.uuid4().hex[:8]}"
+                store_name="agent-workflow"
             )
         ),
         state=AgentStateConfig(
