@@ -1,0 +1,12 @@
+version: 1
+common:
+  appLogDestination: console
+  resourcesPath: ./resources
+  enableAppHealthCheck: false
+  logLevel: info
+apps:
+  - appID: dapr-agent
+    appDirPath: ./
+    appPort: 8006
+    appProtocol: http
+    command: ["python", "main.py"]
