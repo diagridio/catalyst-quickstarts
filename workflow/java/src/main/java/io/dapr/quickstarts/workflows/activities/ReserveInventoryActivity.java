@@ -1,5 +1,6 @@
 package io.dapr.quickstarts.workflows.activities;
 
+import io.dapr.quickstarts.workflows.services.InventoryService;
 import io.dapr.workflows.WorkflowActivity;
 import io.dapr.workflows.WorkflowActivityContext;
 import org.slf4j.Logger;
@@ -13,13 +14,19 @@ public class ReserveInventoryActivity implements WorkflowActivity {
 
   private static final Logger logger = LoggerFactory.getLogger(ReserveInventoryActivity.class);
 
+  private InventoryService inventoryService;
+
+  public ReserveInventoryActivity(InventoryService inventoryService) {
+    this.inventoryService = inventoryService;
+  }
+
   @Override
   public Object run(WorkflowActivityContext ctx) {
     InventoryRequest inventoryRequest = ctx.getInput(InventoryRequest.class);
     logger.info("Verifying inventory for order {}: {} {}", inventoryRequest.getRequestId(),
         inventoryRequest.getQuantity(), inventoryRequest.getItemName());
 
-    InventoryItem inventoryItem = InventoryItem.getItem(inventoryRequest.getItemName());
+    InventoryItem inventoryItem = inventoryService.getItem(inventoryRequest.getItemName());
     if (inventoryItem == null) {
       logger.info("Item {} not found in inventory.", inventoryRequest.getItemName());
       InventoryResult result = new InventoryResult();
