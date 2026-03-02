@@ -19,7 +19,6 @@ def search_decorations(theme: str, venue_size: str) -> str:
 
 
 agent = Agent(
-    "openai:gpt-4o-mini",
     system_prompt=(
         "You are a decoration planner. When asked to find decorations, "
         "use the search_decorations tool with the theme and venue size. "
