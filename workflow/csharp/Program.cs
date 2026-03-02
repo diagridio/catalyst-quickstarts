@@ -11,7 +11,7 @@
  * 4. Update inventory after successful payment
  * 5. Notify user of completion
  * 
- * For more information, visit: https://docs.diagrid.io/catalyst/quickstart/workflow
+ * For more information, visit: https://docs.diagrid.io/getting-started/quickstarts/workflow/
  */
 
 
@@ -72,7 +72,7 @@ app.MapGet("/", () =>
 // POST /workflow/start
 // Body: { "name": "Car", "quantity": 2 }
 // Returns: { "instance_id": "uuid" }
-app.MapPost("/workflow/start", async (OrderPayload order) =>
+app.MapPost("/workflow/start", async ([FromBody] OrderPayload order) =>
 {
     var guid = Guid.NewGuid();
     try

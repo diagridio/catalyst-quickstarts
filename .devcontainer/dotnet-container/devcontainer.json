@@ -1,12 +1,9 @@
 // For format details, see https://aka.ms/devcontainer.json. For config options, see the
-// README at: https://github.com/devcontainers/templates/tree/main/src/universal
+// README at: https://github.com/devcontainers/templates/tree/main/src/dotnet
 {
-	"name": "Default Linux Universal",
+	"name": "C# (.NET)",
 	// Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
-	"image": "mcr.microsoft.com/devcontainers/universal:2-linux",
-	"features": {
-		"ghcr.io/dapr/cli/dapr-cli:0": {}
-	},
+	"image": "mcr.microsoft.com/devcontainers/dotnet:2-10.0-noble",
 	"customizations": {
 		"vscode": {
 			"extensions": [
@@ -19,7 +16,12 @@
 	// "features": {},
 
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
-	// "forwardPorts": [],
+	// "forwardPorts": [5000, 5001],
+	// "portsAttributes": {
+	//		"5001": {
+	//			"protocol": "https"
+	//		}
+	// }
 
 	// Use 'postCreateCommand' to run commands after the container is created.
 	"postCreateCommand": "bash .devcontainer/post-create.sh"
