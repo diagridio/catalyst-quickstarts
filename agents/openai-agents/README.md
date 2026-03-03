@@ -67,7 +67,7 @@ The agent will:
 
 This agent is one of 7 agents in the **Event Planning Team** orchestration scenario. When running together with the orchestrator, the Catering Coordinator handles all food and beverage tasks delegated by the Event Coordinator.
 
-See [`agents/dev-python-orchestration.yaml`](../dev-python-orchestration.yaml) to run all agents together.
+See the [Orchestrator README](../dapr-agents/orchestrator/README.md) to run all agents together.
 
 | Agent | Framework | Role |
 |-------|-----------|------|
