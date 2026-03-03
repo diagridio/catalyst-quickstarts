@@ -16,6 +16,7 @@
   <description>Catalyst State Quickstart</description>
   <properties>
     <java.version>17</java.version>
+    <dapr.version>1.16.0</dapr.version>
   </properties>
   <dependencies>
     <dependency>
@@ -27,30 +28,15 @@
       <artifactId>spring-boot-starter-actuator</artifactId>
     </dependency>
     <dependency>
-      <groupId>io.dapr</groupId>
-      <artifactId>dapr-sdk-springboot</artifactId>
-      <version>1.16.0</version>
+      <groupId>io.dapr.spring</groupId>
+      <artifactId>dapr-spring-boot-starter</artifactId>
+      <version>${dapr.version}</version>
     </dependency>
     <dependency>
-      <groupId>io.dapr</groupId>
-      <artifactId>dapr-sdk</artifactId>
-      <version>1.16.0</version>
-    </dependency>
-    <dependency>
-      <groupId>com.squareup.okhttp3</groupId>
-      <artifactId>okhttp</artifactId>
-      <version>4.9.2</version>
-    </dependency>
-    <dependency>
-      <groupId>org.projectlombok</groupId>
-      <artifactId>lombok</artifactId>
-      <version>1.18.30</version>
-      <optional>true</optional>
-    </dependency>
-    <dependency>
-      <groupId>org.json</groupId>
-      <artifactId>json</artifactId>
-      <version>20231013</version>
+      <groupId>io.dapr.spring</groupId>
+      <artifactId>dapr-spring-boot-starter-test</artifactId>
+      <scope>test</scope>
+      <version>${dapr.version}</version>
     </dependency>
   </dependencies>
   <build>
@@ -58,11 +44,6 @@
       <plugin>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-maven-plugin</artifactId>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-resources-plugin</artifactId>
-        <version>3.1.0</version>
       </plugin>
     </plugins>
   </build>

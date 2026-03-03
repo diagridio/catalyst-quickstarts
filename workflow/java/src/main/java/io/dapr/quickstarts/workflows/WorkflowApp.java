@@ -30,7 +30,6 @@ import io.dapr.spring.workflows.config.EnableDaprWorkflows;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.json.JSONObject;
 
 import io.dapr.quickstarts.workflows.models.*;
 
@@ -56,12 +55,10 @@ public class WorkflowApp {
    * Returns: { "message": "Health check passed. Everything is running smoothly!" }
    */
   @GetMapping("/")
-  public ResponseEntity<Object> readRoot() {
+  public ResponseEntity<ServiceInfo> info() {
     String healthMessage = "Health check passed. Everything is running smoothly!";
     logger.info("Health check result: {}", healthMessage);
-    JSONObject response = new JSONObject();
-    response.put("message", healthMessage);
-    return ResponseEntity.ok(response.toMap());
+    return ResponseEntity.ok(new ServiceInfo(healthMessage));
   }
 
   /**
@@ -71,18 +68,17 @@ public class WorkflowApp {
    * Returns: { "instanceId": "uuid" }
    */
   @PostMapping("/workflow/start")
-  public ResponseEntity<Object> startWorkflow(@RequestBody OrderPayload order) {
+  public ResponseEntity<WorkflowPayload> startWorkflow(@RequestBody OrderPayload order) {
     logger.info("Received request to start workflow for item: {} with quantity: {}", order.getName(), order.getQuantity());
 
     try {
       instanceId = workflowClient.scheduleNewWorkflow(OrderProcessingWorkflow.class, order);
       logger.info("Workflow execution started successfully for item: {} {}", order.getQuantity(), order.getName());
-      java.util.Map<String, Object> response = new java.util.HashMap<>();
-      response.put("instanceId", instanceId);
-      return ResponseEntity.ok(response);
+      return ResponseEntity.ok(new WorkflowPayload(instanceId));
     } catch (Exception e) {
       logger.error("Error starting workflow for item: {} {}", order.getQuantity(), order.getName(), e);
-      return ResponseEntity.internalServerError().body("Failed to start workflow: " + e.getMessage());
+      return ResponseEntity.internalServerError().body(new WorkflowPayload("N/A",
+          "Failed to start workflow: " + e.getMessage()));
     }
   }
 
@@ -92,7 +88,7 @@ public class WorkflowApp {
    * Returns: WorkflowInstanceStatus object or 204 if not found
    */
   @GetMapping("/workflow/status/{instanceId}")
-  public ResponseEntity<Object> getWorkflowStatus(@PathVariable String instanceId) {
+  public ResponseEntity<WorkflowInstanceStatus> getWorkflowStatus(@PathVariable String instanceId) {
     try {
       WorkflowInstanceStatus status = workflowClient.getInstanceState(instanceId, true);
       if (status != null) {
@@ -114,7 +110,7 @@ public class WorkflowApp {
    * Returns: Updated WorkflowInstanceStatus object
    */
   @PostMapping("/workflow/terminate/{instanceId}")
-  public ResponseEntity<Object> terminateWorkflow(@PathVariable String instanceId) {
+  public ResponseEntity<WorkflowInstanceStatus> terminateWorkflow(@PathVariable String instanceId) {
     try {
       // Check current state first to provide accurate messaging
       WorkflowInstanceStatus currentStatus = workflowClient.getInstanceState(instanceId, true);
