@@ -27,15 +27,8 @@ cd durable-agent/python
 ```
 
 ```bash
-# Create a virtual environment
-python3.11 -m venv .venv
-
-# Activate the virtual environment 
-source .venv/bin/activate  # On macOS/Linux
-# .venv\Scripts\activate   # On Windows
-
 # Install dependencies
-pip install -r requirements.txt
+uv sync
 ```
 
 ## Configuration

@@ -7,11 +7,14 @@ WORKDIR /app
 # Expose the port on which the application will run
 EXPOSE 5002
 
-# Copy the requirements file to the working directory
-COPY requirements.txt .
+# Install uv
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+
+# Copy the project file to the working directory
+COPY pyproject.toml .
 
 # Install the Python dependencies
-RUN pip install -r requirements.txt
+RUN uv pip install --system .
 
 # Copy the application code to the working directory
 COPY . .
