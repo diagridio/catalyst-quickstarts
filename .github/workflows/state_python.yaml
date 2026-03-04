@@ -22,16 +22,12 @@ jobs:
     if: github.repository_owner == 'diagridio'
     steps:
       - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
-        with:
-          python-version: "3.12"
-          cache: "pip"
+      - uses: astral-sh/setup-uv@v4
 
       - name: build local
         run: |
           cd state/python
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          uv sync
 
       - name: Configure AWS credentials
         if: github.event_name != 'pull_request'

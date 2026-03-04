@@ -1,5 +1,5 @@
 # Use the official Python base image
-FROM --platform=$BUILDPLATFORM python:3.12-alpine
+FROM --platform=$BUILDPLATFORM python:3.14-alpine
 
 # Set the working directory inside the container
 WORKDIR /app
@@ -7,11 +7,14 @@ WORKDIR /app
 # Expose the port on which the application will run
 EXPOSE 5001
 
-# Copy the requirements file to the working directory
-COPY requirements.txt .
+# Install uv
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+
+# Copy the project file to the working directory
+COPY pyproject.toml .
 
 # Install the Python dependencies
-RUN pip install -r requirements.txt
+RUN uv pip install --system .
 
 # Copy the application code to the working directory
 COPY . .

@@ -1,0 +1,44 @@
+version: 1
+common:
+  appLogDestination: console
+  resourcesPaths:
+    - pubsub.yaml
+    - subscription.yaml
+  enableAppHealthCheck:
+    false
+    # appHealthCheckPath: /healthz
+    # appHealthProbeInterval: 5
+    # appHealthProbeTimeout: 500
+    # appHealthThreshold: 3
+apps:
+  - appID: publisher
+    appDirPath: ./publisher
+    command:
+      - mvn
+      - spring-boot:run
+      - -Dspring-boot.run.arguments=--port=5001
+    appProtocol: http
+    logLevel: info
+    enableAppHealthCheck:
+      false
+      # appHealthCheckPath: /healthz
+      # appHealthProbeInterval: 5
+      # appHealthProbeTimeout: 500
+      # appHealthThreshold: 3
+    appLogDestination: console
+  - appID: subscriber
+    appDirPath: ./subscriber
+    appPort: 5002
+    command:
+      - mvn
+      - spring-boot:run
+      - -Dspring-boot.run.arguments=--port=5002
+    appProtocol: http
+    logLevel: info
+    enableAppHealthCheck:
+      false
+      # appHealthCheckPath: /healthz
+      # appHealthProbeInterval: 5
+      # appHealthProbeTimeout: 500
+      # appHealthThreshold: 3
+    appLogDestination: console

@@ -7,8 +7,6 @@ using Microsoft.AspNetCore.Mvc;
 var builder = WebApplication.CreateBuilder(args);
 var app = builder.Build();
 
-var client = new DaprClientBuilder().Build();
-
 var DaprApiToken = Environment.GetEnvironmentVariable("DAPR_API_TOKEN") ?? "";
 var InvokeAppId = Environment.GetEnvironmentVariable("INVOKE_APPID") ?? "server";
 
@@ -20,7 +18,7 @@ app.MapGet("/", () =>
     return Results.Ok(new { status = "healthy", message = healthMessage });
 });
 
-app.MapPost("/order", async (Order order) =>
+app.MapPost("/order", async ([FromBody] Order order) =>
 {
     try
     {
