@@ -24,21 +24,10 @@ using WorkflowApp.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Configure JSON serialization for camelCase
 builder.Services.Configure<Microsoft.AspNetCore.Http.Json.JsonOptions>(options =>
 {
     options.SerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
     options.SerializerOptions.PropertyNameCaseInsensitive = true;
-});
-
-// Configure Dapr client with JSON serialization options
-builder.Services.AddDaprClient(daprBuilder =>
-{
-    daprBuilder.UseJsonSerializationOptions(new JsonSerializerOptions
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        PropertyNameCaseInsensitive = true
-    });
 });
 
 // Add Dapr workflow services
@@ -53,12 +42,6 @@ builder.Services.AddDaprWorkflow(options =>
 });
 
 var app = builder.Build();
-var workflowClient = app.Services.GetRequiredService<DaprWorkflowClient>();
-
-// Dapr will send serialized event object vs. being raw CloudEvent
-app.UseCloudEvents();
-
-#region Workflow API
 
 // Health check endpoint - verifies the service is running
 app.MapGet("/", () =>
@@ -72,7 +55,9 @@ app.MapGet("/", () =>
 // POST /workflow/start
 // Body: { "name": "Car", "quantity": 2 }
 // Returns: { "instance_id": "uuid" }
-app.MapPost("/workflow/start", async ([FromBody] OrderPayload order) =>
+app.MapPost("/workflow/start", async (
+    [FromBody] OrderPayload order,
+    [FromServices] DaprWorkflowClient workflowClient) =>
 {
     var guid = Guid.NewGuid();
     try
@@ -94,15 +79,18 @@ app.MapPost("/workflow/start", async ([FromBody] OrderPayload order) =>
 // Get workflow status - retrieves the current state of a workflow instance
 // GET /workflow/status/{id}
 // Returns: WorkflowState object or 204 if not found
-app.MapGet("/workflow/status/{id}", async ([FromRoute] string id) =>
+app.MapGet("/workflow/status/{id}", async (
+    [FromRoute] string id,
+    [FromServices] DaprWorkflowClient workflowClient) =>
 {
     try
     {
-        WorkflowState state = await workflowClient.GetWorkflowStateAsync(instanceId: id);
+        var state = await workflowClient.GetWorkflowStateAsync(instanceId: id);
         if (state != null)
         {
             app.Logger.LogInformation("Retrieved workflow status for {id}.", id);
-            return Results.Ok(state);
+            var result = state.ReadOutputAs<OrderResult>();
+            return Results.Ok(new {state, result});
         }
         else
         {
@@ -120,12 +108,14 @@ app.MapGet("/workflow/status/{id}", async ([FromRoute] string id) =>
 // Terminate workflow - stops a running workflow instance
 // POST /workflow/terminate/{id}
 // Returns: Updated WorkflowState object
-app.MapPost("/workflow/terminate/{id}", async ([FromRoute] string id) =>
+app.MapPost("/workflow/terminate/{id}", async (
+    [FromRoute] string id,
+    [FromServices] DaprWorkflowClient workflowClient) =>
 {
     try
     {
         // Check current state first to provide accurate messaging
-        WorkflowState currentState = await workflowClient.GetWorkflowStateAsync(instanceId: id);
+        var currentState = await workflowClient.GetWorkflowStateAsync(instanceId: id);
         if (currentState == null)
         {
             app.Logger.LogInformation("Workflow with id {id} does not exist", id);
@@ -151,7 +141,7 @@ app.MapPost("/workflow/terminate/{id}", async ([FromRoute] string id) =>
         app.Logger.LogInformation("Terminated workflow with id {id}.", id);
 
         // Return the updated state
-        WorkflowState updatedState = await workflowClient.GetWorkflowStateAsync(instanceId: id);
+        var updatedState = await workflowClient.GetWorkflowStateAsync(instanceId: id);
         return Results.Ok(updatedState);
     }
     catch (Exception ex)
@@ -160,8 +150,6 @@ app.MapPost("/workflow/terminate/{id}", async ([FromRoute] string id) =>
         return Results.Problem(detail: ex.Message, statusCode: 500);
     }
 });
-
-#endregion
 
 app.Run();
 
