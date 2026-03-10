@@ -1,0 +1,79 @@
+version: 1
+common:
+  appLogDestination: console
+  resourcesPath: ./resources
+  enableAppHealthCheck: false
+  logLevel: info
+apps:
+  - appID: adk-agent
+    appDirPath: ../../adk
+    appPort: 8001
+    appProtocol: http
+    command: ["python", "main.py"]
+    env:
+      APP_PORT: "8001"
+      GOOGLE_API_KEY: "your-google-api-key"
+
+  - appID: crew-agent
+    appDirPath: ../../crewai
+    appPort: 8002
+    appProtocol: http
+    command: ["python", "main.py"]
+    env:
+      APP_PORT: "8002"
+      OPENAI_API_KEY: "your-openai-api-key"
+
+  - appID: dapr-agent
+    appDirPath: ../durable-agent
+    appPort: 8003
+    appProtocol: http
+    command: ["python", "main.py"]
+    env:
+      APP_PORT: "8003"
+      OPENAI_API_KEY: "your-openai-api-key"
+
+  - appID: agent-orchestration-agent
+    appDirPath: ./
+    appPort: 8004
+    appProtocol: http
+    command: ["python", "main.py"]
+    env:
+      APP_PORT: "8004"
+      OPENAI_API_KEY: "your-openai-api-key"
+
+  - appID: langgraph-agent
+    appDirPath: ../../langgraph
+    appPort: 8005
+    appProtocol: http
+    command: ["python", "main.py"]
+    env:
+      APP_PORT: "8005"
+      OPENAI_API_KEY: "your-openai-api-key"
+
+  - appID: openai-agent
+    appDirPath: ../../openai-agents
+    appPort: 8006
+    appProtocol: http
+    command: ["python", "main.py"]
+    env:
+      APP_PORT: "8006"
+      OPENAI_API_KEY: "your-openai-api-key"
+
+  - appID: pydanticai-agent
+    appDirPath: ../../pydantic-ai
+    appPort: 8007
+    appProtocol: http
+    command: ["python", "main.py"]
+    env:
+      APP_PORT: "8007"
+      OPENAI_API_KEY: "your-openai-api-key"
+
+  - appID: strands-agent
+    appDirPath: ../../strands
+    appPort: 8008
+    appProtocol: http
+    command: ["python", "main.py"]
+    env:
+      APP_PORT: "8008"
+      OPENAI_API_KEY: "your-openai-api-key"
+
