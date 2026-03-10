@@ -5,7 +5,7 @@ This quickstart demonstrates how to run a Google ADK (Agent Development Kit) age
 ## What This Quickstart Demonstrates
 
 - **Google ADK + Dapr Workflows**: Run an ADK LlmAgent with durable execution and automatic state persistence
-- **Dapr Conversation API**: LLM calls routed through the `llm-provider` Dapr component (no hardcoded API keys in code)
+- **Direct LLM Integration**: Calls Google AI directly via the ADK SDK (no Dapr conversation component needed)
 - **Tool Integration**: Entertainment search tool with mock results
 - **REST API**: Trigger agent workflows via HTTP endpoints
 - **Agent Registry**: Auto-registration in a shared agent registry for orchestration
@@ -29,9 +29,11 @@ source venv/bin/activate  # On macOS/Linux
 pip install -r requirements.txt
 ```
 
-### Configure the LLM Provider
+### Set your API key
 
-Update `resources/llm-provider.yaml` with your API key.
+```bash
+export GOOGLE_API_KEY="your-key-here"
+```
 
 ## Running the Quickstart
 

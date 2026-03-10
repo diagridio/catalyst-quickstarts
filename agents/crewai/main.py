@@ -29,6 +29,7 @@ agent = Agent(
 
 # State: persist agent memory across invocations
 runner = DaprWorkflowAgentRunner(
+    name="venue_scout_runner",
     agent=agent,
     state_store=DaprStateStore(store_name="agent-memory"),
 )

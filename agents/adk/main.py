@@ -27,6 +27,7 @@ agent = LlmAgent(
 
 # State: persist agent memory across invocations
 runner = DaprWorkflowAgentRunner(
+    name="entertainment_planner_runner",
     agent=agent,
     state_store=DaprStateStore(store_name="agent-memory"),
 )

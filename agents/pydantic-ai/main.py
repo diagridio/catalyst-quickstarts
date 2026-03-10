@@ -30,6 +30,7 @@ agent = Agent(
 
 # State: persist agent memory across invocations
 runner = DaprWorkflowAgentRunner(
+    name="decoration_planner_runner",
     agent=agent,
     state_store=DaprStateStore(store_name="agent-memory"),
 )
