@@ -21,6 +21,7 @@ def search_catering(cuisine: str, guest_count: int) -> str:
 
 agent = Agent(
     name="catering-coordinator",
+    model="gpt-4o-mini",
     instructions="You are a catering coordinator. When asked to find catering, use the search_catering tool with the cuisine type and number of guests. Return the available catering options with pricing. Always call the tool before responding.",
     tools=[search_catering],
 )

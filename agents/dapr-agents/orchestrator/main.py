@@ -46,7 +46,7 @@ def main() -> None:
 
     runner = AgentRunner()
     try:
-        runner.serve(orchestrator, port=int(os.environ.get("APP_PORT", "8007")))
+        runner.serve(orchestrator, port=int(os.environ.get("APP_PORT", "8004")))
     finally:
         runner.shutdown(orchestrator)
 

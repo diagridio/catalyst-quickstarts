@@ -21,6 +21,7 @@ def find_entertainment(event_type: str) -> str:
 
 agent = LlmAgent(
     name="entertainment_planner",
+    model="gemini-2.0-flash",
     instruction="You are an entertainment planner. When asked to find entertainment, use the find_entertainment tool with the event type. Return the available entertainment options with pricing and duration. Always call the tool before responding.",
     tools=[FunctionTool(find_entertainment)],
 )

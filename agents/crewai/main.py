@@ -25,6 +25,7 @@ agent = Agent(
     goal="Search for event venues by city and guest capacity using the search_venues tool. Return venue names, pricing, and capacity.",
     backstory="You are an expert venue finder with knowledge of event spaces across major cities. When asked to find a venue, always use the search_venues tool with the city name and expected number of guests.",
     tools=[search_venues],
+    llm="gpt-4o-mini",
 )
 
 # State: persist agent memory across invocations
