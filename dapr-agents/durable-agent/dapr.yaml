@@ -9,5 +9,5 @@ apps:
     appDirPath: ./
     appPort: 8001
     appProtocol: http
-    command: ["python", "main.py"]
+    command: ["uv", "run", "python", "main.py"]
 

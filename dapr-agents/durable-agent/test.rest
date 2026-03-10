@@ -2,7 +2,7 @@
 
 ### Start DurableAgent's execution
 // @timeout 300s
-POST http://localhost:8001/run
+POST http://localhost:8001/agents/run
 Content-Type: application/json
 
 {

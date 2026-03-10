@@ -32,7 +32,7 @@ def main() -> None:
 
     runner = AgentRunner()
     try:
-        runner.serve(expert_agent, port=8002)
+        runner.serve(expert_agent, port=8003)
     finally:
         runner.shutdown(expert_agent)
 

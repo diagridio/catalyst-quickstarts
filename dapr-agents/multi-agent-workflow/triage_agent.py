@@ -27,7 +27,7 @@ def main() -> None:
 
     runner = AgentRunner()
     try:
-        runner.serve(triage_agent, port=8001)
+        runner.serve(triage_agent, port=8002)
     finally:
         runner.shutdown(triage_agent)
 

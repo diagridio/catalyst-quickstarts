@@ -24,19 +24,12 @@ Before you begin, ensure you have:
 Navigate to the Python Directory
 
 ```bash
-cd multi-agent-workflow/python
+cd dapr-agents/multi-agent-workflow
 ```
 
 ```bash
-# Create a virtual environment
-python3.11 -m venv .venv
-
-# Activate the virtual environment 
-source .venv/bin/activate  # On macOS/Linux
-# .venv\Scripts\activate   # On Windows
-
 # Install dependencies
-pip install -r requirements.txt
+uv sync
 ```
 
 ## Configuration
@@ -66,14 +59,14 @@ diagrid login
 Deploy the workflow app to Catalyst with managed infrastructure:
 
 ```bash
-diagrid dev run -f dev-python-multi-agent-workflow.yaml --project dev-python-multi-agent-workflow
+diagrid dev run -f dapr.yaml --project multi-agent-workflow-quickstart --approve
 ```
 
 This starts:
-- REST endpoint on port 8003 (workflow app)
+- REST endpoint on port 8001 (workflow app)
 - Durable workflow engine with state persistence
-- Two durable agent apps (triage on 8001, expert on 8002)
-- State stores: `agent-runtimestatestore` (execution state), `agent-memory` (conversation memory), `agent-workflow` (workflow/actor state), and `agent-registry` (agent registry)
+- Two durable agent apps (triage on 8002, expert on 8003)
+- State stores: `agent-runtime` (execution state), `agent-memory` (conversation memory), `agent-workflow` (workflow/actor state), and `agent-registry` (agent registry)
 - OpenAI conversation component (`agent-llm-provider`)
 
 ### 2. Trigger a Workflow
@@ -81,7 +74,7 @@ This starts:
 From another terminal, trigger the workflow via REST API:
 
 ```bash
-curl -i -X POST http://localhost:8003/workflow/start \
+curl -i -X POST http://localhost:8001/workflow/start \
   -H "Content-Type: application/json" \
   -d '{"customer": "Alice", "issue": "My Dapr system fails to start in production."}'
 ```
@@ -106,9 +99,9 @@ The workflow will:
 
 The workflow uses multiple state stores:
 
-1. **agent-runtimestatestore** - Execution state (workflow progress, retries)
+1. **agent-runtime** - Execution state (workflow progress, retries)
 
-   * Go to Components → Key-Value Store → `agent-runtimestatestore`
+   * Go to Components → Key-Value Store → `agent-runtime`
    * View workflow execution data
 
 2. **agent-memory** - Agent conversation memory

@@ -1,0 +1,23 @@
+version: 1
+common:
+  resourcesPath: ./resources
+  logLevel: info
+  appLogDestination: console
+  daprdLogDestination: console
+
+apps:
+  - appID: support-agent-orchestrator
+    appDirPath: ./
+    appPort: 8001
+    appProtocol: http
+    command: [ "uv", "run", "python", "main.py" ]
+  - appID: triage-agent
+    appDirPath: ./
+    appPort: 8002
+    appProtocol: http
+    command: [ "uv", "run", "python", "triage_agent.py" ]
+  - appID: expert-agent
+    appDirPath: ./
+    appPort: 8003
+    appProtocol: http
+    command: [ "uv", "run", "python", "expert_agent.py" ]

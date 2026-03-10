@@ -23,7 +23,7 @@ Before you begin, ensure you have:
 Navigate to the Python Directory
 
 ```bash
-cd durable-agent/python
+cd dapr-agents/durable-agent
 ```
 
 ```bash
@@ -56,7 +56,7 @@ diagrid login
 Deploy the agent to Catalyst with managed infrastructure:
 
 ```bash
-diagrid dev run -f dev-python-durable-agent.yaml --project dev-python-durable-agent
+diagrid dev run -f dapr.yaml --project durable-agent-quickstart --approve
 
 ```
 
@@ -118,8 +118,8 @@ curl -i -X POST http://localhost:8001/agent/run \
 
 The agent uses three separate state stores:
 
-1. **agent-runtimestatestore** - Execution state (workflow progress, retries)
-   - Go to Components → Key-Value Store → `agent-runtimestatestore`
+1. **agent-runtime** - Execution state (workflow progress, retries)
+   - Go to Components → Key-Value Store → `agent-runtime`
    - View workflow execution state
 
 2. **agent-memory** - Conversation memory
