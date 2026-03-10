@@ -36,6 +36,7 @@ agent = Agent(
 )
 
 runner = DaprWorkflowAgentRunner(
+    name="budget_analyst_runner",
     agent=agent,
     state_store=DaprStateStore(store_name="agent-memory"),
 )

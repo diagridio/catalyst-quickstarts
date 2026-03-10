@@ -6,8 +6,8 @@ logging.basicConfig(level=logging.DEBUG)
 from langchain_core.messages import HumanMessage, ToolMessage
 from langchain_core.tools import tool
 from langgraph.graph import StateGraph, START, END, MessagesState
+from langchain_openai import ChatOpenAI
 from diagrid.agent.langgraph import DaprWorkflowGraphRunner
-from diagrid.agent.core.chat import DaprChatModel
 
 
 @tool
@@ -18,7 +18,7 @@ def check_availability(venue: str, date: str) -> str:
 
 tools = [check_availability]
 tools_by_name = {t.name: t for t in tools}
-model = DaprChatModel(component_name="llm-provider").bind_tools(tools)
+model = ChatOpenAI(model="gpt-4.1-2025-04-14").bind_tools(tools)
 
 
 def call_model(state: MessagesState) -> dict:

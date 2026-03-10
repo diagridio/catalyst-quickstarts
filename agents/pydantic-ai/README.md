@@ -20,7 +20,11 @@ This agent is part of the **Event Planning Team** quickstart scenario. It plays 
 - Python 3.12+
 - [Dapr CLI](https://docs.dapr.io/getting-started/install-dapr-cli/)
 - Redis running locally (for state store and pub/sub)
-- `OPENAI_API_KEY` environment variable set
+### Set your API key
+
+```bash
+export OPENAI_API_KEY="your-key-here"
+```
 
 ### Run locally
 
