@@ -18,6 +18,7 @@ This agent is part of the **Event Planning Team** quickstart scenario. It plays 
 ### Prerequisites
 
 - Python 3.12+
+- [uv](https://docs.astral.sh/uv/getting-started/installation/) installed
 - [Dapr CLI](https://docs.dapr.io/getting-started/install-dapr-cli/)
 - Redis running locally (for state store and pub/sub)
 ### Set your API key
@@ -29,7 +30,9 @@ export OPENAI_API_KEY="your-key-here"
 ### Run locally
 
 ```bash
-pip install -r requirements.txt
+uv venv
+source .venv/bin/activate  # On macOS/Linux
+uv pip install -r requirements.txt
 export OPENAI_API_KEY=<your-key>
 dapr run -f dev-python-pydantic-ai.yaml
 ```

@@ -14,19 +14,18 @@ This quickstart demonstrates how to run a CrewAI agent as a durable Dapr Workflo
 
 1. [Diagrid CLI](https://docs.diagrid.io/catalyst/references/cli-reference/overview) installed
 2. [Python 3.10+](https://www.python.org/downloads/)
-3. An [OpenAI API key](https://platform.openai.com/api-keys)
+3. [uv](https://docs.astral.sh/uv/getting-started/installation/) installed
+4. An [OpenAI API key](https://platform.openai.com/api-keys)
 
 ## Setup
 
 ```bash
 cd crewai
 
-# Create and activate virtual environment
-python -m venv venv
-source venv/bin/activate  # On macOS/Linux
-
-# Install dependencies
-pip install -r requirements.txt
+# Create virtual environment and install dependencies
+uv venv
+source .venv/bin/activate  # On macOS/Linux
+uv pip install -r requirements.txt
 ```
 
 ### Set your API key

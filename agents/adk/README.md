@@ -14,19 +14,18 @@ This quickstart demonstrates how to run a Google ADK (Agent Development Kit) age
 
 1. [Diagrid CLI](https://docs.diagrid.io/catalyst/references/cli-reference/overview) installed
 2. [Python 3.10+](https://www.python.org/downloads/)
-3. A [Google API key](https://aistudio.google.com/)
+3. [uv](https://docs.astral.sh/uv/getting-started/installation/) installed
+4. A [Google API key](https://aistudio.google.com/)
 
 ## Setup
 
 ```bash
 cd adk
 
-# Create and activate virtual environment
-python -m venv venv
-source venv/bin/activate  # On macOS/Linux
-
-# Install dependencies
-pip install -r requirements.txt
+# Create virtual environment and install dependencies
+uv venv
+source .venv/bin/activate  # On macOS/Linux
+uv pip install -r requirements.txt
 ```
 
 ### Set your API key

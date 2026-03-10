@@ -3,6 +3,6 @@ FROM ${BASE_IMAGE}
 WORKDIR /app
 EXPOSE 5001
 COPY requirements.txt .
-RUN pip install -r requirements.txt
+RUN uv pip install --system --no-cache -r requirements.txt
 COPY . .
 CMD ["python", "main.py"]

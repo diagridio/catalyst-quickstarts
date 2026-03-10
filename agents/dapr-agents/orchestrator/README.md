@@ -14,20 +14,19 @@ This quickstart demonstrates how to build an **orchestrator agent** using [Dapr 
 
 1. [Diagrid CLI](https://docs.diagrid.io/catalyst/references/cli-reference/overview) installed
 2. [Python 3.10+](https://www.python.org/downloads/)
-3. An [OpenAI API key](https://platform.openai.com/api-keys)
-4. All 6 specialist agents running (see [Running the Full Team](#running-the-full-team) below)
+3. [uv](https://docs.astral.sh/uv/getting-started/installation/) installed
+4. An [OpenAI API key](https://platform.openai.com/api-keys)
+5. All 6 specialist agents running (see [Running the Full Team](#running-the-full-team) below)
 
 ## Setup
 
 ```bash
 cd dapr-agents/orchestrator
 
-# Create and activate virtual environment
-python -m venv venv
-source venv/bin/activate  # On macOS/Linux
-
-# Install dependencies
-pip install -r requirements.txt
+# Create virtual environment and install dependencies
+uv venv
+source .venv/bin/activate  # On macOS/Linux
+uv pip install -r requirements.txt
 ```
 
 ### Configure the LLM Provider
