@@ -1,7 +1,7 @@
 import logging
 import os
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 
 from pydantic_ai import Agent
 from diagrid.agent.pydantic_ai import DaprWorkflowAgentRunner
@@ -19,6 +19,7 @@ def search_decorations(theme: str, venue_size: str) -> str:
 
 
 agent = Agent(
+    "openai:gpt-4o-mini",
     system_prompt=(
         "You are a decoration planner. When asked to find decorations, "
         "use the search_decorations tool with the theme and venue size. "
@@ -30,7 +31,7 @@ agent = Agent(
 
 # State: persist agent memory across invocations
 runner = DaprWorkflowAgentRunner(
-    name="decoration_planner_runner",
+    name="decoration-planner",
     agent=agent,
     state_store=DaprStateStore(store_name="agent-memory"),
 )

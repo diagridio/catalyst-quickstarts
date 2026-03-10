@@ -1,7 +1,7 @@
 import logging
 import os
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 
 from google.adk.agents import LlmAgent
 from google.adk.tools import FunctionTool
@@ -21,13 +21,14 @@ def find_entertainment(event_type: str) -> str:
 
 agent = LlmAgent(
     name="entertainment_planner",
+    model="gemini-2.0-flash",
     instruction="You are an entertainment planner. When asked to find entertainment, use the find_entertainment tool with the event type. Return the available entertainment options with pricing and duration. Always call the tool before responding.",
     tools=[FunctionTool(find_entertainment)],
 )
 
 # State: persist agent memory across invocations
 runner = DaprWorkflowAgentRunner(
-    name="entertainment_planner_runner",
+    name="entertainment-planner",
     agent=agent,
     state_store=DaprStateStore(store_name="agent-memory"),
 )
