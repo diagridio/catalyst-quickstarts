@@ -1,7 +1,7 @@
 import logging
 import os
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 
 from google.adk.agents import LlmAgent
 from google.adk.tools import FunctionTool
@@ -27,6 +27,7 @@ agent = LlmAgent(
 
 # State: persist agent memory across invocations
 runner = DaprWorkflowAgentRunner(
+    name="entertainment-planner",
     agent=agent,
     state_store=DaprStateStore(store_name="agent-memory"),
 )

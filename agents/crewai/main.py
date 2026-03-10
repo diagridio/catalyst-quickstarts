@@ -1,7 +1,7 @@
 import logging
 import os
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 
 from crewai import Agent
 from crewai.tools import tool
@@ -29,6 +29,7 @@ agent = Agent(
 
 # State: persist agent memory across invocations
 runner = DaprWorkflowAgentRunner(
+    name="venue-scout",
     agent=agent,
     state_store=DaprStateStore(store_name="agent-memory"),
 )

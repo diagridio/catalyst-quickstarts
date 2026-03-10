@@ -1,7 +1,7 @@
 import logging
 import os
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 
 from strands import Agent, tool
 from diagrid.agent.strands import DaprWorkflowAgentRunner, DaprStateSessionManager
@@ -36,6 +36,7 @@ agent = Agent(
 )
 
 runner = DaprWorkflowAgentRunner(
+    name="budget-planner",
     agent=agent,
     state_store=DaprStateStore(store_name="agent-memory"),
 )

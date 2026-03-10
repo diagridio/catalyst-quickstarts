@@ -14,7 +14,7 @@ from dapr_agents.workflow.runners import AgentRunner
 
 
 def main() -> None:
-    logging.basicConfig(level=logging.DEBUG)
+    logging.basicConfig(level=logging.INFO)
 
     orchestrator = DurableAgent(
         name="EventCoordinator",

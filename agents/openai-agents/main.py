@@ -1,7 +1,7 @@
 import logging
 import os
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 
 from agents import Agent, function_tool
 from diagrid.agent.openai_agents import DaprWorkflowAgentRunner
@@ -27,6 +27,7 @@ agent = Agent(
 
 # State: persist agent memory across invocations
 runner = DaprWorkflowAgentRunner(
+    name="catering-coordinator",
     agent=agent,
     state_store=DaprStateStore(store_name="agent-memory"),
 )

@@ -1,7 +1,7 @@
 import logging
 import os
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 
 from pydantic_ai import Agent
 from diagrid.agent.pydantic_ai import DaprWorkflowAgentRunner
@@ -30,6 +30,7 @@ agent = Agent(
 
 # State: persist agent memory across invocations
 runner = DaprWorkflowAgentRunner(
+    name="decoration-planner",
     agent=agent,
     state_store=DaprStateStore(store_name="agent-memory"),
 )
