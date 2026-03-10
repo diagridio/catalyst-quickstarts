@@ -12,4 +12,5 @@ apps:
     command: ["python", "main.py"]
     env:
       APP_PORT: "8888"
+      GOOGLE_API_KEY: "${GOOGLE_API_KEY}"
 

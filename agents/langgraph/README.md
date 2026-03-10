@@ -5,7 +5,7 @@ This quickstart demonstrates how to run a LangGraph graph as a durable Dapr Work
 ## What This Quickstart Demonstrates
 
 - **LangGraph + Dapr Workflows**: Run a compiled LangGraph StateGraph with durable execution per node
-- **Dapr Conversation API**: LLM calls via `DaprChatModel` routed through the `llm-provider` Dapr component
+- **Direct LLM Integration**: Calls OpenAI directly via `langchain-openai` (no Dapr conversation component needed)
 - **Tool Integration**: Availability check tool with mock schedule data
 - **Conditional Routing**: LangGraph conditional edges for tool-calling loop
 - **REST API**: Trigger graph workflows via HTTP endpoints
@@ -30,14 +30,10 @@ source venv/bin/activate  # On macOS/Linux
 pip install -r requirements.txt
 ```
 
-### Configure the LLM Provider
+### Set your API key
 
-Update `resources/llm-provider.yaml` with your OpenAI API key:
-
-```yaml
-metadata:
-  - name: key
-    value: "YOUR_OPENAI_API_KEY"
+```bash
+export OPENAI_API_KEY="your-key-here"
 ```
 
 ## Running the Quickstart

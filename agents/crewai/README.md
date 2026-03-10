@@ -5,7 +5,7 @@ This quickstart demonstrates how to run a CrewAI agent as a durable Dapr Workflo
 ## What This Quickstart Demonstrates
 
 - **CrewAI + Dapr Workflows**: Run a CrewAI agent with durable execution and automatic state persistence
-- **Dapr Conversation API**: LLM calls routed through the `llm-provider` Dapr component (no hardcoded API keys in code)
+- **Direct LLM Integration**: Calls OpenAI directly via the CrewAI SDK (no Dapr conversation component needed)
 - **Tool Integration**: Venue search tool with mock results
 - **REST API**: Trigger agent workflows via HTTP endpoints
 - **Agent Registry**: Auto-registration in a shared agent registry for orchestration
@@ -29,14 +29,10 @@ source venv/bin/activate  # On macOS/Linux
 pip install -r requirements.txt
 ```
 
-### Configure the LLM Provider
+### Set your API key
 
-Update `resources/llm-provider.yaml` with your OpenAI API key:
-
-```yaml
-metadata:
-  - name: key
-    value: "YOUR_OPENAI_API_KEY"
+```bash
+export OPENAI_API_KEY="your-key-here"
 ```
 
 ## Running the Quickstart
