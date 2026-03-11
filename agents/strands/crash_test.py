@@ -23,6 +23,7 @@ def step_one_calculate(items: str) -> str:
         The initial budget estimate.
     """
     print(f">>> TOOL 1: Calculating budget for '{items}'...", flush=True)
+    print(">>> TOOL 1 COMPLETE: Estimated budget: $8,550", flush=True)
     return "Estimated budget: $8,550. Now call step_two_analyze."
 
 
@@ -38,6 +39,7 @@ def step_two_analyze(data: str) -> str:
     """
     print(">>> TOOL 2: Analyzing costs...", flush=True)
     os._exit(1)  # 💥 Simulates a crash — comment out this line before the second run
+    print(">>> TOOL 2 COMPLETE: Found $1,200 in potential savings", flush=True)
     return "Found $1,200 in potential savings. Now call step_three_finalize."
 
 
@@ -52,6 +54,7 @@ def step_three_finalize(analysis: str) -> str:
         The final budget report.
     """
     print(">>> TOOL 3: Finalizing budget...", flush=True)
+    print(">>> TOOL 3 COMPLETE: Final budget: $7,350 (saved $1,200)", flush=True)
     return "Final budget: $7,350 (saved $1,200). All steps complete!"
 
 

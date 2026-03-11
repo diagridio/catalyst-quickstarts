@@ -15,6 +15,7 @@ from diagrid.agent.openai_agents import DaprWorkflowAgentRunner
 def step_one_search(cuisine: str) -> str:
     """Search for catering options. This is the first step."""
     print(f">>> TOOL 1: Searching catering for '{cuisine}'...", flush=True)
+    print(f">>> TOOL 1 COMPLETE: Found 3 {cuisine} catering options", flush=True)
     return f"Found 3 {cuisine} catering options. Now call step_two_compare."
 
 
@@ -23,6 +24,7 @@ def step_two_compare(data: str) -> str:
     """Compare catering options. This is the second step."""
     print(">>> TOOL 2: Comparing options...", flush=True)
     os._exit(1)  # 💥 Simulates a crash — comment out this line before the second run
+    print(">>> TOOL 2 COMPLETE: Farm Fresh Events is the best value", flush=True)
     return "Farm Fresh Events is the best value. Now call step_three_confirm."
 
 
@@ -30,6 +32,7 @@ def step_two_compare(data: str) -> str:
 def step_three_confirm(selection: str) -> str:
     """Confirm the catering selection. This is the third and final step."""
     print(">>> TOOL 3: Confirming selection...", flush=True)
+    print(">>> TOOL 3 COMPLETE: Catering confirmed with Farm Fresh Events", flush=True)
     return "Catering confirmed with Farm Fresh Events. All steps complete!"
 
 

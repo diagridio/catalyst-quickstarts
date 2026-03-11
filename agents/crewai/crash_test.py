@@ -16,6 +16,7 @@ from diagrid.agent.crewai import DaprWorkflowAgentRunner
 def step_one_search(city: str) -> str:
     """Search for event venues in a city. This is the first step."""
     print(f">>> TOOL 1: Searching venues in '{city}'...", flush=True)
+    print(f">>> TOOL 1 COMPLETE: Found 3 venues in {city}", flush=True)
     return f"Found 3 venues in {city}. Now call step_two___compare_venues."
 
 
@@ -24,6 +25,7 @@ def step_two_compare(data: str) -> str:
     """Compare the venue options. This is the second step."""
     print(">>> TOOL 2: Comparing venues...", flush=True)
     os._exit(1)  # 💥 Simulates a crash — comment out this line before the second run
+    print(">>> TOOL 2 COMPLETE: Grand Ballroom is the best option", flush=True)
     return "Grand Ballroom is the best option. Now call step_three___confirm_booking."
 
 
@@ -31,6 +33,7 @@ def step_two_compare(data: str) -> str:
 def step_three_confirm(selection: str) -> str:
     """Confirm the venue booking. This is the third and final step."""
     print(">>> TOOL 3: Confirming booking...", flush=True)
+    print(">>> TOOL 3 COMPLETE: Booking confirmed for Grand Ballroom", flush=True)
     return "Booking confirmed for Grand Ballroom. All steps complete!"
 
 

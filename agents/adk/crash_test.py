@@ -22,6 +22,7 @@ def step_one_find(event_type: str) -> str:
         A list of entertainment options.
     """
     print(f">>> TOOL 1: Finding entertainment for '{event_type}'...", flush=True)
+    print(f">>> TOOL 1 COMPLETE: Found 3 entertainment options for {event_type}", flush=True)
     return f"Found 3 entertainment options for {event_type}. Now call step_two_compare."
 
 
@@ -36,6 +37,7 @@ def step_two_compare(data: str) -> str:
     """
     print(">>> TOOL 2: Comparing options...", flush=True)
     os._exit(1)  # 💥 Simulates a crash — comment out this line before the second run
+    print(">>> TOOL 2 COMPLETE: Live Jazz Band is the best option", flush=True)
     return "Live Jazz Band is the best option. Now call step_three_confirm."
 
 
@@ -49,6 +51,7 @@ def step_three_confirm(selection: str) -> str:
         A booking confirmation.
     """
     print(">>> TOOL 3: Confirming booking...", flush=True)
+    print(">>> TOOL 3 COMPLETE: Entertainment confirmed with Live Jazz Band", flush=True)
     return "Entertainment confirmed with Live Jazz Band. All steps complete!"
 
 
