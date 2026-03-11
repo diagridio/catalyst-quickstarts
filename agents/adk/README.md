@@ -59,6 +59,46 @@ The agent will:
 2. Use the `find_entertainment` tool to search for options
 3. Return entertainment options with pricing and duration details
 
+## Crash Recovery Test
+
+The `crash_test.py` file demonstrates durable crash recovery — a capability not offered by Google ADK natively. It defines 3 tools where tool 2 crashes with `os._exit(1)`:
+
+1. **step_one_find** — finds entertainment options (completes successfully)
+2. **step_two_compare** — compares options (crashes before completing)
+3. **step_three_confirm** — confirms the booking
+
+### First run — trigger and crash
+
+```bash
+diagrid dev run -f dev-crash-test.yaml
+```
+
+Wait for `Runner started — ready to accept requests`, then from another terminal:
+
+```bash
+curl -X POST http://localhost:8001/run \
+  -H "Content-Type: application/json" \
+  -d '{"prompt": "Find entertainment for a corporate holiday party"}'
+```
+
+You'll see tool 1 complete and the process crash at tool 2.
+
+### Fix and resume
+
+Open `crash_test.py` and comment out the crash line:
+
+```python
+# os._exit(1)  # 💥 Simulates a crash — comment out this line before the second run
+```
+
+Restart the application:
+
+```bash
+diagrid dev run -f dev-crash-test.yaml
+```
+
+The workflow **resumes from tool 2** — tool 1 is not re-executed. The Dapr workflow engine replays the saved result from Catalyst instead of re-running the tool.
+
 ## Part of the Event Planning Team
 
 This agent is one of 7 agents in the **Event Planning Team** orchestration scenario. When running together with the orchestrator, the Entertainment Planner handles all entertainment-related tasks delegated by the Event Coordinator.

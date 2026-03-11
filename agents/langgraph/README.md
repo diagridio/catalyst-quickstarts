@@ -32,6 +32,8 @@ pip install -r requirements.txt
 
 ### Set your API key
 
+This quickstart uses OpenAI, but you can use any LLM provider supported by LangGraph.
+
 ```bash
 export OPENAI_API_KEY="your-key-here"
 ```
@@ -60,6 +62,46 @@ The agent will:
 2. Call the LLM to determine the right tool call
 3. Use the `check_availability` tool to check venue availability
 4. Return available time slots for the requested date
+
+## Crash Recovery Test
+
+The `crash_test.py` file demonstrates durable crash recovery — a capability not offered by LangGraph natively. It defines a 3-node graph where node 2 crashes with `os._exit(1)`:
+
+1. **check_venues** — checks venue availability (completes successfully)
+2. **compare_options** — compares options (crashes before completing)
+3. **confirm_booking** — confirms the booking
+
+### First run — trigger and crash
+
+```bash
+diagrid dev run -f dev-crash-test.yaml
+```
+
+Wait for `Runner started — ready to accept requests`, then from another terminal:
+
+```bash
+curl -X POST http://localhost:8001/run \
+  -H "Content-Type: application/json" \
+  -d '{"topic": "company gala on March 15"}'
+```
+
+You'll see step 1 complete and the process crash at step 2.
+
+### Fix and resume
+
+Open `crash_test.py` and comment out the crash line:
+
+```python
+# os._exit(1)  # 💥 Simulates a crash — comment out this line before the second run
+```
+
+Restart the application:
+
+```bash
+diagrid dev run -f dev-crash-test.yaml
+```
+
+The workflow **resumes from step 2** — step 1 is not re-executed. The Dapr workflow engine replays the saved result from Catalyst instead of re-running the node.
 
 ## Part of the Event Planning Team
 
