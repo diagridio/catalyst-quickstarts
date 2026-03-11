@@ -12,5 +12,3 @@ apps:
     command: ["python", "main.py"]
     env:
       APP_PORT: "8888"
-      OPENAI_API_KEY: "${OPENAI_API_KEY}"
-
