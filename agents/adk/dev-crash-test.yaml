@@ -1,0 +1,9 @@
+version: 1
+common:
+  appLogDestination: console
+apps:
+  - appID: adk-crash-test
+    appDirPath: ./
+    command: ["python", "crash_test.py"]
+    env:
+      GOOGLE_API_KEY: "${GOOGLE_API_KEY}"
