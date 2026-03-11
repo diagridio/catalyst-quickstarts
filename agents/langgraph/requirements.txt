@@ -1,4 +1,4 @@
-diagrid[langgraph]==0.2.0
+diagrid[langgraph]==0.2.1
 langchain-openai==1.1.11
 fastapi==0.129.0
 uvicorn[standard]==0.41.0

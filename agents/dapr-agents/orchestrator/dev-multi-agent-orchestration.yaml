@@ -12,7 +12,6 @@ apps:
     command: ["python", "main.py"]
     env:
       APP_PORT: "8001"
-      GOOGLE_API_KEY: "your-google-api-key"
 
   - appID: crew-agent
     appDirPath: ../../crewai
@@ -21,7 +20,6 @@ apps:
     command: ["python", "main.py"]
     env:
       APP_PORT: "8002"
-      OPENAI_API_KEY: "your-openai-api-key"
 
   - appID: dapr-agent
     appDirPath: ../durable-agent
@@ -30,7 +28,6 @@ apps:
     command: ["python", "main.py"]
     env:
       APP_PORT: "8003"
-      OPENAI_API_KEY: "your-openai-api-key"
 
   - appID: agent-orchestration-agent
     appDirPath: ./
@@ -39,7 +36,6 @@ apps:
     command: ["python", "main.py"]
     env:
       APP_PORT: "8004"
-      OPENAI_API_KEY: "your-openai-api-key"
 
   - appID: langgraph-agent
     appDirPath: ../../langgraph
@@ -48,7 +44,6 @@ apps:
     command: ["python", "main.py"]
     env:
       APP_PORT: "8005"
-      OPENAI_API_KEY: "your-openai-api-key"
 
   - appID: openai-agent
     appDirPath: ../../openai-agents
@@ -57,7 +52,6 @@ apps:
     command: ["python", "main.py"]
     env:
       APP_PORT: "8006"
-      OPENAI_API_KEY: "your-openai-api-key"
 
   - appID: pydanticai-agent
     appDirPath: ../../pydantic-ai
@@ -66,7 +60,6 @@ apps:
     command: ["python", "main.py"]
     env:
       APP_PORT: "8007"
-      OPENAI_API_KEY: "your-openai-api-key"
 
   - appID: strands-agent
     appDirPath: ../../strands
@@ -75,5 +68,3 @@ apps:
     command: ["python", "main.py"]
     env:
       APP_PORT: "8008"
-      OPENAI_API_KEY: "your-openai-api-key"
-
