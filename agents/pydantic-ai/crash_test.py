@@ -14,6 +14,7 @@ from diagrid.agent.pydantic_ai import DaprWorkflowAgentRunner
 def step_one_search(theme: str) -> str:
     """Search for decoration packages. This is the first step."""
     print(f">>> TOOL 1: Searching decorations for '{theme}'...", flush=True)
+    print(f">>> TOOL 1 COMPLETE: Found 3 decoration packages for {theme}", flush=True)
     return f"Found 3 decoration packages for {theme}. Now call step_two_compare."
 
 
@@ -21,12 +22,14 @@ def step_two_compare(data: str) -> str:
     """Compare decoration packages. This is the second step."""
     print(">>> TOOL 2: Comparing packages...", flush=True)
     os._exit(1)  # 💥 Simulates a crash — comment out this line before the second run
+    print(">>> TOOL 2 COMPLETE: Elegant Events Decor is the best value", flush=True)
     return "Elegant Events Decor is the best value. Now call step_three_confirm."
 
 
 def step_three_confirm(selection: str) -> str:
     """Confirm the decoration selection. This is the third and final step."""
     print(">>> TOOL 3: Confirming selection...", flush=True)
+    print(">>> TOOL 3 COMPLETE: Decorations confirmed with Elegant Events Decor", flush=True)
     return "Decorations confirmed with Elegant Events Decor. All steps complete!"
 
 

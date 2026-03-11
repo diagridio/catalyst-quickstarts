@@ -5,5 +5,3 @@ apps:
   - appID: pydantic-ai-crash-test
     appDirPath: ./
     command: ["python", "crash_test.py"]
-    env:
-      OPENAI_API_KEY: "${OPENAI_API_KEY}"
