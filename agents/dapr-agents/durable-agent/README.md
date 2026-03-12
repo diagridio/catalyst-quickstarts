@@ -20,7 +20,7 @@ This quickstart demonstrates how to build a durable agent using [Dapr Agents](ht
 ## Setup
 
 ```bash
-cd dapr-agents/durable-agent
+cd agents/dapr-agents/durable-agent
 
 # Create and activate virtual environment
 python -m venv venv
@@ -42,19 +42,21 @@ metadata:
 
 ## Running the Quickstart
 
-### 1. Deploy and Run
+### 1. Deploy and Run on Catalyst
+
+The following will create a new project in your Catalyst organization named `invitations-manager`.
 
 ```bash
 diagrid login
-diagrid dev run -f dev-python-durable-agent.yaml
+diagrid dev run -f dev-python-durable-agent.yaml --project invitations-manager
 ```
 
-### 2. Trigger a Workflow
+### 2. Trigger a Durable Agent run
 
-From another terminal:
+From a new terminal window:
 
 ```bash
-curl -i -X POST http://localhost:8006/run \
+curl -i -X POST http://localhost:8006/agent/run \
   -H "Content-Type: application/json" \
   -d '{"task": "Send invitations to 100 guests for a corporate networking event"}'
 ```
@@ -63,6 +65,10 @@ The agent will:
 1. Receive the invitation request
 2. Use the `send_invitations` tool to dispatch invitations
 3. Return a breakdown of invitations sent via email and physical mail
+
+### 3. View the agent in Catalyst
+
+Navigate to the Catalyst console to view the agent runs and the durable workflows that are created: [http://catalyst.diagrid.io/](http://catalyst.diagrid.io/).
 
 ## Part of the Event Planning Team
 
