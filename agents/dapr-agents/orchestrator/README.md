@@ -41,6 +41,13 @@ metadata:
     value: "YOUR_OPENAI_API_KEY"
 ```
 
+Export your `GOOGLE_API_KEY` and `OPENAI_API_KEY` for adk and other agents respectively:
+
+```bash
+export GOOGLE_API_KEY=""
+export OPENAI_API_KEY=""
+```
+
 ## Running the Full Team
 
 The orchestrator requires the specialist agents to be running and registered. Use the combined dev file to start all 8 services at once:
