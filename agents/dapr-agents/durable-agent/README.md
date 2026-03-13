@@ -19,9 +19,9 @@ This quickstart demonstrates how to build a durable agent using [Dapr Agents](ht
 
 ## Setup
 
-```bash
-cd agents/dapr-agents/durable-agent
+Inside the project directory, run the following commands:
 
+```bash
 # Create and activate virtual environment
 python -m venv venv
 source venv/bin/activate  # On macOS/Linux
