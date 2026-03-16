@@ -5,7 +5,7 @@ This quickstart demonstrates how to run a Strands agent as a durable Dapr Workfl
 ## What This Quickstart Demonstrates
 
 - **Strands + Dapr Workflows**: Run a Strands agent with durable execution and automatic state persistence
-- **Dapr Conversation API**: LLM calls routed through the `llm-provider` Dapr component (no hardcoded API keys in code)
+- **Direct LLM Integration**: Calls OpenAI directly via the Strands SDK (no Dapr conversation component needed)
 - **Tool Integration**: Budget calculation tool with mock cost breakdowns
 - **REST API**: Trigger agent workflows via HTTP endpoints
 - **Agent Registry**: Auto-registration in a shared agent registry for orchestration
@@ -29,14 +29,12 @@ source venv/bin/activate  # On macOS/Linux
 pip install -r requirements.txt
 ```
 
-### Configure the LLM Provider
+### Set your API key
 
-Update `resources/llm-provider.yaml` with your OpenAI API key:
+This quickstart uses OpenAI, but you can use any LLM provider supported by Strands.
 
-```yaml
-metadata:
-  - name: key
-    value: "YOUR_OPENAI_API_KEY"
+```bash
+export OPENAI_API_KEY="your-key-here"
 ```
 
 ## Running the Quickstart
@@ -62,6 +60,46 @@ The agent will:
 1. Receive the budget request
 2. Use the `calculate_budget` tool to create a cost breakdown
 3. Return a detailed budget with line items, totals, and a recommended buffer
+
+## Crash Recovery Test
+
+The `crash_test.py` file demonstrates durable crash recovery — a capability not offered by Strands natively. It defines 3 tools where tool 2 crashes with `os._exit(1)`:
+
+1. **step_one_calculate** — calculates initial budget (completes successfully)
+2. **step_two_analyze** — analyzes costs (crashes before completing)
+3. **step_three_finalize** — finalizes the budget report
+
+### First run — trigger and crash
+
+```bash
+diagrid dev run -f dev-crash-test.yaml
+```
+
+Wait for `Runner started — ready to accept requests`, then from another terminal:
+
+```bash
+curl -X POST http://localhost:8001/run \
+  -H "Content-Type: application/json" \
+  -d '{"prompt": "Calculate a budget for a corporate retreat with venue, catering, and entertainment"}'
+```
+
+You'll see tool 1 complete and the process crash at tool 2.
+
+### Fix and resume
+
+Open `crash_test.py` and comment out the crash line:
+
+```python
+# os._exit(1)  # 💥 Simulates a crash — comment out this line before the second run
+```
+
+Restart the application:
+
+```bash
+diagrid dev run -f dev-crash-test.yaml
+```
+
+The workflow **resumes from tool 2** — tool 1 is not re-executed. The Dapr workflow engine replays the saved result from Catalyst instead of re-running the tool.
 
 ## Part of the Event Planning Team
 

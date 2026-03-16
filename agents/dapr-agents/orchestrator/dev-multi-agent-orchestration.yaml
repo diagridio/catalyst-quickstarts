@@ -1,0 +1,70 @@
+version: 1
+common:
+  appLogDestination: console
+  resourcesPath: ./resources
+  enableAppHealthCheck: false
+  logLevel: info
+apps:
+  - appID: adk-agent
+    appDirPath: ../../adk
+    appPort: 8001
+    appProtocol: http
+    command: ["python", "main.py"]
+    env:
+      APP_PORT: "8001"
+
+  - appID: crew-agent
+    appDirPath: ../../crewai
+    appPort: 8002
+    appProtocol: http
+    command: ["python", "main.py"]
+    env:
+      APP_PORT: "8002"
+
+  - appID: dapr-agent
+    appDirPath: ../durable-agent
+    appPort: 8003
+    appProtocol: http
+    command: ["python", "main.py"]
+    env:
+      APP_PORT: "8003"
+
+  - appID: agent-orchestration-agent
+    appDirPath: ./
+    appPort: 8004
+    appProtocol: http
+    command: ["python", "main.py"]
+    env:
+      APP_PORT: "8004"
+
+  - appID: langgraph-agent
+    appDirPath: ../../langgraph
+    appPort: 8005
+    appProtocol: http
+    command: ["python", "main.py"]
+    env:
+      APP_PORT: "8005"
+
+  - appID: openai-agent
+    appDirPath: ../../openai-agents
+    appPort: 8006
+    appProtocol: http
+    command: ["python", "main.py"]
+    env:
+      APP_PORT: "8006"
+
+  - appID: pydanticai-agent
+    appDirPath: ../../pydantic-ai
+    appPort: 8007
+    appProtocol: http
+    command: ["python", "main.py"]
+    env:
+      APP_PORT: "8007"
+
+  - appID: strands-agent
+    appDirPath: ../../strands
+    appPort: 8008
+    appProtocol: http
+    command: ["python", "main.py"]
+    env:
+      APP_PORT: "8008"

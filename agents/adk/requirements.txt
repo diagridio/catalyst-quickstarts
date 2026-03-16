@@ -1,3 +1,3 @@
-diagrid[adk]==0.1.15
+diagrid[adk]==0.2.2
 fastapi==0.129.0
 uvicorn[standard]==0.41.0

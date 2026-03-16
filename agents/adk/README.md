@@ -5,7 +5,7 @@ This quickstart demonstrates how to run a Google ADK (Agent Development Kit) age
 ## What This Quickstart Demonstrates
 
 - **Google ADK + Dapr Workflows**: Run an ADK LlmAgent with durable execution and automatic state persistence
-- **Dapr Conversation API**: LLM calls routed through the `llm-provider` Dapr component (no hardcoded API keys in code)
+- **Direct LLM Integration**: Calls Google AI directly via the ADK SDK (no Dapr conversation component needed)
 - **Tool Integration**: Entertainment search tool with mock results
 - **REST API**: Trigger agent workflows via HTTP endpoints
 - **Agent Registry**: Auto-registration in a shared agent registry for orchestration
@@ -14,7 +14,7 @@ This quickstart demonstrates how to run a Google ADK (Agent Development Kit) age
 
 1. [Diagrid CLI](https://docs.diagrid.io/catalyst/references/cli-reference/overview) installed
 2. [Python 3.10+](https://www.python.org/downloads/)
-3. An [OpenAI API key](https://platform.openai.com/api-keys)
+3. A [Google API key](https://aistudio.google.com/)
 
 ## Setup
 
@@ -29,9 +29,11 @@ source venv/bin/activate  # On macOS/Linux
 pip install -r requirements.txt
 ```
 
-### Configure the LLM Provider
+### Set your API key
 
-Update `resources/llm-provider.yaml` with your API key.
+```bash
+export GOOGLE_API_KEY="your-key-here"
+```
 
 ## Running the Quickstart
 
@@ -56,6 +58,46 @@ The agent will:
 1. Receive the entertainment request
 2. Use the `find_entertainment` tool to search for options
 3. Return entertainment options with pricing and duration details
+
+## Crash Recovery Test
+
+The `crash_test.py` file demonstrates durable crash recovery — a capability not offered by Google ADK natively. It defines 3 tools where tool 2 crashes with `os._exit(1)`:
+
+1. **step_one_find** — finds entertainment options (completes successfully)
+2. **step_two_compare** — compares options (crashes before completing)
+3. **step_three_confirm** — confirms the booking
+
+### First run — trigger and crash
+
+```bash
+diagrid dev run -f dev-crash-test.yaml
+```
+
+Wait for `Runner started — ready to accept requests`, then from another terminal:
+
+```bash
+curl -X POST http://localhost:8001/run \
+  -H "Content-Type: application/json" \
+  -d '{"prompt": "Find entertainment for a corporate holiday party"}'
+```
+
+You'll see tool 1 complete and the process crash at tool 2.
+
+### Fix and resume
+
+Open `crash_test.py` and comment out the crash line:
+
+```python
+# os._exit(1)  # 💥 Simulates a crash — comment out this line before the second run
+```
+
+Restart the application:
+
+```bash
+diagrid dev run -f dev-crash-test.yaml
+```
+
+The workflow **resumes from tool 2** — tool 1 is not re-executed. The Dapr workflow engine replays the saved result from Catalyst instead of re-running the tool.
 
 ## Part of the Event Planning Team
 

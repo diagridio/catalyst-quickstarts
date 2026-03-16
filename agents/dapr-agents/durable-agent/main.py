@@ -37,7 +37,7 @@ def send_invitations(guest_count: int, event_type: str) -> List[InvitationResult
 
 
 def main() -> None:
-    logging.basicConfig(level=logging.DEBUG)
+    logging.basicConfig(level=logging.INFO)
 
     agent = DurableAgent(
         name="invitations-manager",

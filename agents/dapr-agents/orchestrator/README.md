@@ -5,7 +5,7 @@ This quickstart demonstrates how to build an **orchestrator agent** using [Dapr 
 ## What This Quickstart Demonstrates
 
 - **Multi-Agent Orchestration**: A coordinator that discovers and delegates to specialist agents
-- **Framework-Agnostic**: Orchestrates agents built with CrewAI, OpenAI Agents, ADK, Strands, LangGraph, and Dapr Agents
+- **Framework-Agnostic**: Orchestrates agents built with CrewAI, OpenAI Agents, ADK, Strands, LangGraph, Pydantic AI, and Dapr Agents
 - **Agent Registry**: Dynamic agent discovery via a shared Dapr state store
 - **Pub/Sub Communication**: Task delegation via Dapr pub/sub messaging
 - **Durable Workflows**: Full execution plan persisted across steps
@@ -15,7 +15,8 @@ This quickstart demonstrates how to build an **orchestrator agent** using [Dapr 
 1. [Diagrid CLI](https://docs.diagrid.io/catalyst/references/cli-reference/overview) installed
 2. [Python 3.10+](https://www.python.org/downloads/)
 3. An [OpenAI API key](https://platform.openai.com/api-keys)
-4. All 6 specialist agents running (see [Running the Full Team](#running-the-full-team) below)
+4. A [Google API key](https://aistudio.google.com/)
+4. All 7 specialist agents running (see [Running the Full Team](#running-the-full-team) below)
 
 ## Setup
 
@@ -40,34 +41,42 @@ metadata:
     value: "YOUR_OPENAI_API_KEY"
 ```
 
-## Running the Full Team
-
-The orchestrator requires the specialist agents to be running and registered. Use the combined dev file to start all 7 services at once:
+Export your `GOOGLE_API_KEY` and `OPENAI_API_KEY` for adk and other agents respectively:
 
 ```bash
-cd agents/  # Navigate to the agents root directory
-diagrid login
-diagrid dev run -f dev-python-orchestration.yaml
+export GOOGLE_API_KEY=""
+export OPENAI_API_KEY=""
 ```
 
-This starts all agents on ports 8001-8007:
+## Running the Full Team
+
+The orchestrator requires the specialist agents to be running and registered. Use the combined dev file to start all 8 services at once:
+
+```bash
+cd dapr-agents/orchestrator
+diagrid login
+diagrid dev run -f dev-multi-agent-orchestration.yaml
+```
+
+This starts all agents on ports 8001-8008:
 
 | Port | App ID | Agent | Framework |
 |------|--------|-------|-----------|
-| 8001 | crewai-agent | Venue Scout | CrewAI |
-| 8002 | openai-agent | Catering Coordinator | OpenAI Agents |
-| 8003 | adk-agent | Entertainment Planner | ADK |
-| 8004 | strands-agent | Budget Analyst | Strands |
+| 8001 | adk-agent | Entertainment Planner | ADK |
+| 8002 | crew-agent | Venue Scout | CrewAI |
+| 8003 | dapr-agent | Invitations Manager | Dapr Agents |
+| 8004 | agent-orchestration-agent | Event Coordinator | Dapr Agents |
 | 8005 | langgraph-agent | Schedule Planner | LangGraph |
-| 8006 | dapr-agent | Invitations Manager | Dapr Agents |
-| 8007 | event-orchestrator | Event Coordinator | Dapr Agents |
+| 8006 | openai-agent | Catering Coordinator | OpenAI Agents |
+| 8007 | pydanticai-agent | Decoration Planner | Pydantic AI |
+| 8008 | strands-agent | Budget Analyst | Strands |
 
 ## Trigger an Orchestration
 
 Once all agents are running, send a task to the orchestrator:
 
 ```bash
-curl -i -X POST http://localhost:8007/run \
+curl -i -X POST http://localhost:8004/run \
   -H "Content-Type: application/json" \
   -d '{"task": "Plan a company offsite in Austin for 50 people"}'
 ```
@@ -75,30 +84,24 @@ curl -i -X POST http://localhost:8007/run \
 The orchestrator will:
 1. Discover all registered agents in the shared registry
 2. Create an execution plan with tasks for each specialist
-3. Delegate venue search to the Venue Scout (CrewAI)
-4. Delegate catering to the Catering Coordinator (OpenAI Agents)
-5. Delegate entertainment to the Entertainment Planner (ADK)
-6. Delegate budgeting to the Budget Analyst (Strands)
-7. Delegate scheduling to the Schedule Planner (LangGraph)
-8. Delegate invitations to the Invitations Manager (Dapr Agents)
-9. Synthesize all results into a comprehensive event plan
-
-## Running Standalone
-
-To run only the orchestrator (requires agents to be running separately):
-
-```bash
-diagrid dev run -f dev-python-orchestrator.yaml
-```
+3. Delegate entertainment to the Entertainment Planner (ADK)
+4. Delegate venue search to the Venue Scout (CrewAI)
+5. Delegate invitations to the Invitations Manager (Dapr Agents)
+6. Delegate scheduling to the Schedule Planner (LangGraph)
+7. Delegate catering to the Catering Coordinator (OpenAI Agents)
+8. Delegate decorations to the Decoration Planner (Pydantic AI)
+9. Delegate budgeting to the Budget Analyst (Strands)
+10. Synthesize all results into a comprehensive event plan
 
 ## The Event Planning Team
 
 | Agent | Framework | Role |
 |-------|-----------|------|
-| Venue Scout | CrewAI | Find event venues |
-| Catering Coordinator | OpenAI Agents | Find catering options |
 | Entertainment Planner | ADK | Find entertainment |
-| Budget Analyst | Strands | Calculate event budgets |
-| Schedule Planner | LangGraph | Check venue availability |
+| Venue Scout | CrewAI | Find event venues |
 | Invitations Manager | Dapr Agents | Send guest invitations |
 | **Event Coordinator** | Dapr Agents | Orchestrate all agents |
+| Schedule Planner | LangGraph | Check venue availability |
+| Catering Coordinator | OpenAI Agents | Find catering options |
+| Decoration Planner | Pydantic AI | Find decoration packages |
+| Budget Analyst | Strands | Calculate event budgets |

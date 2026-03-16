@@ -1,9 +1,10 @@
 import logging
 import os
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 
 from strands import Agent, tool
+from strands.models.openai import OpenAIModel
 from diagrid.agent.strands import DaprWorkflowAgentRunner, DaprStateSessionManager
 from diagrid.agent.core.state import DaprStateStore
 
@@ -30,12 +31,14 @@ session_manager = DaprStateSessionManager(
 )
 
 agent = Agent(
+    model=OpenAIModel(model_id="gpt-4o-mini"),
     tools=[calculate_budget],
     system_prompt="You are a budget analyst specializing in event planning. When asked to estimate costs, use the calculate_budget tool with a comma-separated list of cost items. Return the full budget breakdown with line items, totals, and recommended buffer. Always call the tool before responding.",
     hooks=[session_manager],
 )
 
 runner = DaprWorkflowAgentRunner(
+    name="budget-planner",
     agent=agent,
     state_store=DaprStateStore(store_name="agent-memory"),
 )
