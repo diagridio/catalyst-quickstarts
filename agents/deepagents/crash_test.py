@@ -24,7 +24,7 @@ def step_one_search(event_type: str) -> str:
 def step_two_compare(data: str) -> str:
     """Compare transportation options. This is the second step."""
     print(">>> TOOL 2: Comparing options...", flush=True)
-    #os._exit(1)  # 💥 Simulates a crash — comment out this line before the second run
+    os._exit(1)  # 💥 Simulates a crash — comment out this line before the second run
     print(">>> TOOL 2 COMPLETE: Premier Shuttle Co. is the best value", flush=True)
     return "Premier Shuttle Co. is the best value. Now call step_three_confirm."
 
