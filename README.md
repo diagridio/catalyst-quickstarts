@@ -20,6 +20,7 @@ Catalyst works with the following agent frameworks:
 | [Google ADK](agents/adk/) | Agent Development Kit with Gemini integration, made durable with Catalyst |
 | [OpenAI Agents](agents/openai-agents/) | Function tools and agent handoffs from OpenAI, made durable with Catalyst |
 | [Pydantic AI](agents/pydantic-ai/) | Type-safe agent framework with structured outputs, made durable with Catalyst |
+| [Deep Agents](agents/deepagents/) | Type-safe agent harness with conditional routing, made durable with Catalyst |
 
 ## Workflow Quickstart
 
