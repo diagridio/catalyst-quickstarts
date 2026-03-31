@@ -1,5 +1,5 @@
 # Use the official Python base image
-FROM --platform=$BUILDPLATFORM python:3.14-alpine
+FROM python:3.14-alpine
 
 # Set the working directory inside the container
 WORKDIR /app
@@ -19,7 +19,7 @@ RUN uv pip install --system .
 # Copy the application code to the working directory
 COPY . .
 
-ENV UVICORN_PORT 5001
+ENV UVICORN_PORT=5001
 
 # Run the FastAPI application using uvicorn server
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0"]
