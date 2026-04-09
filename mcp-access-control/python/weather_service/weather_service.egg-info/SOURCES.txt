@@ -1,0 +1,7 @@
+main.py
+pyproject.toml
+weather_service.egg-info/PKG-INFO
+weather_service.egg-info/SOURCES.txt
+weather_service.egg-info/dependency_links.txt
+weather_service.egg-info/requires.txt
+weather_service.egg-info/top_level.txt

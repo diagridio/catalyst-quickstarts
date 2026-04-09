@@ -1,0 +1,35 @@
+version: 1
+common:
+  appLogDestination: console
+  enableAppHealthCheck: false
+  logLevel: info
+apps:
+  - appID: mcp-client
+    appDirPath: ./mcp_client
+    appPort: 5001
+    appProtocol: http
+    command:
+      - python
+      - main.py
+    env:
+      APP_PORT: "5001"
+    enableAppHealthCheck: false
+    appLogDestination: console
+  - appID: mcp-server
+    appDirPath: ./mcp_server
+    appPort: 8000
+    appProtocol: http
+    command:
+      - python
+      - main.py
+    enableAppHealthCheck: false
+    appLogDestination: console
+  - appID: weather-service
+    appDirPath: ./weather_service
+    appPort: 8001
+    appProtocol: http
+    command:
+      - python
+      - main.py
+    enableAppHealthCheck: false
+    appLogDestination: console

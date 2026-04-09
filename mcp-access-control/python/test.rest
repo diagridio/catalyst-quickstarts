@@ -1,0 +1,20 @@
+### MCP Access Control Quickstart
+### Diagrid Catalyst - Securing MCP Servers with ACLs and OAuth2
+
+### Health Check - MCP Client
+GET http://localhost:5001/
+
+###
+
+### Health Check - Weather Service
+GET http://localhost:8001/
+
+###
+
+### Run MCP Client
+### Discovers MCP tools, invokes add(2,3) and get_weather_alert("Chicago")
+// @name runMcpClient
+POST http://localhost:5001/run
+Content-Type: application/json
+
+###
