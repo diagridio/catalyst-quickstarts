@@ -83,3 +83,24 @@ diagrid dev run -f dev-crash-test.yaml
 ```
 
 The workflow **resumes from tool 2** — tool 1 is not re-executed. The Dapr workflow engine replays the saved result from Catalyst instead of re-running the tool.
+
+## Sub-Agent Workflows
+
+The `subagent_workflows.py` file demonstrates a supervisor/sub-agent pattern where a supervisor agent orchestrates two sub-agents (researcher and analyst) that each run as independent Dapr workflow-backed processes communicating over the Agent Protocol.
+
+- **Researcher** — searches the web for information on a topic and returns a summary
+- **Analyst** — takes research findings and produces a structured analysis report
+- **Supervisor** — orchestrates the researcher and analyst sequentially, then synthesizes their results
+
+### Run
+
+```bash
+diagrid dev run -f dev-subagent-workflows.yaml
+```
+
+This starts three processes:
+- `deepagents-researcher` on port 8001
+- `deepagents-analyst` on port 8002
+- `deepagents-supervisor` which delegates to the other two
+
+The supervisor automatically runs the research and analysis pipeline on startup and prints the final synthesized response.
