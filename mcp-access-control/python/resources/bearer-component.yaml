@@ -1,0 +1,14 @@
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: bearer
+spec:
+  type: middleware.http.bearer
+  version: v1
+  metadata:
+  - name: issuer
+    value: "https://${AUTH0_DOMAIN}/"
+  - name: audience
+    value: "${AUTH0_AUDIENCE}"
+scopes:
+- mcp-server

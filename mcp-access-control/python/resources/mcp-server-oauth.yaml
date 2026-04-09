@@ -1,0 +1,11 @@
+apiVersion: dapr.io/v1alpha1
+kind: Configuration
+metadata:
+  name: mcp-server-oauth
+spec:
+  accessControl:
+    defaultAction: allow
+  appHttpPipeline:
+    handlers:
+    - name: bearer
+      type: middleware.http.bearer
