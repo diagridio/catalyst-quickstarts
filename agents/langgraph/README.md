@@ -23,8 +23,8 @@ This quickstart demonstrates how to run a LangGraph graph as a durable Dapr Work
 cd langgraph
 
 # Create and activate virtual environment
-python -m venv venv
-source venv/bin/activate  # On macOS/Linux
+python -m venv .venv
+source .venv/bin/activate  # On macOS/Linux
 
 # Install dependencies
 pip install -r requirements.txt
