@@ -39,7 +39,7 @@ builder.Services.AddDaprAgents()
         IChatClient chatClient = new OpenAIClient(apiKey)
             .GetChatClient("gpt-4.1-2025-04-14")
             .AsIChatClient();
-        return chatClient.CreateAIAgent(
+        return chatClient.AsAIAgent(
             instructions: """
                 You are an event planner. Call all three tools in sequence:
                 1. First call step_one_search with the city name
