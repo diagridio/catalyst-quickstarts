@@ -76,7 +76,7 @@ This starts all agents on ports 8001-8008:
 Once all agents are running, send a task to the orchestrator:
 
 ```bash
-curl -i -X POST http://localhost:8004/run \
+curl -i -X POST http://localhost:8004/agent/run \
   -H "Content-Type: application/json" \
   -d '{"task": "Plan a company offsite in Austin for 50 people"}'
 ```
