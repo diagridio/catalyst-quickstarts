@@ -11,6 +11,8 @@ apps:
       appPort: 0
       appDirPath: .
       command:
+      - uv
+      - run
       - uvicorn
       - main:app
       - --host
