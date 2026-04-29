@@ -24,8 +24,8 @@ This quickstart demonstrates how to build an **orchestrator agent** using [Dapr 
 cd dapr-agents/orchestrator
 
 # Create and activate virtual environment
-python -m venv venv
-source venv/bin/activate  # On macOS/Linux
+python -m venv .venv
+source .venv/bin/activate  # On macOS/Linux
 
 # Install dependencies
 pip install -r requirements.txt
