@@ -1,0 +1,15 @@
+### Trigger Decoration Planner agent
+POST http://localhost:8888/agent/run
+Content-Type: application/json
+
+{
+    "task": "Find decorations for a garden wedding at a medium venue"
+}
+
+### Trigger crash-test workflow
+POST http://localhost:8001/run
+Content-Type: application/json
+
+{
+    "prompt": "Find decorations for a garden wedding theme"
+}

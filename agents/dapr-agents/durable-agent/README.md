@@ -21,10 +21,23 @@ This quickstart demonstrates how to build a durable agent using [Dapr Agents](ht
 
 Inside the project directory, run the following commands:
 
+**macOS/Linux (bash/zsh):**
+
 ```bash
 # Create and activate virtual environment
 python -m venv venv
-source venv/bin/activate  # On macOS/Linux
+source venv/bin/activate
+
+# Install dependencies
+pip install -r requirements.txt
+```
+
+**Windows (PowerShell):**
+
+```powershell
+# Create and activate virtual environment
+python -m venv venv
+.\venv\Scripts\Activate.ps1
 
 # Install dependencies
 pip install -r requirements.txt
@@ -55,11 +68,23 @@ diagrid dev run -f dev-python-durable-agent.yaml --project invitations-manager
 
 From a new terminal window:
 
+Choose one of the following to trigger the endpoint:
+
+**macOS/Linux (curl):**
+
 ```bash
 curl -i -X POST http://localhost:8006/agent/run \
   -H "Content-Type: application/json" \
   -d '{"task": "Send invitations to 100 guests for a corporate networking event"}'
 ```
+
+**Windows (PowerShell):**
+
+```powershell
+Invoke-RestMethod -Method Post -Uri 'http://localhost:8006/agent/run' -ContentType 'application/json' -Body '{"task": "Send invitations to 100 guests for a corporate networking event"}'
+```
+
+**VS Code REST Client (any OS):** Open [`test.http`](./test.http) and click *Send Request* above the request. Requires the [REST Client](https://marketplace.visualstudio.com/items?itemName=humao.rest-client) extension.
 
 The agent will:
 1. Receive the invitation request

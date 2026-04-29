@@ -19,12 +19,27 @@ This quickstart demonstrates how to run a LangGraph graph as a durable Dapr Work
 
 ## Setup
 
+**macOS/Linux (bash/zsh):**
+
 ```bash
 cd langgraph
 
 # Create and activate virtual environment
 python -m venv venv
-source venv/bin/activate  # On macOS/Linux
+source venv/bin/activate
+
+# Install dependencies
+pip install -r requirements.txt
+```
+
+**Windows (PowerShell):**
+
+```powershell
+cd langgraph
+
+# Create and activate virtual environment
+python -m venv venv
+.\venv\Scripts\Activate.ps1
 
 # Install dependencies
 pip install -r requirements.txt
@@ -34,8 +49,16 @@ pip install -r requirements.txt
 
 This quickstart uses OpenAI, but you can use any LLM provider supported by LangGraph.
 
+**macOS/Linux (bash/zsh):**
+
 ```bash
 export OPENAI_API_KEY="your-key-here"
+```
+
+**Windows (PowerShell):**
+
+```powershell
+$env:OPENAI_API_KEY = "your-key-here"
 ```
 
 ## Running the Quickstart
@@ -51,11 +74,23 @@ diagrid dev run -f dev-python-langgraph.yaml
 
 From another terminal:
 
+Choose one of the following to trigger the endpoint:
+
+**macOS/Linux (curl):**
+
 ```bash
 curl -i -X POST http://localhost:8005/agent/run \
   -H "Content-Type: application/json" \
   -d '{"task": "Check if the Grand Ballroom is available on March 15th"}'
 ```
+
+**Windows (PowerShell):**
+
+```powershell
+Invoke-RestMethod -Method Post -Uri 'http://localhost:8005/agent/run' -ContentType 'application/json' -Body '{"task": "Check if the Grand Ballroom is available on March 15th"}'
+```
+
+**VS Code REST Client (any OS):** Open [`test.http`](./test.http) and click *Send Request* above the request. Requires the [REST Client](https://marketplace.visualstudio.com/items?itemName=humao.rest-client) extension.
 
 The agent will:
 1. Receive the scheduling request
@@ -79,11 +114,23 @@ diagrid dev run -f dev-crash-test.yaml
 
 Wait for `Runner started — ready to accept requests`, then from another terminal:
 
+Choose one of the following to trigger the endpoint:
+
+**macOS/Linux (curl):**
+
 ```bash
 curl -X POST http://localhost:8001/run \
   -H "Content-Type: application/json" \
   -d '{"topic": "company gala on March 15"}'
 ```
+
+**Windows (PowerShell):**
+
+```powershell
+Invoke-RestMethod -Method Post -Uri 'http://localhost:8001/run' -ContentType 'application/json' -Body '{"topic": "company gala on March 15"}'
+```
+
+**VS Code REST Client (any OS):** Open [`test.http`](./test.http) and click *Send Request* above the request. Requires the [REST Client](https://marketplace.visualstudio.com/items?itemName=humao.rest-client) extension.
 
 You'll see step 1 complete and the process crash at step 2.
 

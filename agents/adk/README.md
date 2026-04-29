@@ -18,12 +18,27 @@ This quickstart demonstrates how to run a Google ADK (Agent Development Kit) age
 
 ## Setup
 
+**macOS/Linux (bash/zsh):**
+
 ```bash
 cd adk
 
 # Create and activate virtual environment
 python -m venv venv
-source venv/bin/activate  # On macOS/Linux
+source venv/bin/activate
+
+# Install dependencies
+pip install -r requirements.txt
+```
+
+**Windows (PowerShell):**
+
+```powershell
+cd adk
+
+# Create and activate virtual environment
+python -m venv venv
+.\venv\Scripts\Activate.ps1
 
 # Install dependencies
 pip install -r requirements.txt
@@ -31,8 +46,16 @@ pip install -r requirements.txt
 
 ### Set your API key
 
+**macOS/Linux (bash/zsh):**
+
 ```bash
 export GOOGLE_API_KEY="your-key-here"
+```
+
+**Windows (PowerShell):**
+
+```powershell
+$env:GOOGLE_API_KEY = "your-key-here"
 ```
 
 ## Running the Quickstart
@@ -48,11 +71,23 @@ diagrid dev run -f dev-python-adk.yaml
 
 From another terminal:
 
+Choose one of the following to trigger the endpoint:
+
+**macOS/Linux (curl):**
+
 ```bash
 curl -i -X POST http://localhost:8003/agent/run \
   -H "Content-Type: application/json" \
   -d '{"task": "Find entertainment for a corporate networking event"}'
 ```
+
+**Windows (PowerShell):**
+
+```powershell
+Invoke-RestMethod -Method Post -Uri 'http://localhost:8003/agent/run' -ContentType 'application/json' -Body '{"task": "Find entertainment for a corporate networking event"}'
+```
+
+**VS Code REST Client (any OS):** Open [`test.http`](./test.http) and click *Send Request* above the request. Requires the [REST Client](https://marketplace.visualstudio.com/items?itemName=humao.rest-client) extension.
 
 The agent will:
 1. Receive the entertainment request
@@ -75,11 +110,23 @@ diagrid dev run -f dev-crash-test.yaml
 
 Wait for `Runner started — ready to accept requests`, then from another terminal:
 
+Choose one of the following to trigger the endpoint:
+
+**macOS/Linux (curl):**
+
 ```bash
 curl -X POST http://localhost:8001/run \
   -H "Content-Type: application/json" \
   -d '{"prompt": "Find entertainment for a corporate holiday party"}'
 ```
+
+**Windows (PowerShell):**
+
+```powershell
+Invoke-RestMethod -Method Post -Uri 'http://localhost:8001/run' -ContentType 'application/json' -Body '{"prompt": "Find entertainment for a corporate holiday party"}'
+```
+
+**VS Code REST Client (any OS):** Open [`test.http`](./test.http) and click *Send Request* above the request. Requires the [REST Client](https://marketplace.visualstudio.com/items?itemName=humao.rest-client) extension.
 
 You'll see tool 1 complete and the process crash at tool 2.
 

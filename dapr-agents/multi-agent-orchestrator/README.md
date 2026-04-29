@@ -74,11 +74,23 @@ This starts:
 
 From another terminal, trigger the orchestrator agent via REST API:
 
+Choose one of the following to trigger the endpoint:
+
+**macOS/Linux (curl):**
+
 ```bash
 curl -i -X POST http://localhost:8001/agent/run \
   -H "Content-Type: application/json" \
   -d '{"task": "Customer: Alice. Issue: My Dapr system fails to start in production."}'
 ```
+
+**Windows (PowerShell):**
+
+```powershell
+Invoke-RestMethod -Method Post -Uri 'http://localhost:8001/agent/run' -ContentType 'application/json' -Body '{"task": "Customer: Alice. Issue: My Dapr system fails to start in production."}'
+```
+
+**VS Code REST Client (any OS):** Open [`test.http`](./test.http) and click *Send Request* above the request. Requires the [REST Client](https://marketplace.visualstudio.com/items?itemName=humao.rest-client) extension.
 
 The orchestrator agent will:
 
@@ -134,9 +146,3 @@ The orchestrator agent:
 * Uses LLM reasoning to decide which agents to delegate to
 * Coordinates triage and expert agents via pub/sub
 * Synthesizes final results into a customer response
-
----
-
-## Testing with VS Code REST Client
-
-If you use VS Code with the REST Client extension, open `test.rest` and click **"Send Request"** above any request to test the API.

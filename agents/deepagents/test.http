@@ -1,0 +1,15 @@
+### Trigger Transportation Planner agent
+POST http://localhost:8888/agent/run
+Content-Type: application/json
+
+{
+    "task": "Find transportation for a corporate gala with 200 guests"
+}
+
+### Trigger crash-test workflow
+POST http://localhost:8001/run
+Content-Type: application/json
+
+{
+    "prompt": "Find transportation for a corporate gala"
+}

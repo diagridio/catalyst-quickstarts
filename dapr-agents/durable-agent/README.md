@@ -71,11 +71,23 @@ This starts:
 Confirm from the logs that "Travel Assistant Agent is running".
 From another terminal, trigger the Agent via REST API:
 
+Choose one of the following to trigger the endpoint:
+
+**macOS/Linux (curl):**
+
 ```bash
 curl -i -X POST http://localhost:8001/agent/run \
   -H "Content-Type: application/json" \
   -d '{"task": "Find me flights and hotels to London and Amsterdam"}'
 ```
+
+**Windows (PowerShell):**
+
+```powershell
+Invoke-RestMethod -Method Post -Uri 'http://localhost:8001/agent/run' -ContentType 'application/json' -Body '{"task": "Find me flights and hotels to London and Amsterdam"}'
+```
+
+**VS Code REST Client (any OS):** Open [`test.http`](./test.http) and click *Send Request* above the request. Requires the [REST Client](https://marketplace.visualstudio.com/items?itemName=humao.rest-client) extension.
 
 This should call two parallel tool call to find flights to both cities, followed by two parallel tool call to find hotels.
 
@@ -92,19 +104,43 @@ See this agent adapting other queries and generating different workflows on-the-
 
 - Search for flights and hotels to a single destination.
 
+Choose one of the following to trigger the endpoint:
+
+**macOS/Linux (curl):**
+
 ```bash
 curl -i -X POST http://localhost:8001/agent/run \
   -H "Content-Type: application/json" \
   -d '{"task": "Find me flights and hotels to London"}'
 ```
+
+**Windows (PowerShell):**
+
+```powershell
+Invoke-RestMethod -Method Post -Uri 'http://localhost:8001/agent/run' -ContentType 'application/json' -Body '{"task": "Find me flights and hotels to London"}'
+```
+
+**VS Code REST Client (any OS):** Open [`test.http`](./test.http) and click *Send Request* above the request. Requires the [REST Client](https://marketplace.visualstudio.com/items?itemName=humao.rest-client) extension.
+
 - Search for flights only to London and Amsterdam
 
+Choose one of the following to trigger the endpoint:
+
+**macOS/Linux (curl):**
 
 ```bash
 curl -i -X POST http://localhost:8001/agent/run \
   -H "Content-Type: application/json" \
   -d '{"task": "Find me only flights to London and Amsterdam"}'
 ```
+
+**Windows (PowerShell):**
+
+```powershell
+Invoke-RestMethod -Method Post -Uri 'http://localhost:8001/agent/run' -ContentType 'application/json' -Body '{"task": "Find me only flights to London and Amsterdam"}'
+```
+
+**VS Code REST Client (any OS):** Open [`test.http`](./test.http) and click *Send Request* above the request. Requires the [REST Client](https://marketplace.visualstudio.com/items?itemName=humao.rest-client) extension.
 
 ## Monitoring in Catalyst
 
@@ -151,7 +187,3 @@ The agent:
 - Calls tools (like flight search) as needed
 - Maintains conversation memory across interactions
 - Persists execution state for reliability
-
-## Testing with VS Code REST Client
-
-If you use VS Code with the REST Client extension, open `test.rest` and click "Send Request" above any request to test the API.

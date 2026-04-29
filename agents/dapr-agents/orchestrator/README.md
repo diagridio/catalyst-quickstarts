@@ -20,12 +20,27 @@ This quickstart demonstrates how to build an **orchestrator agent** using [Dapr 
 
 ## Setup
 
+**macOS/Linux (bash/zsh):**
+
 ```bash
 cd dapr-agents/orchestrator
 
 # Create and activate virtual environment
 python -m venv venv
-source venv/bin/activate  # On macOS/Linux
+source venv/bin/activate
+
+# Install dependencies
+pip install -r requirements.txt
+```
+
+**Windows (PowerShell):**
+
+```powershell
+cd dapr-agents/orchestrator
+
+# Create and activate virtual environment
+python -m venv venv
+.\venv\Scripts\Activate.ps1
 
 # Install dependencies
 pip install -r requirements.txt
@@ -43,9 +58,18 @@ metadata:
 
 Export your `GOOGLE_API_KEY` and `OPENAI_API_KEY` for adk and other agents respectively:
 
+**macOS/Linux (bash/zsh):**
+
 ```bash
 export GOOGLE_API_KEY=""
 export OPENAI_API_KEY=""
+```
+
+**Windows (PowerShell):**
+
+```powershell
+$env:GOOGLE_API_KEY = ""
+$env:OPENAI_API_KEY = ""
 ```
 
 ## Running the Full Team
@@ -75,11 +99,23 @@ This starts all agents on ports 8001-8008:
 
 Once all agents are running, send a task to the orchestrator:
 
+Choose one of the following to trigger the endpoint:
+
+**macOS/Linux (curl):**
+
 ```bash
 curl -i -X POST http://localhost:8004/agent/run \
   -H "Content-Type: application/json" \
   -d '{"task": "Plan a company offsite in Austin for 50 people"}'
 ```
+
+**Windows (PowerShell):**
+
+```powershell
+Invoke-RestMethod -Method Post -Uri 'http://localhost:8004/agent/run' -ContentType 'application/json' -Body '{"task": "Plan a company offsite in Austin for 50 people"}'
+```
+
+**VS Code REST Client (any OS):** Open [`test.http`](./test.http) and click *Send Request* above the request. Requires the [REST Client](https://marketplace.visualstudio.com/items?itemName=humao.rest-client) extension.
 
 The orchestrator will:
 1. Discover all registered agents in the shared registry

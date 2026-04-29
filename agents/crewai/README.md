@@ -18,12 +18,27 @@ This quickstart demonstrates how to run a CrewAI agent as a durable Dapr Workflo
 
 ## Setup
 
+**macOS/Linux (bash/zsh):**
+
 ```bash
 cd crewai
 
 # Create and activate virtual environment
 python -m venv venv
-source venv/bin/activate  # On macOS/Linux
+source venv/bin/activate
+
+# Install dependencies
+pip install -r requirements.txt
+```
+
+**Windows (PowerShell):**
+
+```powershell
+cd crewai
+
+# Create and activate virtual environment
+python -m venv venv
+.\venv\Scripts\Activate.ps1
 
 # Install dependencies
 pip install -r requirements.txt
@@ -33,8 +48,16 @@ pip install -r requirements.txt
 
 This quickstart uses OpenAI, but you can use any LLM provider supported by CrewAI.
 
+**macOS/Linux (bash/zsh):**
+
 ```bash
 export OPENAI_API_KEY="your-key-here"
+```
+
+**Windows (PowerShell):**
+
+```powershell
+$env:OPENAI_API_KEY = "your-key-here"
 ```
 
 ## Running the Quickstart
@@ -50,11 +73,23 @@ diagrid dev run -f dev-python-crewai.yaml
 
 From another terminal:
 
+Choose one of the following to trigger the endpoint:
+
+**macOS/Linux (curl):**
+
 ```bash
 curl -i -X POST http://localhost:8001/agent/run \
   -H "Content-Type: application/json" \
   -d '{"task": "Find a venue in Austin for 50 people"}'
 ```
+
+**Windows (PowerShell):**
+
+```powershell
+Invoke-RestMethod -Method Post -Uri 'http://localhost:8001/agent/run' -ContentType 'application/json' -Body '{"task": "Find a venue in Austin for 50 people"}'
+```
+
+**VS Code REST Client (any OS):** Open [`test.http`](./test.http) and click *Send Request* above the request. Requires the [REST Client](https://marketplace.visualstudio.com/items?itemName=humao.rest-client) extension.
 
 The agent will:
 1. Receive the venue search request
@@ -77,11 +112,23 @@ diagrid dev run -f dev-crash-test.yaml
 
 Wait for `Runner started — ready to accept requests`, then from another terminal:
 
+Choose one of the following to trigger the endpoint:
+
+**macOS/Linux (curl):**
+
 ```bash
 curl -X POST http://localhost:8001/run \
   -H "Content-Type: application/json" \
   -d '{"prompt": "Find a venue in Austin for a company gala"}'
 ```
+
+**Windows (PowerShell):**
+
+```powershell
+Invoke-RestMethod -Method Post -Uri 'http://localhost:8001/run' -ContentType 'application/json' -Body '{"prompt": "Find a venue in Austin for a company gala"}'
+```
+
+**VS Code REST Client (any OS):** Open [`test.http`](./test.http) and click *Send Request* above the request. Requires the [REST Client](https://marketplace.visualstudio.com/items?itemName=humao.rest-client) extension.
 
 You'll see tool 1 complete and the process crash at tool 2.
 
