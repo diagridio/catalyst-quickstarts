@@ -1,0 +1,7 @@
+### Trigger customer support orchestration
+POST http://localhost:8001/agent/run
+Content-Type: application/json
+
+{
+    "task": "Customer: Alice. Issue: My Dapr system fails to start in production."
+}

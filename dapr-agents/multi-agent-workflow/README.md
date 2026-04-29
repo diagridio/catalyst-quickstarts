@@ -73,11 +73,23 @@ This starts:
 
 From another terminal, trigger the workflow via REST API:
 
+Choose one of the following to trigger the endpoint:
+
+**macOS/Linux (curl):**
+
 ```bash
 curl -i -X POST http://localhost:8001/workflow/start \
   -H "Content-Type: application/json" \
   -d '{"customer": "Alice", "issue": "My Dapr system fails to start in production."}'
 ```
+
+**Windows (PowerShell):**
+
+```powershell
+Invoke-RestMethod -Method Post -Uri 'http://localhost:8001/workflow/start' -ContentType 'application/json' -Body '{"customer": "Alice", "issue": "My Dapr system fails to start in production."}'
+```
+
+**VS Code REST Client (any OS):** Open [`test.http`](./test.http) and click *Send Request* above the request. Requires the [REST Client](https://marketplace.visualstudio.com/items?itemName=humao.rest-client) extension.
 
 The workflow will:
 
@@ -134,9 +146,3 @@ The workflow:
 * Calls the **Triage Agent** as a child workflow to validate entitlement and urgency
 * Calls the **Expert Agent** as a child workflow to analyze environment and generate a resolution
 * Returns a formatted message to the customer
-
----
-
-## Testing with VS Code REST Client
-
-If you use VS Code with the REST Client extension, open `test.rest` and click **“Send Request”** above any request to test the API.

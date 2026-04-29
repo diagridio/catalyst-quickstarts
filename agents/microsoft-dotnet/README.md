@@ -26,8 +26,16 @@ dotnet build
 
 ### Set your API key
 
+**macOS/Linux (bash/zsh):**
+
 ```bash
 export OPENAI_API_KEY="your-key-here"
+```
+
+**Windows (PowerShell):**
+
+```powershell
+$env:OPENAI_API_KEY = "your-key-here"
 ```
 
 ## Running the Quickstart
@@ -43,11 +51,23 @@ diagrid dev run -f dev-dotnet-agent.yaml --project dotnet-agent-qs --approve
 
 From another terminal:
 
+Choose one of the following to trigger the endpoint:
+
+**macOS/Linux (curl):**
+
 ```bash
 curl -X POST http://localhost:5050/run \
   -H "Content-Type: application/json" \
   -d '{"prompt": "Find a venue in Austin for a company gala"}'
 ```
+
+**Windows (PowerShell):**
+
+```powershell
+Invoke-RestMethod -Method Post -Uri 'http://localhost:5050/run' -ContentType 'application/json' -Body '{"prompt": "Find a venue in Austin for a company gala"}'
+```
+
+**VS Code REST Client (any OS):** Open [`test.http`](./test.http) and click *Send Request* above the request. Requires the [REST Client](https://marketplace.visualstudio.com/items?itemName=humao.rest-client) extension.
 
 The agent will:
 1. Call `step_one_search` — finds venues (completes)

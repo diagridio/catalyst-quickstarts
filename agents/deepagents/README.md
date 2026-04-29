@@ -24,11 +24,21 @@ This agent plays the role of **Transportation Planner**, responsible for finding
 
 This quickstart uses OpenAI, but you can use any LLM provider supported by Deep Agents.
 
+**macOS/Linux (bash/zsh):**
+
 ```bash
 export OPENAI_API_KEY="your-key-here"
 ```
 
+**Windows (PowerShell):**
+
+```powershell
+$env:OPENAI_API_KEY = "your-key-here"
+```
+
 ### Run locally
+
+**macOS/Linux (bash/zsh):**
 
 ```bash
 pip install -r requirements.txt
@@ -36,13 +46,33 @@ export OPENAI_API_KEY=<your-key>
 dapr run -f dev-python-deepagents.yaml
 ```
 
+**Windows (PowerShell):**
+
+```powershell
+pip install -r requirements.txt
+$env:OPENAI_API_KEY = "<your-key>"
+dapr run -f dev-python-deepagents.yaml
+```
+
 ### Test
+
+Choose one of the following to trigger the endpoint:
+
+**macOS/Linux (curl):**
 
 ```bash
 curl -X POST http://localhost:8888/agent/run \
   -H "Content-Type: application/json" \
   -d '{"task": "Find transportation for a corporate gala with 200 guests"}'
 ```
+
+**Windows (PowerShell):**
+
+```powershell
+Invoke-RestMethod -Method Post -Uri 'http://localhost:8888/agent/run' -ContentType 'application/json' -Body '{"task": "Find transportation for a corporate gala with 200 guests"}'
+```
+
+**VS Code REST Client (any OS):** Open [`test.http`](./test.http) and click *Send Request* above the request. Requires the [REST Client](https://marketplace.visualstudio.com/items?itemName=humao.rest-client) extension.
 
 ## Crash Recovery Test
 
@@ -60,11 +90,23 @@ diagrid dev run -f dev-crash-test.yaml
 
 Wait for `Runner started — ready to accept requests`, then from another terminal:
 
+Choose one of the following to trigger the endpoint:
+
+**macOS/Linux (curl):**
+
 ```bash
 curl -X POST http://localhost:8001/run \
   -H "Content-Type: application/json" \
   -d '{"prompt": "Find transportation for a corporate gala"}'
 ```
+
+**Windows (PowerShell):**
+
+```powershell
+Invoke-RestMethod -Method Post -Uri 'http://localhost:8001/run' -ContentType 'application/json' -Body '{"prompt": "Find transportation for a corporate gala"}'
+```
+
+**VS Code REST Client (any OS):** Open [`test.http`](./test.http) and click *Send Request* above the request. Requires the [REST Client](https://marketplace.visualstudio.com/items?itemName=humao.rest-client) extension.
 
 You'll see tool 1 complete and the process crash at tool 2.
 

@@ -1,0 +1,7 @@
+### Trigger Invitations Manager agent
+POST http://localhost:8006/agent/run
+Content-Type: application/json
+
+{
+    "task": "Send invitations to 100 guests for a corporate networking event"
+}
