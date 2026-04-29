@@ -24,8 +24,8 @@ This quickstart demonstrates how to run an OpenAI Agents SDK agent as a durable 
 cd openai-agents
 
 # Create and activate virtual environment
-python -m venv venv
-source venv/bin/activate
+python -m venv .venv
+source .venv/bin/activate
 
 # Install dependencies
 pip install -r requirements.txt
@@ -37,8 +37,8 @@ pip install -r requirements.txt
 cd openai-agents
 
 # Create and activate virtual environment
-python -m venv venv
-.\venv\Scripts\Activate.ps1
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
 
 # Install dependencies
 pip install -r requirements.txt
