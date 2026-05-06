@@ -81,7 +81,16 @@ def get_workflow_status(instance_id: str):
             return Response(status_code=204)
         logger.info(f"Retrieved workflow status for {instance_id}.")
         logger.info(f"Workflow Runtime Status is: {state.runtime_status}")
-        return state
+        status_str = str(state.runtime_status)
+        return {
+            "exists": True,
+            "isWorkflowRunning": "RUNNING" in status_str,
+            "isWorkflowCompleted": "COMPLETED" in status_str,
+            "createdAt": state.created_at.isoformat() if state.created_at else None,
+            "lastUpdatedAt": state.last_updated_at.isoformat() if state.last_updated_at else None,
+            "runtimeStatus": state.runtime_status.value if hasattr(state.runtime_status, "value") else state.runtime_status,
+            "failureDetails": state.failure_details,
+        }
     except Exception as e:
         logger.error(f"Error occurred while getting the status of the workflow: {instance_id}. Exception: {e}")
         raise HTTPException(status_code=500, detail=str(e))
