@@ -9,7 +9,7 @@ apps:
     appDirPath: ../../adk
     appPort: 8001
     appProtocol: http
-    command: ["python", "main.py"]
+    command: ["./.venv/bin/python", "main.py"]
     env:
       APP_PORT: "8001"
 
@@ -17,7 +17,7 @@ apps:
     appDirPath: ../../crewai
     appPort: 8002
     appProtocol: http
-    command: ["python", "main.py"]
+    command: ["./.venv/bin/python", "main.py"]
     env:
       APP_PORT: "8002"
 
@@ -25,7 +25,7 @@ apps:
     appDirPath: ../durable-agent
     appPort: 8003
     appProtocol: http
-    command: ["python", "main.py"]
+    command: ["./.venv/bin/python", "main.py"]
     env:
       APP_PORT: "8003"
 
@@ -33,7 +33,7 @@ apps:
     appDirPath: ./
     appPort: 8004
     appProtocol: http
-    command: ["python", "main.py"]
+    command: ["./.venv/bin/python", "main.py"]
     env:
       APP_PORT: "8004"
 
@@ -41,7 +41,7 @@ apps:
     appDirPath: ../../langgraph
     appPort: 8005
     appProtocol: http
-    command: ["python", "main.py"]
+    command: ["./.venv/bin/python", "main.py"]
     env:
       APP_PORT: "8005"
 
@@ -49,7 +49,7 @@ apps:
     appDirPath: ../../openai-agents
     appPort: 8006
     appProtocol: http
-    command: ["python", "main.py"]
+    command: ["./.venv/bin/python", "main.py"]
     env:
       APP_PORT: "8006"
 
@@ -57,7 +57,7 @@ apps:
     appDirPath: ../../pydantic-ai
     appPort: 8007
     appProtocol: http
-    command: ["python", "main.py"]
+    command: ["./.venv/bin/python", "main.py"]
     env:
       APP_PORT: "8007"
 
@@ -65,6 +65,14 @@ apps:
     appDirPath: ../../strands
     appPort: 8008
     appProtocol: http
-    command: ["python", "main.py"]
+    command: ["./.venv/bin/python", "main.py"]
     env:
       APP_PORT: "8008"
+
+  - appID: claude-agent
+    appDirPath: ../../claude-agents
+    appPort: 8009
+    appProtocol: http
+    command: ["./.venv/bin/python", "main.py"]
+    env:
+      APP_PORT: "8009"
