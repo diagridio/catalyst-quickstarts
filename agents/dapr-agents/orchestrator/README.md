@@ -13,7 +13,7 @@ This quickstart demonstrates how to build an **orchestrator agent** using [Dapr 
 ## Prerequisites
 
 1. [Diagrid CLI](https://docs.diagrid.io/catalyst/references/cli-reference/overview) installed
-2. [Python 3.10+](https://www.python.org/downloads/)
+2. [Python 3.11, 3.12, or 3.13](https://www.python.org/downloads/)
 3. An [OpenAI API key](https://platform.openai.com/api-keys)
 4. A [Google API key](https://aistudio.google.com/)
 4. All 7 specialist agents running (see [Running the Full Team](#running-the-full-team) below)
