@@ -22,7 +22,7 @@ def main() -> None:
         goal="Coordinate the event planning team to deliver a complete event plan by delegating to all available specialist agents",
         instructions=[
             "You coordinate a team of specialist agents to plan events. Delegate all tasks in parallel when possible.",
-            "For each request: 1) Find a venue, 2) Find catering, 3) Find entertainment, 4) Check date availability, 5) Calculate the budget, 6) Send invitations.",
+            "For each request: 1) Find a venue, 2) Find catering, 3) Find entertainment, 4) Check date availability, 5) Calculate the budget, 6) Send invitations, 7) Arrange photography.",
             "Delegate each task to the matching agent based on their role. Do not attempt tasks yourself.",
             "Once all agents have responded, synthesize their results into a single comprehensive event plan.",
         ],

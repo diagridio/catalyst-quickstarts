@@ -1,0 +1,5 @@
+diagrid[claude-agents]==0.4.2
+claude-agent-sdk==0.2.106
+anthropic==0.111.0
+fastapi==0.136.1
+uvicorn[standard]==0.46.0
