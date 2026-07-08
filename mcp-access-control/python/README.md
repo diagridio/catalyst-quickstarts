@@ -1,31 +1,53 @@
 # MCP Access Control Quickstart
 
-This quickstart demonstrates how to secure MCP (Model Context Protocol) servers and tools using Diagrid Catalyst **access control lists (ACLs)** and **OAuth2 middleware pipelines**.
+This quickstart shows how to secure a [Model Context Protocol (MCP)](https://modelcontextprotocol.io)
+server with **Diagrid Catalyst MCP access policies**. Catalyst sits in front of your MCP
+server and enforces a per-tool, per-caller allow-list: it filters tool discovery
+(`tools/list`) down to the tools each caller is authorized to use, and rejects any
+unauthorized tool call (`tools/call`) with `403 Forbidden` before it ever reaches the
+server.
 
 ## What This Quickstart Demonstrates
 
-- **MCP Server with Dapr Service Invocation**: Run an MCP server that exposes tools, with downstream service calls routed through Dapr
-- **Access Control Lists (ACLs)**: Control which services can invoke the MCP server and its downstream dependencies
-- **Granular Tool-Level Security**: Allow the MCP client to call the server while blocking the server from reaching a specific downstream service
-- **OAuth2 Middleware Pipeline**: Protect MCP endpoints with JWT token validation using Dapr's bearer middleware
+- **MCP behind Catalyst**: An MCP server reached through Catalyst's MCP proxy endpoint
+  (`/v1.0/diagrid/mcp/<server>`) instead of directly, so access control is enforced at the
+  platform boundary.
+- **Deny-by-default access**: A newly created MCP server denies everything until you
+  explicitly grant access.
+- **Per-tool, per-caller authorization (ACLs)**: Grant a caller App ID access to specific
+  tools (e.g. `add` but not `get_weather_alert`) and see `tools/list` filtered and
+  unauthorized calls rejected with `403`.
+- **Dynamic policy updates**: Change the policy at runtime with
+  `diagrid mcpserver access grant|revoke` and observe the effect on the next client run.
+- **Tool-gated downstream calls**: The `get_weather_alert` tool calls a downstream
+  `weather-service` via Dapr service invocation — denying the tool prevents the caller from
+  ever triggering that downstream call.
 
 ## Architecture
 
 ```
-                          Access Control                    Access Control
-                          enforced here                     enforced here
-                               |                                |
-                               v                                v
-MCP Client ──> [ Dapr Service Invocation ] ──> MCP Server ──> [ Dapr Service Invocation ] ──> Weather Service
-  (5001)                                        (8000)                                          (8001)
-               Tools: add, get_weather_alert, echo              Endpoint: /weather-alert
+                         MCP access policy
+                         enforced here (per-tool, per-caller ACL)
+                                    │
+                                    ▼
+  mcp-client ───HTTP──▶  Catalyst  ───▶  mcp-server ──Dapr service invoke──▶  weather-service
+   (caller)            (MCP proxy endpoint +        (tools: add,                        (downstream
+                        policy ACL)         get_weather_alert, echo)            dependency)
 ```
+
+- The **mcp-client** reaches the server only through Catalyst's MCP proxy endpoint. Catalyst applies
+  the MCP server's access policy here.
+- The **mcp-server** exposes three tools. `get_weather_alert` calls **weather-service** over
+  Dapr service invocation; the other tools are self-contained.
+- `weather-service` is a plain downstream dependency — this quickstart does not put a
+  separate access policy on it. It is only reachable when a caller is allowed to invoke the
+  `get_weather_alert` tool.
 
 **Three services:**
 
 | Service | Port | Description |
 |---------|------|-------------|
-| **mcp-client** | 5001 | Discovers and invokes MCP tools through Dapr service invocation |
+| **mcp-client** | 5001 | Discovers and invokes MCP tools through Catalyst's MCP proxy endpoint |
 | **mcp-server** | 8000 | Exposes MCP tools (`add`, `get_weather_alert`, `echo`) via FastMCP |
 | **weather-service** | 8001 | Provides mock weather alert data (downstream dependency of `get_weather_alert`) |
 
@@ -53,29 +75,107 @@ pip install -e mcp_client/ -e mcp_server/ -e weather_service/
 
 ```bash
 diagrid login
-diagrid project create mcp-access-control
-diagrid project use mcp-access-control
+
 diagrid dev run -f mcp-quickstart.yaml --project mcp-access-control --approve --skip-default-resiliency
 ```
 
-This starts all three services. Wait for the log output to confirm they are ready.
+`diagrid dev run` creates the project (if it does not exist), the three App IDs, and the
+`mcp-server` MCP server resource, then launches all three services locally. The `mcp-server`
+App ID is recognized as an MCP server and exposed to Catalyst through a tunnel. Wait for the
+log output to show all three apps started before continuing.
 
-### 2. Test All Access Allowed (Default)
+> Leave `diagrid dev run` running in this terminal and use a second terminal for the steps
+> below.
 
-From another terminal, trigger the MCP client:
+### 2. Test All Access Denied (Default)
+
+A newly created MCP server has a deny-all policy: no caller may discover or call any tool.
+
+From the second terminal, trigger the MCP client:
 
 ```bash
 curl -s -X POST http://localhost:5001/run | python -m json.tool
 ```
 
-Expected response — all tools succeed:
+Expected response — no tools listed and every tool call fails (Catalyst tears the session
+down before any tool runs):
+
+```json
+{
+    "tools": [],
+    "add_result": null,
+    "weather_alert": null,
+    "errors": [
+        { "step": "list_tools", "error": "Session terminated" },
+        { "tool": "add", "error": "Session terminated" },
+        { "tool": "get_weather_alert", "error": "Session terminated" }
+    ]
+}
+```
+
+## Testing the MCP Server Access Policy
+
+A Catalyst MCP server access policy is an allow-list that decides which caller App IDs may
+use which tools. You change it at runtime — no redeploy.
+
+### Phase 1 — Allow the "add" tool
+
+Grant the `mcp-client` App ID access to just the `add` tool:
+
+```bash
+diagrid mcpserver access grant mcp-server --caller mcp-client --allow-tools add --wait
+```
+
+Trigger the MCP client again:
+
+```bash
+curl -s -X POST http://localhost:5001/run | python -m json.tool
+```
+
+Now `add` is discoverable and succeeds, while `get_weather_alert` is rejected with `403`
+(it is not in the allow-list), so the downstream `weather-service` is never reached:
 
 ```json
 {
     "tools": [
-        {"name": "add", "description": "Add two numbers together."},
-        {"name": "get_weather_alert", "description": "Get a weather alert for a given city."},
-        {"name": "echo", "description": "Echo back a message."}
+        { "name": "add", "description": "Add two numbers together." }
+    ],
+    "add_result": "5",
+    "weather_alert": null,
+    "errors": [
+        {
+            "tool": "get_weather_alert",
+            "error": "Client error '403 Forbidden' for url '.../v1.0/diagrid/mcp/mcp-server'",
+            "status_code": 403,
+            "reason": "ACCESS_DENIED"
+        }
+    ]
+}
+```
+
+### Phase 2 — Allow all tools for all callers
+
+Open the server up with a wildcard grant:
+
+```bash
+diagrid mcpserver access grant mcp-server --caller "*" --allow-tools "*" --wait
+```
+
+Trigger the client again:
+
+```bash
+curl -s -X POST http://localhost:5001/run | python -m json.tool
+```
+
+All three tools are now discoverable, and both `add` and `get_weather_alert` succeed (the
+latter reaching `weather-service` downstream):
+
+```json
+{
+    "tools": [
+        { "name": "add", "description": "Add two numbers together." },
+        { "name": "get_weather_alert", "description": "Get a weather alert for a given city." },
+        { "name": "echo", "description": "Echo back a message." }
     ],
     "add_result": "5",
     "weather_alert": "Severe thunderstorm warning until 6 PM CDT",
@@ -83,207 +183,59 @@ Expected response — all tools succeed:
 }
 ```
 
-## Part 1: Access Control Lists
-
-Catalyst access control configurations determine which App IDs are allowed to invoke other App IDs. You can dynamically apply and swap configurations without restarting services.
-
-### Phase 1 — All Access Allowed (Default)
-
-By default, there are no access restrictions. The MCP client successfully discovers tools and invokes both `add` and `get_weather_alert`.
-
-```bash
-curl -s -X POST http://localhost:5001/run | python -m json.tool
-```
-
-Both tools return valid results.
-
-### Phase 2 — Block Client from MCP Server
-
-Stop the dev session (Ctrl+C), then create and apply a deny configuration that blocks `mcp-client` from calling `mcp-server`:
-
-```bash
-diagrid configuration create mcp-server-deny \
-    --default-action deny \
-    --policy mcp-client:deny
-
-diagrid appid update mcp-server --app-config mcp-server-deny
-```
-
-Restart the dev session:
-
-```bash
-diagrid dev run -f mcp-quickstart.yaml --project mcp-access-control --approve --skip-default-resiliency
-```
-
-From another terminal, trigger the client:
-
-```bash
-curl -s -X POST http://localhost:5001/run | python -m json.tool
-```
-
-The client receives an error — it **cannot reach the MCP server at all**. No tools are discovered, no calls succeed.
-
-### Phase 3 — Block MCP Server from Weather Service
-
-Stop the dev session (Ctrl+C), then restore client access to the MCP server but block the MCP server from reaching the weather service:
-
-```bash
-# Restore MCP server access
-diagrid configuration create mcp-server-allow \
-    --default-action allow
-
-diagrid appid update mcp-server --app-config mcp-server-allow
-
-# Block MCP server from calling weather service
-diagrid configuration create weather-deny \
-    --default-action deny \
-    --policy mcp-server:deny
-
-diagrid appid update weather-service --app-config weather-deny
-```
-
-Restart the dev session:
-
-```bash
-diagrid dev run -f mcp-quickstart.yaml --project mcp-access-control --approve --skip-default-resiliency
-```
-
-From another terminal, trigger the client:
-
-```bash
-curl -s -X POST http://localhost:5001/run | python -m json.tool
-```
-
-The `add` tool works normally, but `get_weather_alert` returns a `403 Forbidden` error indicating the MCP server was denied access to the weather service. This demonstrates **granular, tool-level access control** — the client can use the MCP server, but the server's downstream calls are restricted.
-
-### Restore Full Access
-
-Stop the dev session (Ctrl+C), then restore access:
-
-```bash
-diagrid configuration create weather-allow \
-    --default-action allow
-
-diagrid appid update weather-service --app-config weather-allow
-```
-
-## Part 2: OAuth2 Middleware Pipeline
-
-This section demonstrates adding JWT token validation to the MCP server using Dapr's HTTP bearer middleware. Requests without a valid token are rejected before reaching the application.
-
-### Prerequisites
-
-An OAuth2 provider (e.g., [Auth0](https://auth0.com)) with:
-- A **Machine-to-Machine application** configured for client credentials grant
-- An **API audience** defined
-
-### Setup OAuth2
-
-1. Set your OAuth2 credentials:
-
-```bash
-export AUTH0_DOMAIN="your-tenant.us.auth0.com"
-export AUTH0_CLIENT_ID="your-client-id"
-export AUTH0_CLIENT_SECRET="your-client-secret"
-export AUTH0_AUDIENCE="https://your-api-audience/"
-```
-
-2. Update and apply the bearer middleware component:
-
-```bash
-envsubst < resources/bearer-component.yaml | diagrid apply -f -
-```
-
-3. Apply the OAuth configuration:
-
-```bash
-diagrid apply -f resources/mcp-server-oauth.yaml
-```
-
-### Phase 1 — Server Enforces OAuth, No Token Sent
-
-Apply the OAuth configuration to the MCP server:
-
-```bash
-diagrid appid update mcp-server --app-config mcp-server-oauth
-```
-
-Stop and restart the services **without** the `AUTH0_*` environment variables (or unset them):
-
-```bash
-diagrid dev run -f mcp-quickstart.yaml --project mcp-access-control --approve --skip-default-resiliency
-```
-
-Trigger the client:
-
-```bash
-curl -s -X POST http://localhost:5001/run | python -m json.tool
-```
-
-The request fails — the bearer middleware rejects it because no token is present.
-
-### Phase 2 — Server Enforces OAuth, Valid Token Sent
-
-Stop the services and restart **with** the `AUTH0_*` environment variables set:
-
-```bash
-export AUTH0_DOMAIN="your-tenant.us.auth0.com"
-export AUTH0_CLIENT_ID="your-client-id"
-export AUTH0_CLIENT_SECRET="your-client-secret"
-export AUTH0_AUDIENCE="https://your-api-audience/"
-diagrid dev run -f mcp-quickstart.yaml --project mcp-access-control --approve --skip-default-resiliency
-```
-
-Trigger the client:
-
-```bash
-curl -s -X POST http://localhost:5001/run | python -m json.tool
-```
-
-The client automatically fetches an Auth0 token using the client credentials grant and attaches it to the request. The bearer middleware validates the JWT (checking the issuer and audience claims), and the MCP tools are invoked successfully.
-
-### Restore Default Configuration
-
-```bash
-diagrid appid update mcp-server --app-config mcp-server-allow
-```
-
 ## How It Works
 
-### Access Control Lists
+### Access Policy
 
-Catalyst enforces access control at the service invocation layer. Each App ID can have a **configuration** that defines:
+Each MCP server has exactly one **access policy**, created automatically with a deny-all
+baseline and lifecycle-locked to the server (you edit its rules; you don't create or delete
+it directly). A rule is an allow-list entry: it names one or more **callers** (App IDs, or
+`*` for any) and the **tools** they may use (names, or `*` for all). A tool call is allowed
+only if some rule matches both the caller and the tool; otherwise it is denied.
 
-- **`defaultAction`**: `allow` or `deny` — the default policy for all callers
-- **`policies`**: Per-App-ID overrides (e.g., deny `mcp-client` specifically)
+Manage the policy with the `diagrid mcpserver access` commands:
 
-When `mcp-client` calls `mcp-server` via Dapr service invocation, Catalyst checks the target's configuration. If the caller's App ID is denied, the request returns **403 Forbidden** before reaching the application.
+```bash
+# Grant: add caller→tool allow-list entries
+diagrid mcpserver access grant mcp-server --caller mcp-client --allow-tools add,echo
 
-### OAuth2 Bearer Middleware
+# Revoke specific grants, or a caller's entire rule
+diagrid mcpserver access revoke mcp-server --caller mcp-client --allow-tools echo
+diagrid mcpserver access revoke mcp-server --caller "*" --all
 
-The Dapr HTTP bearer middleware intercepts incoming requests and validates JWT tokens:
+# Inspect the current policy
+diagrid mcpserver access get mcp-server      # one server, full detail
+diagrid mcpserver access list                # all servers in the project
 
-1. Checks for an `Authorization: Bearer <token>` header
-2. Fetches the issuer's JWKS (JSON Web Key Set) to verify the token signature
-3. Validates the `iss` (issuer) and `aud` (audience) claims
-4. Forwards the request if valid; returns **401 Unauthorized** if not
-
-The middleware is configured as a **component** and attached to an App ID's HTTP pipeline via a **configuration**.
-
-```yaml
-# Bearer middleware component
-spec:
-  type: middleware.http.bearer
-  metadata:
-  - name: issuer
-    value: "https://your-tenant.auth0.com/"
-  - name: audience
-    value: "https://your-api-audience/"
-
-# Configuration with OAuth pipeline
-spec:
-  appHttpPipeline:
-    handlers:
-    - name: bearer
-      type: middleware.http.bearer
+# Preview a verdict WITHOUT calling the server or waiting for rollout.
+# Evaluated locally with the same OPA policy the data plane enforces.
+diagrid mcpserver access test mcp-server --caller mcp-client --tool get_weather_alert
+# → ALLOWED: ...  or  DENIED: ...
 ```
+
+### Enforcement
+
+Callers never talk to the MCP server directly — they go through Catalyst's MCP proxy endpoint
+(`{DAPR_HTTP_ENDPOINT}/v1.0/diagrid/mcp/<server>`, see `mcp_client/main.py`). Catalyst
+enforces the policy on that hop in two ways:
+
+- **Discovery is filtered.** `tools/list` returns only the tools the calling App ID is
+  granted, so an unauthorized tool is invisible rather than merely un-callable.
+- **Calls are gated.** An unauthorized `tools/call` is rejected with `403 Forbidden` before
+  the request reaches the server. With a full deny-all policy the MCP session itself is
+  refused (the client sees `Session terminated`).
+
+The demo client (`mcp_client/main.py`) runs each tool on its own MCP session and reports a
+per-tool error, so one tool's `403` doesn't hide the others' results — which is what lets a
+single run show `add` succeeding while `get_weather_alert` is denied.
+
+## Files
+
+| File | Purpose |
+|------|---------|
+| `mcp-quickstart.yaml` | `diagrid dev run` multi-app file (the three services) |
+| `resources/mcp-server.yaml` | The `MCPServer` resource (points Catalyst at `localhost:8000/mcp`) |
+| `mcp_client/main.py` | FastAPI client that discovers and invokes tools through Catalyst |
+| `mcp_server/main.py` | FastMCP server exposing `add`, `get_weather_alert`, `echo` |
+| `weather_service/main.py` | Mock downstream weather service |
+| `test.rest` | REST-client requests for manual testing |
