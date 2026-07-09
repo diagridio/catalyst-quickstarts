@@ -7,6 +7,8 @@ server and enforces a per-tool, per-caller allow-list: it filters tool discovery
 unauthorized tool call (`tools/call`) with `403 Forbidden` before it ever reaches the
 server.
 
+To find out more on developing and operating MCPs servers read [MCP on Diagrid Catalyst](read https://docs.diagrid.io/develop/mcp) and [Manage MCP Servers](https://docs.diagrid.io/operate/manage/mcp-servers)
+
 ## What This Quickstart Demonstrates
 
 - **MCP behind Catalyst**: An MCP server reached through Catalyst's MCP proxy endpoint
