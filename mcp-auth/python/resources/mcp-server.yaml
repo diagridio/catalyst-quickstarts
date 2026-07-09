@@ -1,0 +1,11 @@
+apiVersion: dapr.io/v1alpha1
+kind: MCPServer
+metadata:
+  name: mcp-server
+spec:
+  endpoint:
+    streamableHTTP:
+      url: http://localhost:8000/mcp
+      headers:
+        - name: x-mcp-shared-secret
+          value: local-dev-shared-secret
