@@ -6,6 +6,3 @@ spec:
   endpoint:
     streamableHTTP:
       url: http://localhost:8000/mcp
-      headers:
-        - name: x-mcp-shared-secret
-          value: local-dev-shared-secret
