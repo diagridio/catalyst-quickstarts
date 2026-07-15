@@ -8,6 +8,7 @@ from dapr.clients import DaprClient
 
 from diagrid.identity import OAuthConfig
 from diagrid.agent.identity import HITLConfig
+from diagrid.agent.plugins import OAuthPlugin, HITLPlugin
 from diagrid.agent.langgraph import DaprWorkflowGraphRunner
 from dapr_agents.hooks import RequireApproval
 
@@ -79,8 +80,7 @@ runner = DaprWorkflowGraphRunner(
     name="customer-ops",
     role="Customer Operations Agent",
     goal="Answer questions about customers and, with approval, erase records on request.",
-    oauth=oauth,
-    hitl=hitl,
+    plugins=[OAuthPlugin(oauth), HITLPlugin(hitl)],
 )
 
 runner.serve(

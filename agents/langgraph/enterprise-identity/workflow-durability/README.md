@@ -27,10 +27,28 @@ erases records on request.
   makes the identity available to the workflow, and performs the OBO exchange for
   downstream MCP calls. Your graph code only declares `OAuthConfig` and
   `HITLConfig`.
-- **Same `OAuthConfig` type as the sync-path RFC** ([AI-702](https://linear.app/diagrid/issue/AI-702),
-  [`../service-invocation/`](../service-invocation/)). Whether an agent runs
+- **Same `OAuthConfig` type as the sync-path RFC**
+  ([`../service-invocation/`](../service-invocation/)). Whether an agent runs
   vanilla (sync) or under the workflow runner (this example), inbound identity is
   configured the same way — this is the unification story we're validating.
+
+### Plugin registration
+
+Identity behavior is registered as **plugins** that wrap the configs. Each config
+is wrapped in its plugin (`OAuthPlugin(oauth)`, `HITLPlugin(hitl)`) and passed as
+a list. The list construction is identical across all three RFC quickstarts —
+only the mount point differs:
+
+| Quickstart | Runtime | How the plugin list mounts |
+|------------|---------|----------------------------|
+| [`../service-invocation/`](../service-invocation/) | vanilla LangGraph, sync | `plugins=[...]` on the runner |
+| **`workflow-durability/` (this one)** | LangGraph + `DaprWorkflowGraphRunner` | `plugins=[...]` on the runner |
+| dapr-agents raw | `DurableAgent` (OSS-clean) | `lifecycle_dispatcher=PluginRegistry([...])` |
+
+The two workflow paths (this one and the dapr-agents raw quickstart) take the
+exact same `[OAuthPlugin(oauth), HITLPlugin(hitl)]` list. The mount kwarg differs
+only because `DurableAgent` is OSS-clean and can't take a `plugins=` kwarg
+directly.
 
 ## Prerequisites
 
@@ -158,4 +176,4 @@ Send `{"approved": false, ...}` to reject the deletion instead.
 ## Related
 
 - Sync-path counterpart (vanilla LangGraph, no workflow runner):
-  [`../service-invocation/`](../service-invocation/) — [AI-702](https://linear.app/diagrid/issue/AI-702)
+  [`../service-invocation/`](../service-invocation/)
