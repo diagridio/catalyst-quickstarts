@@ -1,0 +1,39 @@
+@userToken = REPLACE_WITH_USER_JWT
+@approverToken = REPLACE_WITH_APPROVER_JWT
+@instanceId = REPLACE_WITH_WORKFLOW_INSTANCE_ID
+@approvalId = REPLACE_WITH_APPROVAL_REQUEST_ID
+
+### Query customers (OBO-propagated MCP read)
+POST http://localhost:3500/v1.0/invoke/customer-ops-agent/method/invoke
+Content-Type: application/json
+X-Diagrid-User-Token: Bearer {{userToken}}
+
+{
+    "prompt": "List customers in the EMEA region"
+}
+
+### Without a user token — expect 401 from the runner's inbound dependency
+POST http://localhost:3500/v1.0/invoke/customer-ops-agent/method/invoke
+Content-Type: application/json
+
+{
+    "prompt": "List customers in the EMEA region"
+}
+
+### Request a deletion (returns a pending HITL approval + workflow instance ID)
+POST http://localhost:3500/v1.0/invoke/customer-ops-agent/method/invoke
+Content-Type: application/json
+X-Diagrid-User-Token: Bearer {{userToken}}
+
+{
+    "prompt": "Delete customer record 001XX000ABCDEFG"
+}
+
+### Approve the pending deletion (approver identity carried in the event body)
+POST http://localhost:3500/v1.0/workflows/dapr/{{instanceId}}/raiseEvent/approval-response-{{approvalId}}
+Content-Type: application/json
+
+{
+    "approved": true,
+    "approver_token": "{{approverToken}}"
+}
