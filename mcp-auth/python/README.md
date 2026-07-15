@@ -348,9 +348,10 @@ Manage the policy with the `diagrid mcpserver access` commands:
 # Grant: add caller→tool allow-list entries
 diagrid mcpserver access grant mcp-server --caller mcp-client --allow-tools add,echo
 
-# Revoke specific grants, or a caller's entire rule
-diagrid mcpserver access revoke mcp-server --caller mcp-client --allow-tools echo
-diagrid mcpserver access revoke mcp-server --caller "*" --all
+# Revoke specific grants, or a caller's entire rule. Unlike grant, revoke asks
+# for interactive confirmation unless you pass --yes (or --approve).
+diagrid mcpserver access revoke mcp-server --caller mcp-client --allow-tools echo --yes
+diagrid mcpserver access revoke mcp-server --caller "*" --all --yes
 
 # Inspect the current policy
 diagrid mcpserver access get mcp-server      # one server, full detail
@@ -363,20 +364,26 @@ diagrid mcpserver access test mcp-server --caller mcp-client --tool get_account_
 
 ### Telling authentication and authorization failures apart
 
-A denied caller and an unauthenticated connection can look identical to the caller —
-`Session terminated`, no HTTP status. That's because both failures happen while
-establishing the MCP session itself (before any per-tool distinction is possible), whereas a
-denial of one specific tool *after* the session is already established comes back as a clean
-`403`, as seen above with `get_account_balance`. To tell the two apart when the whole session
-is failing:
+`Session terminated`, with no HTTP status, specifically means the caller matches **no rule at
+all** in the access policy — Catalyst tears the session down at that point regardless of
+whether the upstream credential is even valid, so on its own it doesn't tell you which problem
+you have. Once a caller matches at least one rule, the two failure modes stop looking alike: a
+call to a tool that rule doesn't cover comes back as a clean `403`, as seen above with
+`get_account_balance`, and a bad upstream credential comes back as a clean `401` instead of a
+session teardown — the request now gets far enough to actually reach, and be rejected by, your
+server. To tell the two apart when the whole session is failing:
 
 - **Check the MCP server's own log.** `401 Unauthorized` from your server means Catalyst
   itself isn't authenticated yet — fix the credential on the `MCPServer` resource. A `200 OK`
   followed by `Processing request of type ListToolsRequest` means Catalyst reached your tool
-  code — authentication is fine, and it's the access policy holding everything closed.
+  code — authentication is fine, and it's the access policy (no matching rule) holding
+  everything closed.
 - **Run `diagrid mcpserver access test`.** It evaluates the policy directly and answers
-  `ALLOWED`/`DENIED` without calling the server at all — if it says `ALLOWED` but the caller
-  still sees `Session terminated`, the problem is upstream authentication, not the policy.
+  `ALLOWED`/`DENIED` without calling the server at all. `DENIED` for every tool confirms the
+  caller matches no rule — check the server log to see whether authentication is *also*
+  broken. `ALLOWED` means the policy isn't the problem — if the caller still can't reach that
+  tool, the upstream credential is, and it'll surface as a clean `401`, not `Session
+  terminated`.
 
 ## Files
 
