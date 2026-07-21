@@ -14,35 +14,19 @@ This quickstart demonstrates how to run a LangGraph graph as a durable Dapr Work
 ## Prerequisites
 
 1. [Diagrid CLI](https://docs.diagrid.io/catalyst/references/cli-reference/overview) installed
-2. [Python 3.10+](https://www.python.org/downloads/)
-3. An [OpenAI API key](https://platform.openai.com/api-keys)
+2. [Python 3.11+](https://www.python.org/downloads/)
+3. [uv](https://docs.astral.sh/uv/getting-started/installation/) installed
+4. An [OpenAI API key](https://platform.openai.com/api-keys)
 
 ## Setup
 
-**macOS/Linux (bash/zsh):**
+Install [uv](https://docs.astral.sh/uv/getting-started/installation/) if you don't have it already, then install the dependencies:
 
 ```bash
 cd langgraph
 
-# Create and activate virtual environment
-python -m venv .venv
-source .venv/bin/activate
-
-# Install dependencies
-pip install -r requirements.txt
-```
-
-**Windows (PowerShell):**
-
-```powershell
-cd langgraph
-
-# Create and activate virtual environment
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-
-# Install dependencies
-pip install -r requirements.txt
+# uv creates and manages the virtual environment for you
+uv sync
 ```
 
 ### Set your API key
@@ -67,7 +51,7 @@ $env:OPENAI_API_KEY = "your-key-here"
 
 ```bash
 diagrid login
-diagrid dev run -f dev-python-langgraph.yaml
+uv run diagrid dev run -f dev-python-langgraph.yaml
 ```
 
 ### 2. Trigger a Workflow
@@ -109,7 +93,7 @@ The `crash_test.py` file demonstrates durable crash recovery — a capability no
 ### First run — trigger and crash
 
 ```bash
-diagrid dev run -f dev-crash-test.yaml
+uv run diagrid dev run -f dev-crash-test.yaml
 ```
 
 Wait for `Runner started — ready to accept requests`, then from another terminal:
@@ -145,7 +129,7 @@ Open `crash_test.py` and comment out the crash line:
 Restart the application:
 
 ```bash
-diagrid dev run -f dev-crash-test.yaml
+uv run diagrid dev run -f dev-crash-test.yaml
 ```
 
 The workflow **resumes from step 2** — step 1 is not re-executed. The Dapr workflow engine replays the saved result from Catalyst instead of re-running the node.
