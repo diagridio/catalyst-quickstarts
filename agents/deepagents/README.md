@@ -18,6 +18,7 @@ This agent plays the role of **Transportation Planner**, responsible for finding
 ### Prerequisites
 
 - Python 3.12+
+- [uv](https://docs.astral.sh/uv/getting-started/installation/)
 - [Dapr CLI](https://docs.dapr.io/getting-started/install-dapr-cli/)
 - Redis running locally (for state store and pub/sub)
 ### Set your API key
@@ -38,20 +39,26 @@ $env:OPENAI_API_KEY = "your-key-here"
 
 ### Run locally
 
+Install [uv](https://docs.astral.sh/uv/getting-started/installation/) if you don't have it already, then install the dependencies:
+
+```bash
+uv sync
+```
+
+Set your API key and run:
+
 **macOS/Linux (bash/zsh):**
 
 ```bash
-pip install -r requirements.txt
 export OPENAI_API_KEY=<your-key>
-dapr run -f dev-python-deepagents.yaml
+uv run dapr run -f dev-python-deepagents.yaml
 ```
 
 **Windows (PowerShell):**
 
 ```powershell
-pip install -r requirements.txt
 $env:OPENAI_API_KEY = "<your-key>"
-dapr run -f dev-python-deepagents.yaml
+uv run dapr run -f dev-python-deepagents.yaml
 ```
 
 ### Test
@@ -85,7 +92,7 @@ The `crash_test.py` file demonstrates durable crash recovery — a capability po
 ### First run — trigger and crash
 
 ```bash
-diagrid dev run -f dev-crash-test.yaml
+uv run diagrid dev run -f dev-crash-test.yaml
 ```
 
 Wait for `Runner started — ready to accept requests`, then from another terminal:
@@ -121,7 +128,7 @@ Open `crash_test.py` and comment out the crash line:
 Restart the application:
 
 ```bash
-diagrid dev run -f dev-crash-test.yaml
+uv run diagrid dev run -f dev-crash-test.yaml
 ```
 
 The workflow **resumes from tool 2** — tool 1 is not re-executed. The Dapr workflow engine replays the saved result from Catalyst instead of re-running the tool.
@@ -137,7 +144,7 @@ The `subagent_workflows.py` file demonstrates a supervisor/sub-agent pattern whe
 ### Run
 
 ```bash
-diagrid dev run -f dev-subagent-workflows.yaml
+uv run diagrid dev run -f dev-subagent-workflows.yaml
 ```
 
 This starts three processes:
