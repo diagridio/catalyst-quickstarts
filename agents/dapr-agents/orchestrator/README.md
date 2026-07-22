@@ -5,7 +5,7 @@ This quickstart demonstrates how to build an **orchestrator agent** using [Dapr 
 ## What This Quickstart Demonstrates
 
 - **Multi-Agent Orchestration**: A coordinator that discovers and delegates to specialist agents
-- **Framework-Agnostic**: Orchestrates agents built with CrewAI, OpenAI Agents, ADK, Strands, LangGraph, Pydantic AI, and Dapr Agents
+- **Framework-Agnostic**: Orchestrates agents built with CrewAI, OpenAI Agents, ADK, Strands, LangGraph, Pydantic AI, Claude Agents, and Dapr Agents
 - **Agent Registry**: Dynamic agent discovery via a shared Dapr state store
 - **Pub/Sub Communication**: Task delegation via Dapr pub/sub messaging
 - **Durable Workflows**: Full execution plan persisted across steps
@@ -16,7 +16,8 @@ This quickstart demonstrates how to build an **orchestrator agent** using [Dapr 
 2. [Python 3.11, 3.12, or 3.13](https://www.python.org/downloads/)
 3. An [OpenAI API key](https://platform.openai.com/api-keys)
 4. A [Google API key](https://aistudio.google.com/)
-4. All 7 specialist agents running (see [Running the Full Team](#running-the-full-team) below)
+5. An [Anthropic API key](https://console.anthropic.com/settings/keys)
+6. All 8 specialist agents running (see [Running the Full Team](#running-the-full-team) below)
 
 ## Setup
 
@@ -56,13 +57,14 @@ metadata:
     value: "YOUR_OPENAI_API_KEY"
 ```
 
-Export your `GOOGLE_API_KEY` and `OPENAI_API_KEY` for adk and other agents respectively:
+Export your `GOOGLE_API_KEY`, `OPENAI_API_KEY`, and `ANTHROPIC_API_KEY` for adk, the catering/other agents, and the Claude photography agent respectively:
 
 **macOS/Linux (bash/zsh):**
 
 ```bash
 export GOOGLE_API_KEY=""
 export OPENAI_API_KEY=""
+export ANTHROPIC_API_KEY=""
 ```
 
 **Windows (PowerShell):**
@@ -70,11 +72,12 @@ export OPENAI_API_KEY=""
 ```powershell
 $env:GOOGLE_API_KEY = ""
 $env:OPENAI_API_KEY = ""
+$env:ANTHROPIC_API_KEY = ""
 ```
 
 ## Running the Full Team
 
-The orchestrator requires the specialist agents to be running and registered. Use the combined dev file to start all 8 services at once:
+The orchestrator requires the specialist agents to be running and registered. Use the combined dev file to start all 9 services at once:
 
 ```bash
 cd dapr-agents/orchestrator
@@ -82,7 +85,7 @@ diagrid login
 diagrid dev run -f dev-multi-agent-orchestration.yaml
 ```
 
-This starts all agents on ports 8001-8008:
+This starts all agents on ports 8001-8009:
 
 | Port | App ID | Agent | Framework |
 |------|--------|-------|-----------|
@@ -94,6 +97,7 @@ This starts all agents on ports 8001-8008:
 | 8006 | openai-agent | Catering Coordinator | OpenAI Agents |
 | 8007 | pydanticai-agent | Decoration Planner | Pydantic AI |
 | 8008 | strands-agent | Budget Analyst | Strands |
+| 8009 | claude-agent | Photography Planner | Claude Agents |
 
 ## Trigger an Orchestration
 
@@ -127,7 +131,8 @@ The orchestrator will:
 7. Delegate catering to the Catering Coordinator (OpenAI Agents)
 8. Delegate decorations to the Decoration Planner (Pydantic AI)
 9. Delegate budgeting to the Budget Analyst (Strands)
-10. Synthesize all results into a comprehensive event plan
+10. Delegate photography to the Photography Planner (Claude Agents)
+11. Synthesize all results into a comprehensive event plan
 
 ## The Event Planning Team
 
@@ -141,3 +146,4 @@ The orchestrator will:
 | Catering Coordinator | OpenAI Agents | Find catering options |
 | Decoration Planner | Pydantic AI | Find decoration packages |
 | Budget Analyst | Strands | Calculate event budgets |
+| Photography Planner | Claude Agents | Find photography & videography |
