@@ -21,6 +21,7 @@ This agent plays the role of **Transportation Planner**, responsible for finding
 - [uv](https://docs.astral.sh/uv/getting-started/installation/)
 - [Dapr CLI](https://docs.dapr.io/getting-started/install-dapr-cli/)
 - Redis running locally (for state store and pub/sub)
+
 ### Set your API key
 
 This quickstart uses OpenAI, but you can use any LLM provider supported by Deep Agents.
