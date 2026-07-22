@@ -13,7 +13,7 @@ This quickstart demonstrates how to run a Google ADK (Agent Development Kit) age
 ## Prerequisites
 
 1. [Diagrid CLI](https://docs.diagrid.io/catalyst/references/cli-reference/overview) installed
-2. [Python 3.11+](https://www.python.org/downloads/)
+2. [Python 3.11–3.13](https://www.python.org/downloads/)
 3. [uv](https://docs.astral.sh/uv/getting-started/installation/) installed
 4. A [Google API key](https://aistudio.google.com/)
 

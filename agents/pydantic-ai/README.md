@@ -17,7 +17,7 @@ This agent is part of the **Event Planning Team** quickstart scenario. It plays 
 
 ### Prerequisites
 
-- Python 3.12+
+- Python 3.12–3.13
 - [uv](https://docs.astral.sh/uv/getting-started/installation/)
 - [Dapr CLI](https://docs.dapr.io/getting-started/install-dapr-cli/)
 - Redis running locally (for state store and pub/sub)

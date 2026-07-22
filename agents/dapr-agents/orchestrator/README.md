@@ -13,7 +13,7 @@ This quickstart demonstrates how to build an **orchestrator agent** using [Dapr 
 ## Prerequisites
 
 1. [Diagrid CLI](https://docs.diagrid.io/catalyst/references/cli-reference/overview) installed
-2. [Python 3.11+](https://www.python.org/downloads/)
+2. [Python 3.11–3.13](https://www.python.org/downloads/)
 3. [uv](https://docs.astral.sh/uv/getting-started/installation/) installed
 4. An [OpenAI API key](https://platform.openai.com/api-keys)
 5. A [Google API key](https://aistudio.google.com/)
