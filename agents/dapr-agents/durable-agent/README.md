@@ -14,33 +14,17 @@ This quickstart demonstrates how to build a durable agent using [Dapr Agents](ht
 ## Prerequisites
 
 1. [Diagrid CLI](https://docs.diagrid.io/catalyst/references/cli-reference/overview) installed
-2. [Python 3.10+](https://www.python.org/downloads/)
-3. An [OpenAI API key](https://platform.openai.com/api-keys)
+2. [Python 3.11+](https://www.python.org/downloads/)
+3. [uv](https://docs.astral.sh/uv/getting-started/installation/) installed
+4. An [OpenAI API key](https://platform.openai.com/api-keys)
 
 ## Setup
 
-Inside the project directory, run the following commands:
-
-**macOS/Linux (bash/zsh):**
+Install [uv](https://docs.astral.sh/uv/getting-started/installation/) if you don't have it already. Inside the project directory, install the dependencies:
 
 ```bash
-# Create and activate virtual environment
-python -m venv .venv
-source .venv/bin/activate
-
-# Install dependencies
-pip install -r requirements.txt
-```
-
-**Windows (PowerShell):**
-
-```powershell
-# Create and activate virtual environment
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-
-# Install dependencies
-pip install -r requirements.txt
+# uv creates and manages the virtual environment for you
+uv sync
 ```
 
 ### Configure the LLM Provider
@@ -61,7 +45,7 @@ The following will create a new project in your Catalyst organization named `inv
 
 ```bash
 diagrid login
-diagrid dev run -f dev-python-durable-agent.yaml --project invitations-manager
+uv run diagrid dev run -f dev-python-durable-agent.yaml --project invitations-manager
 ```
 
 ### 2. Trigger a Durable Agent run
