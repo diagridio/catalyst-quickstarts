@@ -12,7 +12,7 @@ This quickstart demonstrates how to run a Microsoft Agent Framework agent as a d
 ## Prerequisites
 
 1. [Diagrid CLI](https://docs.diagrid.io/catalyst/references/cli-reference/overview) installed
-2. [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0) or later
+2. [.NET 9 SDK](https://dotnet.microsoft.com/download/dotnet/9.0)
 3. An [OpenAI API key](https://platform.openai.com/api-keys)
 
 ## Setup
