@@ -14,37 +14,21 @@ This quickstart demonstrates how to build an **orchestrator agent** using [Dapr 
 
 1. [Diagrid CLI](https://docs.diagrid.io/catalyst/references/cli-reference/overview) installed
 2. [Python 3.11+](https://www.python.org/downloads/)
-3. An [OpenAI API key](https://platform.openai.com/api-keys)
-4. A [Google API key](https://aistudio.google.com/)
-5. An [Anthropic API key](https://console.anthropic.com/settings/keys)
-6. All 8 specialist agents running (see [Running the Full Team](#running-the-full-team) below)
+3. [uv](https://docs.astral.sh/uv/getting-started/installation/) installed
+4. An [OpenAI API key](https://platform.openai.com/api-keys)
+5. A [Google API key](https://aistudio.google.com/)
+6. An [Anthropic API key](https://console.anthropic.com/settings/keys)
+7. All 8 specialist agents running (see [Running the Full Team](#running-the-full-team) below)
 
 ## Setup
 
-**macOS/Linux (bash/zsh):**
+Install [uv](https://docs.astral.sh/uv/getting-started/installation/) if you don't have it already, then install the dependencies:
 
 ```bash
 cd dapr-agents/orchestrator
 
-# Create and activate virtual environment
-python -m venv .venv
-source .venv/bin/activate
-
-# Install dependencies
-pip install -r requirements.txt
-```
-
-**Windows (PowerShell):**
-
-```powershell
-cd dapr-agents/orchestrator
-
-# Create and activate virtual environment
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-
-# Install dependencies
-pip install -r requirements.txt
+# uv creates and manages the virtual environment for you
+uv sync
 ```
 
 ### Configure the LLM Provider
@@ -82,7 +66,7 @@ The orchestrator requires the specialist agents to be running and registered. Us
 ```bash
 cd dapr-agents/orchestrator
 diagrid login
-diagrid dev run -f dev-multi-agent-orchestration.yaml
+uv run diagrid dev run -f dev-multi-agent-orchestration.yaml
 ```
 
 This starts all agents on ports 8001-8009:
