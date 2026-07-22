@@ -90,7 +90,7 @@ The `crash_test.py` file demonstrates durable crash recovery — a capability no
 2. **compare_options** — compares options (crashes before completing)
 3. **confirm_booking** — confirms the booking
 
-### First run — trigger and crash
+### 1. First run — trigger and crash
 
 ```bash
 uv run diagrid dev run -f dev-crash-test.yaml
@@ -116,11 +116,19 @@ Invoke-RestMethod -Method Post -Uri 'http://localhost:8001/run' -ContentType 'ap
 
 **VS Code REST Client (any OS):** Open [`test.http`](./test.http) and click *Send Request* above the request. Requires the [REST Client](https://marketplace.visualstudio.com/items?itemName=humao.rest-client) extension.
 
-You'll see step 1 complete and the process crash at step 2.
+Go to the terminal where you started `uv run diagrid dev run`. You'll see step 1 complete and the process crash at step 2.
 
-### Fix and resume
+```text
+== APP - langgraph-crash-test == >>> STEP 1: Checking venue availability for 'company gala on March 15'...
+== APP - langgraph-crash-test == >>> STEP 1 COMPLETE: Grand Ballroom available on March 15 (2PM-6PM, 6PM-11PM)
+...
+== APP - langgraph-crash-test == >>> STEP 2: Comparing venue options...
+❌ App process "langgraph-crash-test" exited with error code: exit status 1
+```
 
-Open `crash_test.py` and comment out the crash line:
+### 2. Fix and resume
+
+Open `crash_test.py` and comment out the crash line (line 30):
 
 ```python
 # os._exit(1)  # 💥 Simulates a crash — comment out this line before the second run
