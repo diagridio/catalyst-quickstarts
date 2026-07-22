@@ -13,19 +13,17 @@ This quickstart demonstrates how to run a [Claude Agent SDK](https://docs.claude
 
 ## Prerequisites
 
-1. [Diagrid CLI](https://docs.diagrid.io/catalyst/references/cli-reference/overview) installed
+1. [Diagrid CLI](https://docs.diagrid.io/references/catalyst/catalyst-cli-intro/) installed
 2. [Python 3.11–3.13](https://www.python.org/downloads/) (the Diagrid SDK does not yet support 3.14)
 3. [uv](https://docs.astral.sh/uv/getting-started/installation/) installed
 4. An [Anthropic API key](https://console.anthropic.com/settings/keys)
 
 ## Setup
 
-Install [uv](https://docs.astral.sh/uv/getting-started/installation/) if you don't have it already, then install the dependencies:
+Navigate to the `claude-agents` directory and install the dependencies using `uv`:
 
 ```bash
 cd claude-agents
-
-# uv creates and manages the virtual environment for you
 uv sync
 ```
 
@@ -45,12 +43,19 @@ export ANTHROPIC_API_KEY="your-key-here"
 $env:ANTHROPIC_API_KEY = "your-key-here"
 ```
 
-## Running the Quickstart
+## Run with Catalyst
 
-### 1. Deploy and Run
+### 1. Login and Run
+
+Login to Catalyst using the Diagrid CLI:
 
 ```bash
 diagrid login
+```
+
+Deploy to Catalyst and run it:
+
+```bash
 uv run diagrid dev run -f dev-python-claude.yaml
 ```
 
@@ -81,7 +86,7 @@ The agent will:
 2. Use the `search_photography` tool to find available packages
 3. Return photography options with pricing for the requested event type and coverage hours
 
-## Crash Recovery Test
+## Crash Recovery Test With Catalyst
 
 The `crash_test.py` file demonstrates durable crash recovery — a capability not offered by the Claude Agent SDK natively. It defines 3 tools where tool 2 crashes with `os._exit(1)`:
 

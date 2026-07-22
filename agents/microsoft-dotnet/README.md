@@ -11,7 +11,7 @@ This quickstart demonstrates how to run a Microsoft Agent Framework agent as a d
 
 ## Prerequisites
 
-1. [Diagrid CLI](https://docs.diagrid.io/catalyst/references/cli-reference/overview) installed
+1. [Diagrid CLI](https://docs.diagrid.io/references/catalyst/catalyst-cli-intro/) installed
 2. [.NET 9 SDK](https://dotnet.microsoft.com/download/dotnet/9.0)
 3. An [OpenAI API key](https://platform.openai.com/api-keys)
 
@@ -38,12 +38,19 @@ export OPENAI_API_KEY="your-key-here"
 $env:OPENAI_API_KEY = "your-key-here"
 ```
 
-## Running the Quickstart
+## Run with Catalyst
 
-### 1. Deploy and Run
+### 1. Login and Run
+
+Login to Catalyst using the Diagrid CLI:
 
 ```bash
 diagrid login
+```
+
+Run the agent with Catalyst:
+
+```bash
 diagrid dev run -f dev-dotnet-agent.yaml --project dotnet-agent-qs --approve
 ```
 

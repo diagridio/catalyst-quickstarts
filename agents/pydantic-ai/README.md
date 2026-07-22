@@ -1,26 +1,42 @@
-# Pydantic AI - Decoration Planner Agent
+# Pydantic AI Quickstart - Decoration Planner
 
-This agent is part of the **Event Planning Team** quickstart scenario. It plays the role of **Decoration Planner**, responsible for finding decoration packages based on theme and venue size.
+This quickstart demonstrates how to run a Pydantic AI agent as a durable Dapr Workflow using the Diagrid Python SDK. The agent acts as a **Decoration Planner** that finds decoration packages based on theme and venue size.
 
-## Role
+## What This Quickstart Demonstrates
+
+- **Pydantic AI + Dapr Workflows**: Run a Pydantic AI agent with durable execution and automatic state persistence
+- **Direct LLM Integration**: Calls OpenAI directly via the Pydantic AI SDK (no Dapr conversation component needed)
+- **Tool Integration**: Decoration search tool with mock results
+- **Pub/Sub Messaging**: Subscribe to a request topic and publish results for event-driven orchestration
+- **REST API**: Trigger agent workflows via HTTP endpoints
+- **Durable Crash Recovery**: Resume a workflow from the last completed step after a crash (see [Crash Recovery Test With Catalyst](#crash-recovery-test-with-catalyst))
+
+### Role
 
 - **Agent**: `pydantic-ai-agent`
 - **Port**: 8008
 - **Subscribe topic**: `decorations.requests`
 - **Publish topic**: `decorations.results`
 
-## Tools
+### Tools
 
 - `search_decorations(theme, venue_size)` — Searches for decoration packages matching the given theme and venue size.
 
+## Prerequisites
+
+1. [Diagrid CLI](https://docs.diagrid.io/references/catalyst/catalyst-cli-intro/) installed
+2. [Python 3.12–3.13](https://www.python.org/downloads/)
+3. [uv](https://docs.astral.sh/uv/getting-started/installation/) installed
+4. An [OpenAI API key](https://platform.openai.com/api-keys)
+
 ## Setup
 
-### Prerequisites
+Navigate to the `pydantic-ai` directory and install the dependencies using `uv`:
 
-- Python 3.12–3.13
-- [uv](https://docs.astral.sh/uv/getting-started/installation/)
-- [Dapr CLI](https://docs.dapr.io/getting-started/install-dapr-cli/)
-- Redis running locally (for state store and pub/sub)
+```bash
+cd pydantic-ai
+uv sync
+```
 
 ### Set your API key
 
@@ -38,31 +54,23 @@ export OPENAI_API_KEY="your-key-here"
 $env:OPENAI_API_KEY = "your-key-here"
 ```
 
-### Run locally
+## Run with Catalyst
 
-Install [uv](https://docs.astral.sh/uv/getting-started/installation/) if you don't have it already, then install the dependencies:
+### 1. Login and Run
+
+Login to Catalyst using the Diagrid CLI:
 
 ```bash
-uv sync
+diagrid login
 ```
 
-Set your API key and run:
-
-**macOS/Linux (bash/zsh):**
+Run the agent with Catalyst:
 
 ```bash
-export OPENAI_API_KEY=<your-key>
 uv run dapr run -f dev-python-pydantic-ai.yaml
 ```
 
-**Windows (PowerShell):**
-
-```powershell
-$env:OPENAI_API_KEY = "<your-key>"
-uv run dapr run -f dev-python-pydantic-ai.yaml
-```
-
-### Test
+### 2. Trigger a Workflow
 
 Choose one of the following to trigger the endpoint:
 
@@ -82,7 +90,7 @@ Invoke-RestMethod -Method Post -Uri 'http://localhost:8888/agent/run' -ContentTy
 
 **VS Code REST Client (any OS):** Open [`test.http`](./test.http) and click *Send Request* above the request. Requires the [REST Client](https://marketplace.visualstudio.com/items?itemName=humao.rest-client) extension.
 
-## Crash Recovery Test
+## Crash Recovery Test With Catalyst
 
 The `crash_test.py` file demonstrates durable crash recovery — a capability not offered by Pydantic AI natively. It defines 3 tools where tool 2 crashes with `os._exit(1)`:
 

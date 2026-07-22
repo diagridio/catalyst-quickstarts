@@ -12,19 +12,17 @@ This quickstart demonstrates how to run a Strands agent as a durable Dapr Workfl
 
 ## Prerequisites
 
-1. [Diagrid CLI](https://docs.diagrid.io/catalyst/references/cli-reference/overview) installed
+1. [Diagrid CLI](https://docs.diagrid.io/references/catalyst/catalyst-cli-intro/) installed
 2. [Python 3.11–3.13](https://www.python.org/downloads/)
 3. [uv](https://docs.astral.sh/uv/getting-started/installation/) installed
 4. An [OpenAI API key](https://platform.openai.com/api-keys)
 
 ## Setup
 
-Install [uv](https://docs.astral.sh/uv/getting-started/installation/) if you don't have it already, then install the dependencies:
+Navigate to the `strands` directory and install the dependencies using `uv`:
 
 ```bash
 cd strands
-
-# uv creates and manages the virtual environment for you
 uv sync
 ```
 
@@ -44,12 +42,19 @@ export OPENAI_API_KEY="your-key-here"
 $env:OPENAI_API_KEY = "your-key-here"
 ```
 
-## Running the Quickstart
+## Run with Catalyst
 
-### 1. Deploy and Run
+### 1. Login and Run
+
+Login to Catalyst using the Diagrid CLI:
 
 ```bash
 diagrid login
+```
+
+Run the agent with Catalyst:
+
+```bash
 uv run diagrid dev run -f dev-python-strands.yaml
 ```
 
@@ -80,7 +85,7 @@ The agent will:
 2. Use the `calculate_budget` tool to create a cost breakdown
 3. Return a detailed budget with line items, totals, and a recommended buffer
 
-## Crash Recovery Test
+## Crash Recovery Test With Catalyst
 
 The `crash_test.py` file demonstrates durable crash recovery — a capability not offered by Strands natively. It defines 3 tools where tool 2 crashes with `os._exit(1)`:
 

@@ -12,19 +12,17 @@ This quickstart demonstrates how to run a Google ADK (Agent Development Kit) age
 
 ## Prerequisites
 
-1. [Diagrid CLI](https://docs.diagrid.io/catalyst/references/cli-reference/overview) installed
+1. [Diagrid CLI](https://docs.diagrid.io/references/catalyst/catalyst-cli-intro/) installed
 2. [Python 3.11–3.13](https://www.python.org/downloads/)
 3. [uv](https://docs.astral.sh/uv/getting-started/installation/) installed
 4. A [Google API key](https://aistudio.google.com/)
 
 ## Setup
 
-Install [uv](https://docs.astral.sh/uv/getting-started/installation/) if you don't have it already, then install the dependencies:
+Navigate to the `adk` directory and install the dependencies using `uv`:
 
 ```bash
 cd adk
-
-# uv creates and manages the virtual environment for you
 uv sync
 ```
 
@@ -78,7 +76,7 @@ The agent will:
 2. Use the `find_entertainment` tool to search for options
 3. Return entertainment options with pricing and duration details
 
-## Crash Recovery Test
+## Crash Recovery Test With Catalyst
 
 The `crash_test.py` file demonstrates durable crash recovery — a capability not offered by Google ADK natively. It defines 3 tools where tool 2 crashes with `os._exit(1)`:
 

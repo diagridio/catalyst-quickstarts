@@ -1,26 +1,43 @@
-# Deep Agents - Transportation Planner Agent
+# Deep Agents Quickstart - Transportation Planner
 
-This agent plays the role of **Transportation Planner**, responsible for finding transportation options based on event type and guest count.
+This quickstart demonstrates how to run a Deep Agents agent as a durable Dapr Workflow using the Diagrid Python SDK. The agent acts as a **Transportation Planner** that finds transportation options based on event type and guest count.
 
-## Role
+## What This Quickstart Demonstrates
+
+- **Deep Agents + Dapr Workflows**: Run a Deep Agents agent with durable execution and automatic state persistence
+- **Direct LLM Integration**: Calls OpenAI directly via `langchain-openai` (no Dapr conversation component needed)
+- **Tool Integration**: Transportation search tool with mock results
+- **Pub/Sub Messaging**: Subscribe to a request topic and publish results for event-driven orchestration
+- **REST API**: Trigger agent workflows via HTTP endpoints
+- **Durable Crash Recovery**: Resume a workflow from the last completed step after a crash (see [Crash Recovery Test With Catalyst](#crash-recovery-test-with-catalyst))
+- **Sub-Agent Workflows**: Supervisor/sub-agent orchestration over the Agent Protocol (see [Sub-Agent Workflows](#sub-agent-workflows))
+
+### Role
 
 - **Agent**: `deepagents-agent`
 - **Port**: 8009
 - **Subscribe topic**: `transportation.requests`
 - **Publish topic**: `transportation.results`
 
-## Tools
+### Tools
 
 - `search_transportation(event_type, guest_count)` — Searches for transportation options matching the given event type and guest count.
 
+## Prerequisites
+
+1. [Diagrid CLI](https://docs.diagrid.io/references/catalyst/catalyst-cli-intro/) installed
+2. [Python 3.12–3.13](https://www.python.org/downloads/)
+3. [uv](https://docs.astral.sh/uv/getting-started/installation/) installed
+4. An [OpenAI API key](https://platform.openai.com/api-keys)
+
 ## Setup
 
-### Prerequisites
+Navigate to the `deepagents` directory and install the dependencies using `uv`:
 
-- Python 3.12–3.13
-- [uv](https://docs.astral.sh/uv/getting-started/installation/)
-- [Dapr CLI](https://docs.dapr.io/getting-started/install-dapr-cli/)
-- Redis running locally (for state store and pub/sub)
+```bash
+cd deepagents
+uv sync
+```
 
 ### Set your API key
 
@@ -38,31 +55,23 @@ export OPENAI_API_KEY="your-key-here"
 $env:OPENAI_API_KEY = "your-key-here"
 ```
 
-### Run locally
+## Run with Catalyst
 
-Install [uv](https://docs.astral.sh/uv/getting-started/installation/) if you don't have it already, then install the dependencies:
+### 1. Login and Run
 
-```bash
-uv sync
-```
-
-Set your API key and run:
-
-**macOS/Linux (bash/zsh):**
+Login to Catalyst using the Diagrid CLI:
 
 ```bash
-export OPENAI_API_KEY=<your-key>
-uv run dapr run -f dev-python-deepagents.yaml
+diagrid login
 ```
 
-**Windows (PowerShell):**
+Run the agent with Catalyst:
 
-```powershell
-$env:OPENAI_API_KEY = "<your-key>"
-uv run dapr run -f dev-python-deepagents.yaml
+```bash
+uv run diagrid dev run -f dev-python-deepagents.yaml
 ```
 
-### Test
+### 2. Trigger a Workflow
 
 Choose one of the following to trigger the endpoint:
 
@@ -82,7 +91,7 @@ Invoke-RestMethod -Method Post -Uri 'http://localhost:8888/agent/run' -ContentTy
 
 **VS Code REST Client (any OS):** Open [`test.http`](./test.http) and click *Send Request* above the request. Requires the [REST Client](https://marketplace.visualstudio.com/items?itemName=humao.rest-client) extension.
 
-## Crash Recovery Test
+## Crash Recovery Test With Catalyst
 
 The `crash_test.py` file demonstrates durable crash recovery — a capability powered by Dapr Workflows. It defines 3 tools where tool 2 crashes with `os._exit(1)`:
 
@@ -90,7 +99,7 @@ The `crash_test.py` file demonstrates durable crash recovery — a capability po
 2. **step_two_compare** — compares options (crashes before completing)
 3. **step_three_confirm** — confirms the selection
 
-### First run — trigger and crash
+### 1. First run — trigger and crash
 
 ```bash
 uv run diagrid dev run -f dev-crash-test.yaml
@@ -118,7 +127,7 @@ Invoke-RestMethod -Method Post -Uri 'http://localhost:8001/run' -ContentType 'ap
 
 You'll see tool 1 complete and the process crash at tool 2.
 
-### Fix and resume
+### 2. Fix and resume
 
 Open `crash_test.py` and comment out the crash line:
 
