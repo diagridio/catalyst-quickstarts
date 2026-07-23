@@ -156,7 +156,7 @@ Open `crash_test.py` and comment out the crash line:
 Restart the application:
 
 ```bash
-uv run diagrid dev run -f dev-crash-test.yaml
+uv run diagrid dev run -f dev-crash-test.yaml --approve
 ```
 
 The workflow **resumes from tool 2** — tool 1 is not re-executed. The Dapr workflow engine replays the saved result from Catalyst instead of re-running the tool.
@@ -172,7 +172,7 @@ The `subagent_workflows.py` file demonstrates a supervisor/sub-agent pattern whe
 ### Run
 
 ```bash
-uv run diagrid dev run -f dev-subagent-workflows.yaml
+uv run diagrid dev run -f dev-subagent-workflows.yaml --approve
 ```
 
 This starts three processes:
