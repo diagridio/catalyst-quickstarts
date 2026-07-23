@@ -1,0 +1,28 @@
+version: 1
+common:
+  appLogDestination: console
+  enableAppHealthCheck: false
+  logLevel: info
+  resourcesPath: ./resources
+apps:
+  - appID: mcp-client
+    appDirPath: ./mcp_client
+    appProtocol: http
+    command:
+      - python
+      - main.py
+    env:
+      APP_PORT: "5001"
+    enableAppHealthCheck: false
+    appLogDestination: console
+  - appID: mcp-server
+    appDirPath: ./mcp_server
+    appPort: 8000
+    appProtocol: http
+    command:
+      - python
+      - main.py
+    env:
+      SERVER_SHARED_SECRET: "local-dev-shared-secret"
+    enableAppHealthCheck: false
+    appLogDestination: console
