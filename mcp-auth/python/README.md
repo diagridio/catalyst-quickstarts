@@ -18,10 +18,10 @@ through).
 
 - **MCP behind Catalyst**: An MCP server reached through Catalyst's MCP proxy endpoint
   (`/v1.0/diagrid/mcp/<server>`) instead of directly.
-- **A local server, exposed via tunnel**: `diagrid dev run --app-id mcp-server --app-port 8000`
-  opens a secure tunnel from Catalyst Cloud to your machine — used here for exactly that one
-  purpose, not as a process supervisor — so a server running on `localhost:8000` is reachable
-  from your hosted Catalyst project, with no public endpoint or inbound firewall rule required.
+- **A local server, exposed via tunnel**: `mcp-server` declares an `appPort` in
+  `mcp-auth-quickstart.yaml`, so `diagrid dev run` opens a secure tunnel from Catalyst Cloud to
+  `localhost:8000` for it — reachable from your hosted Catalyst project with no public endpoint
+  or inbound firewall rule required — while also running its process for you.
 - **Authenticating Catalyst to your MCP server**: A static shared-secret header, configured on
   the `MCPServer` resource, that your server validates on every request.
 - **Deny-by-default authorization**: A newly registered MCP server allows no caller to
@@ -75,95 +75,62 @@ pip install -e mcp_client/ -e mcp_server/
 
 ## Running the Quickstart
 
-There's no `diagrid dev run` multi-app file here — every Catalyst resource and every local
-process is its own explicit command, so it's clear exactly what's talking to what. You'll end
-up with three long-running terminals (a tunnel, the server, the client) plus one free terminal
-for the commands below.
-
-### 1. Log in and create the project
+### 1. Log in, create the project, and create the mcp-client App
 
 ```bash
 diagrid login
 diagrid project create mcp-auth --use
 ```
 
-`--use` sets `mcp-auth` as your default project, so most commands below don't need an explicit
-`--project` flag — `diagrid dev run` in step 4 is the one exception, noted there.
+`--use` sets `mcp-auth` as your default project, so the commands below don't need an explicit
+`--project` flag.
 
-### 2. Register the MCP server
+```bash
+diagrid app create mcp-client --wait
+```
+
+A one-off command that returns immediately — no dedicated terminal needed. `mcp-client` is a
+plain caller with no MCP-specific behavior of its own, so a generic Catalyst App is all it needs.
+
+### 2. Register the mcp-server MCP server
 
 ```bash
 diagrid apply -f resources/mcp-server.yaml
 ```
 
-This creates the `mcp-server` MCP server resource pointing at `http://localhost:8000/mcp`, with
-its access policy starting deny-all. It isn't reachable yet: nothing is listening on
-`localhost:8000`, and no upstream credential is configured.
+Also a one-off command, run right after the client's. `mcp-server` doesn't get a plain
+`app create` like `mcp-client` did: it's different because it needs an identity *and* its
+MCP-specific behavior (the proxy endpoint, the access policy) together, and applying the
+`MCPServer` resource is what gives it both at once — creating it as a plain App first would
+collide with that (`cannot create MCPServer "mcp-server": an App ID with the same name already
+exists`). This creates the resource pointing at `http://localhost:8000/mcp`, with its access
+policy starting deny-all and no upstream credential yet — nothing is listening on `localhost:8000`
+until the next step, so it isn't reachable yet either.
 
-### 3. Create the mcp-client App ID
+### 3. Run everything — Terminal 1
 
-```bash
-diagrid appid create mcp-client --wait
-```
-
-This prints an API token — `mcp-client` runs as a plain local process later (not through
-`diagrid dev run`), so you'll export this token yourself in step 6:
-
-```
-🔒 YOUR API_TOKEN: diagrid://v1/.../mcp-client/...
-```
-
-You can always retrieve it again with `diagrid appid get mcp-client -o yaml` (under
-`status.apiToken`). Also note your project's HTTP endpoint, which you'll need in step 6 too:
+`diagrid dev run` is a local dev-loop helper, not a production deployment mechanism — it runs
+multiple processes together, alongside their tunnel connectivity, in one place specifically to
+make local iteration and debugging easier.
 
 ```bash
-diagrid project get mcp-auth
+diagrid dev run -f mcp-auth-quickstart.yaml --project mcp-auth --approve --skip-managed-kv --skip-managed-pubsub --skip-default-resiliency
 ```
 
-```
-Endpoints:
-  http:
-    url:   https://http-prj123456.cloud.r1.diagrid.io:443
-```
+`mcp-auth-quickstart.yaml` also points `resourcesPath` at `./resources`, so `diagrid dev run`
+re-applies the `mcp-server` resource you just registered — harmlessly, since applying is
+idempotent — and recognizes its App identity is already managed by that MCPServer resource, so
+it doesn't try to provision it again. It then launches both services locally, `mcp-client` under
+the App you created in step 1. `mcp-server` declares an `appPort`, so it also gets a secure
+tunnel from Catalyst Cloud to `localhost:8000`; `mcp-client` doesn't declare one, since it only
+calls out to Catalyst's MCP proxy endpoint and never receives inbound requests, so no tunnel is
+opened for it. No manual token or endpoint copying either — `dev run` wires `DAPR_HTTP_ENDPOINT`
+and `DAPR_API_TOKEN` straight into `mcp-client`'s process. Wait for the log output to show both
+apps started before continuing.
 
-### 4. Open the tunnel for mcp-server — Terminal 1
+> Leave `diagrid dev run` running in this terminal and use a second terminal for the steps below.
 
-```bash
-diagrid dev run --app-id mcp-server --app-port 8000 --project mcp-auth --skip-managed-kv --skip-managed-pubsub --skip-default-resiliency
-```
-
-This is the only role `diagrid dev run` plays in this quickstart. With no trailing command, it
-does exactly one thing: open a secure tunnel from Catalyst Cloud to `localhost:8000` for the
-`mcp-server` App ID. It does not run your code — that's the next step. Leave it running.
-
-(`--project` has to be explicit here — without it, `dev run` prompts for an interactive
-confirmation, which just hangs in a non-interactive shell.)
-
-### 5. Run the MCP server — Terminal 2
-
-```bash
-cd mcp_server
-source ../venv/bin/activate
-SERVER_SHARED_SECRET=local-dev-shared-secret python main.py
-```
-
-Leave it running.
-
-### 6. Run the MCP client — Terminal 3
-
-```bash
-cd mcp_client
-source ../venv/bin/activate
-export DAPR_HTTP_ENDPOINT=<the http url from step 3>
-export DAPR_API_TOKEN=<the token from step 3>
-python main.py
-```
-
-Leave it running. Unlike `mcp-server`, `mcp-client` never receives inbound requests through
-Catalyst — it only calls out to Catalyst's MCP proxy endpoint — so it needs no tunnel, just
-these two environment variables.
-
-### 7. See it fail closed (default state) — Terminal 4
+### 4. See it fail closed (default state) — Terminal 2
 
 A freshly registered MCP server starts in two "closed" states at once: `mcp-server` requires a
 shared-secret header that Catalyst hasn't been given yet, and the access policy denies every
@@ -189,8 +156,8 @@ down before anything reaches your tool code:
 }
 ```
 
-Check the `mcp-server` log in Terminal 2 and you'll see why — your server itself is rejecting
-Catalyst:
+Check the `mcp-server` output in Terminal 1 (each app's log lines are labeled with its app ID)
+and you'll see why — your server itself is rejecting Catalyst:
 
 ```
 INFO:     ... "POST /mcp HTTP/1.1" 401 Unauthorized
@@ -225,7 +192,9 @@ spec:
           value: local-dev-shared-secret
 ```
 
-Apply the change from Terminal 4 — Terminals 1-3 keep running as-is, nothing needs restarting:
+Apply the change from your driver terminal (Terminal 2 in the consolidated flow, Terminal 4 if
+you ran every process manually) — everything you started earlier keeps running as-is, nothing
+needs restarting:
 
 ```bash
 diagrid apply -f resources/mcp-server.yaml
@@ -238,7 +207,8 @@ curl -s -X POST http://localhost:5001/run | python -m json.tool
 ```
 
 The response is unchanged — still `Session terminated` for everything. But look at the
-`mcp-server` log in Terminal 2 again:
+`mcp-server` output again (Terminal 1 in the consolidated flow, Terminal 2 if you ran it
+manually):
 
 ```
 INFO:     ... "POST /mcp HTTP/1.1" 200 OK
@@ -389,7 +359,144 @@ server. To tell the two apart when the whole session is failing:
 
 | File | Purpose |
 |------|---------|
+| `mcp-auth-quickstart.yaml` | `diagrid dev run` multi-app file (both services) |
 | `resources/mcp-server.yaml` | The `MCPServer` resource — add the `headers` block here to configure the upstream credential |
 | `mcp_client/main.py` | FastAPI client that discovers and invokes tools through Catalyst |
 | `mcp_server/main.py` | FastMCP server exposing `add` and `get_account_balance`, guarded by a shared-secret middleware |
 | `test.rest` | REST-client requests for manual testing |
+
+## Appendix: Run Every Process Manually
+
+The flow above uses one `diagrid dev run -f` command to launch both services and their tunnel
+together. If you'd rather see every Catalyst resource and every local process as its own
+explicit command — useful for understanding exactly what's talking to what, or for attaching a
+debugger to one process without disturbing the other — use the fully manual version below
+instead. It reaches the identical end state, just via more terminals and more individual
+commands.
+
+Follow this section **instead of** "Running the Quickstart" above, not in addition to it — both
+create the same `mcp-auth` project, App IDs, and MCP server resource, so running both against the
+same project will collide. Once you've gotten this far with either one, "Authenticating to the
+MCP Server" and "Authorizing Tool Calls" above apply the same way regardless of which path you
+used to get here.
+
+### 1. Log in and create the project
+
+```bash
+diagrid login
+diagrid project create mcp-auth --use
+```
+
+`--use` sets `mcp-auth` as your default project, so most commands below don't need an explicit
+`--project` flag — `diagrid dev run` in step 4 is the one exception, noted there.
+
+### 2. Register the MCP server
+
+```bash
+diagrid apply -f resources/mcp-server.yaml
+```
+
+This creates the `mcp-server` MCP server resource pointing at `http://localhost:8000/mcp`, with
+its access policy starting deny-all. It isn't reachable yet: nothing is listening on
+`localhost:8000`, and no upstream credential is configured.
+
+### 3. Create the mcp-client App
+
+```bash
+diagrid app create mcp-client --wait
+```
+
+`mcp-client` runs as a plain local process later (not through `diagrid dev run`), so you'll
+export its API token yourself in step 6. Unlike the old `appid create`, `app create` doesn't
+print the token directly — fetch it with:
+
+```bash
+diagrid app get mcp-client -o yaml
+```
+
+```yaml
+status:
+  apiToken: diagrid://v1/.../mcp-client/...
+```
+
+(under `status.apiToken`). Also note your project's HTTP endpoint, which you'll need in step 6 too:
+
+```bash
+diagrid project get mcp-auth
+```
+
+```
+Endpoints:
+  http:
+    url:   https://http-prj123456.cloud.r1.diagrid.io:443
+```
+
+### 4. Open the tunnel for mcp-server — Terminal 1
+
+```bash
+diagrid dev run --app-id mcp-server --app-port 8000 --project mcp-auth --skip-managed-kv --skip-managed-pubsub --skip-default-resiliency
+```
+
+With no trailing command, `diagrid dev run` does exactly one thing here: open a secure tunnel
+from Catalyst Cloud to `localhost:8000` for the `mcp-server` App ID. It does not run your code —
+that's the next step. Leave it running.
+
+(`--project` has to be explicit here — without it, `dev run` prompts for an interactive
+confirmation, which just hangs in a non-interactive shell.)
+
+### 5. Run the MCP server — Terminal 2
+
+```bash
+cd mcp_server
+source ../venv/bin/activate
+SERVER_SHARED_SECRET=local-dev-shared-secret python main.py
+```
+
+Leave it running.
+
+### 6. Run the MCP client — Terminal 3
+
+```bash
+cd mcp_client
+source ../venv/bin/activate
+export DAPR_HTTP_ENDPOINT=<the http url from step 3>
+export DAPR_API_TOKEN=<the token from step 3>
+python main.py
+```
+
+Leave it running. Unlike `mcp-server`, `mcp-client` never receives inbound requests through
+Catalyst — it only calls out to Catalyst's MCP proxy endpoint — so it needs no tunnel, just
+these two environment variables.
+
+### 7. See it fail closed (default state) — Terminal 4
+
+A freshly registered MCP server starts in two "closed" states at once: `mcp-server` requires a
+shared-secret header that Catalyst hasn't been given yet, and the access policy denies every
+caller and tool by default.
+
+```bash
+curl -s -X POST http://localhost:5001/run | python -m json.tool
+```
+
+Both problems currently look identical from the caller's side — Catalyst tears the session
+down before anything reaches your tool code:
+
+```json
+{
+    "tools": [],
+    "add_result": null,
+    "balance_result": null,
+    "errors": [
+        { "step": "list_tools", "error": "Session terminated" },
+        { "tool": "add", "error": "Session terminated" },
+        { "tool": "get_account_balance", "error": "Session terminated" }
+    ]
+}
+```
+
+Check the `mcp-server` log in Terminal 2 and you'll see why — your server itself is rejecting
+Catalyst:
+
+```
+INFO:     ... "POST /mcp HTTP/1.1" 401 Unauthorized
+```
