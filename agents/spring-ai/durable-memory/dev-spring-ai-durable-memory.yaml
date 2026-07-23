@@ -1,0 +1,8 @@
+version: 1
+common:
+  appLogDestination: console
+apps:
+  - appID: spring-ai-durable-memory
+    appDirPath: ./
+    appPort: 8080
+    command: ["mvn", "spring-boot:run"]

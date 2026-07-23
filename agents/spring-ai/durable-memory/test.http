@@ -1,0 +1,10 @@
+### 1. Start a durable turn under an id you own (blocks ~30s on the slow tool).
+###    Kill the app during this window (request #3), then restart and re-send this exact request.
+POST http://localhost:8080/chat?id=trip-1&conversationId=alice&message=Book a flight to Oslo, reference OSLO-1
+
+### 2. Inspect what the memory advisor has persisted for this conversation.
+###    Before the call succeeds you see the USER question but no ASSISTANT answer.
+GET http://localhost:8080/history?conversationId=alice
+
+### 3. Simulate a crash while the booking above is in flight.
+POST http://localhost:8080/crash/kill
