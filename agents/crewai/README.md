@@ -13,7 +13,7 @@ This quickstart demonstrates how to run a CrewAI agent as a durable Dapr Workflo
 ## Prerequisites
 
 1. [Diagrid CLI](https://docs.diagrid.io/catalyst/references/cli-reference/overview) installed
-2. [Python 3.10+](https://www.python.org/downloads/)
+2. [Python 3.11, 3.12, or 3.13](https://www.python.org/downloads/)
 3. An [OpenAI API key](https://platform.openai.com/api-keys)
 
 ## Setup
