@@ -92,7 +92,7 @@ diagrid app create mcp-client --wait
 A one-off command that returns immediately — no dedicated terminal needed. `mcp-client` is a
 plain caller with no MCP-specific behavior of its own, so a generic Catalyst App is all it needs.
 
-### 2. Register the mcp-server MCP server
+### 2. Register the MCP server
 
 ```bash
 diagrid apply -f resources/mcp-server.yaml
