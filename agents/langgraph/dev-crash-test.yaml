@@ -2,6 +2,6 @@ version: 1
 common:
   appLogDestination: console
 apps:
-  - appID: langgraph-crash-test
+  - appID: langgraph-agent
     appDirPath: ./
     command: ["python", "crash_test.py"]

@@ -22,7 +22,7 @@ This quickstart demonstrates how to run a Google ADK (Agent Development Kit) age
 Navigate to the `adk` directory and install the dependencies using `uv`:
 
 ```bash
-cd adk
+cd agents/adk
 uv sync
 ```
 
@@ -42,12 +42,33 @@ $env:GOOGLE_API_KEY = "your-key-here"
 
 ## Running the Quickstart
 
-### 1. Deploy and Run
+### 1. Login and Run
+
+1. Login to Catalyst using the Diagrid CLI:
 
 ```bash
 diagrid login
-uv run diagrid dev run -f dev-python-adk.yaml
 ```
+
+2. Create a new Catalyst project for the quickstart and use it as the default project for the current session:
+
+```bash
+diagrid project create adk-quickstart --enable-agent-infrastructure --wait --use
+```
+
+3. Create an agent for the project:
+
+```bash
+diagrid agent create adk-agent --wait
+```
+
+4. Run the agent with Catalyst:
+
+```bash
+uv run diagrid dev run -f dev-python-adk.yaml --approve
+```
+
+Wait until the output shows `Uvicorn running on <localhost:port>`.
 
 ### 2. Trigger a Workflow
 
@@ -76,6 +97,10 @@ The agent will:
 2. Use the `find_entertainment` tool to search for options
 3. Return entertainment options with pricing and duration details
 
+### 3. Inspecting the Results in Catalyst
+
+Open the [Catalyst dashboard](https://catalyst.diagrid.io/agents) in your browser and navigate to Agents > entertainment-planner. Then select the most recent agent workflow run to view output.
+
 ## Crash Recovery Test With Catalyst
 
 The `crash_test.py` file demonstrates durable crash recovery — a capability not offered by Google ADK natively. It defines 3 tools where tool 2 crashes with `os._exit(1)`:
@@ -87,10 +112,10 @@ The `crash_test.py` file demonstrates durable crash recovery — a capability no
 ### First run — trigger and crash
 
 ```bash
-uv run diagrid dev run -f dev-crash-test.yaml
+uv run diagrid dev run -f dev-crash-test.yaml --approve
 ```
 
-Wait for `Runner started — ready to accept requests`, then from another terminal:
+Wait for `Uvicorn running on <localhost:port>`, then from another terminal:
 
 Choose one of the following to trigger the endpoint:
 

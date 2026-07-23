@@ -2,6 +2,6 @@ version: 1
 common:
   appLogDestination: console
 apps:
-  - appID: adk-crash-test
+  - appID: adk-agent
     appDirPath: ./
     command: ["python", "crash_test.py"]

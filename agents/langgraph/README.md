@@ -23,7 +23,7 @@ This quickstart demonstrates how to run a LangGraph graph as a durable Dapr Work
 Navigate to the `langgraph` directory and install the dependencies using `uv`:
 
 ```bash
-cd langgraph
+cd agents/langgraph
 uv sync
 ```
 
@@ -47,17 +47,31 @@ $env:OPENAI_API_KEY = "your-key-here"
 
 ### 1. Login and Run
 
-Login to Catalyst using the Diagrid CLI:
+1. Login to Catalyst using the Diagrid CLI:
 
 ```bash
 diagrid login
 ```
 
-Run the graph with Catalyst:
+2. Create a new Catalyst project for the quickstart and use it as the default project for the current session:
 
 ```bash
-uv run diagrid dev run -f dev-python-langgraph.yaml
+diagrid project create langgraph-quickstart --enable-agent-infrastructure --wait --use
 ```
+
+3. Create an agent for the project:
+
+```bash
+diagrid agent create langgraph-agent --wait
+```
+
+4. Run the graph with Catalyst:
+
+```bash
+uv run diagrid dev run -f dev-python-langgraph.yaml --approve
+```
+
+Wait until the output shows `Uvicorn running on <localhost:port>`.
 
 ### 2. Trigger a Workflow
 
@@ -87,6 +101,10 @@ The agent will:
 3. Use the `check_availability` tool to check venue availability
 4. Return available time slots for the requested date
 
+### 3. Inspecting the Results in Catalyst
+
+Open the [Catalyst dashboard](https://catalyst.diagrid.io/agents) in your browser and navigate to Agents > schedule-planner. Then select the most recent agent workflow run to view output.
+
 ## Crash Recovery Test With Catalyst
 
 The `crash_test.py` file demonstrates durable crash recovery — a capability not offered by LangGraph natively. It defines a 3-node graph where node 2 crashes with `os._exit(1)`:
@@ -98,10 +116,10 @@ The `crash_test.py` file demonstrates durable crash recovery — a capability no
 ### 1. First run — trigger and crash
 
 ```bash
-uv run diagrid dev run -f dev-crash-test.yaml
+uv run diagrid dev run -f dev-crash-test.yaml --approve
 ```
 
-Wait for `Runner started — ready to accept requests`, then from another terminal:
+Wait for `Uvicorn running on <localhost:port>`, then from another terminal:
 
 Choose one of the following to trigger the endpoint:
 

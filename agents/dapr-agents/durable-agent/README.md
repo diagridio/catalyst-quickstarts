@@ -20,10 +20,10 @@ This quickstart demonstrates how to build a durable agent using [Dapr Agents](ht
 
 ## Setup
 
-Install [uv](https://docs.astral.sh/uv/getting-started/installation/) if you don't have it already. Inside the project directory, install the dependencies:
+Navigate to the `dapr-agents/durable-agent` directory and install the dependencies using `uv`:
 
 ```bash
-# uv creates and manages the virtual environment for you
+cd agents/dapr-agents/durable-agent
 uv sync
 ```
 
@@ -39,14 +39,33 @@ metadata:
 
 ## Running the Quickstart
 
-### 1. Deploy and Run on Catalyst
+### 1. Login and Run
 
-The following will create a new project in your Catalyst organization named `invitations-manager`.
+1. Login to Catalyst using the Diagrid CLI:
 
 ```bash
 diagrid login
-uv run diagrid dev run -f dev-python-durable-agent.yaml --project invitations-manager
 ```
+
+2. Create a new Catalyst project for the quickstart and use it as the default project for the current session:
+
+```bash
+diagrid project create durable-agent-quickstart --enable-agent-infrastructure --wait --use
+```
+
+3. Create an agent for the project:
+
+```bash
+diagrid agent create dapr-agent --wait
+```
+
+4. Run the agent with Catalyst:
+
+```bash
+uv run diagrid dev run -f dev-python-durable-agent.yaml --approve
+```
+
+Wait until the output shows `Uvicorn running on <localhost:port>`.
 
 ### 2. Trigger a Durable Agent run
 
@@ -75,9 +94,9 @@ The agent will:
 2. Use the `send_invitations` tool to dispatch invitations
 3. Return a breakdown of invitations sent via email and physical mail
 
-### 3. View the agent in Catalyst
+### 3. Inspecting the Results in Catalyst
 
-Navigate to the Catalyst console to view the agent runs and the durable workflows that are created: [http://catalyst.diagrid.io/](http://catalyst.diagrid.io/).
+Open the [Catalyst dashboard](https://catalyst.diagrid.io/agents) in your browser and navigate to Agents > invitations-manager. Then select the most recent agent workflow run to view output.
 
 ## Part of the Event Planning Team
 

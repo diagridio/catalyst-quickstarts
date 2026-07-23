@@ -22,7 +22,7 @@ This quickstart demonstrates how to run an OpenAI Agents SDK agent as a durable 
 Navigate to the `openai-agents` directory and install the dependencies using `uv`:
 
 ```bash
-cd openai-agents
+cd agents/openai-agents
 uv sync
 ```
 
@@ -46,17 +46,31 @@ $env:OPENAI_API_KEY = "your-key-here"
 
 ### 1. Login and Run
 
-Login to Catalyst using the Diagrid CLI:
+1. Login to Catalyst using the Diagrid CLI:
 
 ```bash
 diagrid login
 ```
 
-Run the agent with Catalyst:
+2. Create a new Catalyst project for the quickstart and use it as the default project for the current session:
 
 ```bash
-uv run diagrid dev run -f dev-python-openai.yaml
+diagrid project create openai-quickstart --enable-agent-infrastructure --wait --use
 ```
+
+3. Create an agent for the project:
+
+```bash
+diagrid agent create openai-agent --wait
+```
+
+4. Run the agent with Catalyst:
+
+```bash
+uv run diagrid dev run -f dev-python-openai.yaml --approve
+```
+
+Wait until the output shows `Uvicorn running on <localhost:port>`.
 
 ### 2. Trigger a Workflow
 
@@ -85,6 +99,10 @@ The agent will:
 2. Use the `search_catering` tool to find available options
 3. Return catering options with pricing for the requested cuisine and guest count
 
+### 3. Inspecting the Results in Catalyst
+
+Open the [Catalyst dashboard](https://catalyst.diagrid.io/agents) in your browser and navigate to Agents > catering-coordinator. Then select the most recent agent workflow run to view output.
+
 ## Crash Recovery Test With Catalyst
 
 The `crash_test.py` file demonstrates durable crash recovery — a capability not offered by the OpenAI Agents SDK natively. It defines 3 tools where tool 2 crashes with `os._exit(1)`:
@@ -96,10 +114,10 @@ The `crash_test.py` file demonstrates durable crash recovery — a capability no
 ### 1. First run — trigger and crash
 
 ```bash
-uv run diagrid dev run -f dev-crash-test.yaml
+uv run diagrid dev run -f dev-crash-test.yaml --approve
 ```
 
-Wait for `Runner started — ready to accept requests`, then from another terminal:
+Wait for `Uvicorn running on <localhost:port>`, then from another terminal:
 
 Choose one of the following to trigger the endpoint:
 
@@ -132,7 +150,7 @@ Open `crash_test.py` and comment out the crash line:
 Restart the application:
 
 ```bash
-uv run diagrid dev run -f dev-crash-test.yaml
+uv run diagrid dev run -f dev-crash-test.yaml --approve
 ```
 
 The workflow **resumes from tool 2** — tool 1 is not re-executed. The Dapr workflow engine replays the saved result from Catalyst instead of re-running the tool.

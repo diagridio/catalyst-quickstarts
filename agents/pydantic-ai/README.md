@@ -34,7 +34,7 @@ This quickstart demonstrates how to run a Pydantic AI agent as a durable Dapr Wo
 Navigate to the `pydantic-ai` directory and install the dependencies using `uv`:
 
 ```bash
-cd pydantic-ai
+cd agents/pydantic-ai
 uv sync
 ```
 
@@ -58,17 +58,31 @@ $env:OPENAI_API_KEY = "your-key-here"
 
 ### 1. Login and Run
 
-Login to Catalyst using the Diagrid CLI:
+1. Login to Catalyst using the Diagrid CLI:
 
 ```bash
 diagrid login
 ```
 
-Run the agent with Catalyst:
+2. Create a new Catalyst project for the quickstart and use it as the default project for the current session:
 
 ```bash
-uv run dapr run -f dev-python-pydantic-ai.yaml
+diagrid project create pydantic-ai-quickstart --enable-agent-infrastructure --wait --use
 ```
+
+3. Create an agent for the project:
+
+```bash
+diagrid agent create pydantic-ai-agent --wait
+```
+
+4. Run the agent with Catalyst:
+
+```bash
+uv run diagrid dev run -f dev-python-pydantic-ai.yaml --approve
+```
+
+Wait until the output shows `Uvicorn running on <localhost:port>`.
 
 ### 2. Trigger a Workflow
 
@@ -90,6 +104,10 @@ Invoke-RestMethod -Method Post -Uri 'http://localhost:8888/agent/run' -ContentTy
 
 **VS Code REST Client (any OS):** Open [`test.http`](./test.http) and click *Send Request* above the request. Requires the [REST Client](https://marketplace.visualstudio.com/items?itemName=humao.rest-client) extension.
 
+### 3. Inspecting the Results in Catalyst
+
+Open the [Catalyst dashboard](https://catalyst.diagrid.io/agents) in your browser and navigate to Agents > decoration-planner. Then select the most recent agent workflow run to view output.
+
 ## Crash Recovery Test With Catalyst
 
 The `crash_test.py` file demonstrates durable crash recovery — a capability not offered by Pydantic AI natively. It defines 3 tools where tool 2 crashes with `os._exit(1)`:
@@ -104,7 +122,7 @@ The `crash_test.py` file demonstrates durable crash recovery — a capability no
 uv run diagrid dev run -f dev-crash-test.yaml
 ```
 
-Wait for `Runner started — ready to accept requests`, then from another terminal:
+Wait for `Uvicorn running on <localhost:port>`, then from another terminal:
 
 Choose one of the following to trigger the endpoint:
 

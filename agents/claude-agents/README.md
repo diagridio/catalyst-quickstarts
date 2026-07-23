@@ -23,7 +23,7 @@ This quickstart demonstrates how to run a [Claude Agent SDK](https://docs.claude
 Navigate to the `claude-agents` directory and install the dependencies using `uv`:
 
 ```bash
-cd claude-agents
+cd agents/claude-agents
 uv sync
 ```
 
@@ -47,17 +47,31 @@ $env:ANTHROPIC_API_KEY = "your-key-here"
 
 ### 1. Login and Run
 
-Login to Catalyst using the Diagrid CLI:
+1. Login to Catalyst using the Diagrid CLI:
 
 ```bash
 diagrid login
 ```
 
-Deploy to Catalyst and run it:
+2. Create a new Catalyst project for the quickstart and use it as the default project for the current session:
 
 ```bash
-uv run diagrid dev run -f dev-python-claude.yaml
+diagrid project create claude-quickstart --enable-agent-infrastructure --wait --use
 ```
+
+3. Create an agent for the project:
+
+```bash
+diagrid agent create claude-agent --wait
+```
+
+4. Run the agent with Catalyst:
+
+```bash
+uv run diagrid dev run -f dev-python-claude.yaml --approve
+```
+
+Wait until the output shows `Uvicorn running on <localhost:port>`.
 
 ### 2. Trigger a Workflow
 
@@ -86,6 +100,10 @@ The agent will:
 2. Use the `search_photography` tool to find available packages
 3. Return photography options with pricing for the requested event type and coverage hours
 
+### 3. Inspecting the Results in Catalyst
+
+Open the [Catalyst dashboard](https://catalyst.diagrid.io/agents) in your browser and navigate to Agents > photography-planner. Then select the most recent agent workflow run to view output.
+
 ## Crash Recovery Test With Catalyst
 
 The `crash_test.py` file demonstrates durable crash recovery — a capability not offered by the Claude Agent SDK natively. It defines 3 tools where tool 2 crashes with `os._exit(1)`:
@@ -97,10 +115,10 @@ The `crash_test.py` file demonstrates durable crash recovery — a capability no
 ### First run — trigger and crash
 
 ```bash
-uv run diagrid dev run -f dev-crash-test.yaml
+uv run diagrid dev run -f dev-crash-test.yaml --approve
 ```
 
-Wait for `Runner started — ready to accept requests`, then from another terminal:
+Wait for `Uvicorn running on <localhost:port>`, then from another terminal:
 
 Choose one of the following to trigger the endpoint:
 
