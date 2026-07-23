@@ -169,6 +169,14 @@ The `subagent_workflows.py` file demonstrates a supervisor/sub-agent pattern whe
 - **Analyst** — takes research findings and produces a structured analysis report
 - **Supervisor** — orchestrates the researcher and analyst sequentially, then synthesizes their results
 
+### Create the sub-agents
+
+```bash
+diagrid agent create deepagents-researcher --wait
+diagrid agent create deepagents-analyst --wait
+diagrid agent create deepagents-supervisor --wait
+```
+
 ### Run
 
 ```bash
