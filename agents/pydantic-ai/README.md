@@ -17,7 +17,7 @@ This agent is part of the **Event Planning Team** quickstart scenario. It plays 
 
 ### Prerequisites
 
-- Python 3.12+
+- Python 3.12 or 3.13
 - [Dapr CLI](https://docs.dapr.io/getting-started/install-dapr-cli/)
 - Redis running locally (for state store and pub/sub)
 ### Set your API key
