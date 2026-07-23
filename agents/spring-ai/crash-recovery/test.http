@@ -1,0 +1,6 @@
+### 1. Book under an id you own — blocks ~30s while the slow tool "commits".
+###    Kill the app during this window (request below), then restart and re-send this exact request.
+GET http://localhost:8080/crash/book?id=trip-42&reference=ABC123
+
+### 2. Simulate a crash: SIGKILL the app while the booking above is in flight.
+POST http://localhost:8080/crash/kill
