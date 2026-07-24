@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-parent</artifactId>
+    <version>4.0.5</version>
+    <relativePath/>
+  </parent>
+
+  <groupId>io.diagrid.quickstart.springai</groupId>
+  <artifactId>durable-memory</artifactId>
+  <version>1.0.0</version>
+  <name>durable-memory</name>
+  <description>Catalyst Spring AI Quickstart — durable chat with memory, showing that response advisors run only after a successful call</description>
+
+  <properties>
+    <java.version>21</java.version>
+    <spring-ai.version>2.0.0</spring-ai.version>
+    <dapr.version>1.18.0</dapr.version>
+    <dapr-spring-ai.version>0.1.0</dapr-spring-ai.version>
+  </properties>
+
+  <dependencyManagement>
+    <dependencies>
+      <!-- Align Netty across Dapr's grpc-netty (4.1) and Spring Boot 4 / reactor-netty (4.2); the
+           mixed state otherwise breaks the reactor HTTP client (MultiThreadIoEventLoopGroup is 4.2+).
+           Declared first so it wins over the versions the other BOMs pull in. -->
+      <dependency>
+        <groupId>io.netty</groupId>
+        <artifactId>netty-bom</artifactId>
+        <version>4.2.12.Final</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.springframework.ai</groupId>
+        <artifactId>spring-ai-bom</artifactId>
+        <version>${spring-ai.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+      <dependency>
+        <groupId>io.dapr</groupId>
+        <artifactId>dapr-sdk-bom</artifactId>
+        <version>${dapr.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
+  <dependencies>
+    <!-- REST endpoints. -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+
+    <!-- Spring AI OpenAI model: ChatClient + tool calling (version managed by the BOM). -->
+    <dependency>
+      <groupId>org.springframework.ai</groupId>
+      <artifactId>spring-ai-starter-model-openai</artifactId>
+    </dependency>
+
+    <!-- Durability: each ChatClient.call() runs as a Dapr Workflow. -->
+    <dependency>
+      <groupId>io.diagrid.dapr</groupId>
+      <artifactId>dapr-spring-ai-starter</artifactId>
+      <version>${dapr-spring-ai.version}</version>
+    </dependency>
+
+    <!-- Chat memory backed by a Dapr state store (the Catalyst-managed 'agent-memory' store). Backs
+         Spring AI's ChatMemory so MessageChatMemoryAdvisor persists conversations durably. -->
+    <dependency>
+      <groupId>io.diagrid.dapr</groupId>
+      <artifactId>dapr-spring-ai-memory</artifactId>
+      <version>${dapr-spring-ai.version}</version>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-maven-plugin</artifactId>
+      </plugin>
+    </plugins>
+  </build>
+</project>
