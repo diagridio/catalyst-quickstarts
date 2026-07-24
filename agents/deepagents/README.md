@@ -1,25 +1,44 @@
-# Deep Agents - Transportation Planner Agent
+# Deep Agents Quickstart - Transportation Planner
 
-This agent plays the role of **Transportation Planner**, responsible for finding transportation options based on event type and guest count.
+This quickstart demonstrates how to run a Deep Agents agent as a durable Dapr Workflow using the Diagrid Python SDK. The agent acts as a **Transportation Planner** that finds transportation options based on event type and guest count.
 
-## Role
+## What This Quickstart Demonstrates
+
+- **Deep Agents + Dapr Workflows**: Run a Deep Agents agent with durable execution and automatic state persistence
+- **Direct LLM Integration**: Calls OpenAI directly via `langchain-openai` (no Dapr conversation component needed)
+- **Tool Integration**: Transportation search tool with mock results
+- **Pub/Sub Messaging**: Subscribe to a request topic and publish results for event-driven orchestration
+- **REST API**: Trigger agent workflows via HTTP endpoints
+- **Durable Crash Recovery**: Resume a workflow from the last completed step after a crash (see [Crash Recovery Test With Catalyst](#crash-recovery-test-with-catalyst))
+- **Sub-Agent Workflows**: Supervisor/sub-agent orchestration over the Agent Protocol (see [Sub-Agent Workflows](#sub-agent-workflows))
+
+### Role
 
 - **Agent**: `deepagents-agent`
 - **Port**: 8009
 - **Subscribe topic**: `transportation.requests`
 - **Publish topic**: `transportation.results`
 
-## Tools
+### Tools
 
 - `search_transportation(event_type, guest_count)` — Searches for transportation options matching the given event type and guest count.
 
+## Prerequisites
+
+1. [Diagrid CLI](https://docs.diagrid.io/references/catalyst/catalyst-cli-intro/) installed
+2. [Python 3.12–3.13](https://www.python.org/downloads/)
+3. [uv](https://docs.astral.sh/uv/getting-started/installation/) installed
+4. An [OpenAI API key](https://platform.openai.com/api-keys)
+
 ## Setup
 
-### Prerequisites
+Navigate to the `deepagents` directory and install the dependencies using `uv`:
 
-- Python 3.12 or 3.13
-- [Dapr CLI](https://docs.dapr.io/getting-started/install-dapr-cli/)
-- Redis running locally (for state store and pub/sub)
+```bash
+cd agents/deepagents
+uv sync
+```
+
 ### Set your API key
 
 This quickstart uses OpenAI, but you can use any LLM provider supported by Deep Agents.
@@ -36,25 +55,37 @@ export OPENAI_API_KEY="your-key-here"
 $env:OPENAI_API_KEY = "your-key-here"
 ```
 
-### Run locally
+## Run with Catalyst
 
-**macOS/Linux (bash/zsh):**
+### 1. Login and Run
+
+1. Login to Catalyst using the Diagrid CLI:
 
 ```bash
-pip install -r requirements.txt
-export OPENAI_API_KEY=<your-key>
-dapr run -f dev-python-deepagents.yaml
+diagrid login
 ```
 
-**Windows (PowerShell):**
+2. Create a new Catalyst project for the quickstart and use it as the default project for the current session:
 
-```powershell
-pip install -r requirements.txt
-$env:OPENAI_API_KEY = "<your-key>"
-dapr run -f dev-python-deepagents.yaml
+```bash
+diagrid project create deepagents-quickstart --enable-agent-infrastructure --wait --use
 ```
 
-### Test
+3. Create an agent for the project:
+
+```bash
+diagrid agent create deepagents-agent --wait
+```
+
+4. Run the agent with Catalyst:
+
+```bash
+uv run diagrid dev run -f dev-python-deepagents.yaml --approve
+```
+
+Wait until the output shows `Uvicorn running on <localhost:port>`.
+
+### 2. Trigger a Workflow
 
 Choose one of the following to trigger the endpoint:
 
@@ -74,7 +105,11 @@ Invoke-RestMethod -Method Post -Uri 'http://localhost:8888/agent/run' -ContentTy
 
 **VS Code REST Client (any OS):** Open [`test.http`](./test.http) and click *Send Request* above the request. Requires the [REST Client](https://marketplace.visualstudio.com/items?itemName=humao.rest-client) extension.
 
-## Crash Recovery Test
+### 3. Inspecting the Results in Catalyst
+
+Open the [Catalyst dashboard](https://catalyst.diagrid.io/agents) in your browser and navigate to Agents > transportation-planner. Then select the most recent agent workflow run to view output.
+
+## Crash Recovery Test With Catalyst
 
 The `crash_test.py` file demonstrates durable crash recovery — a capability powered by Dapr Workflows. It defines 3 tools where tool 2 crashes with `os._exit(1)`:
 
@@ -82,13 +117,13 @@ The `crash_test.py` file demonstrates durable crash recovery — a capability po
 2. **step_two_compare** — compares options (crashes before completing)
 3. **step_three_confirm** — confirms the selection
 
-### First run — trigger and crash
+### 1. First run — trigger and crash
 
 ```bash
-diagrid dev run -f dev-crash-test.yaml
+uv run diagrid dev run -f dev-crash-test.yaml --approve
 ```
 
-Wait for `Runner started — ready to accept requests`, then from another terminal:
+Wait for `Uvicorn running on <localhost:port>`, then from another terminal:
 
 Choose one of the following to trigger the endpoint:
 
@@ -110,7 +145,7 @@ Invoke-RestMethod -Method Post -Uri 'http://localhost:8001/run' -ContentType 'ap
 
 You'll see tool 1 complete and the process crash at tool 2.
 
-### Fix and resume
+### 2. Fix and resume
 
 Open `crash_test.py` and comment out the crash line:
 
@@ -121,7 +156,7 @@ Open `crash_test.py` and comment out the crash line:
 Restart the application:
 
 ```bash
-diagrid dev run -f dev-crash-test.yaml
+uv run diagrid dev run -f dev-crash-test.yaml --approve
 ```
 
 The workflow **resumes from tool 2** — tool 1 is not re-executed. The Dapr workflow engine replays the saved result from Catalyst instead of re-running the tool.
@@ -134,10 +169,18 @@ The `subagent_workflows.py` file demonstrates a supervisor/sub-agent pattern whe
 - **Analyst** — takes research findings and produces a structured analysis report
 - **Supervisor** — orchestrates the researcher and analyst sequentially, then synthesizes their results
 
+### Create the sub-agents
+
+```bash
+diagrid agent create deepagents-researcher --wait
+diagrid agent create deepagents-analyst --wait
+diagrid agent create deepagents-supervisor --wait
+```
+
 ### Run
 
 ```bash
-diagrid dev run -f dev-subagent-workflows.yaml
+uv run diagrid dev run -f dev-subagent-workflows.yaml --approve
 ```
 
 This starts three processes:

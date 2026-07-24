@@ -12,36 +12,18 @@ This quickstart demonstrates how to run a CrewAI agent as a durable Dapr Workflo
 
 ## Prerequisites
 
-1. [Diagrid CLI](https://docs.diagrid.io/catalyst/references/cli-reference/overview) installed
-2. [Python 3.11, 3.12, or 3.13](https://www.python.org/downloads/)
-3. An [OpenAI API key](https://platform.openai.com/api-keys)
+1. [Diagrid CLI](https://docs.diagrid.io/references/catalyst/catalyst-cli-intro/) installed
+2. [Python 3.11–3.13](https://www.python.org/downloads/)
+3. [uv](https://docs.astral.sh/uv/getting-started/installation/) installed
+4. An [OpenAI API key](https://platform.openai.com/api-keys)
 
 ## Setup
 
-**macOS/Linux (bash/zsh):**
+Navigate to the `crewai` directory and install the dependencies using `uv`:
 
 ```bash
-cd crewai
-
-# Create and activate virtual environment
-python -m venv .venv
-source .venv/bin/activate
-
-# Install dependencies
-pip install -r requirements.txt
-```
-
-**Windows (PowerShell):**
-
-```powershell
-cd crewai
-
-# Create and activate virtual environment
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-
-# Install dependencies
-pip install -r requirements.txt
+cd agents/crewai
+uv sync
 ```
 
 ### Set your API key
@@ -60,14 +42,35 @@ export OPENAI_API_KEY="your-key-here"
 $env:OPENAI_API_KEY = "your-key-here"
 ```
 
-## Running the Quickstart
+## Run with Catalyst
 
-### 1. Deploy and Run
+### 1. Login and Run
+
+1. Login to Catalyst using the Diagrid CLI:
 
 ```bash
 diagrid login
-diagrid dev run -f dev-python-crewai.yaml
 ```
+
+2. Create a new Catalyst project for the quickstart and use it as the default project for the current session:
+
+```bash
+diagrid project create crewai-quickstart --enable-agent-infrastructure --wait --use
+```
+
+3. Create an agent for the project:
+
+```bash
+diagrid agent create crewai-agent --wait
+```
+
+4. Run the agent with Catalyst:
+
+```bash
+uv run diagrid dev run -f dev-python-crewai.yaml  --approve
+```
+
+Wait until the output shows `Uvicorn running on <localhost:port>`.
 
 ### 2. Trigger a Workflow
 
@@ -96,7 +99,11 @@ The agent will:
 2. Use the `search_venues` tool to find available venues
 3. Return venue options with pricing and capacity details
 
-## Crash Recovery Test
+### 3. Inspecting the Results in Catalyst
+
+Open the [Catalyst dashboard](https://catalyst.diagrid.io/agents) in your browser and navigate to Agents > venue-scout. Then select the most recent agent workflow run to view output.
+
+## Crash Recovery Test With Catalyst
 
 The `crash_test.py` file demonstrates durable crash recovery — a capability not offered by CrewAI natively. It defines 3 tools where tool 2 crashes with `os._exit(1)`:
 
@@ -107,10 +114,10 @@ The `crash_test.py` file demonstrates durable crash recovery — a capability no
 ### First run — trigger and crash
 
 ```bash
-diagrid dev run -f dev-crash-test.yaml
+uv run diagrid dev run -f dev-crash-test.yaml --approve
 ```
 
-Wait for `Runner started — ready to accept requests`, then from another terminal:
+Wait for ``Uvicorn running on <localhost:port>``, then from another terminal:
 
 Choose one of the following to trigger the endpoint:
 
@@ -143,7 +150,7 @@ Open `crash_test.py` and comment out the crash line:
 Restart the application:
 
 ```bash
-diagrid dev run -f dev-crash-test.yaml
+uv run diagrid dev run -f dev-crash-test.yaml
 ```
 
 The workflow **resumes from tool 2** — tool 1 is not re-executed. The Dapr workflow engine replays the saved result from Catalyst instead of re-running the tool.

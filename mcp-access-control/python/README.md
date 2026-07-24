@@ -55,7 +55,7 @@ To find out more on developing and operating MCPs servers read [MCP on Diagrid C
 
 ## Prerequisites
 
-1. [Diagrid CLI](https://docs.diagrid.io/catalyst/references/cli-reference/overview) installed
+1. [Diagrid CLI](https://docs.diagrid.io/references/catalyst/catalyst-cli-intro/) installed
 2. [Python 3.12+](https://www.python.org/downloads/)
 
 ## Setup

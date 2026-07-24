@@ -2,6 +2,6 @@ version: 1
 common:
   appLogDestination: console
 apps:
-  - appID: crewai-crash-test
+  - appID: crewai-agent
     appDirPath: ./
     command: ["python", "crash_test.py"]

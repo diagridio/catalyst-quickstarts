@@ -11,16 +11,16 @@ This quickstart demonstrates how to run a Microsoft Agent Framework agent as a d
 
 ## Prerequisites
 
-1. [Diagrid CLI](https://docs.diagrid.io/catalyst/references/cli-reference/overview) installed
-2. [.NET 9 SDK](https://dotnet.microsoft.com/download/dotnet/9.0)
+1. [Diagrid CLI](https://docs.diagrid.io/references/catalyst/catalyst-cli-intro/) installed
+2. [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
 3. An [OpenAI API key](https://platform.openai.com/api-keys)
 
 ## Setup
 
-```bash
-cd microsoft-dotnet
+Navigate to the `microsoft-dotnet` directory and install the dependencies using `dotnet build`:
 
-# Build the project
+```bash
+cd agents/microsoft-dotnet
 dotnet build
 ```
 
@@ -38,14 +38,35 @@ export OPENAI_API_KEY="your-key-here"
 $env:OPENAI_API_KEY = "your-key-here"
 ```
 
-## Running the Quickstart
+## Run with Catalyst
 
-### 1. Deploy and Run
+### 1. Login and Run
+
+1. Login to Catalyst using the Diagrid CLI:
 
 ```bash
 diagrid login
-diagrid dev run -f dev-dotnet-agent.yaml --project dotnet-agent-qs --approve
 ```
+
+2. Create a new Catalyst project for the quickstart and use it as the default project for the current session:
+
+```bash
+diagrid project create dotnet-quickstart --enable-agent-infrastructure --wait --use
+```
+
+3. Create an agent for the project:
+
+```bash
+diagrid agent create dotnet-agent --wait
+```
+
+4. Run the agent with Catalyst:
+
+```bash
+diagrid dev run -f dev-dotnet-agent.yaml --approve
+```
+
+Wait until the output shows `Established gRPC bidirectional stream with Dapr sidecar`.
 
 ### 2. Trigger the Agent
 
@@ -83,7 +104,7 @@ You'll see:
 
 The process exits — this is expected.
 
-## Crash Recovery
+### 3. Crash Recovery with Catalyst
 
 Open `Program.cs` and comment out the crash line:
 
@@ -94,10 +115,10 @@ Open `Program.cs` and comment out the crash line:
 Restart:
 
 ```bash
-diagrid dev run -f dev-dotnet-agent.yaml --project dotnet-agent-qs --approve
+diagrid dev run -f dev-dotnet-agent.yaml
 ```
 
-You do **not** need to curl again — the existing workflow resumes automatically:
+You do **not** need to send a request again — the existing workflow resumes automatically:
 
 ```text
 == APP == >>> TOOL 1: Searching venues in 'Austin'...
@@ -108,10 +129,14 @@ You do **not** need to curl again — the existing workflow resumes automaticall
 == APP == >>> TOOL 3 COMPLETE: Booking confirmed for Grand Ballroom
 ```
 
+### 4. Inspecting the Results in Catalyst
+
+Open the [Catalyst dashboard](https://catalyst.diagrid.io/agents) in your browser and navigate to Agents > EventPlannerAgent. Then select the most recent agent workflow run to view output.
+
 ## Clean Up
 
 Stop the running application with `Ctrl+C`, then delete the Catalyst project:
 
 ```bash
-diagrid project delete dotnet-agent-qs
+diagrid project delete dotnet-quickstart
 ```

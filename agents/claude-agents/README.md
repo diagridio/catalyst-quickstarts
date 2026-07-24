@@ -13,36 +13,18 @@ This quickstart demonstrates how to run a [Claude Agent SDK](https://docs.claude
 
 ## Prerequisites
 
-1. [Diagrid CLI](https://docs.diagrid.io/catalyst/references/cli-reference/overview) installed
+1. [Diagrid CLI](https://docs.diagrid.io/references/catalyst/catalyst-cli-intro/) installed
 2. [Python 3.11–3.13](https://www.python.org/downloads/) (the Diagrid SDK does not yet support 3.14)
-3. An [Anthropic API key](https://console.anthropic.com/settings/keys)
+3. [uv](https://docs.astral.sh/uv/getting-started/installation/) installed
+4. An [Anthropic API key](https://console.anthropic.com/settings/keys)
 
 ## Setup
 
-**macOS/Linux (bash/zsh):**
+Navigate to the `claude-agents` directory and install the dependencies using `uv`:
 
 ```bash
-cd claude-agents
-
-# Create and activate virtual environment
-python3.13 -m venv .venv
-source .venv/bin/activate
-
-# Install dependencies
-pip install -r requirements.txt
-```
-
-**Windows (PowerShell):**
-
-```powershell
-cd claude-agents
-
-# Create and activate virtual environment
-py -3.13 -m venv .venv
-.\.venv\Scripts\Activate.ps1
-
-# Install dependencies
-pip install -r requirements.txt
+cd agents/claude-agents
+uv sync
 ```
 
 ### Set your API key
@@ -61,14 +43,35 @@ export ANTHROPIC_API_KEY="your-key-here"
 $env:ANTHROPIC_API_KEY = "your-key-here"
 ```
 
-## Running the Quickstart
+## Run with Catalyst
 
-### 1. Deploy and Run
+### 1. Login and Run
+
+1. Login to Catalyst using the Diagrid CLI:
 
 ```bash
 diagrid login
-diagrid dev run -f dev-python-claude.yaml
 ```
+
+2. Create a new Catalyst project for the quickstart and use it as the default project for the current session:
+
+```bash
+diagrid project create claude-quickstart --enable-agent-infrastructure --wait --use
+```
+
+3. Create an agent for the project:
+
+```bash
+diagrid agent create claude-agent --wait
+```
+
+4. Run the agent with Catalyst:
+
+```bash
+uv run diagrid dev run -f dev-python-claude.yaml --approve
+```
+
+Wait until the output shows `Uvicorn running on <localhost:port>`.
 
 ### 2. Trigger a Workflow
 
@@ -97,7 +100,11 @@ The agent will:
 2. Use the `search_photography` tool to find available packages
 3. Return photography options with pricing for the requested event type and coverage hours
 
-## Crash Recovery Test
+### 3. Inspecting the Results in Catalyst
+
+Open the [Catalyst dashboard](https://catalyst.diagrid.io/agents) in your browser and navigate to Agents > photography-planner. Then select the most recent agent workflow run to view output.
+
+## Crash Recovery Test With Catalyst
 
 The `crash_test.py` file demonstrates durable crash recovery — a capability not offered by the Claude Agent SDK natively. It defines 3 tools where tool 2 crashes with `os._exit(1)`:
 
@@ -108,10 +115,10 @@ The `crash_test.py` file demonstrates durable crash recovery — a capability no
 ### First run — trigger and crash
 
 ```bash
-diagrid dev run -f dev-crash-test.yaml
+uv run diagrid dev run -f dev-crash-test.yaml --approve
 ```
 
-Wait for `Runner started — ready to accept requests`, then from another terminal:
+Wait for `Uvicorn running on <localhost:port>`, then from another terminal:
 
 Choose one of the following to trigger the endpoint:
 
@@ -144,7 +151,7 @@ Open `crash_test.py` and comment out the crash line:
 Restart the application:
 
 ```bash
-diagrid dev run -f dev-crash-test.yaml
+uv run diagrid dev run -f dev-crash-test.yaml
 ```
 
 The workflow **resumes from tool 2** — tool 1 is not re-executed. The Dapr workflow engine replays the saved result from Catalyst instead of re-running the tool.

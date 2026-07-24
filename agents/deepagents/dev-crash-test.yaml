@@ -2,6 +2,6 @@ version: 1
 common:
   appLogDestination: console
 apps:
-  - appID: deepagents-crash-test
+  - appID: deepagents-agent
     appDirPath: ./
     command: ["python", "crash_test.py"]
