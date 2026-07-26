@@ -1,2 +1,0 @@
-starlette>=0.40.0
-uvicorn==0.37.0

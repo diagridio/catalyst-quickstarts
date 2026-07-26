@@ -9,7 +9,8 @@ apps:
     appDirPath: ./mcp_client
     appProtocol: http
     command:
-      - python
+      - uv
+      - run
       - main.py
     env:
       APP_PORT: "5001"
@@ -20,7 +21,8 @@ apps:
     appPort: 8000
     appProtocol: http
     command:
-      - python
+      - uv
+      - run
       - main.py
     env:
       SERVER_SHARED_SECRET: "local-dev-shared-secret"
