@@ -59,18 +59,16 @@ through).
 
 1. [Diagrid CLI](https://docs.diagrid.io/references/catalyst/catalyst-cli-intro/) installed
 2. [Python 3.12+](https://www.python.org/downloads/)
+3. [uv](https://docs.astral.sh/uv/getting-started/installation/) installed
 
 ## Setup
 
+`mcp_client` and `mcp_server` share the one `uv`-managed project at the repo root — a single
+sync installs dependencies for both:
+
 ```bash
 cd mcp-auth/python
-
-# Create and activate virtual environment
-python -m venv venv
-source venv/bin/activate  # On macOS/Linux
-
-# Install dependencies for both services
-pip install -e mcp_client/ -e mcp_server/
+uv sync
 ```
 
 ## Running the Quickstart
@@ -135,6 +133,15 @@ apps started before continuing.
 A freshly registered MCP server starts in two "closed" states at once: `mcp-server` requires a
 shared-secret header that Catalyst hasn't been given yet, and the access policy denies every
 caller and tool by default.
+
+> **Reusing a project from an earlier pass through this quickstart?** The access policy and the
+> `headers` credential both live on the `mcp-server` resource itself, not on this walkthrough —
+> re-registering it with `diagrid apply` updates the resource but doesn't reset either one. If
+> `mcp-server` already existed in this project, `add` (or everything) may already succeed below
+> instead of failing closed. Check `diagrid mcpserver access get mcp-server` and revoke any
+> grants it shows (`diagrid mcpserver access revoke mcp-server --caller <name> --all --yes`, once
+> per caller listed), and confirm `resources/mcp-server.yaml` has no `headers` block before
+> applying, to see the fail-closed behavior below.
 
 ```bash
 curl -s -X POST http://localhost:5001/run | python -m json.tool
@@ -448,8 +455,7 @@ confirmation, which just hangs in a non-interactive shell.)
 
 ```bash
 cd mcp_server
-source ../venv/bin/activate
-SERVER_SHARED_SECRET=local-dev-shared-secret python main.py
+SERVER_SHARED_SECRET=local-dev-shared-secret uv run main.py
 ```
 
 Leave it running.
@@ -458,10 +464,9 @@ Leave it running.
 
 ```bash
 cd mcp_client
-source ../venv/bin/activate
 export DAPR_HTTP_ENDPOINT=<the http url from step 3>
 export DAPR_API_TOKEN=<the token from step 3>
-python main.py
+uv run main.py
 ```
 
 Leave it running. Unlike `mcp-server`, `mcp-client` never receives inbound requests through
@@ -473,6 +478,15 @@ these two environment variables.
 A freshly registered MCP server starts in two "closed" states at once: `mcp-server` requires a
 shared-secret header that Catalyst hasn't been given yet, and the access policy denies every
 caller and tool by default.
+
+> **Reusing a project from an earlier pass through this quickstart?** The access policy and the
+> `headers` credential both live on the `mcp-server` resource itself, not on this walkthrough —
+> re-registering it with `diagrid apply` updates the resource but doesn't reset either one. If
+> `mcp-server` already existed in this project, `add` (or everything) may already succeed below
+> instead of failing closed. Check `diagrid mcpserver access get mcp-server` and revoke any
+> grants it shows (`diagrid mcpserver access revoke mcp-server --caller <name> --all --yes`, once
+> per caller listed), and confirm `resources/mcp-server.yaml` has no `headers` block before
+> applying, to see the fail-closed behavior below.
 
 ```bash
 curl -s -X POST http://localhost:5001/run | python -m json.tool
