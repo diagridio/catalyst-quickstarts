@@ -126,6 +126,11 @@ opened for it. No manual token or endpoint copying either — `dev run` wires `D
 and `DAPR_API_TOKEN` straight into `mcp-client`'s process. Wait for the log output to show both
 apps started before continuing.
 
+Catalyst also starts periodically probing `mcp-server`'s reachability as soon as its tunnel is
+up, independent of anything `mcp-client` does — so this terminal may already show rejected
+requests by the time both apps report started, before you ever trigger anything yourself in
+step 4 below.
+
 > Leave `diagrid dev run` running in this terminal and use a second terminal for the steps below.
 
 ### 4. See it fail closed (default state) — Terminal 2
@@ -147,8 +152,7 @@ caller and tool by default.
 curl -s -X POST http://localhost:5001/run | python -m json.tool
 ```
 
-Both problems currently look identical from the caller's side — Catalyst tears the session
-down before anything reaches your tool code:
+Both problems currently look identical here — `Session terminated`, no detail:
 
 ```json
 {
@@ -163,12 +167,24 @@ down before anything reaches your tool code:
 }
 ```
 
-Check the `mcp-server` output in Terminal 1 (each app's log lines are labeled with its app ID)
-and you'll see why — your server itself is rejecting Catalyst:
+The real reason is sitting in Terminal 1, in `mcp-client`'s own log lines (labeled
+`== APP - mcp-client ==`), via the HTTP request it actually made:
 
 ```
-INFO:     ... "POST /mcp HTTP/1.1" 401 Unauthorized
+INFO:httpx:HTTP Request: POST https://.../v1.0/diagrid/mcp/mcp-server "HTTP/1.1 404 Not Found"
 ```
+
+That `404` is Catalyst's access-policy gate turning the caller away before the request ever
+reaches `mcp-server` — this quickstart never has a case where the MCP server itself doesn't
+exist, so read it as "this caller matches no rule," not "not found." The JSON response above
+doesn't carry that code; only an in-session per-tool denial (see Authorizing Tool Calls below)
+comes back as a clean status the demo can report.
+
+You'll likely also see `mcp-server`'s own lines (`== APP - mcp-server ==`) in Terminal 1 already
+showing `401 Unauthorized` on their own — that's Catalyst periodically checking the upstream
+credential in the background (see step 3 above), independent of anything you just did. It's a
+real signal, just not about this call: while the access policy denies you, your request never
+reaches `mcp-server` at all.
 
 ## Authenticating to the MCP Server
 
@@ -213,9 +229,14 @@ Trigger the client again:
 curl -s -X POST http://localhost:5001/run | python -m json.tool
 ```
 
-The response is unchanged — still `Session terminated` for everything. But look at the
-`mcp-server` output again (Terminal 1 in the consolidated flow, Terminal 2 if you ran it
-manually):
+The response is unchanged — still `Session terminated` for everything. Fixing the upstream
+credential doesn't unlock the caller; the access policy is a separate gate, and it's still
+deny-all.
+
+Separately — and independent of the client call above — Catalyst has been retrying its own
+connection to `mcp-server` in the background ever since the tunnel came up, so you don't need to
+trigger anything to see it succeed. Check that output whenever you like (Terminal 1 in the
+consolidated flow, Terminal 2 if you ran it manually):
 
 ```
 INFO:     ... "POST /mcp HTTP/1.1" 200 OK
@@ -341,26 +362,32 @@ diagrid mcpserver access test mcp-server --caller mcp-client --tool get_account_
 
 ### Telling authentication and authorization failures apart
 
-`Session terminated`, with no HTTP status, specifically means the caller matches **no rule at
-all** in the access policy — Catalyst tears the session down at that point regardless of
-whether the upstream credential is even valid, so on its own it doesn't tell you which problem
-you have. Once a caller matches at least one rule, the two failure modes stop looking alike: a
-call to a tool that rule doesn't cover comes back as a clean `403`, as seen above with
-`get_account_balance`, and a bad upstream credential comes back as a clean `401` instead of a
-session teardown — the request now gets far enough to actually reach, and be rejected by, your
-server. To tell the two apart when the whole session is failing:
+`Session terminated`, with no status code in the JSON response, specifically means the caller
+matches **no rule at all** in the access policy. Catalyst does send back a real status — a `404`
+from its edge, before the request ever reaches `mcp-server` — but it happens on the request that
+establishes the MCP session, and the Python MCP client library doesn't preserve that code the
+way it preserves one from an in-session tool call, so the demo's own error handling never gets a
+hold of it either. `mcp-client`'s own log shows it plainly, via httpx's request logging:
+`"HTTP/1.1 404 Not Found"`. Read that as "caller matches no rule," not "server doesn't exist" —
+this quickstart has no scenario where the MCP server itself is missing; Catalyst reuses the same
+generic code for both so a fully unauthorized caller can't tell which one it hit.
 
-- **Check the MCP server's own log.** `401 Unauthorized` from your server means Catalyst
-  itself isn't authenticated yet — fix the credential on the `MCPServer` resource. A `200 OK`
-  followed by `Processing request of type ListToolsRequest` means Catalyst reached your tool
-  code — authentication is fine, and it's the access policy (no matching rule) holding
-  everything closed.
+While the caller has zero grants, `mcp-server`'s own log is a red herring: none of the caller's
+requests ever reach it, so anything you see there — including a `401` — is Catalyst's own
+independent, periodic health-check of the credential, updating on its own regardless of what any
+caller does. Once the caller matches at least one rule, that changes: real proxied requests start
+reaching `mcp-server` too, and the two failure modes stop looking alike in the JSON response as
+well — a call to a tool that rule doesn't cover comes back as a clean `403`, as seen above with
+`get_account_balance`, and a bad upstream credential comes back as a clean `401` instead of
+`Session terminated` — the request now gets far enough to actually reach, and be rejected by,
+your server. To tell the two apart when the whole session is failing:
+
+- **Check `mcp-client`'s own log for the actual status code**, especially while grants are still
+  zero — `mcp-server`'s log won't reflect your request at all in that state.
 - **Run `diagrid mcpserver access test`.** It evaluates the policy directly and answers
   `ALLOWED`/`DENIED` without calling the server at all. `DENIED` for every tool confirms the
-  caller matches no rule — check the server log to see whether authentication is *also*
-  broken. `ALLOWED` means the policy isn't the problem — if the caller still can't reach that
-  tool, the upstream credential is, and it'll surface as a clean `401`, not `Session
-  terminated`.
+  caller matches no rule. `ALLOWED` means the policy isn't the problem — if the caller still
+  can't reach that tool, the upstream credential is.
 
 ## Files
 
@@ -458,7 +485,9 @@ cd mcp_server
 SERVER_SHARED_SECRET=local-dev-shared-secret uv run main.py
 ```
 
-Leave it running.
+Leave it running. Catalyst starts periodically probing `mcp-server`'s reachability as soon as it
+can reach this process, independent of anything `mcp-client` does — so this terminal may already
+show rejected requests before you ever trigger anything yourself in step 7 below.
 
 ### 6. Run the MCP client — Terminal 3
 
@@ -492,8 +521,7 @@ caller and tool by default.
 curl -s -X POST http://localhost:5001/run | python -m json.tool
 ```
 
-Both problems currently look identical from the caller's side — Catalyst tears the session
-down before anything reaches your tool code:
+Both problems currently look identical here — `Session terminated`, no detail:
 
 ```json
 {
@@ -508,9 +536,20 @@ down before anything reaches your tool code:
 }
 ```
 
-Check the `mcp-server` log in Terminal 2 and you'll see why — your server itself is rejecting
-Catalyst:
+The real reason is sitting in Terminal 3, in `mcp-client`'s own log, via the HTTP request it
+actually made:
 
 ```
-INFO:     ... "POST /mcp HTTP/1.1" 401 Unauthorized
+INFO:httpx:HTTP Request: POST https://.../v1.0/diagrid/mcp/mcp-server "HTTP/1.1 404 Not Found"
 ```
+
+That `404` is Catalyst's access-policy gate turning the caller away before the request ever
+reaches `mcp-server` — this quickstart never has a case where the MCP server itself doesn't
+exist, so read it as "this caller matches no rule," not "not found." The JSON response above
+doesn't carry that code; only an in-session per-tool denial (see Authorizing Tool Calls below)
+comes back as a clean status the demo can report.
+
+You'll likely also see `mcp-server`'s own log in Terminal 2 already showing `401 Unauthorized`
+on its own — that's Catalyst periodically checking the upstream credential in the background
+(see step 5 above), independent of anything you just did. It's a real signal, just not about
+this call: while the access policy denies you, your request never reaches `mcp-server` at all.
