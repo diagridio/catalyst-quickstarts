@@ -1,0 +1,7 @@
+### Trigger Event Planner agent
+POST http://localhost:5050/run
+Content-Type: application/json
+
+{
+    "prompt": "Find a venue in Austin for a company gala"
+}

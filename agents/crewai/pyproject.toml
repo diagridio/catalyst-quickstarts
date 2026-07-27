@@ -1,0 +1,16 @@
+[project]
+name = "crewai-agent"
+version = "0.1.0"
+requires-python = ">=3.11,<3.14"
+dependencies = [
+    "diagrid[crewai]==0.4.2",
+    "fastapi==0.136.1",
+    "uvicorn[standard]==0.46.0",
+]
+
+[tool.uv]
+package = false
+# litellm 1.92+ ships Linux-only wheels with a Rust extension, forcing a
+# source build (Rust + MSVC) on Windows/macOS. Cap below 1.92 so uv installs
+# the pure-Python wheel (1.91.4). crewai only requires litellm>=1.74.9.
+constraint-dependencies = ["litellm<1.92"]

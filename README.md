@@ -22,6 +22,15 @@ Catalyst works with the following agent frameworks:
 | [Pydantic AI](agents/pydantic-ai/) | Type-safe agent framework with structured outputs, made durable with Catalyst |
 | [Deep Agents](agents/deepagents/) | Type-safe agent harness with conditional routing, made durable with Catalyst |
 
+## MCP Quickstarts
+
+Learn how to register MCP (Model Context Protocol) servers with Catalyst and secure them.
+
+| Quickstart | Description | Path |
+|------------|--------------|------|
+| MCP Authentication & Authorization | Register a local MCP server, authenticate Catalyst to it, and authorize specific tool calls | [mcp-auth/python](mcp-auth/python/) |
+| MCP Access Control | Secure MCP servers and tools using granular access control lists (ACLs) and OAuth2 middleware pipelines | [mcp-access-control/python](mcp-access-control/python/) |
+
 ## Workflow Quickstart
 
 Learn how to build stateful, long-running, reliable workflows using the Dapr Workflow API. Choose your preferred language to get started.

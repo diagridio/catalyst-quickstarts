@@ -68,3 +68,11 @@ apps:
     command: ["python", "main.py"]
     env:
       APP_PORT: "8008"
+
+  - appID: claude-agent
+    appDirPath: ../../claude-agents
+    appPort: 8009
+    appProtocol: http
+    command: ["python", "main.py"]
+    env:
+      APP_PORT: "8009"

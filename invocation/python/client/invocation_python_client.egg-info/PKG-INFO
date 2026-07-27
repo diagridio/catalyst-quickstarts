@@ -1,0 +1,9 @@
+Metadata-Version: 2.4
+Name: invocation-python-client
+Version: 0.1.0
+Requires-Python: >=3.12
+Requires-Dist: dapr==1.17.0
+Requires-Dist: fastapi==0.135.1
+Requires-Dist: pydantic==2.12.0
+Requires-Dist: requests>=2.32.4
+Requires-Dist: uvicorn==0.37.0

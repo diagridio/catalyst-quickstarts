@@ -2,6 +2,6 @@ version: 1
 common:
   appLogDestination: console
 apps:
-  - appID: pydantic-ai-crash-test
+  - appID: pydantic-ai-agent
     appDirPath: ./
     command: ["python", "crash_test.py"]

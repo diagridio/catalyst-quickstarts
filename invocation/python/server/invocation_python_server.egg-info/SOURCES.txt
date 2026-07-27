@@ -1,0 +1,7 @@
+main.py
+pyproject.toml
+invocation_python_server.egg-info/PKG-INFO
+invocation_python_server.egg-info/SOURCES.txt
+invocation_python_server.egg-info/dependency_links.txt
+invocation_python_server.egg-info/requires.txt
+invocation_python_server.egg-info/top_level.txt
