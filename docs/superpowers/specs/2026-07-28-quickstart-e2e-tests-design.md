@@ -80,10 +80,11 @@ Consequences worth stating up front, because they change the earlier draft of th
   `dotnet build` while `state/csharp` documents `dotnet restore`.
 - **Readiness has a documented signal.** The pubsub and invocation READMEs tell the user to
   wait for `Connected App ID "<appID>" to localhost:<port>` in the `diagrid dev run` output.
-- **The documented flow is narrower than the API surface.** No state README documents
-  `DELETE /order/{id}`, and no workflow README documents `POST /workflow/terminate/{id}`,
-  though both endpoints exist in every implementation and in every `test.rest`. See
-  "Steps beyond the documented flow" below.
+- **The documented flow is narrower than the API surface, and the suites stop where the docs
+  stop.** No state README documents `DELETE /order/{id}`, and no workflow README documents
+  `POST /workflow/terminate/{id}`, so neither is tested even though both exist in every
+  implementation and every `test.rest`. See "The suites test the documented flow and nothing
+  more" below.
 
 `test.rest` remains a secondary reference — useful for confirming an endpoint exists, not for
 deciding what a test asserts.
@@ -415,37 +416,25 @@ as such in the READMEs — the javascript README even tells the user that `test.
 will not resolve because of it. The test records the key as a variable rather than papering
 over it, so it shows up in review.
 
-### Steps beyond the documented flow
+### The suites test the documented flow and nothing more
 
 Two endpoints exist in every implementation and every `test.rest`, but no README documents
-them:
+them, and the suites therefore do not touch them:
 
-| Endpoint | Documented? |
+| Endpoint | Status |
 |---|---|
-| `DELETE /order/{id}` (state) | No — state READMEs cover only store and retrieve |
-| `POST /workflow/terminate/{id}` (workflow) | No — deliberately excluded when the READMEs were written |
+| `DELETE /order/{id}` (state) | Not documented, not tested |
+| `POST /workflow/terminate/{id}` (workflow) | Not documented, not tested |
 
-The suites exercise them anyway, as steps clearly labelled as beyond the documented flow and
-placed after the documented ones so a failure reads unambiguously:
+This is a deliberate boundary. The suites exist to prove that a user following a README
+succeeds; the README is the specification, and testing past it would mean the suites and the
+docs disagree about what the quickstart is.
 
-| Extra step | HTTP | Log marker |
-|---|---|---|
-| `DELETE /order/1` | 204 | `Delete state item successful. Order deleted` |
-| `GET /order/1` after delete | 404, body contains `ORDER_NOT_FOUND` | `State item with key` |
-| `POST /workflow/terminate/<id>` | 200 | — |
-
-The reasoning: these are real endpoints in code users read, and leaving them untested means a
-regression in either ships silently. The cost is that the four state suites and four workflow
-suites test slightly more than their README describes, which is a much smaller problem than an
-untested delete path.
-
-The `State item with key` marker is deliberately weak — python and .NET log `State item with
-key 1 does not exist` while javascript and java log `State item with key does not exist: 1`,
-so only the prefix is invariant.
-
-If you would rather the suites assert nothing beyond the documented flow, dropping these three
-rows is a self-contained change. The better fix is arguably the other direction: document the
-two endpoints in the READMEs, after which these stop being extras at all.
+The tradeoff is real and worth naming: a regression in either endpoint ships silently. Neither
+is on the documented path, so no user following the docs would hit it, but both are in code
+users read. The fix is to document them — add a delete step to the four state READMEs and a
+terminate step to the four workflow READMEs — after which the suites pick them up as
+documented steps and this gap closes on its own. Until then it stays open by choice.
 
 ### Marker organisation
 
@@ -662,8 +651,8 @@ test-only change would be the wrong bundle.
 - **`test.rest` uses order ID `4` for state while the READMEs use `1`.** Harmless, and the
   state README calls it out, but the two would ideally agree.
 - **`DELETE /order/{id}` and `POST /workflow/terminate/{id}` are undocumented** though present
-  in every implementation and every `test.rest`. Documenting them would turn the suites'
-  extra steps into documented ones.
+  in every implementation and every `test.rest`, and are consequently untested. Documenting
+  them in the eight relevant READMEs is what brings them under test.
 - **Log wording diverges across languages** for the same operation — capital-S `Publish
   Successful` in .NET, `Invoke Successful. Response received` in java's invocation client, a
   missing colon in java's invocation server. Harmonising these would let the marker table
@@ -698,9 +687,12 @@ Three deliberate exclusions:
 - **The `--project` value is normalised before comparison**, since the harness substitutes its
   ephemeral project name for the documented `<api>-quickstart`. This is the one sanctioned
   divergence and the checker knows about it explicitly rather than by fuzzy matching.
-- **Steps beyond the documented flow are allowed.** The checker asserts the README is covered
-  by the suite, not that the suite is covered by the README, so the delete and terminate steps
-  do not trip it. Asserting in both directions would forbid them.
+- **The check runs one way only:** every documented command must be covered by the suite, not
+  the reverse. The suites legitimately do things no README describes — poll a health endpoint,
+  wait for the readiness marker, create and delete the ephemeral project — and a bidirectional
+  check would flag all of it. Since the suites now assert nothing beyond the documented API
+  calls, a reverse check would mostly pass, but it would couple the harness's internal steps to
+  the docs for no benefit.
 
 It runs in the `lint` job, so it fires on every PR without needing secrets or a Catalyst
 project — cheap, fast, and exactly the check most likely to catch a README edit.
@@ -726,8 +718,8 @@ writing the harness; all three block the first green scheduled run.
 1. `tools/qs-tester/` skeleton: `pyproject.toml`, `resources/catalyst.resource` with the
    ported teardown keyword, `variables/quickstarts.py` populated **by reading all 16 READMEs**
    — install command, run command, endpoints, payloads, expected bodies, markers.
-2. `state/tests/quickstart.robot` — the simplest API, single app, two documented steps plus the
-   two extras. Get one language green locally end to end, then the other three.
+2. `state/tests/quickstart.robot` — the simplest API, single app, two documented steps. Get one
+   language green locally end to end, then the other three.
 3. `invocation/tests/quickstart.robot`, then `pubsub/tests/quickstart.robot` — two-app
    quickstarts, and pubsub is where the log assertion earns its place.
 4. `workflow/tests/quickstart.robot` — the log-marker completion gate, the per-language start
