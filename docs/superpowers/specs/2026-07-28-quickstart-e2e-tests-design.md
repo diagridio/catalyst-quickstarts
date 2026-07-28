@@ -292,7 +292,8 @@ satisfied by the wrong process.
 
 ## Catalyst environment lifecycle
 
-One ephemeral project per matrix leg, created at the start and deleted at the end.
+One ephemeral project per matrix leg, created at the start and deleted at the end, with the
+legs throttled so that no more than two projects exist at the same time.
 
 `ci/setup-project.sh`:
 
@@ -320,9 +321,28 @@ accepted deliberately:
 - **Leaked projects when a job is cancelled**, since teardown never runs. `ci/reap-orphans.sh`
   runs on the schedule and deletes any `qs-ci-*` project older than 6 hours.
 
-This requires enough Catalyst quota for four concurrent projects, each with a managed KV
-store, pub/sub broker, and workflow engine, plus a second KV store. **Confirm quota
-headroom before the first scheduled run.**
+### At most two projects exist at any moment
+
+The four language legs run **two at a time**, not four, so the run never needs more than two
+ephemeral projects concurrently. This is a hard requirement rather than a tuning choice:
+each project carries a managed KV store, a pub/sub broker, a workflow engine, and a second
+KV store, and four of those at once risks hitting Catalyst account limits — a limit breach
+fails the run for a reason that has nothing to do with the quickstarts, which is the worst
+kind of test failure.
+
+`max-parallel: 2` on the matrix is the mechanism. Two legs start, and as each finishes the
+next starts, so the guarantee is "never more than two", not "two strict waves". That is what
+the constraint actually requires, and it wastes no time waiting for a slow partner to finish.
+
+Leg order in the matrix is `[java, javascript, csharp, python]` so the two slow,
+build-heavy languages (java, .NET) are not scheduled against each other. Pairing each slow
+language with a fast one keeps both concurrency slots doing useful work rather than leaving
+one idle while a Maven build finishes.
+
+Each leg gets `timeout-minutes: 60`. With only two slots, a hung leg no longer just delays
+its own result — it holds a slot that a queued leg needs, and it holds a project open while
+it hangs. The timeout bounds both. It sits above the expected per-leg time with room to
+spare; it is a backstop, not a target.
 
 ## GitHub Actions workflow
 
@@ -347,7 +367,11 @@ jobs:
   e2e:
     if: github.repository_owner == 'diagridio'
     environment: shared-production
-    strategy: {fail-fast: false, matrix: {lang: [csharp, java, javascript, python]}}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      max-parallel: 2                     # never more than 2 Catalyst projects at once
+      matrix: {lang: [java, javascript, csharp, python]}   # slow paired with fast
     steps:
       - setup-dotnet 10.0.x | setup-java 17 temurin + ~/.m2 cache | setup-node lts | setup-uv
       - install pinned diagrid CLI
@@ -379,6 +403,14 @@ Details that matter:
 - **`pull_request` triggers only `lint`.** The e2e job needs `DIAGRID_API_KEY`, which is not
   available to fork PRs, and 16 real Catalyst projects per PR would be wasteful regardless.
   `--dryrun` still catches broken keyword references and typos in suite files on every PR.
+- **`max-parallel: 2` caps concurrent Catalyst projects at two**, as described above. It also
+  roughly doubles wall-clock time against an unconstrained matrix — expect somewhere around
+  45 to 60 minutes for the whole run rather than 25 to 30. For a nightly schedule that is a
+  cheap price for staying inside account limits. Both figures are estimates to be replaced
+  with real numbers after the first few runs.
+- **`fail-fast: false` matters more with a capped matrix.** With `fail-fast` enabled, one
+  failing leg would cancel the queued legs that had not started yet, and a cancelled leg
+  leaks its project. It must stay `false`.
 - **`concurrency` without `cancel-in-progress`** so a manual dispatch cannot cancel a
   scheduled run mid-flight and leak its project.
 - **`report` is skipped on pull requests**, so a `lint` failure on a PR does not open a drift
@@ -465,10 +497,11 @@ writing the harness; all three block the first green scheduled run.
 1. **`DIAGRID_API_KEY` secret.** No workflow in the repository references a Diagrid API key
    today, so the secret has to be created in the `shared-production` environment and its name
    confirmed. A CI-scoped key, not a personal one.
-2. **Catalyst quota.** Four concurrent ephemeral projects, each with a managed KV store, a
-   pub/sub broker, a workflow engine, and a second KV store. If quota is tighter than that,
-   the fallback is to drop the matrix to two concurrent legs, which roughly doubles wall-clock
-   time but changes nothing else in the design.
+2. **Catalyst quota.** The design holds at two concurrent ephemeral projects, each with a
+   managed KV store, a pub/sub broker, a workflow engine, and a second KV store. Confirm that
+   two fits inside the account limits. If even two is too many, `max-parallel: 1` serialises
+   the legs and changes nothing else in the design, at roughly four times the wall-clock of an
+   unconstrained matrix.
 3. **`invocation/python/venv/`.** The checked-in Python 3.9 virtualenv likely has to be
    removed before the python invocation leg can build. Confirm whether anything depends on it.
 
