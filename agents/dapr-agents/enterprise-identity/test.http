@@ -1,0 +1,25 @@
+### Query an account (OBO — runs under the calling user's identity)
+POST http://localhost:3500/v1.0/invoke/salesforce-agent/method/invoke
+X-Diagrid-User-Token: Bearer <your-jwt>
+Content-Type: application/json
+
+{
+    "prompt": "What is the name and owner of account 001XX000ABC?"
+}
+
+### Delete an account (triggers HITL — HITLPlugin pauses for a scoped approver)
+POST http://localhost:3500/v1.0/invoke/salesforce-agent/method/invoke
+X-Diagrid-User-Token: Bearer <your-jwt>
+Content-Type: application/json
+
+{
+    "prompt": "Delete account 001XX000ABC"
+}
+
+### Rejected — no X-Diagrid-User-Token header, so OAuthPlugin denies the request
+POST http://localhost:3500/v1.0/invoke/salesforce-agent/method/invoke
+Content-Type: application/json
+
+{
+    "prompt": "What is the name and owner of account 001XX000ABC?"
+}

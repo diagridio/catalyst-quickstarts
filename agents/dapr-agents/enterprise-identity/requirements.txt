@@ -1,0 +1,3 @@
+dapr-agents==1.0.2
+diagrid-identity
+diagrid-agent
