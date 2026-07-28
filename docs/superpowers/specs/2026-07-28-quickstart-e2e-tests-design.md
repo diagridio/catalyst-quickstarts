@@ -48,13 +48,45 @@ four APIs run sequentially and their appIDs do not overlap.
 `statestore`.
 
 **`workflow/java` has no `workflow-quickstart.yaml`.** The other three workflow languages
-have one. Per the README design spec (`2026-07-28-quickstart-readmes-design.md`), the
-documented command for this one case is the `--app-id` form rather than `-f`.
+have one. `workflow/java/README.md` therefore documents the `--app-id` form rather than `-f`,
+and the suite follows it.
 
 **Application log destination is already correct.** Every `*-quickstart.yaml` sets
 `appLogDestination: console`, so application stdout is merged into the `diagrid dev run`
 console stream. Capturing that one stream per suite captures every app's log output — which
 is what makes log assertions possible without extra plumbing.
+
+## Source of truth: the per-language READMEs
+
+Each of the 16 directories now has a `README.md` with a fixed seven-section structure
+(prerequisites, log in, clone, install, run, exercise the API, clean up), added by the work
+described in `2026-07-28-quickstart-readmes-design.md`. **Those READMEs define what the tests
+do**: the prerequisites determine what CI provisions, and sections 4 through 7 determine the
+commands each suite runs and the responses it asserts.
+
+This is the whole point of the exercise. A test that runs commands nobody documented proves
+only that some code path works; a test that runs the documented commands and asserts the
+documented responses proves that a user following the README will succeed.
+
+Consequences worth stating up front, because they change the earlier draft of this design:
+
+- **The order ID is `1`, not `4`.** Every README uses `{"orderId":1}`. The `test.rest` files
+  use `4` for state, and the state README explicitly notes the discrepancy. The suites follow
+  the README.
+- **Expected response bodies are documented exactly** for state, pubsub, and invocation, and
+  they diverge between languages. The suites assert the documented body per language rather
+  than a loose substring.
+- **Install commands are per-(API, language), not per-language.** `workflow/csharp` documents
+  `dotnet build` while `state/csharp` documents `dotnet restore`.
+- **Readiness has a documented signal.** The pubsub and invocation READMEs tell the user to
+  wait for `Connected App ID "<appID>" to localhost:<port>` in the `diagrid dev run` output.
+- **The documented flow is narrower than the API surface.** No state README documents
+  `DELETE /order/{id}`, and no workflow README documents `POST /workflow/terminate/{id}`,
+  though both endpoints exist in every implementation and in every `test.rest`. See
+  "Steps beyond the documented flow" below.
+
+`test.rest` remains a secondary reference — useful for confirming an endpoint exists, not for
+deciding what a test asserts.
 
 ## Prior art
 
@@ -77,7 +109,9 @@ tools/qs-tester/
 │   ├── catalyst.resource     # project lifecycle, `diagrid dev run`, process teardown
 │   └── quickstart.resource   # build, health-wait, HTTP + log assertions
 ├── variables/
-│   └── quickstarts.py        # per-(api, language) matrix and log markers
+│   └── quickstarts.py        # per-(api, language) matrix, expected bodies, log markers
+├── docsync/
+│   └── check_readme_sync.py  # assert each README's commands match its suite
 └── ci/
     ├── setup-project.sh      # login, create ephemeral project, create `statestore` KV
     ├── teardown-project.sh   # delete the ephemeral project
@@ -114,40 +148,93 @@ next suite in the leg. This is the single most important piece of reused code.
 
 Every one of the 16 tests follows the same five steps:
 
-1. **Build** — the language's documented install command (table below).
-2. **Start** — `diagrid dev run` as a background process, stdout+stderr to a per-suite log
-   file. The log file is truncated first so a stale file cannot satisfy an assertion.
-3. **Wait until healthy** — poll `GET http://localhost:<port>/` until 200, per app. Timeout
-   180s: JVM and .NET cold starts on a CI runner are slow, and `diagrid dev run` also has to
-   provision appIDs and establish tunnels.
-4. **Assert** — the HTTP contract, then the log markers.
-5. **Teardown** — stop the process tree, then `diagrid dev stop`, unconditionally.
+1. **Build** — the README's section 4 install command for that directory (matrix below).
+2. **Start** — the README's section 5 run command, as a background process, stdout+stderr to a
+   per-suite log file. The log file is truncated first so a stale file cannot satisfy an
+   assertion.
+3. **Wait until ready** — the documented readiness signal, then an HTTP health check
+   (below).
+4. **Assert** — the documented HTTP responses, then the log markers.
+5. **Teardown** — stop the process tree (the README's CTRL+C), then `diagrid dev stop`,
+   unconditionally.
 
-### Build and run commands per language
+### Install commands, verbatim from README section 4
 
-Taken from the README design spec so the tests execute the documented commands rather than
-invented equivalents.
+These are per-(API, language), not per-language — `workflow/csharp` documents `dotnet build`
+where `state/csharp` documents `dotnet restore`, and the python variants differ in all three
+respects. Reading them off a per-language rule would silently run something the docs never
+told a user to run.
 
-| Language | Build | Run |
-|---|---|---|
-| Python | `uv sync` (per app dir for two-app quickstarts) | `uv run diagrid dev run -f <api>-quickstart.yaml --project $PROJECT --approve` |
-| .NET | `dotnet build` / `dotnet restore ./<app>` | `diagrid dev run -f <api>-quickstart.yaml --project $PROJECT --approve` |
-| JavaScript | `npm install [--prefix ./<app>]` | `diagrid dev run -f <api>-quickstart.yaml --project $PROJECT --approve` |
-| Java | `mvn clean install [-f ./<app>]` | `diagrid dev run -f <api>-quickstart.yaml --project $PROJECT --approve` |
+| Directory | Documented install command |
+|---|---|
+| `workflow/csharp` | `dotnet build` |
+| `workflow/java` | `mvn clean install` |
+| `workflow/javascript` | `npm install` |
+| `workflow/python` | `uv sync` |
+| `state/csharp` | `dotnet restore` |
+| `state/java` | `mvn clean install` |
+| `state/javascript` | `npm install` |
+| `state/python` | `uv venv` + activate, then `uv sync` |
+| `pubsub/csharp` | `dotnet restore ./publisher && dotnet restore ./subscriber` |
+| `pubsub/java` | `mvn clean install -f ./publisher && mvn clean install -f ./subscriber` |
+| `pubsub/javascript` | `npm install --prefix ./publisher && npm install --prefix ./subscriber` |
+| `pubsub/python` | `uv venv` + activate, then `uv sync --active --directory publisher && uv sync --active --directory subscriber` |
+| `invocation/csharp` | `dotnet restore ./client && dotnet restore ./server` |
+| `invocation/java` | `mvn clean install -f ./client && mvn clean install -f ./server` |
+| `invocation/javascript` | `npm install --prefix ./client && npm install --prefix ./server` |
+| `invocation/python` | `uv venv` + activate, then `uv sync --active --directory client && uv sync --active --directory server` |
 
-One exception, matching the documented command: `workflow/java` has no dev config file, so
-it runs
+### Run commands, verbatim from README section 5
+
+Fourteen of the sixteen are the same shape:
 
 ```
+diagrid dev run -f <api>-quickstart.yaml --project $PROJECT --approve
+```
+
+Two documented exceptions:
+
+```
+# workflow/python — README prefixes uv run
+uv run diagrid dev run -f workflow-quickstart.yaml --project $PROJECT --approve
+
+# workflow/java — no dev config file exists, so the README uses the --app-id form
 diagrid dev run --project $PROJECT --app-id order-workflow --approve -- mvn spring-boot:run
 ```
 
-This asymmetry is deliberate — the test mirrors the repository and the docs as they stand.
-It does not add a `workflow-quickstart.yaml` to fix the inconsistency, because that would
-change a file users read as part of a test-only change.
+The `--project` value is the one deliberate substitution: the READMEs document
+`--project workflow-quickstart` and friends, but parallel language legs need distinct
+projects, so the harness passes its ephemeral project name. Nothing else about the command
+is rewritten.
 
-The `--project` value is a harness variable rather than the documented per-API name
-(`state-quickstart` and friends), because parallel language legs need distinct projects.
+**The three python `uv venv` + activate cases matter more than they look.** `state/python`,
+`pubsub/python`, and `invocation/python` document activating a virtual environment and then
+running a bare `diagrid dev run` — no `uv run` prefix. The harness therefore has to launch
+these through a shell wrapper (`bash -c 'source .venv/bin/activate && diagrid dev run …'`).
+That wrapper is exactly the situation track-tester's teardown comments describe, where
+`diagrid`, its sidecar, and the app land in process groups the wrapper's own group signal
+cannot reach. It is the concrete reason the PID-tree kill fallback is not optional.
+
+### Readiness
+
+The pubsub and invocation READMEs give a precise signal, and the suites use it:
+
+| README | Documented readiness log |
+|---|---|
+| pubsub (all 4) | `Connected App ID "publisher" to localhost:5001` and `Connected App ID "subscriber" to localhost:5002` |
+| invocation (all 4) | `Connected App ID "server" to localhost:5002` |
+| workflow, state (all 8) | prose only — "wait a few seconds until you see application logs" |
+
+Waiting on `Connected App ID "<appID>" to localhost:<port>` is better than an HTTP health
+poll alone, because it confirms the Catalyst side of the connection is established and not
+merely that a local port is listening. It is also a line `diagrid dev run` emits for every
+app, so the suites use it for all four APIs — including the eight whose READMEs only say
+"wait a few seconds", which is not something a test can act on.
+
+After the readiness marker, each suite still polls `GET http://localhost:<port>/` until 200
+per app, with a 180s timeout. Two gates rather than one: the marker proves Catalyst
+connected the appID, the health check proves the app itself is serving. JVM and .NET cold
+starts on a CI runner are slow enough that the gap between the two is real.
 
 ## Assertion matrix
 
@@ -161,26 +248,46 @@ asynchronous with respect to the HTTP response.
 
 ### state — one app on port 5001
 
+README section 6 documents two steps, 6.1 store and 6.2 retrieve, both with exact expected
+bodies.
+
 | Step | HTTP | Log marker |
 |---|---|---|
-| `POST /order {"orderId":4}` | 201, body contains `Order created successfully` | `Save state item successful.` |
-| `GET /order/4` | 200, body contains `4` | `Get state item successful. Order retrieved` |
-| `DELETE /order/4` | 204 | `Delete state item successful. Order deleted` |
-| `GET /order/4` | 404, body contains `ORDER_NOT_FOUND` | `State item with key` |
+| `POST /order {"orderId":1}` | 201, body per language below | `Save state item successful.` |
+| `GET /order/1` | 200, body per language below | `Get state item successful. Order retrieved` |
 
-All four markers are language-invariant substrings. `Save state item successful.` stops at
-the period because python continues `Order saved with key: 4 and value: ...` where the other
-three continue `Order saved: 4`. The final marker is deliberately weak — python and csharp
-log `State item with key 4 does not exist` while javascript and java log `State item with key
-does not exist: 4` — so the invariant part is the prefix.
+The documented bodies diverge across languages in both steps:
+
+| Language | 6.1 store response | 6.2 retrieve response |
+|---|---|---|
+| Python | `{"id":1,"message":"Order created successfully"}` | `{"data":"orderId=1"}` |
+| .NET | `{"id":1,"message":"Order created successfully"}` | `{"data":{"orderId":1}}` |
+| JavaScript | `{"id":1,"message":"Order created successfully"}` | `{"data":{"orderId":1}}` |
+| Java | `{"orderId":1,"message":"Order created successfully"}` | `{"data":{"orderId":1},"message":""}` |
+
+Java names the store-response id field `orderId` where the other three use `id`, and its
+retrieve response carries an extra empty `message`. Python's retrieve response is a *string*
+`"orderId=1"` rather than a nested object, because that implementation saves the string form
+of its model — the README calls this out explicitly.
+
+Both log markers are language-invariant substrings. `Save state item successful.` stops at
+the period because python continues `Order saved with key: 1 and value: ...` where the other
+three continue `Order saved: 1`.
 
 ### invocation — client on 5001, server on 5002
 
 | Step | HTTP | Log marker |
 |---|---|---|
-| both apps healthy | 200 on `GET /` for each | — |
-| `POST /order {"orderId":1}` on client | 200, body contains `Invocation successful` | server: `Invocation received with data` |
+| both apps ready | readiness marker, then 200 on `GET /` for each | — |
+| `POST /order {"orderId":1}` on client | 200, body exactly as documented | server: `Invocation received with data` |
 | | | client: per-language, see below |
+
+The documented response body is identical in all four languages — the only API where that is
+true:
+
+```json
+{"message":"Invocation successful","orderId":1,"targetApp":"server"}
+```
 
 The server marker is invariant as a prefix only: java logs `Invocation received with data 1`
 with no colon, the other three use `with data: `.
@@ -198,9 +305,18 @@ The client marker diverges completely and needs a per-language entry:
 
 | Step | HTTP | Log marker |
 |---|---|---|
-| both apps healthy | 200 on `GET /` for each | — |
-| `POST /order {"orderId":1}` on publisher | 201, body contains `Message published successfully` | publisher: `Order published: 1` |
+| both apps ready | readiness marker, then 200 on `GET /` for each | — |
+| `POST /order {"orderId":1}` on publisher | 201, body per language below | publisher: `Order published: 1` |
 | message delivered to subscriber | — (no HTTP surface) | subscriber: per-language, see below |
+
+The documented publish response differs in one detail — java returns the id as a **string**:
+
+| Language | Documented publish response |
+|---|---|
+| Python | `{"id":1,"message":"Message published successfully","topic":"orders"}` |
+| .NET | `{"id":1,"message":"Message published successfully","topic":"orders"}` |
+| JavaScript | `{"id":1,"message":"Message published successfully","topic":"orders"}` |
+| Java | `{"id":"1","message":"Message published successfully","topic":"orders"}` |
 
 `Order published: 1` rather than the fuller sentence because csharp logs `Publish
 Successful.` with a capital S where the other three use lowercase.
@@ -221,12 +337,13 @@ marker, a broken subscription or a mis-scoped `subscription.yaml` would pass a g
 
 ### workflow — one app on port 5001
 
+README section 6 documents two steps, 6.1 start and 6.2 get status.
+
 | Step | HTTP | Log marker |
 |---|---|---|
-| `POST /workflow/start {"name":"Car","quantity":2}` | 200, extract instance id | `Received order <instanceId> for 2 Car` |
+| `POST /workflow/start {"name":"Car", "quantity":2}` | 200, extract instance id | `Received order <instanceId> for 2 Car` |
 | workflow runs to completion | — | `Order <instanceId> has completed!` |
-| `GET /workflow/status/<id>` | 200, body contains `COMPLETED`, case-insensitive | — |
-| `POST /workflow/terminate/<id>` | 200 | — |
+| `GET /workflow/status/<id>` | 200, non-empty body; python additionally `"isWorkflowCompleted":true` | — |
 
 The two workflow markers interpolate the **actual instance ID** returned by the start call,
 so they prove that *this* run's workflow executed rather than merely that some workflow did.
@@ -253,29 +370,82 @@ Notification messages are emitted through `NotifyActivity`, which logs the bare 
 python and .NET and prefixes `Notification: ` in java and javascript — substring matching
 handles both.
 
-**The completion gate is the log marker, not the status JSON.** This is a deliberate choice.
-The status responses diverge structurally: python and java expose `runtimeStatus` at the top
-level, .NET nests it under `{state, result}`, and javascript returns the raw SDK state
-object. Polling any of them for completion would need a per-language JSON path, and the
-javascript key cannot be read from source without the SDK installed.
+**The completion gate is the log marker, not the status JSON.** This is a deliberate choice,
+and the READMEs make the case for it more strongly than the source did.
 
-Gating on `Order <instanceId> has completed!` instead is invariant across all four languages,
-needs no JSON path, and is a stronger assertion — it proves the activity chain ran, whereas a
-status field only reports what the engine recorded. The status endpoint is still called and
-still asserted, but with a case-insensitive substring check for `COMPLETED` on the raw
-response body, which is oblivious to nesting and to .NET's PascalCase enum serialisation.
+Only `workflow/python`'s README documents the status response concretely, and what it
+documents is:
+
+```json
+{"exists":true,"isWorkflowRunning":false,"isWorkflowCompleted":true,
+ "createdAt":"<DATE_TIME>","lastUpdatedAt":"<DATE_TIME>",
+ "runtimeStatus":1,"failureDetails":null}
+```
+
+`"runtimeStatus":1` — a **numeric** enum. The other three READMEs describe the body in prose
+only ("the runtime status reads as completed") without showing it. So a substring check for
+`COMPLETED` on the status body, which an earlier draft of this design specified, would simply
+fail against python, and cannot be confirmed for the other three from any documented source.
+Structurally the responses also diverge: python returns a hand-built object, java the
+serialized `WorkflowInstanceStatus`, .NET a `{state, result}` pair, javascript the raw SDK
+`WorkflowState`.
+
+Gating on `Order <instanceId> has completed!` avoids all of that. It is invariant across all
+four languages, needs no JSON path, and is the stronger assertion — it proves the activity
+chain ran, whereas a status field only reports what the engine recorded. The status endpoint
+is still called and asserted, but only for what is actually documented: HTTP 200 with a
+non-empty body, plus `"isWorkflowCompleted":true` for python where the README states it.
+
+Tightening the other three to a specific field is deliberately left for implementation, when
+real responses can be observed rather than guessed. This is also a documentation gap worth
+fixing separately: three of the four workflow READMEs describe a response body they never
+show, and python's shows a numeric status where the prose says "completed".
 
 That leaves exactly one per-language accessor:
 
-| Language | Start response key |
+| Language | Documented start response |
 |---|---|
-| Python | `instanceId` |
-| Java | `instanceId` |
-| .NET | `instanceId` |
-| JavaScript | `instance_id` |
+| Python | `{"instanceId":"<YOUR_INSTANCE_ID>"}` |
+| .NET | `{"instanceId":"<YOUR_INSTANCE_ID>"}` |
+| Java | `{"instanceId":"<YOUR_INSTANCE_ID>","errorMessage":null}` |
+| JavaScript | `{"instance_id":"<YOUR_INSTANCE_ID>"}` |
 
-`instance_id` in javascript against `instanceId` in the other three is real drift. The test
-records it as a variable rather than papering over it, so it shows up in review.
+`instance_id` in javascript against `instanceId` in the other three is real drift, documented
+as such in the READMEs — the javascript README even tells the user that `test.rest`'s variable
+will not resolve because of it. The test records the key as a variable rather than papering
+over it, so it shows up in review.
+
+### Steps beyond the documented flow
+
+Two endpoints exist in every implementation and every `test.rest`, but no README documents
+them:
+
+| Endpoint | Documented? |
+|---|---|
+| `DELETE /order/{id}` (state) | No — state READMEs cover only store and retrieve |
+| `POST /workflow/terminate/{id}` (workflow) | No — deliberately excluded when the READMEs were written |
+
+The suites exercise them anyway, as steps clearly labelled as beyond the documented flow and
+placed after the documented ones so a failure reads unambiguously:
+
+| Extra step | HTTP | Log marker |
+|---|---|---|
+| `DELETE /order/1` | 204 | `Delete state item successful. Order deleted` |
+| `GET /order/1` after delete | 404, body contains `ORDER_NOT_FOUND` | `State item with key` |
+| `POST /workflow/terminate/<id>` | 200 | — |
+
+The reasoning: these are real endpoints in code users read, and leaving them untested means a
+regression in either ships silently. The cost is that the four state suites and four workflow
+suites test slightly more than their README describes, which is a much smaller problem than an
+untested delete path.
+
+The `State item with key` marker is deliberately weak — python and .NET log `State item with
+key 1 does not exist` while javascript and java log `State item with key does not exist: 1`,
+so only the prefix is invariant.
+
+If you would rather the suites assert nothing beyond the documented flow, dropping these three
+rows is a self-contained change. The better fix is arguably the other direction: document the
+two endpoints in the READMEs, after which these stop being extras at all.
 
 ### Marker organisation
 
@@ -358,8 +528,10 @@ on:
 concurrency: {group: e2e-quickstarts, cancel-in-progress: false}
 
 jobs:
-  lint:    # runs on PRs and on schedule
-    uv sync && robot --dryrun (all 4 suites)   # resolves syntax, keywords, variables
+  lint:    # runs on PRs and on schedule — no secrets, fork-safe
+    uv sync
+    robot --dryrun (all 4 suites)              # resolves syntax, keywords, variables
+    check_readme_sync.py (all 16 READMEs)      # README commands match the suites
 
   reap:    # schedule only
     delete qs-ci-* projects older than 6h
@@ -391,9 +563,12 @@ jobs:
 
 Details that matter:
 
-- **Toolchain versions** are verified against the repository, not guessed: `net10.0` in every
-  csproj, `<java.version>17</java.version>` in every pom, `requires-python = ">=3.12"` in
-  every pyproject, `node index.js` with no engine constraint in every package.json.
+- **Toolchain versions come from README section 1**, and agree with the code: the READMEs list
+  .NET 10.0, Java 17+ with Maven 3.9.5+, Node.JS LTS, and Python 3.12+ with uv; the repository
+  has `net10.0` in every csproj, `<java.version>17</java.version>` in every pom, and
+  `requires-python = ">=3.12"` in every pyproject. The prerequisite lists are identical across
+  all four APIs for a given language, so the runtime setup is per-matrix-leg, not per-suite.
+  `ubuntu-latest` already ships a Maven newer than 3.9.5, so no explicit Maven step is needed.
 - **Dependency pre-warming runs outside the timed Robot keywords.** track-tester learned this
   the hard way: on a cold `~/.m2` the dependency download alone exceeded the build timeout
   and the build was killed mid-download. The timed step should only compile.
@@ -441,15 +616,19 @@ currently referenced by any workflow in the repository.
 
 ## Verification
 
-The harness is itself testable, and its correctness is established in three layers:
+The harness is itself testable, and its correctness is established in four layers:
 
 1. **`robot --dryrun` on all four suites** resolves every keyword and variable without
    starting anything. Runs on every PR.
-2. **A single leg run locally** against a real Catalyst project, for each of the four
+2. **`check_readme_sync.py` on all 16 READMEs** confirms the suites still run what the docs
+   say. Also on every PR, and it is the layer that catches a README edit.
+3. **A single leg run locally** against a real Catalyst project, for each of the four
    languages, before the workflow is enabled on a schedule. This is the step that confirms
    every log marker in this spec actually appears in the captured stream — the markers were
-   read from source, and reading source is not the same as observing output.
-3. **A deliberate-break check**: point one marker at a string the app does not log and
+   read from source, and reading source is not the same as observing output. It is also where
+   the three undocumented workflow status bodies get observed and, if they turn out stable,
+   asserted more tightly.
+4. **A deliberate-break check**: point one marker at a string the app does not log and
    confirm the suite fails rather than passing vacuously. Log assertions that silently never
    match are the main failure mode of this design, and a green run proves nothing until this
    check has been done once per API.
@@ -466,28 +645,65 @@ test-only change would be the wrong bundle.
   so the error path raises `NameError` instead of returning a 500.
 - **`state/java` expects `kvstore` while the other three expect `statestore`.** Worked around
   in CI by provisioning both; the inconsistency remains in the repository.
-- **`state/javascript` keys on `order<id>`** (`order4`) where python, java, and .NET key on
-  the bare id (`4`). The tests do not notice, because every call goes through the app's own
+- **`state/javascript` keys on `order<id>`** (`order1`) where python, java, and .NET key on
+  the bare id (`1`). The tests do not notice, because every call goes through the app's own
   API and is self-consistent. A user following the README's console-explorer step will see a
   differently named key in javascript than in the other three languages.
 - **`workflow/javascript` returns `instance_id`** where the other three return `instanceId`.
 - **`workflow/java` has no `workflow-quickstart.yaml`**, unlike the other three languages.
+- **`state/java` names its store-response field `orderId`** where python, javascript, and .NET
+  name it `id`, and its retrieve response carries an extra empty `message`. Documented in the
+  READMEs, so the tests assert it as-is.
+- **`pubsub/java` returns the published id as a string** (`{"id":"1"}`) where the other three
+  return a number.
+- **Three of four workflow READMEs never show the status response body**, describing it in
+  prose as "reads as completed". Python's shows `"runtimeStatus":1` — a numeric enum, so the
+  prose and the payload do not visibly agree. This is why the completion gate is a log marker.
+- **`test.rest` uses order ID `4` for state while the READMEs use `1`.** Harmless, and the
+  state README calls it out, but the two would ideally agree.
+- **`DELETE /order/{id}` and `POST /workflow/terminate/{id}` are undocumented** though present
+  in every implementation and every `test.rest`. Documenting them would turn the suites'
+  extra steps into documented ones.
 - **Log wording diverges across languages** for the same operation — capital-S `Publish
   Successful` in .NET, `Invoke Successful. Response received` in java's invocation client, a
   missing colon in java's invocation server. Harmonising these would let the marker table
   collapse to invariants only.
 
-## Deferred: doc-sync
+## doc-sync
 
-track-tester's `docsync/check_doc_sync.py` asserts that every runnable command in a
-challenge's `assignment.md` appears in the neighbouring suite, which is what catches
-*documentation* drift rather than runtime drift.
+Now that the READMEs exist, the check that catches *documentation* drift rather than runtime
+drift is in scope. This is track-tester's `docsync/check_doc_sync.py` idea applied to READMEs:
+assert that what a README tells a user to do is what the suite actually does.
 
-The equivalent here is not yet possible: these four quickstart directories have no READMEs.
-The `2026-07-28-quickstart-readmes-design.md` spec adds 16 of them. Once those exist, a
-doc-sync job comparing each README's fenced `bash` blocks against its suite is a natural
-follow-on and the layout above leaves room for it (`tools/qs-tester/docsync/`). It is
-deliberately not built now — there is nothing to check against.
+`tools/qs-tester/docsync/check_readme_sync.py` takes a README and its suite's variables entry
+and asserts four things for that directory:
+
+| Extracted from README | Compared against |
+|---|---|
+| section 4 fenced `bash` block(s) | the install command in `variables/quickstarts.py` |
+| section 5 fenced `bash` block | the run command, modulo the `--project` substitution |
+| section 6 `curl` URLs, methods, and `-d` payloads | the endpoints and payloads the suite calls |
+| section 6 fenced `json` expected bodies | the expected bodies the suite asserts |
+
+It is a **presence and equality check on strings**, not a proof of execution — the same
+limitation track-tester documents. Its job is catching the day someone edits a README command
+or an expected body without touching the suite, which is the most likely way these two drift
+apart.
+
+Three deliberate exclusions:
+
+- **PowerShell blocks are ignored.** Every request in every README is given three ways
+  (curl, PowerShell, REST Client). The suites use one. Requiring coverage of all three would
+  mean asserting the same call three times.
+- **The `--project` value is normalised before comparison**, since the harness substitutes its
+  ephemeral project name for the documented `<api>-quickstart`. This is the one sanctioned
+  divergence and the checker knows about it explicitly rather than by fuzzy matching.
+- **Steps beyond the documented flow are allowed.** The checker asserts the README is covered
+  by the suite, not that the suite is covered by the README, so the delete and terminate steps
+  do not trip it. Asserting in both directions would forbid them.
+
+It runs in the `lint` job, so it fires on every PR without needing secrets or a Catalyst
+project — cheap, fast, and exactly the check most likely to catch a README edit.
 
 ## Open items requiring a decision or access
 
@@ -508,15 +724,20 @@ writing the harness; all three block the first green scheduled run.
 ## Implementation order
 
 1. `tools/qs-tester/` skeleton: `pyproject.toml`, `resources/catalyst.resource` with the
-   ported teardown keyword, `variables/quickstarts.py` with the matrix and markers.
-2. `state/tests/quickstart.robot` — the simplest API, single app, four HTTP steps. Get one
-   language green locally end to end, then the other three.
+   ported teardown keyword, `variables/quickstarts.py` populated **by reading all 16 READMEs**
+   — install command, run command, endpoints, payloads, expected bodies, markers.
+2. `state/tests/quickstart.robot` — the simplest API, single app, two documented steps plus the
+   two extras. Get one language green locally end to end, then the other three.
 3. `invocation/tests/quickstart.robot`, then `pubsub/tests/quickstart.robot` — two-app
    quickstarts, and pubsub is where the log assertion earns its place.
-4. `workflow/tests/quickstart.robot` — the polling status loop and the `--app-id` java
-   special case.
-5. `ci/*.sh` scripts.
-6. `.github/workflows/e2e-quickstarts.yml`, initially `workflow_dispatch` only.
-7. Run each language leg by hand, do the deliberate-break check, then enable the schedule.
+4. `workflow/tests/quickstart.robot` — the log-marker completion gate, the per-language start
+   response key, and the `--app-id` java special case.
+5. `docsync/check_readme_sync.py`, written after the variables file exists so it has something
+   real to compare against. Run it against all 16 READMEs immediately; any mismatch it reports
+   at this point is a bug in step 1's transcription, which is exactly what it is for.
+6. `ci/*.sh` scripts.
+7. `.github/workflows/e2e-quickstarts.yml`, initially `workflow_dispatch` only.
+8. Run each language leg by hand, observe the three undocumented workflow status bodies, do the
+   deliberate-break check, then enable the schedule.
 
 Steps 2-4 each end with a green local run for all four languages before moving on.
