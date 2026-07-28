@@ -1,0 +1,13 @@
+version: 1
+common:
+  appLogDestination: console
+  enableAppHealthCheck: false
+  logLevel: info
+apps:
+  - appID: customer-ops-agent
+    appDirPath: ./
+    appPort: 8005
+    appProtocol: http
+    command: ["python", "main.py"]
+    env:
+      APP_PORT: "8005"

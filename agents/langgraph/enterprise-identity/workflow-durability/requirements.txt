@@ -1,0 +1,6 @@
+diagrid[langgraph]==0.4.2
+diagrid-identity
+langchain-openai==1.2.1
+dapr==1.15.0
+fastapi==0.136.1
+uvicorn[standard]==0.46.0
