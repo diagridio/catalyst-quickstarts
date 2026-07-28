@@ -512,23 +512,29 @@ are untouched.
 on:
   schedule:    [{cron: '0 5 * * *'}]   # daily 05:00 UTC, before the working day in EU
   workflow_dispatch:                    # inputs: language, api (both optional filters)
-  pull_request:                         # lint job only — no secrets, fork-safe
+  pull_request:                         # lint job only — no credentials, fork-safe
 
 concurrency: {group: e2e-quickstarts, cancel-in-progress: false}
 
+env:
+  DIAGRID_CLI_VERSION: '<pinned>'      # workflow-wide, not a credential
+
 jobs:
-  lint:    # runs on PRs and on schedule — no secrets, fork-safe
+  lint:    # runs on PRs and on schedule — no credentials, fork-safe
     uv sync
     robot --dryrun (all 4 suites)              # resolves syntax, keywords, variables
     check_readme_sync.py (all 16 READMEs)      # README commands match the suites
 
   reap:    # schedule only
+    env: {DIAGRID_API_KEY: ...}
     delete qs-ci-* projects older than 6h
 
   e2e:
     if: github.repository_owner == 'diagridio'
     environment: shared-production
     timeout-minutes: 60
+    env:
+      DIAGRID_API_KEY: ...             # job-level, so every step and script sees it
     strategy:
       fail-fast: false
       max-parallel: 2                     # never more than 2 Catalyst projects at once
@@ -564,9 +570,10 @@ Details that matter:
 - **The per-API loop uses the `if !` guard** so a failure in one API still lets the remaining
   three run. One nightly run then reports every broken API for that language, not just the
   first. The leg fails at the end if any API failed.
-- **`pull_request` triggers only `lint`.** The e2e job needs `DIAGRID_API_KEY`, which is not
-  available to fork PRs, and 16 real Catalyst projects per PR would be wasteful regardless.
-  `--dryrun` still catches broken keyword references and typos in suite files on every PR.
+- **`pull_request` triggers only `lint`.** The e2e job needs `DIAGRID_API_KEY`, which will not
+  be populated for fork PRs, and real Catalyst projects per PR would be wasteful regardless.
+  `--dryrun` and doc-sync still run on every PR, and between them catch broken keyword
+  references, typos in suite files, and README edits that the suites have not followed.
 - **`max-parallel: 2` caps concurrent Catalyst projects at two**, as described above. It also
   roughly doubles wall-clock time against an unconstrained matrix — expect somewhere around
   45 to 60 minutes for the whole run rather than 25 to 30. For a nightly schedule that is a
@@ -592,16 +599,40 @@ and includes the `gh run download` command per failing leg for fetching the merg
 One issue that accumulates comments, rather than a new issue per night, keeps a recurring
 breakage in one place with its history.
 
-## Secrets and configuration
+## Configuration
 
-| Name | Kind | Purpose |
-|---|---|---|
-| `DIAGRID_API_KEY` | secret | `diagrid login --api-key` |
-| `DIAGRID_CLI_VERSION` | env in workflow | pin the CLI so a CLI release cannot silently change behaviour |
+Both values reach the harness as **environment variables**, in CI and locally alike:
 
-The existing workflows use `environment: shared-production`; this one does the same. **The
-API key secret must be created and its exact name confirmed** — no suitable secret is
-currently referenced by any workflow in the repository.
+| Name | Purpose |
+|---|---|
+| `DIAGRID_API_KEY` | authenticates `diagrid login` |
+| `DIAGRID_CLI_VERSION` | pins the CLI so a CLI release cannot silently change behaviour |
+
+`ci/setup-project.sh` reads `DIAGRID_API_KEY` from the environment and passes it to the CLI
+explicitly:
+
+```bash
+diagrid login --api-key "$DIAGRID_API_KEY"
+```
+
+**The CLI does not read `DIAGRID_API_KEY` itself** — `diagrid login` accepts only the
+`--api-key` flag, with no documented environment fallback. Exporting the variable without
+passing the flag would silently attempt an interactive browser login and hang in CI. The
+explicit flag is required.
+
+The script fails fast with a clear message if the variable is unset or empty, rather than
+letting the CLI fall through to an interactive login.
+
+Locally the same variable makes a single leg reproducible with no extra setup:
+
+```bash
+export DIAGRID_API_KEY=...
+bash tools/qs-tester/ci/setup-project.sh
+(cd tools/qs-tester && uv run robot --include python ../../state/tests/quickstart.robot)
+```
+
+In GitHub Actions the workflow sets it at job level from the repository's configured value.
+The job keeps `environment: shared-production`, matching the 16 existing workflows.
 
 ## Verification
 
@@ -627,9 +658,6 @@ The harness is itself testable, and its correctness is established in four layer
 These are real and worth separate PRs. They are out of scope; fixing quickstart source in a
 test-only change would be the wrong bundle.
 
-- **`invocation/python/venv/`** is a checked-in Python 3.9 virtualenv. It will confuse
-  `uv sync` and should be deleted and gitignored. This one may need resolving before the
-  python invocation leg can run.
 - **`pubsub/python/publisher/main.py`** catches `grpc.RpcError` without importing `grpc`,
   so the error path raises `NameError` instead of returning a 500.
 - **`state/java` expects `kvstore` while the other three expect `statestore`.** Worked around
@@ -694,24 +722,23 @@ Three deliberate exclusions:
   calls, a reverse check would mostly pass, but it would couple the harness's internal steps to
   the docs for no benefit.
 
-It runs in the `lint` job, so it fires on every PR without needing secrets or a Catalyst
+It runs in the `lint` job, so it fires on every PR without needing credentials or a Catalyst
 project — cheap, fast, and exactly the check most likely to catch a README edit.
 
-## Open items requiring a decision or access
+## Settled prerequisites
 
-Three things this design depends on but cannot settle from the repository alone. None blocks
-writing the harness; all three block the first green scheduled run.
+The three items this design was blocked on are resolved. Recorded here so the implementation
+does not have to re-ask.
 
-1. **`DIAGRID_API_KEY` secret.** No workflow in the repository references a Diagrid API key
-   today, so the secret has to be created in the `shared-production` environment and its name
-   confirmed. A CI-scoped key, not a personal one.
-2. **Catalyst quota.** The design holds at two concurrent ephemeral projects, each with a
-   managed KV store, a pub/sub broker, a workflow engine, and a second KV store. Confirm that
-   two fits inside the account limits. If even two is too many, `max-parallel: 1` serialises
-   the legs and changes nothing else in the design, at roughly four times the wall-clock of an
-   unconstrained matrix.
-3. **`invocation/python/venv/`.** The checked-in Python 3.9 virtualenv likely has to be
-   removed before the python invocation leg can build. Confirm whether anything depends on it.
+1. **`DIAGRID_API_KEY` is supplied as an environment variable**, locally and in GitHub Actions.
+   No `secrets.*` plumbing in the harness; the scripts read the variable and pass
+   `--api-key "$DIAGRID_API_KEY"` to the CLI, which has no environment fallback of its own.
+2. **Two concurrent Catalyst projects is within limits**, so `max-parallel: 2` stands as
+   designed. No fallback to serial execution needed.
+3. **`invocation/python/venv/` is already removed on `main`.** Verified against `origin/main`;
+   the directory is gone and `.gitignore` covers `.venv`, which is the directory name
+   `uv venv` actually creates. That matters for the three python legs that create a virtual
+   environment during the run — they cannot dirty the working tree or leak into an artifact.
 
 ## Implementation order
 
