@@ -226,16 +226,38 @@ The pubsub and invocation READMEs give a precise signal, and the suites use it:
 | invocation (all 4) | `Connected App ID "server" to localhost:5002` |
 | workflow, state (all 8) | prose only — "wait a few seconds until you see application logs" |
 
-Waiting on `Connected App ID "<appID>" to localhost:<port>` is better than an HTTP health
-poll alone, because it confirms the Catalyst side of the connection is established and not
-merely that a local port is listening. It is also a line `diagrid dev run` emits for every
-app, so the suites use it for all four APIs — including the eight whose READMEs only say
-"wait a few seconds", which is not something a test can act on.
+The difference between the three README variants is not editorial — it follows from the dev
+config. `diagrid dev run` emits `Connected App ID "<id>" to localhost:<port>` only for an app
+that has a **local app connection**, meaning a non-zero `appPort`:
 
-After the readiness marker, each suite still polls `GET http://localhost:<port>/` until 200
-per app, with a 180s timeout. Two gates rather than one: the marker proves Catalyst
-connected the appID, the health check proves the app itself is serving. JVM and .NET cold
-starts on a CI runner are slow enough that the gap between the two is real.
+| App | `appPort` | Connection marker emitted? |
+|---|---|---|
+| pubsub `publisher` | 5001 | Yes |
+| pubsub `subscriber` | 5002 | Yes |
+| invocation `server` | 5002 | Yes |
+| invocation `client` | absent | **No** — outbound only |
+| workflow `order-workflow` | 0 | **No** |
+| state `order-app` | 0 | **No** |
+
+So the marker is available for pubsub and invocation, and does not exist at all for workflow
+and state. Waiting on it where it exists is better than an HTTP poll alone, because it proves
+the Catalyst side of the connection is established rather than merely that a local port is
+listening. Waiting on it where it does not exist would hang until timeout.
+
+Readiness is therefore per-API:
+
+| Suite | Gate 1 — connection marker | Gate 2 — HTTP health |
+|---|---|---|
+| pubsub | both `publisher` (5001) and `subscriber` (5002) | `GET /` on 5001 and 5002 |
+| invocation | `server` (5002) only | `GET /` on 5001 and 5002 |
+| workflow | none available | `GET /` on 5001 |
+| state | none available | `GET /` on 5001 |
+
+Gate 2 always runs, with a 180s timeout: the marker proves Catalyst connected the appID, the
+health check proves the app itself is serving, and JVM and .NET cold starts on a CI runner
+make the gap between the two real. For workflow and state the health check is the only gate,
+which is fine — `GET /` is a documented endpoint on every app and is language-invariant,
+unlike the framework startup lines that would be the alternative.
 
 ## Assertion matrix
 
