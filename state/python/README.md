@@ -153,7 +153,7 @@ curl -i -X GET http://localhost:5001/order/1
 Invoke-RestMethod -Method Get -Uri "http://localhost:5001/order/1"
 ```
 
-**Any OS (VS Code REST Client):** open [`test.rest`](./test.rest) and click *Send Request* above the request. Requires the [REST Client](https://marketplace.visualstudio.com/items?itemName=humao.rest-client) extension.
+**Any OS (VS Code REST Client):** open [`test.rest`](./test.rest) and click *Send Request* above the request. Note that `test.rest` uses order ID `4` rather than `1`, so the retrieved value reads `4`. Requires the [REST Client](https://marketplace.visualstudio.com/items?itemName=humao.rest-client) extension.
 
 The expected response body is:
 

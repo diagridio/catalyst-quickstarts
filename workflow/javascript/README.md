@@ -186,7 +186,7 @@ curl -i -X GET http://localhost:5001/workflow/status/$INSTANCE_ID
 Invoke-RestMethod -Method Get -Uri "http://localhost:5001/workflow/status/$env:INSTANCE_ID" | ConvertTo-Json -Depth 3
 ```
 
-**Any OS (VS Code REST Client):** open [`test.rest`](./test.rest) and click *Send Request* above the request — it reuses the instance ID from the start request automatically. Requires the [REST Client](https://marketplace.visualstudio.com/items?itemName=humao.rest-client) extension.
+**Any OS (VS Code REST Client):** open [`test.rest`](./test.rest), and replace `{{startWorkflow.response.body.instanceId}}` in the status request with the `instance_id` value from step 6.1 — this application returns `instance_id`, so the variable does not resolve on its own. Requires the [REST Client](https://marketplace.visualstudio.com/items?itemName=humao.rest-client) extension.
 
 The response is the Dapr SDK's `WorkflowState` object for the instance, including its runtime status and creation and last-updated timestamps. Once the workflow has finished, the runtime status reads as completed.
 

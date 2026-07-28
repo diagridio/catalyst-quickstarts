@@ -154,7 +154,7 @@ Invoke-RestMethod -Method Post -Uri "http://localhost:5001/workflow/start" -Cont
 The response contains the workflow instance ID:
 
 ```json
-{"instanceId":"<YOUR_INSTANCE_ID>"}
+{"instanceId":"<YOUR_INSTANCE_ID>","errorMessage":null}
 ```
 
 Copy the value from the response and save it as an environment variable for subsequent calls:
