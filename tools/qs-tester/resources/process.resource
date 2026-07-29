@@ -15,8 +15,10 @@ Start Background Process
     [Documentation]    Launch ${command} without blocking, merging stdout and stderr
     ...    into ${logfile}. ${alias} lets later keywords refer to the process.
     [Arguments]    ${command}    ${logfile}    ${alias}    ${cwd}=${EMPTY}
-    # Truncate first: a log left over from a previous run could otherwise satisfy
-    # an assertion before the new process has produced any output at all.
+    # Robot's Process library already truncates any stdout= path it opens
+    # (open(path, "w")), so this is belt-and-braces against that undocumented
+    # behaviour changing — not the thing that currently prevents a stale log
+    # from satisfying an assertion.
     Create File    ${logfile}    ${EMPTY}
     ${handle}=    Start Process    ${command}    shell=True    alias=${alias}
     ...    cwd=${cwd}    stdout=${logfile}    stderr=STDOUT
