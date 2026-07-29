@@ -90,10 +90,9 @@ RUN = {
 
 # --- Apps, ports, and readiness ---------------------------------------------
 # HEALTH_PORTS: every port that must answer 200 on `GET /` before asserting.
-# CONNECTED_APPS: (appID, port) pairs that `diagrid dev run` reports as
-# `Connected App ID "<id>" to localhost:<port>`. Only apps with a non-zero
-# appPort in the dev config produce that line, so workflow and state have none
-# and invocation has only `server`.
+# Keyed by api only: the apps listen on 5001/5002 regardless of appPort
+# (appPort only tells Catalyst to open an inbound connection), so this stays
+# uniform across languages even where CONNECTED_APPS below does not.
 HEALTH_PORTS = {
     "workflow": (5001,),
     "state": (5001,),
@@ -101,11 +100,31 @@ HEALTH_PORTS = {
     "invocation": (5001, 5002),
 }
 
+# CONNECTED_APPS: (appID, port) pairs that `diagrid dev run` reports as
+# `Connected App ID "<id>" to localhost:<port>`. Only apps with a non-zero
+# appPort in the dev config produce that line. Keyed by (api, language),
+# matching INSTALL and RUN above, because this is NOT uniform per API:
+# pubsub's publisher has an appPort in csharp/python but NOT in java/
+# javascript (verified against each language's dev config), so java and
+# javascript emit only the subscriber's connection line. Do not collapse
+# this back to a per-API dict — the divergence is real, not a typo.
 CONNECTED_APPS = {
-    "workflow": (),
-    "state": (),
-    "pubsub": (("publisher", 5001), ("subscriber", 5002)),
-    "invocation": (("server", 5002),),
+    ("workflow", "csharp"): (),
+    ("workflow", "java"): (),
+    ("workflow", "javascript"): (),
+    ("workflow", "python"): (),
+    ("state", "csharp"): (),
+    ("state", "java"): (),
+    ("state", "javascript"): (),
+    ("state", "python"): (),
+    ("pubsub", "csharp"): (("publisher", 5001), ("subscriber", 5002)),
+    ("pubsub", "java"): (("subscriber", 5002),),
+    ("pubsub", "javascript"): (("subscriber", 5002),),
+    ("pubsub", "python"): (("publisher", 5001), ("subscriber", 5002)),
+    ("invocation", "csharp"): (("server", 5002),),
+    ("invocation", "java"): (("server", 5002),),
+    ("invocation", "javascript"): (("server", 5002),),
+    ("invocation", "python"): (("server", 5002),),
 }
 
 # --- README section 6: requests ---------------------------------------------
@@ -202,5 +221,5 @@ def get_quickstart(api, language):
         "run": RUN[(api, language)],
         "activate_venv": (api, language) in ACTIVATE_VENV,
         "health_ports": list(HEALTH_PORTS[api]),
-        "connected_apps": [list(pair) for pair in CONNECTED_APPS[api]],
+        "connected_apps": [list(pair) for pair in CONNECTED_APPS[(api, language)]],
     }
