@@ -44,7 +44,7 @@ POST And Expect
     ${body}=    Set Variable    ${response.json()}
     IF    $expected_body is not None
         Should Be Equal    ${body}    ${expected_body}
-        ...    msg=POST ${path} body mismatch.\nExpected: ${expected_body}\nActual:   ${body}
+        ...    msg=POST ${path} body mismatch.\nExpected: ${expected_body}\nActual: ${body}
     END
     RETURN    ${body}
 
@@ -55,6 +55,6 @@ GET And Expect
     ${body}=    Set Variable    ${response.json()}
     IF    $expected_body is not None
         Should Be Equal    ${body}    ${expected_body}
-        ...    msg=GET ${path} body mismatch.\nExpected: ${expected_body}\nActual:   ${body}
+        ...    msg=GET ${path} body mismatch.\nExpected: ${expected_body}\nActual: ${body}
     END
     RETURN    ${body}
