@@ -1859,15 +1859,17 @@ on:
   workflow_dispatch:
     inputs:
       language:
-        description: 'Single language to run (blank = all four)'
+        description: 'Single language to run (all = all four)'
         required: false
         type: choice
-        options: ['', csharp, java, javascript, python]
+        default: 'all'
+        options: [all, csharp, java, javascript, python]
       api:
-        description: 'Single API to run (blank = all four)'
+        description: 'Single API to run (all = all four)'
         required: false
         type: choice
-        options: ['', workflow, state, pubsub, invocation]
+        default: 'all'
+        options: [all, workflow, state, pubsub, invocation]
   pull_request:
     paths:
       - 'tools/qs-tester/**'
@@ -1908,6 +1910,8 @@ jobs:
         run: (cd tools/qs-tester && uv run python docsync/check_readme_sync.py --all)
       - name: Unit-test the doc-sync checker
         run: (cd tools/qs-tester && uv run pytest docsync/tests -q)
+      - name: Smoke-test process teardown keywords
+        run: (cd tools/qs-tester && uv run robot --outputdir results/smoke resources/tests/smoke.robot)
 
   reap:
     if: github.event_name == 'schedule' && github.repository_owner == 'diagridio'
@@ -1928,14 +1932,19 @@ jobs:
     if: github.event_name != 'pull_request' && github.repository_owner == 'diagridio'
     runs-on: ubuntu-latest
     environment: shared-production
-    timeout-minutes: 60
+    timeout-minutes: 90
     strategy:
       fail-fast: false
       # Never more than two concurrent Catalyst projects. Order pairs each
       # build-heavy language with a fast one so both slots stay busy.
       max-parallel: 2
       matrix:
-        lang: [java, javascript, csharp, python]
+        # On workflow_dispatch with a specific language, run only that one leg
+        # (the deliberate first-run procedure is "dispatch one language, then
+        # the full matrix", so it must not still create four projects). Any
+        # other trigger -- schedule, pull_request, or a dispatch left at the
+        # "all" default -- runs the full four-leg matrix in this fixed order.
+        lang: ${{ fromJSON( (github.event_name == 'workflow_dispatch' && inputs.language != 'all') && format('["{0}"]', inputs.language) || '["java","javascript","csharp","python"]' ) }}
     env:
       DIAGRID_API_KEY: ${{ secrets.DIAGRID_API_KEY }}
       LANG_ID: ${{ matrix.lang }}
@@ -2002,8 +2011,13 @@ jobs:
           cd tools/qs-tester
           # Run every API even if an earlier one fails, so one nightly run reports
           # all broken APIs for this language. The `if !` guard is exempt from set -e.
+          # inputs.api is empty on a scheduled run (workflow_dispatch inputs
+          # don't apply) and "all" on a dispatch left at its default; both
+          # mean "run every API".
           apis="${{ inputs.api }}"
-          [ -z "$apis" ] && apis="workflow state pubsub invocation"
+          if [ -z "$apis" ] || [ "$apis" = "all" ]; then
+            apis="workflow state pubsub invocation"
+          fi
           failed=""
           for api in $apis; do
             if ! uv run robot --outputdir "results/$api" \
