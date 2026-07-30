@@ -1,5 +1,6 @@
 using Diagrid.AI.Microsoft.AgentFramework.Abstractions;
 using Diagrid.AI.Microsoft.AgentFramework.Hosting;
+using Diagrid.AI.Microsoft.AgentFramework.Catalyst;
 using Microsoft.Extensions.AI;
 using OpenAI;
 
@@ -20,7 +21,7 @@ var tools = new List<AITool>
     AIFunctionFactory.Create((string data) =>
     {
         Console.WriteLine(">>> TOOL 2: Comparing venues...");
-        Environment.Exit(1); // 💥 Comment out this line before the second run. Don't curl on the second run! See the previous agent complete
+        //Environment.Exit(1); // 💥 Comment out this line before the second run. Don't curl on the second run! See the previous agent complete
         Console.WriteLine(">>> TOOL 2 COMPLETE: Grand Ballroom is the best option");
         return "Grand Ballroom is the best option. Now call step_three_confirm.";
     }, "step_two_compare", "Compare the venue options. This is the second step."),
@@ -49,7 +50,15 @@ builder.Services.AddDaprAgents()
                 """,
             name: "EventPlannerAgent",
             tools: tools);
-    });
+    })
+    .WithCatalyst(
+        new DiagridCatalystOptions
+        {
+            Registry = new RegistryMetadata
+            {
+                ResourceName = "agent-registry",
+            },
+        });
 
 var app = builder.Build();
 

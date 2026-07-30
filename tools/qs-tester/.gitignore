@@ -1,0 +1,8 @@
+.venv/
+results/
+output.xml
+log.html
+report.html
+*.log
+__pycache__/
+.pytest_cache/
