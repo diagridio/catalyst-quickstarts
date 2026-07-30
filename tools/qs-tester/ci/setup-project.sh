@@ -42,8 +42,14 @@ diagrid project create "$PROJECT" \
   --enable-managed-workflow \
   --wait --use
 
-# --deploy-managed-kv provisions a store named `kvstore`, which state/java expects.
-# The other three state quickstarts default to `statestore`, so provision that too.
-# Both are real stores, so no STATESTORE_NAME override is needed anywhere and each
-# language exercises its own published default.
-diagrid kv create statestore --project "$PROJECT" --wait
+# --deploy-managed-kv provisions the project's single managed KV store, named
+# `kvstore`, which state/java expects. The other three state quickstarts default
+# to `statestore` -- that is a *component* name, not a second store: each
+# quickstart's dev config lists statestore.yaml under resourcesPaths, and
+# `diagrid dev run` creates a `statestore` component backed by the same managed
+# `kvstore` service. So no STATESTORE_NAME override is needed anywhere and each
+# language still exercises its own published default.
+#
+# Do NOT add `diagrid kv create statestore` here. Orgs are capped at one KV store
+# per project per region, so it fails with HTTP 400 ("reached the configured
+# maximum number of kvstores per project"), and it was never needed.

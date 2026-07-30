@@ -34,16 +34,18 @@ Resolve Project In Command
     RETURN    ${result}
 
 Wait Until Apps Connected
-    [Documentation]    Wait for `Connected App ID "<id>" to localhost:<port>` for each
-    ...    app that has a local app connection. Apps with appPort 0 or no appPort
+    [Documentation]    Wait for `Connected App ID "<id>" to http://localhost:<port>` for
+    ...    each app that has a local app connection. Apps with appPort 0 or no appPort
     ...    (workflow, state, invocation's client) never emit this line, so
     ...    ${qs}[connected_apps] is empty for those and this keyword does nothing.
+    ...    The `http://` scheme is part of the line the CLI prints — matching on the
+    ...    schemeless `to localhost:<port>` silently waits out the full timeout.
     [Arguments]    ${qs}    ${logfile}
     FOR    ${app}    IN    @{qs}[connected_apps]
         ${app_id}=    Set Variable    ${app}[0]
         ${port}=    Set Variable    ${app}[1]
         Wait Until Log Contains    ${logfile}
-        ...    Connected App ID "${app_id}" to localhost:${port}    timeout=180s
+        ...    Connected App ID "${app_id}" to http://localhost:${port}    timeout=180s
     END
 
 Stop Quickstart

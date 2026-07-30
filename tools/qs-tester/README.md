@@ -147,8 +147,8 @@ Two failure shapes worth recognising:
 
 ### Readiness markers are not uniform per API
 
-`diagrid dev run` only prints `Connected App ID "<id>" to localhost:<port>` for an
-app that has a **non-zero `appPort`** in its dev config. This is not the same for
+`diagrid dev run` only prints `Connected App ID "<id>" to http://localhost:<port>` for
+an app that has a **non-zero `appPort`** in its dev config. This is not the same for
 every language of a given API: pubsub's `publisher` has an `appPort` in csharp and
 python but not in java or javascript, so `diagrid dev run` emits that connection
 line for the publisher in only two of the four languages (java and javascript wait

@@ -30,22 +30,22 @@ def quickstart_dir(api, language):
 INSTALL = {
     ("workflow", "csharp"): "dotnet build",
     ("workflow", "java"): "mvn clean install",
-    ("workflow", "javascript"): "npm install",
+    ("workflow", "javascript"): "npm ci",
     ("workflow", "python"): "uv sync",
     ("state", "csharp"): "dotnet restore",
     ("state", "java"): "mvn clean install",
-    ("state", "javascript"): "npm install",
+    ("state", "javascript"): "npm ci",
     ("state", "python"): "uv venv && . .venv/bin/activate && uv sync",
     ("pubsub", "csharp"): "dotnet restore ./publisher && dotnet restore ./subscriber",
     ("pubsub", "java"): "mvn clean install -f ./publisher && mvn clean install -f ./subscriber",
-    ("pubsub", "javascript"): "npm install --prefix ./publisher && npm install --prefix ./subscriber",
+    ("pubsub", "javascript"): "npm ci --prefix ./publisher && npm ci --prefix ./subscriber",
     ("pubsub", "python"): (
         "uv venv && . .venv/bin/activate && "
         "uv sync --active --directory publisher && uv sync --active --directory subscriber"
     ),
     ("invocation", "csharp"): "dotnet restore ./client && dotnet restore ./server",
     ("invocation", "java"): "mvn clean install -f ./client && mvn clean install -f ./server",
-    ("invocation", "javascript"): "npm install --prefix ./client && npm install --prefix ./server",
+    ("invocation", "javascript"): "npm ci --prefix ./client && npm ci --prefix ./server",
     ("invocation", "python"): (
         "uv venv && . .venv/bin/activate && "
         "uv sync --active --directory client && uv sync --active --directory server"
@@ -101,7 +101,7 @@ HEALTH_PORTS = {
 }
 
 # CONNECTED_APPS: (appID, port) pairs that `diagrid dev run` reports as
-# `Connected App ID "<id>" to localhost:<port>`. Only apps with a non-zero
+# `Connected App ID "<id>" to http://localhost:<port>`. Only apps with a non-zero
 # appPort in the dev config produce that line. Keyed by (api, language),
 # matching INSTALL and RUN above, because this is NOT uniform per API:
 # pubsub's publisher has an appPort in csharp/python but NOT in java/

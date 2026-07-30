@@ -134,6 +134,17 @@ def check(api: str, language: str, repo_root: Path) -> list[str]:
         # `source .venv/bin/activate` in the README; same thing, different spelling.
         if line.startswith("source "):
             line = ". " + line.split(" ", 1)[1]
+        # The READMEs document `npm install` because that is the right advice for a
+        # reader: it works from a clean checkout and tolerates a lockfile that has
+        # drifted from package.json. The harness deliberately runs `npm ci` instead,
+        # because `npm install` REWRITES package-lock.json (it normalises the `name`
+        # field to the directory name), which dirties the working tree on every
+        # javascript leg and shows up as a spurious diff in CI. `npm ci` installs the
+        # same locked dependency set and never writes the lockfile. Treat the two as
+        # equivalent here rather than degrading the READMEs to match the harness.
+        # Tradeoff: the javascript legs therefore no longer prove that the documented
+        # `npm install` itself succeeds.
+        line = line.replace("npm install", "npm ci")
         if line and line not in harness_install:
             problems.append(
                 f"{where}: README install step not in harness: {line!r}\n"
