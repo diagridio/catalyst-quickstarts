@@ -1,0 +1,15 @@
+### Trigger Schedule Planner agent
+POST http://localhost:8005/agent/run
+Content-Type: application/json
+
+{
+    "task": "Check if the Grand Ballroom is available on March 15th"
+}
+
+### Trigger crash-test workflow
+POST http://localhost:8001/run
+Content-Type: application/json
+
+{
+    "topic": "company gala on March 15"
+}

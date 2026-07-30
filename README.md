@@ -17,10 +17,20 @@ Catalyst works with the following agent frameworks:
 | [LangGraph](agents/langgraph/) | Graph-based agent orchestration with conditional routing, made durable with Catalyst |
 | [Strands](agents/strands/) | Model-driven agent framework from AWS with tool use, made durable with Catalyst |
 | [Microsoft Agent Framework](agents/microsoft-dotnet/) | Enterprise agent framework from Microsoft, made durable with Catalyst |
+| [Spring AI](agents/spring-ai/) | Spring's AI framework for Java, made durable with Catalyst |
 | [Google ADK](agents/adk/) | Agent Development Kit with Gemini integration, made durable with Catalyst |
 | [OpenAI Agents](agents/openai-agents/) | Function tools and agent handoffs from OpenAI, made durable with Catalyst |
 | [Pydantic AI](agents/pydantic-ai/) | Type-safe agent framework with structured outputs, made durable with Catalyst |
 | [Deep Agents](agents/deepagents/) | Type-safe agent harness with conditional routing, made durable with Catalyst |
+
+## MCP Quickstarts
+
+Learn how to register MCP (Model Context Protocol) servers with Catalyst and secure them.
+
+| Quickstart | Description | Path |
+|------------|--------------|------|
+| MCP Authentication & Authorization | Register a local MCP server, authenticate Catalyst to it, and authorize specific tool calls | [mcp-auth/python](mcp-auth/python/) |
+| MCP Access Control | Secure MCP servers and tools using granular access control lists (ACLs) and OAuth2 middleware pipelines | [mcp-access-control/python](mcp-access-control/python/) |
 
 ## Workflow Quickstart
 

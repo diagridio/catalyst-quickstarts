@@ -1,0 +1,15 @@
+version: 1
+common:
+  appLogDestination: console
+apps:
+  - appID: deepagents-researcher
+    appDirPath: ./
+    appPort: 8001
+    command: ["python", "subagent_workflows.py", "researcher"]
+  - appID: deepagents-analyst
+    appDirPath: ./
+    appPort: 8002
+    command: ["python", "subagent_workflows.py", "analyst"]
+  - appID: deepagents-supervisor
+    appDirPath: ./
+    command: ["python", "subagent_workflows.py", "supervisor"]

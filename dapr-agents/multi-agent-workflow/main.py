@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 
 import dapr.ext.workflow as wf
 from dapr.ext.workflow import WorkflowRuntime, DaprWorkflowClient
+from dapr_agents.workflow.utils.core import call_agent
 
 # ------------- MODELS -------------
 class SupportRequest(BaseModel):
@@ -43,8 +44,9 @@ def _parse_json_or_text(content: str) -> dict:
 def customer_support_workflow(ctx: wf.DaprWorkflowContext, input_data: dict):
     name = input_data.get("customer")
     issue = input_data.get("issue")
-    triage_response = yield ctx.call_child_workflow(
-        workflow="agent_workflow",
+    triage_response = yield call_agent(
+        ctx,
+        "triage_agent",
         input={
             "task": (
                 f"Customer: {name}. Issue: {issue}. "
@@ -58,8 +60,9 @@ def customer_support_workflow(ctx: wf.DaprWorkflowContext, input_data: dict):
     if not triage_result.get("entitled"):
         return {"status": "rejected", "reason": "No entitlement"}
 
-    expert_response = yield ctx.call_child_workflow(
-        workflow="agent_workflow",
+    expert_response = yield call_agent(
+        ctx,
+        "expert_agent",
         input={
             "task": (
                 f"Customer: {name}. Issue: {issue}. "

@@ -1,0 +1,15 @@
+### Trigger Entertainment Planner agent
+POST http://localhost:8003/agent/run
+Content-Type: application/json
+
+{
+    "task": "Find entertainment for a corporate networking event"
+}
+
+### Trigger crash-test workflow
+POST http://localhost:8001/run
+Content-Type: application/json
+
+{
+    "prompt": "Find entertainment for a corporate holiday party"
+}

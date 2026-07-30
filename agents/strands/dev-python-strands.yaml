@@ -1,14 +1,13 @@
 version: 1
 common:
   appLogDestination: console
-  resourcesPath: ./resources
   enableAppHealthCheck: false
   logLevel: info
 apps:
   - appID: strands-agent
     appDirPath: ./
-    appPort: 8888
+    appPort: 8004
     appProtocol: http
     command: ["python", "main.py"]
     env:
-      APP_PORT: "8888"
+      APP_PORT: "8004"
