@@ -1,0 +1,16 @@
+[project]
+name = "qs-tester"
+version = "0.1.0"
+description = "End-to-end tests for the Catalyst quickstarts (Robot Framework)"
+requires-python = ">=3.12"
+dependencies = [
+    "robotframework>=7,<8",
+    "robotframework-requests>=0.9",
+]
+
+[dependency-groups]
+dev = ["pytest>=8"]
+
+[tool.pytest.ini_options]
+pythonpath = ["docsync", "variables"]
+testpaths = ["docsync/tests"]
