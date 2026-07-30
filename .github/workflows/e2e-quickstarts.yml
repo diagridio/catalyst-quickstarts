@@ -143,14 +143,25 @@ jobs:
       # Pre-warm OUTSIDE the timed Robot build keyword. On a cold ~/.m2 the
       # dependency download alone can exceed the build timeout and get killed
       # mid-download; the timed step should only have to compile.
+      #
+      # BOTH goals are required, and dependency:go-offline alone is NOT enough.
+      # Measured on a clean repository (-Dmaven.repo.local), go-offline exits 0
+      # but fetches only the .pom for many compile dependencies, leaving 4-10
+      # jars per module absent (gson, reactor-core, netty-*, ...). A subsequent
+      # `mvn -o clean install` then failed for all six modules; adding
+      # dependency:resolve made all six pass. go-offline is still needed because
+      # it is what pre-fetches the build *plugins*. Verify any change here the
+      # same way: prewarm into an empty repo, then build with -o and require
+      # BUILD SUCCESS. Do not drop either goal.
       - name: Pre-warm Maven dependencies
         if: matrix.lang == 'java'
         run: |
           for dir in workflow/java state/java \
                      pubsub/java/publisher pubsub/java/subscriber \
                      invocation/java/client invocation/java/server; do
-            echo "::group::go-offline $dir"
+            echo "::group::prewarm $dir"
             mvn -q -B -f "$dir/pom.xml" dependency:go-offline || true
+            mvn -q -B -f "$dir/pom.xml" dependency:resolve || true
             echo "::endgroup::"
           done
 
