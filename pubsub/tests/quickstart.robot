@@ -50,7 +50,7 @@ Python Pubsub Quickstart
 Run Pubsub Quickstart
     [Arguments]    ${language}
     ${qs}=      Get Quickstart    pubsub    ${language}
-    ${log}=     Suite Log File    pubsub
+    ${log}=     Suite Log File    pubsub    ${language}
     Build Quickstart            ${qs}
     Start Quickstart            ${qs}    ${PROJECT}    ${log}
     # Both apps have an appPort, so both connection markers are emitted — the

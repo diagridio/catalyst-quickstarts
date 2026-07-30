@@ -17,10 +17,14 @@ Build Quickstart
     Run And Expect RC Zero    ${qs}[install]    cwd=${qs}[dir]    timeout=900s
 
 Suite Log File
-    [Documentation]    One captured `diagrid dev run` stream per suite. Lives under
-    ...    the Robot output dir so CI uploads it with the report.
-    [Arguments]    ${api}
-    RETURN    ${OUTPUT DIR}/${api}-dev-run.log
+    [Documentation]    One captured `diagrid dev run` stream per (api, language).
+    ...    Lives under the Robot output dir so CI uploads it with the report.
+    ...    The language MUST be in the filename: all four language tests share a
+    ...    suite, and Start Background Process truncates this file, so a per-api
+    ...    name left only the last language's log on disk and destroyed the
+    ...    evidence for whichever earlier language actually failed.
+    [Arguments]    ${api}    ${language}
+    RETURN    ${OUTPUT DIR}/${api}-${language}-dev-run.log
 
 Wait Until Apps Healthy
     [Documentation]    Poll `GET /` on every app port until it answers 200. This is

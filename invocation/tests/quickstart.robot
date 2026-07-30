@@ -48,7 +48,7 @@ Python Invocation Quickstart
 Run Invocation Quickstart
     [Arguments]    ${language}
     ${qs}=      Get Quickstart    invocation    ${language}
-    ${log}=     Suite Log File    invocation
+    ${log}=     Suite Log File    invocation    ${language}
     Build Quickstart            ${qs}
     Start Quickstart            ${qs}    ${PROJECT}    ${log}
     # Only `server` has an appPort, so only its connection marker is emitted —

@@ -47,7 +47,7 @@ Python State Quickstart
 Run State Quickstart
     [Arguments]    ${language}
     ${qs}=      Get Quickstart    state    ${language}
-    ${log}=     Suite Log File    state
+    ${log}=     Suite Log File    state    ${language}
     Build Quickstart            ${qs}
     Start Quickstart            ${qs}    ${PROJECT}    ${log}
     # state's app has appPort 0, so no `Connected App ID` line is ever emitted.

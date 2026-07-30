@@ -56,7 +56,7 @@ Python Workflow Quickstart
 Run Workflow Quickstart
     [Arguments]    ${language}
     ${qs}=      Get Quickstart    workflow    ${language}
-    ${log}=     Suite Log File    workflow
+    ${log}=     Suite Log File    workflow    ${language}
     Build Quickstart            ${qs}
     Start Quickstart            ${qs}    ${PROJECT}    ${log}
     # workflow's app has appPort 0, so no connection marker exists; the health
