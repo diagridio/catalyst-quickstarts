@@ -1,0 +1,15 @@
+### MCP Authentication & Authorization Quickstart
+### Diagrid Catalyst - Authenticating to an MCP server and authorizing tool calls
+
+### Health Check - MCP Client
+GET http://localhost:5001/
+
+###
+
+### Run MCP Client
+### Discovers MCP tools, invokes add(2,3) and get_account_balance("acct-42")
+// @name runMcpClient
+POST http://localhost:5001/run
+Content-Type: application/json
+
+###

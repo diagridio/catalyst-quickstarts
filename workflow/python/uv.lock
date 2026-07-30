@@ -1,5 +1,5 @@
 version = 1
-revision = 2
+revision = 3
 requires-python = ">=3.12"
 
 [[package]]
@@ -141,15 +141,6 @@ wheels = [
 ]
 
 [[package]]
-name = "asyncio"
-version = "4.0.0"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/71/ea/26c489a11f7ca862d5705db67683a7361ce11c23a7b98fc6c2deaeccede2/asyncio-4.0.0.tar.gz", hash = "sha256:570cd9e50db83bc1629152d4d0b7558d6451bb1bfd5dfc2e935d96fc2f40329b", size = 5371, upload-time = "2025-08-05T02:51:46.605Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/57/64/eff2564783bd650ca25e15938d1c5b459cda997574a510f7de69688cb0b4/asyncio-4.0.0-py3-none-any.whl", hash = "sha256:c1eddb0659231837046809e68103969b2bef8b0400d59cfa6363f6b5ed8cc88b", size = 5555, upload-time = "2025-08-05T02:51:45.767Z" },
-]
-
-[[package]]
 name = "attrs"
 version = "25.4.0"
 source = { registry = "https://pypi.org/simple" }
@@ -181,7 +172,7 @@ wheels = [
 
 [[package]]
 name = "dapr"
-version = "1.17.0"
+version = "1.18.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
@@ -191,36 +182,19 @@ dependencies = [
     { name = "python-dateutil" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/62/bb/d9b3235e45d557bc3f79584e0ce7e08858d81959aa8722b95c32bffeacc0/dapr-1.17.0.tar.gz", hash = "sha256:918331f4b8e12cd484b1350ed4a0b379bb79148244e7e4c62d1c8770d1cbc860", size = 170812, upload-time = "2026-02-27T20:56:46.158Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/44/e9/4a15713fae156a9d25d62057c2a3a2a47efcbaa55816053fdfff5eb3f0cb/dapr-1.17.0-py3-none-any.whl", hash = "sha256:101ad9dde88c4f1a6d469ac3d84b711f6e7095298a2a72e9a239d62693553fc0", size = 241207, upload-time = "2026-02-27T20:56:43.299Z" },
+    { url = "https://files.pythonhosted.org/packages/f1/94/d981426db04d49b1b3d186e51e4f6744911520fd9ce62f6bfa3d195945be/dapr-1.18.0-py3-none-any.whl", hash = "sha256:933502f853589904ffa20805523a9679934d3d30cde289d25da61e529de70e00", size = 252058, upload-time = "2026-06-10T21:43:19.639Z" },
 ]
 
 [[package]]
 name = "dapr-ext-workflow"
-version = "1.17.0"
+version = "1.18.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "dapr" },
-    { name = "durabletask-dapr" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/39/0a/3e3dd75f5fa26e8af525990952f95217de7e8659fe24ce2c3ce2bd112968/dapr_ext_workflow-1.17.0.tar.gz", hash = "sha256:c0703126f4e5ddecfc7b2d4e6e0ecaadfd0fb4c8723a144100c968647837b588", size = 21463, upload-time = "2026-02-27T20:56:42.946Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/fa/90/b13fc8cc854aff9dd48fbedd6540ad851a1e4540b79fef8cf25fa5ad178a/dapr_ext_workflow-1.17.0-py3-none-any.whl", hash = "sha256:b754df2b641a5c86af12befad28fc43c0d27a4860ab213ac48a780bb2a10d539", size = 28381, upload-time = "2026-02-27T20:56:42.099Z" },
-]
-
-[[package]]
-name = "durabletask-dapr"
-version = "0.2.0a19"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "asyncio" },
-    { name = "grpcio" },
-    { name = "protobuf" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/4a/bc/949889b23cfb3e670047d52d21828f4f72325924ef4253a91b23ca66b1d6/durabletask_dapr-0.2.0a19.tar.gz", hash = "sha256:554de66d239c23598aa6f7bee7d1fad3838b0c353c5b532d2b511c843ab16cdd", size = 100490, upload-time = "2026-02-10T14:44:42.707Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/7d/a4/a57834388649378c9a48f65e18c3383d7067dd549fa86813d3fa8bde1eb9/durabletask_dapr-0.2.0a19-py3-none-any.whl", hash = "sha256:9f3ba3c4a903c9c1acdc3452e87f15b66884b42324214f6eec0706b96eb2021c", size = 67998, upload-time = "2026-02-10T14:44:41.829Z" },
+    { url = "https://files.pythonhosted.org/packages/80/bc/85c8f1931f7c6c3136514116821607eaece2fcc4e1c358710b3db45f35e5/dapr_ext_workflow-1.18.0-py3-none-any.whl", hash = "sha256:25ed8c97522888ee10fa029cf328cf21f2a026922cfd1e3658d13bff6fe388fb", size = 152242, upload-time = "2026-06-10T21:43:22.576Z" },
 ]
 
 [[package]]
@@ -771,8 +745,8 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "dapr", specifier = "==1.17.0" },
-    { name = "dapr-ext-workflow", specifier = "==1.17.0" },
+    { name = "dapr", specifier = "==1.18.0" },
+    { name = "dapr-ext-workflow", specifier = "==1.18.0" },
     { name = "fastapi", specifier = "==0.135.1" },
     { name = "pydantic", specifier = "==2.12.0" },
     { name = "uvicorn", specifier = "==0.37.0" },

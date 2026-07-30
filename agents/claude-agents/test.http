@@ -1,0 +1,15 @@
+### Trigger Photography Planner agent
+POST http://localhost:8010/agent/run
+Content-Type: application/json
+
+{
+    "task": "Find photography for a wedding, 8 hours of coverage"
+}
+
+### Trigger crash-test workflow
+POST http://localhost:8001/run
+Content-Type: application/json
+
+{
+    "prompt": "Find photography for a corporate gala"
+}

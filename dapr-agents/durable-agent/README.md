@@ -14,8 +14,8 @@ This quickstart demonstrates how to build a durable agent using Dapr Agents and 
 
 Before you begin, ensure you have:
 
-1. [Diagrid CLI](https://docs.diagrid.io/catalyst/references/cli-reference/overview) installed
-2. [Python 3.11+](https://www.python.org/downloads/)
+1. [Diagrid CLI](https://docs.diagrid.io/references/catalyst/catalyst-cli-intro/) installed
+2. [Python 3.11, 3.12, or 3.13](https://www.python.org/downloads/)
 3. [An OpenAI API key](https://platform.openai.com/api-keys)
 
 ### Set up your local environment
