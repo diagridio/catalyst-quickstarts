@@ -90,7 +90,7 @@ The `diagrid dev run` command creates your Catalyst project, provisions resource
 diagrid dev run -f pubsub-quickstart.yaml --project pubsub-quickstart --approve
 ```
 
-> **Tip:** Wait a few seconds until you see the logs `Connected App ID "publisher" to localhost:5001` and `Connected App ID "subscriber" to localhost:5002` in the terminal before proceeding, to ensure both applications are up and running.
+> **Tip:** Wait a few seconds until you see the logs `Connected App ID "publisher" to http://localhost:5001` and `Connected App ID "subscriber" to http://localhost:5002` in the terminal before proceeding, to ensure both applications are up and running.
 
 ## 6. Publish and receive a message
 
