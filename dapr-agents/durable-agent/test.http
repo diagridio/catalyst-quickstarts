@@ -1,0 +1,23 @@
+### Trigger Travel Assistant — flights and hotels (multi-destination)
+POST http://localhost:8001/agent/run
+Content-Type: application/json
+
+{
+    "task": "Find me flights and hotels to London and Amsterdam"
+}
+
+### Trigger Travel Assistant — flights and hotels (single destination)
+POST http://localhost:8001/agent/run
+Content-Type: application/json
+
+{
+    "task": "Find me flights and hotels to London"
+}
+
+### Trigger Travel Assistant — flights only
+POST http://localhost:8001/agent/run
+Content-Type: application/json
+
+{
+    "task": "Find me only flights to London and Amsterdam"
+}

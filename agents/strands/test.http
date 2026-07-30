@@ -1,0 +1,15 @@
+### Trigger Budget Analyst agent
+POST http://localhost:8004/agent/run
+Content-Type: application/json
+
+{
+    "task": "Calculate the budget for a corporate event with venue, catering, and entertainment"
+}
+
+### Trigger crash-test workflow
+POST http://localhost:8001/run
+Content-Type: application/json
+
+{
+    "prompt": "Calculate a budget for a corporate retreat with venue, catering, and entertainment"
+}

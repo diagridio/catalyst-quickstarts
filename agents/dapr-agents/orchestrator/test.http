@@ -1,0 +1,7 @@
+### Trigger Event Coordinator orchestration
+POST http://localhost:8004/agent/run
+Content-Type: application/json
+
+{
+    "task": "Plan a company offsite in Austin for 50 people"
+}

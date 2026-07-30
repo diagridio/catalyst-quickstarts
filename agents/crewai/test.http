@@ -1,0 +1,15 @@
+### Trigger Venue Scout agent
+POST http://localhost:8001/agent/run
+Content-Type: application/json
+
+{
+    "task": "Find a venue in Austin for 50 people"
+}
+
+### Trigger crash-test workflow
+POST http://localhost:8001/run
+Content-Type: application/json
+
+{
+    "prompt": "Find a venue in Austin for a company gala"
+}
