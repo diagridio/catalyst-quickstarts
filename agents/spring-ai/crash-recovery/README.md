@@ -25,7 +25,7 @@ booking), and a caller-owned instance id is what makes a retry safe.
 ## Setup
 
 ```bash
-cd crash-recovery
+cd agents/spring-ai/crash-recovery
 
 # Build the project (pre-downloads dependencies)
 mvn package -DskipTests
