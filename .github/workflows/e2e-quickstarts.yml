@@ -1,0 +1,281 @@
+name: E2E quickstart tests
+
+on:
+  schedule:
+    - cron: '0 5 * * *'   # daily 05:00 UTC
+  workflow_dispatch:
+    inputs:
+      language:
+        description: 'Single language to run (all = all four)'
+        required: false
+        type: choice
+        default: 'all'
+        options: [all, csharp, java, javascript, python]
+      api:
+        description: 'Single API to run (all = all four)'
+        required: false
+        type: choice
+        default: 'all'
+        options: [all, workflow, state, pubsub, invocation]
+  pull_request:
+    paths:
+      - 'tools/qs-tester/**'
+      - '*/tests/quickstart.robot'
+      - '*/*/README.md'
+      - '.github/workflows/e2e-quickstarts.yml'
+
+# Do not cancel in progress: a cancelled leg never runs teardown and leaks its
+# Catalyst project.
+concurrency:
+  group: e2e-quickstarts
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  issues: write
+
+env:
+  # The install.sh installer reads this as an env var (RELEASE_VERSION), not a
+  # positional argument, and its GCS layout requires the leading "v".
+  DIAGRID_CLI_VERSION: 'v1.36.0'
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - name: Sync harness
+        run: (cd tools/qs-tester && uv sync)
+      - name: Resolve suites without executing
+        run: |
+          cd tools/qs-tester
+          uv run robot --dryrun --variable PROJECT:dryrun --outputdir results/dryrun \
+            ../../workflow/tests/quickstart.robot \
+            ../../state/tests/quickstart.robot \
+            ../../pubsub/tests/quickstart.robot \
+            ../../invocation/tests/quickstart.robot
+      - name: Check READMEs match the harness
+        run: (cd tools/qs-tester && uv run python docsync/check_readme_sync.py --all)
+      - name: Unit-test the doc-sync checker
+        run: (cd tools/qs-tester && uv run pytest docsync/tests -q)
+      - name: Smoke-test process teardown keywords
+        run: (cd tools/qs-tester && uv run robot --outputdir results/smoke resources/tests/smoke.robot)
+
+  reap:
+    if: github.event_name == 'schedule' && github.repository_owner == 'diagridio'
+    runs-on: ubuntu-latest
+    environment: shared-production
+    env:
+      DIAGRID_API_KEY: ${{ secrets.DIAGRID_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install diagrid CLI
+        run: |
+          curl -sL https://downloads.diagrid.io/cli/install.sh | RELEASE_VERSION="$DIAGRID_CLI_VERSION" bash
+          sudo mv ./diagrid /usr/local/bin
+      - name: Delete qs-ci-* projects older than 6h
+        run: bash tools/qs-tester/ci/reap-orphans.sh
+
+  e2e:
+    if: github.event_name != 'pull_request' && github.repository_owner == 'diagridio'
+    runs-on: ubuntu-latest
+    environment: shared-production
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      # Never more than two concurrent Catalyst projects. Order pairs each
+      # build-heavy language with a fast one so both slots stay busy.
+      max-parallel: 2
+      matrix:
+        # On workflow_dispatch with a specific language, run only that one leg
+        # (the deliberate first-run procedure is "dispatch one language, then
+        # the full matrix", so it must not still create four projects). Any
+        # other trigger -- schedule, pull_request, or a dispatch left at the
+        # "all" default -- runs the full four-leg matrix in this fixed order.
+        lang: ${{ fromJSON( (github.event_name == 'workflow_dispatch' && inputs.language != 'all') && format('["{0}"]', inputs.language) || '["java","javascript","csharp","python"]' ) }}
+    env:
+      DIAGRID_API_KEY: ${{ secrets.DIAGRID_API_KEY }}
+      LANG_ID: ${{ matrix.lang }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+
+      - name: Set up .NET
+        if: matrix.lang == 'csharp'
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Set up Java
+        if: matrix.lang == 'java'
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Cache Maven repository
+        if: matrix.lang == 'java'
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: maven-qs-${{ github.run_id }}
+          restore-keys: maven-qs-
+
+      - name: Set up Node
+        if: matrix.lang == 'javascript'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 'lts/*'
+
+      - name: Install diagrid CLI
+        run: |
+          curl -sL https://downloads.diagrid.io/cli/install.sh | RELEASE_VERSION="$DIAGRID_CLI_VERSION" bash
+          sudo mv ./diagrid /usr/local/bin
+          diagrid version
+
+      - name: Sync harness
+        run: (cd tools/qs-tester && uv sync)
+
+      - name: Create ephemeral Catalyst project
+        run: bash tools/qs-tester/ci/setup-project.sh
+
+      # Pre-warm OUTSIDE the timed Robot build keyword. On a cold ~/.m2 the
+      # dependency download alone can exceed the build timeout and get killed
+      # mid-download; the timed step should only have to compile.
+      #
+      # BOTH goals are required, and dependency:go-offline alone is NOT enough.
+      # Measured on a clean repository (-Dmaven.repo.local), go-offline exits 0
+      # but fetches only the .pom for many compile dependencies, leaving 4-10
+      # jars per module absent (gson, reactor-core, netty-*, ...). A subsequent
+      # `mvn -o clean install` then failed for all six modules; adding
+      # dependency:resolve made all six pass. go-offline is still needed because
+      # it is what pre-fetches the build *plugins*. Verify any change here the
+      # same way: prewarm into an empty repo, then build with -o and require
+      # BUILD SUCCESS. Do not drop either goal.
+      - name: Pre-warm Maven dependencies
+        if: matrix.lang == 'java'
+        run: |
+          for dir in workflow/java state/java \
+                     pubsub/java/publisher pubsub/java/subscriber \
+                     invocation/java/client invocation/java/server; do
+            echo "::group::prewarm $dir"
+            mvn -q -B -f "$dir/pom.xml" dependency:go-offline || true
+            mvn -q -B -f "$dir/pom.xml" dependency:resolve || true
+            echo "::endgroup::"
+          done
+
+      - name: Run quickstart suites
+        run: |
+          mkdir -p tools/qs-tester/results
+          cd tools/qs-tester
+          # Run every API even if an earlier one fails, so one nightly run reports
+          # all broken APIs for this language. The `if !` guard is exempt from set -e.
+          # inputs.api is empty on a scheduled run (workflow_dispatch inputs
+          # don't apply) and "all" on a dispatch left at its default; both
+          # mean "run every API".
+          apis="${{ inputs.api }}"
+          if [ -z "$apis" ] || [ "$apis" = "all" ]; then
+            apis="workflow state pubsub invocation"
+          fi
+          failed=""
+          for api in $apis; do
+            if ! uv run robot --outputdir "results/$api" \
+                 --include "${{ matrix.lang }}" \
+                 --variable "PROJECT:$PROJECT" \
+                 "../../$api/tests/quickstart.robot"; then
+              failed="$failed $api"
+            fi
+          done
+          # Merge into one indexed report. `|| true` because rebot's exit code
+          # reflects test failures too.
+          uv run rebot --outputdir results --name "quickstarts (${{ matrix.lang }})" \
+            results/*/output.xml || true
+          if [ -n "$failed" ]; then
+            echo "${{ matrix.lang }}:$failed" > results/failed-${{ matrix.lang }}.txt
+            echo "::error::Failed APIs (${{ matrix.lang }}):$failed"
+            exit 1
+          fi
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: robot-${{ matrix.lang }}
+          path: tools/qs-tester/results/
+
+      - name: Delete ephemeral Catalyst project
+        if: always()
+        run: bash tools/qs-tester/ci/teardown-project.sh
+
+  report:
+    needs: [lint, e2e]
+    if: failure() && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download failure summaries
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          path: artifacts
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+            // Each failing leg wrote failed-<lang>.txt (e.g. "python: pubsub")
+            // into its artifact; gather them so the issue names exact failures.
+            const lines = [];
+            const walk = (dir) => {
+              for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+                const p = path.join(dir, entry.name);
+                if (entry.isDirectory()) walk(p);
+                else if (/^failed-.*\.txt$/.test(entry.name)) {
+                  const txt = fs.readFileSync(p, 'utf8').trim();
+                  if (txt) lines.push(txt);
+                }
+              }
+            };
+            if (fs.existsSync('artifacts')) walk('artifacts');
+            lines.sort();
+            const details = lines.length
+              ? lines.map(l => `  - \`${l}\``).join('\n')
+              : '  - (no per-API detail captured — check the failing job logs)';
+            const legs = [...new Set(lines.map(l => l.split(':')[0].trim()))].filter(Boolean);
+            const downloads = (legs.length ? legs : ['<lang>'])
+              .map(l => `gh run download ${context.runId} -n robot-${l} -D ./report-${l}`)
+              .join('\n');
+            const title = 'Quickstart e2e tests failing';
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const body = [
+              `The quickstart end-to-end tests **failed**.`,
+              ``,
+              `**Failing legs (\`language: api …\`):**`,
+              details,
+              ``,
+              `- Run: ${runUrl}`,
+              `- For a per-language index, download the \`robot-<lang>\` artifact and open`,
+              `  \`report.html\` (every API listed, failures in red) or \`log.html\`.`,
+              ``,
+              `Download the report(s) for the failing leg(s):`,
+              '```bash',
+              downloads,
+              '```',
+              ``,
+              `_This issue is updated automatically each run._`,
+            ].join('\n');
+            const existing = await github.rest.issues.listForRepo({
+              owner: context.repo.owner, repo: context.repo.repo,
+              state: 'open', labels: 'e2e-failure',
+            });
+            const match = existing.data.find(i => i.title === title);
+            if (match) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner, repo: context.repo.repo,
+                issue_number: match.number, body,
+              });
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner, repo: context.repo.repo,
+                title, body, labels: ['e2e-failure'],
+              });
+            }
