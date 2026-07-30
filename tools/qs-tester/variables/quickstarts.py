@@ -196,8 +196,10 @@ INVOCATION_SERVER_MARKER = "Invocation received with data"
 INVOCATION_CLIENT_MARKER = {
     "python": "Invocation successful with status code: 200",
     "javascript": "Invocation successful with status code: 200",
-    # no colon
-    "csharp": "Invocation successful with status code 200",
+    # csharp logs response.StatusCode, an HttpStatusCode enum that renders as
+    # "OK" rather than the numeric code python/javascript log, so this marker
+    # is truncated before the status value to match regardless of rendering.
+    "csharp": "Invocation successful with status code",
     # different sentence entirely
     "java": "Invoke Successful. Response received: 1",
 }

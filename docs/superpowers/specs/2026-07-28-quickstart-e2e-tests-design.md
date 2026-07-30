@@ -321,7 +321,7 @@ The client marker diverges completely and needs a per-language entry:
 |---|---|
 | Python | `Invocation successful with status code: 200` |
 | JavaScript | `Invocation successful with status code: 200` |
-| .NET | `Invocation successful with status code 200` (no colon) |
+| .NET | `Invocation successful with status code` (truncated — logs the `HttpStatusCode` enum, which renders as `OK`, not the numeric code) |
 | Java | `Invoke Successful. Response received: 1` |
 
 ### pubsub — publisher on 5001, subscriber on 5002
@@ -721,13 +721,20 @@ and asserts four things for that directory:
 |---|---|
 | section 4 fenced `bash` block(s) | the install command in `variables/quickstarts.py` |
 | section 5 fenced `bash` block | the run command, modulo the `--project` substitution |
-| section 6 `curl` URLs, methods, and `-d` payloads | the endpoints and payloads the suite calls |
+| section 6 `curl` `-d` payloads | the payloads the suite sends |
 | section 6 fenced `json` expected bodies | the expected bodies the suite asserts |
 
 It is a **presence and equality check on strings**, not a proof of execution — the same
 limitation track-tester documents. Its job is catching the day someone edits a README command
 or an expected body without touching the suite, which is the most likely way these two drift
 apart.
+
+`extract_curl_calls` also parses each documented request's method and URL, but `check()` never
+compares either — only the payload is checked. Documented HTTP status codes are not compared
+either. Endpoint paths, methods, and status codes are hardcoded directly in the four `.robot`
+suites rather than carried in `variables/quickstarts.py`'s data table, which is what doc-sync
+reads; extending the checker to cover them would first require moving those values into the
+data table, and is a known follow-up rather than something this checker does today.
 
 Three deliberate exclusions:
 

@@ -196,10 +196,6 @@ RUN = {
 
 # --- Apps, ports, and readiness ---------------------------------------------
 # HEALTH_PORTS: every port that must answer 200 on `GET /` before asserting.
-# CONNECTED_APPS: (appID, port) pairs that `diagrid dev run` reports as
-# `Connected App ID "<id>" to localhost:<port>`. Only apps with a non-zero
-# appPort in the dev config produce that line, so workflow and state have none
-# and invocation has only `server`.
 HEALTH_PORTS = {
     "workflow": (5001,),
     "state": (5001,),
@@ -207,11 +203,32 @@ HEALTH_PORTS = {
     "invocation": (5001, 5002),
 }
 
+# CONNECTED_APPS: (appID, port) pairs that `diagrid dev run` reports as
+# `Connected App ID "<id>" to localhost:<port>`. Only apps with a non-zero
+# appPort in the dev config produce that line. Keyed by (api, language),
+# matching INSTALL and RUN above, because this is NOT uniform per API:
+# pubsub's publisher has an appPort in csharp/python but NOT in java/
+# javascript (verified against each language's dev config), so java and
+# javascript emit only the subscriber's connection line. An api-only key
+# would silently drop the publisher's connection assertion for two of the
+# four pubsub tests, so all 16 (api, language) pairs are listed explicitly.
 CONNECTED_APPS = {
-    "workflow": (),
-    "state": (),
-    "pubsub": (("publisher", 5001), ("subscriber", 5002)),
-    "invocation": (("server", 5002),),
+    ("workflow", "csharp"): (),
+    ("workflow", "java"): (),
+    ("workflow", "javascript"): (),
+    ("workflow", "python"): (),
+    ("state", "csharp"): (),
+    ("state", "java"): (),
+    ("state", "javascript"): (),
+    ("state", "python"): (),
+    ("pubsub", "csharp"): (("publisher", 5001), ("subscriber", 5002)),
+    ("pubsub", "java"): (("subscriber", 5002),),
+    ("pubsub", "javascript"): (("subscriber", 5002),),
+    ("pubsub", "python"): (("publisher", 5001), ("subscriber", 5002)),
+    ("invocation", "csharp"): (("server", 5002),),
+    ("invocation", "java"): (("server", 5002),),
+    ("invocation", "javascript"): (("server", 5002),),
+    ("invocation", "python"): (("server", 5002),),
 }
 
 # --- README section 6: requests ---------------------------------------------
@@ -283,8 +300,10 @@ INVOCATION_SERVER_MARKER = "Invocation received with data"
 INVOCATION_CLIENT_MARKER = {
     "python": "Invocation successful with status code: 200",
     "javascript": "Invocation successful with status code: 200",
-    # no colon
-    "csharp": "Invocation successful with status code 200",
+    # csharp logs response.StatusCode, an HttpStatusCode enum that renders as
+    # "OK" rather than the numeric code, so this marker is truncated before
+    # the status value to match regardless of rendering.
+    "csharp": "Invocation successful with status code",
     # different sentence entirely
     "java": "Invoke Successful. Response received: 1",
 }
@@ -308,7 +327,7 @@ def get_quickstart(api, language):
         "run": RUN[(api, language)],
         "activate_venv": (api, language) in ACTIVATE_VENV,
         "health_ports": list(HEALTH_PORTS[api]),
-        "connected_apps": [list(pair) for pair in CONNECTED_APPS[api]],
+        "connected_apps": [list(pair) for pair in CONNECTED_APPS[(api, language)]],
     }
 ```
 
@@ -648,7 +667,7 @@ POST And Expect
     ${body}=    Set Variable    ${response.json()}
     IF    $expected_body is not None
         Should Be Equal    ${body}    ${expected_body}
-        ...    msg=POST ${path} body mismatch.\nExpected: ${expected_body}\nActual:   ${body}
+        ...    msg=POST ${path} body mismatch.\nExpected: ${expected_body}\nActual: ${body}
     END
     RETURN    ${body}
 
@@ -659,7 +678,7 @@ GET And Expect
     ${body}=    Set Variable    ${response.json()}
     IF    $expected_body is not None
         Should Be Equal    ${body}    ${expected_body}
-        ...    msg=GET ${path} body mismatch.\nExpected: ${expected_body}\nActual:   ${body}
+        ...    msg=GET ${path} body mismatch.\nExpected: ${expected_body}\nActual: ${body}
     END
     RETURN    ${body}
 ```
@@ -1867,7 +1886,7 @@ permissions:
   issues: write
 
 env:
-  DIAGRID_CLI_VERSION: '1.36.0'
+  DIAGRID_CLI_VERSION: 'v1.36.0'
 
 jobs:
   lint:
@@ -1900,7 +1919,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Install diagrid CLI
         run: |
-          curl -o- https://downloads.diagrid.io/cli/install.sh | bash -s "$DIAGRID_CLI_VERSION"
+          curl -sL https://downloads.diagrid.io/cli/install.sh | RELEASE_VERSION="$DIAGRID_CLI_VERSION" bash
           sudo mv ./diagrid /usr/local/bin
       - name: Delete qs-ci-* projects older than 6h
         run: bash tools/qs-tester/ci/reap-orphans.sh
@@ -1953,7 +1972,7 @@ jobs:
 
       - name: Install diagrid CLI
         run: |
-          curl -o- https://downloads.diagrid.io/cli/install.sh | bash -s "$DIAGRID_CLI_VERSION"
+          curl -sL https://downloads.diagrid.io/cli/install.sh | RELEASE_VERSION="$DIAGRID_CLI_VERSION" bash
           sudo mv ./diagrid /usr/local/bin
           diagrid version
 
@@ -2104,13 +2123,15 @@ Expected: `valid YAML`
 
 - [ ] **Step 3: Confirm the CLI installer accepts a pinned version**
 
-The install step passes the version as `bash -s "$DIAGRID_CLI_VERSION"`. Verify that is how the installer takes a version:
+The install step passes the version as `RELEASE_VERSION="$DIAGRID_CLI_VERSION" bash` — the
+installer reads the env var `RELEASE_VERSION`, not a positional argument, and its GCS layout
+requires a `v` prefix (e.g. `v1.36.0`). Verify that is how the installer takes a version:
 
 ```bash
 curl -s https://downloads.diagrid.io/cli/install.sh | head -40
 ```
 
-Expected: a script whose argument handling you can read. If it takes the version differently (an env var, or no pinning at all), correct both install steps. If pinning is not supported, drop `DIAGRID_CLI_VERSION` and note in `tools/qs-tester/README.md` that the CLI floats.
+Expected: a script whose argument handling you can read. If it takes the version differently, correct both install steps. If pinning is not supported, drop `DIAGRID_CLI_VERSION` and note in `tools/qs-tester/README.md` that the CLI floats.
 
 - [ ] **Step 4: Create the issue label**
 
