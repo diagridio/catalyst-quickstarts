@@ -75,27 +75,8 @@ cd catalyst-quickstarts\invocation\python
 
 Install the dependencies for both the client and server applications.
 
-Create and activate a Python virtual environment:
-
-**macOS/Linux:**
-
 ```bash
-uv venv
-source .venv/bin/activate
-```
-
-**Windows:**
-
-```powershell
-uv venv
-.venv\Scripts\activate
-# or use .venv\Scripts\Activate.ps1
-```
-
-Install dependencies:
-
-```bash
-uv sync --active --directory client && uv sync --active --directory server
+uv sync --all-packages
 ```
 
 ## 5. Run the application with Catalyst Cloud
@@ -103,7 +84,7 @@ uv sync --active --directory client && uv sync --active --directory server
 The `diagrid dev run` command creates your Catalyst project, provisions resources (apps), configures environment variables, and launches your application connected to Catalyst Cloud.
 
 ```bash
-diagrid dev run -f invocation-quickstart.yaml --project invocation-quickstart --approve
+uv run diagrid dev run -f invocation-quickstart.yaml --project invocation-quickstart --approve
 ```
 
 > **Tip:** Wait a few seconds until you see the log `Connected App ID "server" to http://localhost:5002` in the terminal before proceeding, to ensure both applications are up and running.

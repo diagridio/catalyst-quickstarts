@@ -40,24 +40,11 @@ INSTALL = {
     ("pubsub", "csharp"): "dotnet restore ./publisher && dotnet restore ./subscriber",
     ("pubsub", "java"): "mvn clean install -f ./publisher && mvn clean install -f ./subscriber",
     ("pubsub", "javascript"): "npm ci --prefix ./publisher && npm ci --prefix ./subscriber",
-    ("pubsub", "python"): (
-        "uv venv && . .venv/bin/activate && "
-        "uv sync --active --directory publisher && uv sync --active --directory subscriber"
-    ),
+    ("pubsub", "python"): "uv sync --all-packages",
     ("invocation", "csharp"): "dotnet restore ./client && dotnet restore ./server",
     ("invocation", "java"): "mvn clean install -f ./client && mvn clean install -f ./server",
     ("invocation", "javascript"): "npm ci --prefix ./client && npm ci --prefix ./server",
-    ("invocation", "python"): (
-        "uv venv && . .venv/bin/activate && "
-        "uv sync --active --directory client && uv sync --active --directory server"
-    ),
-}
-
-# True where README section 4 documents `uv venv` + activate, meaning the run
-# command must execute inside that activated virtual environment.
-ACTIVATE_VENV = {
-    ("pubsub", "python"),
-    ("invocation", "python"),
+    ("invocation", "python"): "uv sync --all-packages",
 }
 
 # --- README section 5: run commands -----------------------------------------
@@ -84,11 +71,11 @@ RUN = {
     ("pubsub", "csharp"): _DEV_RUN.format(file="pubsub-quickstart.yaml", project="{project}"),
     ("pubsub", "java"): _DEV_RUN.format(file="pubsub-quickstart.yaml", project="{project}"),
     ("pubsub", "javascript"): _DEV_RUN.format(file="pubsub-quickstart.yaml", project="{project}"),
-    ("pubsub", "python"): _DEV_RUN.format(file="pubsub-quickstart.yaml", project="{project}"),
+    ("pubsub", "python"): _UV_DEV_RUN.format(file="pubsub-quickstart.yaml", project="{project}"),
     ("invocation", "csharp"): _DEV_RUN.format(file="invocation-quickstart.yaml", project="{project}"),
     ("invocation", "java"): _DEV_RUN.format(file="invocation-quickstart.yaml", project="{project}"),
     ("invocation", "javascript"): _DEV_RUN.format(file="invocation-quickstart.yaml", project="{project}"),
-    ("invocation", "python"): _DEV_RUN.format(file="invocation-quickstart.yaml", project="{project}"),
+    ("invocation", "python"): _UV_DEV_RUN.format(file="invocation-quickstart.yaml", project="{project}"),
 }
 
 # --- Apps, ports, and readiness ---------------------------------------------
@@ -224,7 +211,6 @@ def get_quickstart(api, language):
         "dir": quickstart_dir(api, language),
         "install": INSTALL[(api, language)],
         "run": RUN[(api, language)],
-        "activate_venv": (api, language) in ACTIVATE_VENV,
         "health_ports": list(HEALTH_PORTS[api]),
         "connected_apps": [list(pair) for pair in CONNECTED_APPS[(api, language)]],
     }

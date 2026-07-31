@@ -11,9 +11,7 @@ docs/superpowers/specs/2026-07-31-python-quickstart-uv-workspaces-design.md.
 import pytest
 import quickstarts as qs
 
-# Widened to all four in the task that converts invocation and pubsub. Keeping it
-# narrow means each conversion commit leaves the suite green.
-PYTHON_APIS = ("workflow", "state")
+PYTHON_APIS = qs.APIS
 
 
 @pytest.mark.parametrize("api", PYTHON_APIS)
@@ -31,3 +29,11 @@ def test_nothing_creates_or_activates_a_venv(api):
     install = qs.INSTALL[(api, "python")]
     assert "uv venv" not in install
     assert "activate" not in install
+
+
+def test_harness_no_longer_tracks_venv_activation():
+    """`ACTIVATE_VENV` and the `activate_venv` key existed only to wrap the run
+    command in `bash -c '. .venv/bin/activate && ...'`. Nothing activates a venv
+    now, so both must be gone — a leftover key invites the wrapper's return."""
+    assert not hasattr(qs, "ACTIVATE_VENV")
+    assert "activate_venv" not in qs.get_quickstart("invocation", "python")

@@ -64,11 +64,12 @@ Stop Process Tree
     ${result}=    Wait For Process    ${alias}    timeout=${timeout}    on_timeout=continue
     IF    $result is None
         # A group signal is not enough here. `diagrid dev run` and the app each
-        # detach into new process groups, and for the three python quickstarts we
-        # launch through a `bash -c '. .venv/bin/activate && ...'` wrapper, so the
-        # descendants sit in groups the wrapper's own group can never reach. The
-        # only reliable fallback is to walk the real OS parent/child PID tree from
-        # the tracked PID, to any depth, and SIGKILL every descendant directly.
+        # detach into new process groups, and the python quickstarts add another
+        # layer: the documented command is `uv run diagrid dev run`, so uv sits
+        # between us and the CLI, and the descendants end up in groups our own
+        # group can never reach. The only reliable fallback is to walk the real OS
+        # parent/child PID tree from the tracked PID, to any depth, and SIGKILL
+        # every descendant directly. Do NOT delete this as dead code.
         ${pid}=    Get Process Id    ${alias}
         Run Process    bash    -c
         ...    kill_tree() { for c in $(pgrep -P "$1" 2>/dev/null); do kill_tree "$c"; done; kill -9 "$1" 2>/dev/null; }; kill_tree ${pid}
