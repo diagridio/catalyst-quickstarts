@@ -80,7 +80,12 @@ For one named quickstart:
 2. Test data. Canonical: rows in every dict in
    `tools/qs-tester/variables/quickstarts.py`. Agent-family: a new module
    `tools/qs-tester/variables/<family>_<name>.py`.
-3. A row in the new suite manifest, `tools/qs-tester/variables/suites.py`.
+3. A row in the new suite manifest, `tools/qs-tester/variables/suites.py`. Each row
+   carries the suite path, the family, the api or quickstart name, the language or
+   languages, the runtime (which selects the CI setup step), nightly membership, and
+   the names of any required secrets. It carries no agent-infrastructure flag and no
+   agent name: those live in the documented `SETUP` commands the suite runs, so a
+   manifest copy of them would be a second source of truth for the same fact.
 4. CI wiring in `.github/workflows/e2e-quickstarts.yml`. Normally no hand-edited YAML,
    because the manifest drives discovery. A genuinely new runtime (a first Go
    quickstart) still needs a setup step, which the skill adds explicitly.
@@ -208,6 +213,9 @@ SUITES = (
 )
 ```
 
+Each row: suite path, family, api or name, language or languages, runtime, nightly
+membership, and required secret names.
+
 `nightly` is the cost lever, and it is read only for agent-family rows: canonical
 scheduling stays the business of the existing `e2e` job. Around a dozen agent
 quickstarts each consume a project with agent infrastructure plus real model tokens, so
@@ -236,7 +244,11 @@ SETUP = (
 )
 INSTALL = "uv sync"
 RUN = "uv run diagrid dev run -f dev-python-langgraph.yaml --approve"
-TEARDOWN = ("diagrid project delete {project}",)
+# Empty because this README documents no cleanup step. Where one is documented
+# (agents/microsoft-dotnet documents `diagrid project delete`), it goes here and
+# the suite runs it. Otherwise deleting the project is infrastructure and
+# ci/teardown-project.sh owns it.
+TEARDOWN = ()
 READY_MARKER = "Uvicorn running on"
 HEALTH_PORTS = (8005,)
 SECRETS = ("OPENAI_API_KEY",)
