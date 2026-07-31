@@ -25,7 +25,7 @@ jobs:
 
       - name: build local
         run: |
-          cd invocation/python/client && uv sync && cd ../server && uv sync
+          cd invocation/python && uv sync --all-packages
 
       - name: Configure AWS credentials
         if: github.event_name != 'pull_request'
