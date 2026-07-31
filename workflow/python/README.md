@@ -77,7 +77,7 @@ cd catalyst-quickstarts\workflow\python
 Install the dependencies for the workflow application.
 
 ```bash
-uv sync
+uv sync --all-packages
 ```
 
 ## 5. Run the application with Catalyst Cloud

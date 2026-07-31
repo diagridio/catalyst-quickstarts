@@ -74,27 +74,8 @@ cd catalyst-quickstarts\state\python
 
 Install the dependencies for the state management application.
 
-Create and activate a Python virtual environment:
-
-**macOS/Linux:**
-
 ```bash
-uv venv
-source .venv/bin/activate
-```
-
-**Windows:**
-
-```powershell
-uv venv
-.venv\Scripts\activate
-# or use .venv\Scripts\Activate.ps1
-```
-
-Install dependencies:
-
-```bash
-uv sync
+uv sync --all-packages
 ```
 
 ## 5. Run the application with Catalyst Cloud
@@ -102,7 +83,7 @@ uv sync
 The `diagrid dev run` command creates your Catalyst project, provisions resources (apps, Diagrid KV Store service), configures environment variables, and launches your application connected to Catalyst Cloud.
 
 ```bash
-diagrid dev run -f state-quickstart.yaml --project state-quickstart --approve
+uv run diagrid dev run -f state-quickstart.yaml --project state-quickstart --approve
 ```
 
 > **Tip:** Wait a few seconds until you see application logs in the terminal to ensure the application is up and running and connected to Catalyst.
