@@ -1,0 +1,16 @@
+# Workspace root for this quickstart's two apps. It exists so the virtual
+# environment lives here, next to pubsub-quickstart.yaml, which is the directory
+# `diagrid dev run` runs from: `uv run` puts .venv/bin on PATH and the bare
+# `uvicorn` command in the dev config resolves from it. Nothing is activated.
+#
+# ALWAYS sync from here with `uv sync --all-packages`. A sync from inside
+# publisher/ or subscriber/ resolves up to this root but installs only that one
+# member, and uv is exact by default, so it UNINSTALLS the other app's
+# dependencies.
+[project]
+name = "pubsub-python"
+version = "0.1.0"
+requires-python = ">=3.12"
+
+[tool.uv.workspace]
+members = ["publisher", "subscriber"]
