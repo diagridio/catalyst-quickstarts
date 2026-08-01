@@ -22,12 +22,15 @@ Design spec: `docs/superpowers/specs/2026-07-31-quickstart-e2e-test-skill-design
 - Python 3.12+, no new third-party dependencies (in particular no PyYAML).
 - Commit messages: plain imperative, no `feat:`/`fix:` prefixes, matching this repo's history.
 
-## Two deliberate refinements to the spec
+## Deliberate refinements to the spec
 
-Both are improvements found while planning. Apply them as written here, and update the spec's wording in Task 7.
+All were found while planning, by checking the spec's sketches against the quickstarts they have to cover. Apply them as written here, and update the spec in Task 7.
 
 1. **Two timeout variables, not one.** The spec proposed a single `${MARKER_TIMEOUT}`. The harness has two distinct hardcoded timeouts with different values: log markers wait 60s (`Wait Until Log Contains`) and readiness waits 180s (`Wait Until Apps Connected`, `Wait Until Apps Healthy`). Collapsing them into one variable would silently change existing behaviour, which Global Constraints forbid. Use `${MARKER_TIMEOUT}` (default `60s`) and `${READINESS_TIMEOUT}` (default `180s`).
 2. **doc-sync loose mode is total, not one-way.** The canonical checker only verifies documented-to-harness coverage, because the harness legitimately does undocumented things. For agent-family quickstarts the reverse also becomes checkable: every documented bash line is either run by the suite or listed in the data module's `UNCOVERED` tuple with a reason. This turns "out of scope" from a claim in prose into a machine-checked list.
+3. **`REQUESTS` is an ordered tuple, and a request may carry documented commands to run first.** A single trigger dict cannot express `mcp-auth/python`, whose documented flow interleaves HTTP calls and CLI commands: call the tool and watch it fail closed, run `diagrid mcp grant`, call again and watch it succeed. Each entry therefore gets an optional `commands` tuple, run through the existing `Run Documented Commands` before that request, and an optional `log_marker` asserted after it. Single-request quickstarts like langgraph simply omit both keys. Two documented statuses in one flow (403 then 200) is the case that makes this necessary, and it is the shape most agent quickstarts will eventually grow.
+4. **`READY_MARKERS` is a tuple.** `dapr-agents/multi-agent-workflow` runs three apps (`customer-support-system` on 8001, `triage-agent` on 8002, `expert-agent` on 8003), so "the apps are up" is several markers, not one. `HEALTH_PORTS` already handles several ports.
+5. **The mutation check overrides through a generated variable file, not `--variable`.** Robot's `--variable` can only set scalars, so it cannot break a tuple like `READY_MARKERS`. A generated one-line variable file passed with `--variablefile` takes precedence over a suite's `Variables` import, works for scalars and tuples alike, and needs no type guessing in the script.
 
 ---
 
@@ -847,7 +850,22 @@ git commit -m "Add keywords for documented commands, readiness markers, secrets 
 - Consumes: `suites.agent_suites` (Task 1); `normalise_run_command` and `_FENCE` (existing).
 - Produces: `all_bash_lines(markdown: str) -> list[str]`; `normalise_project(command: str, documented_project: str) -> str`; `check_agent(row: dict, repo_root: Path) -> list[str]`. Task 5's data module must satisfy the contract `check_agent` enforces; Task 6 relies on `--all` covering agent rows.
 
-The data module contract `check_agent` enforces, which Task 5 implements: module-level `DOCUMENTED_PROJECT` (str), `SETUP` / `TEARDOWN` / `LOG_MARKERS` / `UNCOVERED` (tuples), `INSTALL` / `RUN` / `READY_MARKER` (str), `TRIGGER` (dict with `port`, `path`, `payload`, `status`, `field`).
+The data module contract `check_agent` enforces, which Task 5 implements:
+
+| Name | Type | Meaning |
+|---|---|---|
+| `DOCUMENTED_PROJECT` | str | The project name the README uses, mapped onto `{project}` when comparing. |
+| `SETUP` | tuple[str] | Documented provisioning commands, in documented order. Empty when the README documents none. |
+| `INSTALL` | str or tuple[str] | Documented install command(s). |
+| `RUN` | str | The documented `dev run` command, verbatim. |
+| `TEARDOWN` | tuple[str] | Documented cleanup. Empty when the README documents none. |
+| `READY_MARKERS` | tuple[str] | Readiness strings, one per app that announces itself. |
+| `HEALTH_PORTS` | tuple[int] | Every port that must answer 200 on `GET /`. |
+| `SECRETS` | tuple[str] | Environment variable names the quickstart needs. |
+| `REQUESTS` | tuple[dict] | The documented calls, in order. Keys: `method`, `port`, `path`, `payload`, `status`; optional `field` (assert present and non-empty), `commands` (documented commands to run before this request), `log_marker` (assert after this request). |
+| `UNCOVERED` | tuple[tuple[str, str]] | (command, reason) for documented commands the suite deliberately does not run. |
+
+`commands` is what makes a documented multi-phase flow expressible. `mcp-auth/python` needs it: its documented sequence is call-fails-closed, `diagrid mcp grant`, call-succeeds, which is two requests where the second carries the grant command and expects a different status.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -933,15 +951,17 @@ def data_module(**overrides):
         INSTALL="uv sync",
         RUN="uv run diagrid dev run -f dev-python-langgraph.yaml --approve",
         TEARDOWN=("diagrid project delete {project}",),
-        READY_MARKER="Uvicorn running on",
-        TRIGGER={
-            "port": 8005,
-            "path": "/agent/run",
-            "payload": {"task": "Check if the Grand Ballroom is available on March 15th"},
-            "status": 200,
-            "field": None,
-        },
-        LOG_MARKERS=(),
+        READY_MARKERS=("Uvicorn running on",),
+        REQUESTS=(
+            {
+                "method": "POST",
+                "port": 8005,
+                "path": "/agent/run",
+                "payload": {"task": "Check if the Grand Ballroom is available on March 15th"},
+                "status": 200,
+                "field": None,
+            },
+        ),
         UNCOVERED=(
             ("uv run diagrid dev run -f dev-crash-test.yaml --approve",
              "crash-recovery flow needs a source edit; out of scope"),
@@ -996,31 +1016,67 @@ def test_check_agent_reports_a_documented_command_nobody_runs(tmp_path):
 
 def test_check_agent_reports_a_readiness_marker_absent_from_the_readme(tmp_path):
     row, root = _fixture(tmp_path)
-    module = data_module(READY_MARKER="Application started on port")
+    module = data_module(READY_MARKERS=("Application started on port",))
     problems = check_agent(row, root, module=module)
     assert any("readiness marker" in p for p in problems)
 
 
-def test_check_agent_reports_a_trigger_payload_that_drifted(tmp_path):
+def test_check_agent_checks_every_readiness_marker(tmp_path):
+    # Multi-app quickstarts have one marker per app (dapr-agents/multi-agent-workflow
+    # runs three), so a checker that only looked at the first would miss drift in
+    # the others.
+    row, root = _fixture(tmp_path)
+    module = data_module(READY_MARKERS=("Uvicorn running on", "Nothing prints this"))
+    problems = check_agent(row, root, module=module)
+    assert any("Nothing prints this" in p for p in problems)
+
+
+def test_check_agent_reports_a_request_payload_that_drifted(tmp_path):
     row, root = _fixture(tmp_path)
     module = data_module(
-        TRIGGER={"port": 8005, "path": "/agent/run",
-                 "payload": {"task": "something else entirely"},
-                 "status": 200, "field": None}
+        REQUESTS=({"method": "POST", "port": 8005, "path": "/agent/run",
+                   "payload": {"task": "something else entirely"},
+                   "status": 200, "field": None},)
     )
     problems = check_agent(row, root, module=module)
     assert any("payload" in p for p in problems)
 
 
-def test_check_agent_reports_a_trigger_url_that_drifted(tmp_path):
+def test_check_agent_reports_a_request_url_that_drifted(tmp_path):
     row, root = _fixture(tmp_path)
     module = data_module(
-        TRIGGER={"port": 9999, "path": "/agent/run",
-                 "payload": {"task": "Check if the Grand Ballroom is available on March 15th"},
-                 "status": 200, "field": None}
+        REQUESTS=({"method": "POST", "port": 9999, "path": "/agent/run",
+                   "payload": {"task": "Check if the Grand Ballroom is available on March 15th"},
+                   "status": 200, "field": None},)
     )
     problems = check_agent(row, root, module=module)
-    assert any("trigger" in p for p in problems)
+    assert any("request URL" in p for p in problems)
+
+
+def test_check_agent_checks_commands_attached_to_a_request(tmp_path):
+    # A request's `commands` are documented commands too (mcp-auth's grant step
+    # sits between two calls), so they must be documented like any other.
+    row, root = _fixture(tmp_path)
+    module = data_module(
+        REQUESTS=({"method": "POST", "port": 8005, "path": "/agent/run",
+                   "payload": {"task": "Check if the Grand Ballroom is available on March 15th"},
+                   "status": 200, "field": None,
+                   "commands": ("diagrid mcp grant --caller x --tool add",)},)
+    )
+    problems = check_agent(row, root, module=module)
+    assert any("mcp grant" in p for p in problems)
+
+
+def test_check_agent_checks_a_requests_log_marker(tmp_path):
+    row, root = _fixture(tmp_path)
+    module = data_module(
+        REQUESTS=({"method": "POST", "port": 8005, "path": "/agent/run",
+                   "payload": {"task": "Check if the Grand Ballroom is available on March 15th"},
+                   "status": 200, "field": None,
+                   "log_marker": "no_such_tool"},)
+    )
+    problems = check_agent(row, root, module=module)
+    assert any("log marker" in p for p in problems)
 
 
 def _fixture(tmp_path):
@@ -1129,6 +1185,10 @@ def check_agent(row, repo_root, module=None):
         *_install_lines(module.INSTALL),
         module.RUN,
         *module.TEARDOWN,
+        # A request's `commands` are documented commands like any other: mcp-auth's
+        # `diagrid mcp grant` sits between two calls, so it belongs in this list
+        # rather than escaping the check by being nested in a request.
+        *[c for request in module.REQUESTS for c in request.get("commands", ())],
     ]
     harness = [normalise_project(command, project) for command in harness]
     excused = [normalise_project(command, project) for command, _ in module.UNCOVERED]
@@ -1151,24 +1211,24 @@ def check_agent(row, repo_root, module=None):
             "  Either run it from the suite, or add it to UNCOVERED with the reason."
         )
 
-    if module.READY_MARKER not in markdown:
-        problems.append(
-            f"{where}: readiness marker {module.READY_MARKER!r} does not appear in the README"
-        )
-
-    trigger = module.TRIGGER
-    url = f"http://localhost:{trigger['port']}{trigger['path']}"
-    if url not in markdown:
-        problems.append(f"{where}: trigger URL {url} does not appear in the README")
+    for marker in module.READY_MARKERS:
+        if marker not in markdown:
+            problems.append(
+                f"{where}: readiness marker {marker!r} does not appear in the README"
+            )
 
     payloads = [call["payload"] for call in extract_curl_calls_anywhere(markdown)]
-    if trigger["payload"] not in payloads:
-        problems.append(
-            f"{where}: trigger payload {trigger['payload']!r} is not documented.\n"
-            f"  README documents: {payloads!r}"
-        )
+    for request in module.REQUESTS:
+        url = f"http://localhost:{request['port']}{request['path']}"
+        if url not in markdown:
+            problems.append(f"{where}: request URL {url} does not appear in the README")
+        if request["payload"] is not None and request["payload"] not in payloads:
+            problems.append(
+                f"{where}: request payload {request['payload']!r} is not documented.\n"
+                f"  README documents: {payloads!r}"
+            )
 
-    for marker in module.LOG_MARKERS:
+    for marker in [r["log_marker"] for r in module.REQUESTS if r.get("log_marker")]:
         if marker not in markdown:
             problems.append(f"{where}: log marker {marker!r} does not appear in the README")
 
@@ -1259,7 +1319,7 @@ git commit -m "Check agent-family READMEs against their data modules both ways"
 
 **Interfaces:**
 - Consumes: all four keywords from Task 3; `${READINESS_TIMEOUT}` from Task 2; the data module contract from Task 4.
-- Produces: `agents_langgraph.get_quickstart() -> dict` with keys `family, name, language, dir, setup, install, run, teardown, ready_marker, health_ports, secrets, trigger, log_markers`; `ci/project-name.sh` exporting `PROJECT`; `ci/login.sh`. Task 6 calls both scripts; Task 8's reference file describes this module as the template.
+- Produces: the module-level names from Task 4's contract table (`SETUP`, `INSTALL`, `RUN`, `TEARDOWN`, `READY_MARKERS`, `HEALTH_PORTS`, `SECRETS`, `REQUESTS`, `UNCOVERED`, `DOCUMENTED_PROJECT`), plus `agents_langgraph.get_quickstart() -> dict` with keys `family, name, language, dir, setup, install, run, teardown, health_ports, secrets, activate_venv`. `READY_MARKERS` and `REQUESTS` are deliberately absent from that dict; see Step 1. Also `ci/project-name.sh` exporting `PROJECT`, and `ci/login.sh`. Task 6 calls both scripts; Task 8's reference file describes this module as the template.
 
 - [ ] **Step 1: Write the data module**
 
@@ -1317,35 +1377,45 @@ RUN = "uv run diagrid dev run -f dev-python-langgraph.yaml --approve"
 TEARDOWN = ()
 
 # README: "Wait until the output shows `Uvicorn running on <localhost:port>`."
-# Truncated before the address, which varies.
-READY_MARKER = "Uvicorn running on"
+# Truncated before the address, which varies. A tuple because multi-app
+# quickstarts announce themselves once per app: dapr-agents/multi-agent-workflow
+# runs three. langgraph has one.
+READY_MARKERS = ("Uvicorn running on",)
 
 # appPort in dev-python-langgraph.yaml, and the port the documented curl targets.
 HEALTH_PORTS = (8005,)
 
 SECRETS = ("OPENAI_API_KEY",)
 
-# README "### 2. Trigger a Workflow".
+# The documented calls, in documented order. README "### 2. Trigger a Workflow".
 #
-# `field` is None because no README documents a response body for /agent/run,
-# and the endpoint is served by DaprWorkflowGraphRunner.serve() from an external
+# Optional keys a request may carry, unused here:
+#   commands    documented commands to run before this request, for flows that
+#               interleave CLI and HTTP (mcp-auth grants a tool between two calls)
+#   log_marker  a string to wait for in the dev-run output after this request
+#
+# `field` is None because no README documents a response body for /agent/run, and
+# the endpoint is served by DaprWorkflowGraphRunner.serve() from an external
 # package, so the field name cannot be read out of this repo. The suite asserts
 # the documented status code only. Fill this in from an observed live response,
 # with a comment naming that response as the source; guessing a field name
 # produces an assertion that looks like coverage and fails for the wrong reason.
 # This is the same weak-assertion tradeoff the harness already accepts for the
 # undocumented `GET /workflow/status/{id}` bodies.
-TRIGGER = {
-    "port": 8005,
-    "path": "/agent/run",
-    "payload": {"task": "Check if the Grand Ballroom is available on March 15th"},
-    "status": 200,
-    "field": None,
-}
-
-# The README describes the agent using the `check_availability` tool, and main.py
-# defines it. Model output varies; the tool call is what the quickstart promises.
-LOG_MARKERS = ("check_availability",)
+REQUESTS = (
+    {
+        "method": "POST",
+        "port": 8005,
+        "path": "/agent/run",
+        "payload": {"task": "Check if the Grand Ballroom is available on March 15th"},
+        "status": 200,
+        "field": None,
+        # The README describes the agent using the `check_availability` tool, and
+        # main.py defines it. Model output varies; the tool call is what the
+        # quickstart actually promises, so that is what this asserts.
+        "log_marker": "check_availability",
+    },
+)
 
 # Documented commands this suite deliberately does not run, each with its reason.
 # doc-sync fails if a documented command is in neither this tuple nor the suite,
@@ -1378,26 +1448,22 @@ def get_quickstart():
         "install": INSTALL,
         "run": RUN,
         "teardown": list(TEARDOWN),
-        "ready_marker": READY_MARKER,
         "health_ports": list(HEALTH_PORTS),
         "secrets": list(SECRETS),
-        "trigger": dict(TRIGGER),
-        "log_markers": list(LOG_MARKERS),
         # `Start Quickstart` reads this. langgraph's README documents no
         # `uv venv` + activate step, because `uv run` resolves the environment.
         "activate_venv": False,
     }
 ```
 
-**Do not have the suite read `ready_marker` or `log_markers` back out of this
-dict.** A value returned by a Python keyword cannot be overridden with
-`robot --variable`, so a mutation check against `get_quickstart()["ready_marker"]`
-would run with the real marker, pass, and "prove" the assertion is sound when it
-proved nothing. The suite reads `${READY_MARKER}` and `@{LOG_MARKERS}` from the
-`Variables` import instead, which command-line variables do override. The dict
-keys stay for symmetry with `quickstarts.get_quickstart` and for keywords that
-take the whole dict (`Build Quickstart`, `Start Quickstart`, `Wait Until Apps
-Healthy`).
+**Note what this dict deliberately omits: `READY_MARKERS` and `REQUESTS`.** A value
+returned by a Python keyword cannot be overridden from the command line, so a
+mutation check against `get_quickstart()["ready_markers"]` would run with the real
+markers, pass, and "prove" an assertion sound while proving nothing. The suite
+reads `@{READY_MARKERS}` and `@{REQUESTS}` from the `Variables` import instead,
+which a `--variablefile` override does replace. The dict keeps only what whole-dict
+keywords need (`Build Quickstart`, `Start Quickstart`, `Wait Until Apps Healthy`)
+plus the secrets loop.
 
 - [ ] **Step 2: Write the suite**
 
@@ -1409,9 +1475,14 @@ End-to-end test for the agents/langgraph quickstart (python only: this
 quickstart has one implementation, unlike the canonical four-language APIs).
 
 Mirrors agents/langgraph/README.md: "## Setup" installs, "## Run with Catalyst"
-provisions and runs, "### 2. Trigger a Workflow" triggers, "## Clean Up"
-deletes. The crash-recovery flow is deliberately absent; see UNCOVERED in
+provisions and runs, "### 2. Trigger a Workflow" triggers. This README documents
+no cleanup command, so deleting the project is infrastructure here. The
+crash-recovery flow is deliberately absent; see UNCOVERED in
 variables/agents_langgraph.py for why.
+
+The request loop below is the shape every agent-family suite uses, including ones
+whose documented flow interleaves CLI commands with HTTP calls: a request may
+carry `commands` to run first and a `log_marker` to wait for afterwards.
 
 Run it:
   export DIAGRID_API_KEY=... OPENAI_API_KEY=...
@@ -1426,7 +1497,7 @@ Run it:
 Resource        ../../../tools/qs-tester/resources/catalyst.resource
 Resource        ../../../tools/qs-tester/resources/quickstart.resource
 # Imported twice on purpose, same as the canonical suites: `Variables` exposes
-# the module-level names (${TRIGGER}, ${READY_MARKER}), `Library` exposes
+# the module-level names (@{REQUESTS}, @{READY_MARKERS}), `Library` exposes
 # get_quickstart as a keyword. Neither import alone gives both.
 Variables       ../../../tools/qs-tester/variables/agents_langgraph.py
 Library         ../../../tools/qs-tester/variables/agents_langgraph.py
@@ -1454,20 +1525,42 @@ Python Langgraph Quickstart
     # README "## Run with Catalyst" steps 2-3, run verbatim.
     Run Documented Commands     ${qs}[setup]    ${PROJECT}    cwd=${qs}[dir]
     Start Quickstart            ${qs}    ${PROJECT}    ${log}
-    # ${READY_MARKER} and @{LOG_MARKERS} come from the `Variables` import, NOT from
-    # ${qs}, and that is deliberate: `robot --variable READY_MARKER:...` overrides a
-    # variable-file value but cannot touch what a Python keyword returned. Reading
-    # these from ${qs} would make the mutation check run with the real marker,
-    # pass, and prove nothing.
-    Wait Until Ready Marker     ${log}    ${READY_MARKER}
+
+    # @{READY_MARKERS} and @{REQUESTS} come from the `Variables` import, NOT from
+    # ${qs}, and that is deliberate: a --variablefile override replaces a variable
+    # file's value but cannot touch what a Python keyword returned. Reading these
+    # from ${qs} would make the mutation check run with the real markers, pass, and
+    # prove nothing. One marker per app that announces itself.
+    FOR    ${marker}    IN    @{READY_MARKERS}
+        Wait Until Ready Marker    ${log}    ${marker}
+    END
     Wait Until Apps Healthy     ${qs}
 
-    # README "### 2. Trigger a Workflow".
-    POST And Expect Field    ${TRIGGER}[port]    ${TRIGGER}[path]    ${TRIGGER}[payload]
-    ...    ${TRIGGER}[status]    ${TRIGGER}[field]
-
-    FOR    ${marker}    IN    @{LOG_MARKERS}
-        Wait Until Log Contains    ${log}    ${marker}
+    # The documented calls, in documented order. README "### 2. Trigger a Workflow".
+    # `commands` and `log_marker` are optional per request: a flow that interleaves
+    # CLI and HTTP (mcp-auth grants a tool between two calls) expresses that here
+    # rather than needing its own bespoke suite.
+    # Every optional key is read with a default, so a request that needs none of
+    # them stays a five-key dict instead of carrying explicit nulls.
+    FOR    ${request}    IN    @{REQUESTS}
+        # `Evaluate`, not `Get From Dictionary ... default=`: the default has to be an
+        # empty SEQUENCE. A ${EMPTY} default is an empty string, and Run Documented
+        # Commands would fail iterating it with "not list or list-like" for every
+        # request that carries no commands, which is most of them.
+        ${commands}=    Evaluate    $request.get('commands', ())
+        Run Documented Commands    ${commands}    ${PROJECT}    cwd=${qs}[dir]
+        ${field}=       Get From Dictionary    ${request}    field          default=${NONE}
+        # POST-only on purpose: every documented agent trigger is a POST. A
+        # documented GET belongs in `GET And Expect` from quickstart.resource, and
+        # a suite that needs one should branch on ${request}[method] here.
+        Should Be Equal    ${request}[method]    POST
+        ...    msg=Only POST requests are handled here; use GET And Expect for a documented GET.
+        POST And Expect Field    ${request}[port]    ${request}[path]    ${request}[payload]
+        ...    ${request}[status]    ${field}
+        ${marker}=      Get From Dictionary    ${request}    log_marker     default=${NONE}
+        IF    $marker is not None
+            Wait Until Log Contains    ${log}    ${marker}
+        END
     END
 
 *** Keywords ***
@@ -1601,7 +1694,7 @@ uv run python ci/list-suites.py --matrix agent
 bash ci/project-name.sh agents-langgraph
 ```
 
-Expected: manifest valid (5 suites); doc-sync reports 16 canonical READMEs in sync and no agent problems; 25 tests pass; the dryrun now resolves 17 tests; the matrix prints one JSON object; the name script prints `PROJECT=qs-ci-agents-langgraph-local<epoch>`.
+Expected: manifest valid (5 suites); doc-sync reports 16 canonical READMEs in sync and no agent problems; 29 tests pass (6 doc-sync, 10 manifest, 13 agent-sync); the dryrun now resolves 17 tests; the matrix prints one JSON object; the name script prints `PROJECT=qs-ci-agents-langgraph-local<epoch>`.
 
 If doc-sync reports a problem, fix `agents_langgraph.py` to match the README, not the other way around. Consult `agents/langgraph/README.md` and re-read the guiding principle first.
 
@@ -1635,7 +1728,7 @@ Expected: PASS, 1 test. If it fails, read `results/agents-langgraph/agents-langg
 
 - [ ] **Step 9: Record the observed response shape**
 
-The live run prints the `/agent/run` response body in `results/agents-langgraph/log.html` (expand `POST And Expect Field`). If it contains a stable non-empty field, set `TRIGGER["field"]` to that name and replace the placeholder comment with one naming the live response as the source, for example:
+The live run prints the `/agent/run` response body in `results/agents-langgraph/log.html` (expand `POST And Expect Field`). If it contains a stable non-empty field, set that request's `field` to its name and replace the placeholder comment with one naming the live response as the source, for example:
 
 ```python
     # Observed in a live run on 2026-07-31: {"output": "...", "instance_id": "..."}.
@@ -1647,19 +1740,26 @@ Then re-run Step 8 to confirm the stronger assertion still passes, and `uv run p
 
 - [ ] **Step 10: Mutation check**
 
-Prove the readiness assertion is not vacuous, reusing the same project so no second provisioning is needed:
+Prove the readiness assertion is not vacuous, reusing the same project so no second provisioning is needed.
+
+`READY_MARKERS` is a tuple, and `robot --variable` can only set scalars, so the override goes through a generated variable file. A CLI `--variablefile` takes precedence over the suite's own `Variables` import, and this works the same way for scalars and tuples with no type guessing:
 
 ```bash
 cd tools/qs-tester
+mkdir -p results/mutation
+cat > results/mutation/mutate.py <<'EOF'
+READY_MARKERS = ("__mutation_check__",)
+EOF
 uv run robot --variable PROJECT:$PROJECT \
-  --variable READY_MARKER:__mutation_check__ --variable READINESS_TIMEOUT:20s \
+  --variablefile results/mutation/mutate.py \
+  --variable READINESS_TIMEOUT:20s \
   --outputdir results/agents-langgraph-mutated \
   ../../agents/langgraph/tests/quickstart.robot
 ```
 
 Expected: FAIL within roughly 20 seconds, with `Log ... does not contain "__mutation_check__"`.
 
-A PASS here means the readiness assertion never fails and is therefore worthless. Do not proceed: find out why (the most likely cause is a keyword reading the module constant directly instead of the Robot variable) and fix it.
+A PASS here means the readiness assertion never fails and is therefore worthless. Do not proceed. The likeliest cause is the suite reading the marker out of `get_quickstart()` instead of the `Variables` import, which no override can reach; the second likeliest is `--variablefile` pointing at a path that does not exist, which Robot reports as an error rather than silently ignoring, so check the console output before assuming the assertion is at fault.
 
 - [ ] **Step 11: Tear down and commit**
 
@@ -1979,11 +2079,17 @@ The suite runs the README's documented `diagrid project delete` itself, so
 because it is the safety net for a suite that died before its own teardown.
 
 To prove an assertion is not vacuous, re-run against the same project with the
-assertion broken and require a failure:
+assertion broken and require a failure. The override goes through a generated
+variable file because `--variable` can only set scalars, and the interesting
+targets (`READY_MARKERS`, `REQUESTS`) are tuples:
 
 ```bash
+mkdir -p results/mutation
+cat > results/mutation/mutate.py <<'EOF'
+READY_MARKERS = ("__mutation_check__",)
+EOF
 uv run robot --variable PROJECT:$PROJECT \
-  --variable READY_MARKER:__mutation_check__ --variable READINESS_TIMEOUT:20s \
+  --variablefile results/mutation/mutate.py --variable READINESS_TIMEOUT:20s \
   --outputdir results/mutated ../../agents/langgraph/tests/quickstart.robot
 ```
 
@@ -2012,6 +2118,9 @@ Update `docs/superpowers/specs/2026-07-31-quickstart-e2e-test-skill-design.md` f
 1. `${MARKER_TIMEOUT}` plus `${READINESS_TIMEOUT}`, rather than one variable.
 2. doc-sync loose mode is total via `UNCOVERED`, rather than one-way.
 3. The `TEARDOWN` of a quickstart whose README documents no cleanup is empty, and deletion falls to `ci/teardown-project.sh` as infrastructure. langgraph is that case, so the spec's example should not imply every agent quickstart documents a delete.
+4. `REQUESTS` is an ordered tuple whose entries may carry `commands` and `log_marker`, and `READY_MARKERS` is a tuple. Record why: `mcp-auth` interleaves CLI commands with HTTP calls, and `dapr-agents/multi-agent-workflow` runs three apps.
+5. The mutation check overrides through a generated `--variablefile`, not `--variable`, because `--variable` cannot set a tuple.
+6. Phase 2 gains the undocumented-provisioning decision path: leave `SETUP` empty and ask which `ci/setup-project.sh` flags the project needs, rather than guessing.
 
 Also confirm the spec's manifest field list matches `variables/suites.py` as built. The spec listed an `agent_infra` flag and an agent name per row; both became dead fields once the suite ran the documented `project create` and `agent create` itself, so they are not in the manifest.
 
@@ -2111,6 +2220,27 @@ list becomes `UNCOVERED`, and doc-sync fails if a documented command is in
 neither `UNCOVERED` nor the suite. Crash-recovery flows that need source edits,
 and endpoints no README documents, belong in `UNCOVERED`.
 
+### When the README documents no project creation
+
+Some quickstarts need a project but never say how to make one.
+`dapr-agents/durable-agent` is the clearest case: its prerequisites list only the
+CLI, Python and an OpenAI key, yet its `dev run` passes
+`--project durable-agent-quickstart`. Under the guiding principle, provisioning is
+then infrastructure, and `ci/setup-project.sh` owns it, exactly as for the
+canonical APIs.
+
+That script's flags were chosen for the canonical APIs, though
+(`--deploy-managed-kv --deploy-managed-pubsub --enable-managed-workflow`), and an
+agent quickstart may also need `--enable-agent-infrastructure`. Deciding that from
+nothing is guessing, which is the one thing this skill must not do.
+
+So: leave `SETUP` empty, note in the data module that provisioning is
+undocumented, and **ask** which flags the project needs before running anything.
+Say what you know (the quickstart passes `--project X`, nothing documents creating
+X, the canonical flags are these) and what you need decided. A wrong flag here
+either fails the whole leg or, worse, provisions something that works by accident
+and hides a documentation gap readers will hit.
+
 ## Phase 3: write
 
 Follow the files that already exist rather than inventing a layout:
@@ -2170,7 +2300,9 @@ because everything downstream trusts that claim.
 
 Transcribe, from the spec's "Per-quickstart data module", "Project lifecycle for agent-family suites" and "doc-sync" sections plus the real `agents_langgraph.py`:
 
-- The full data module contract: `DOCUMENTED_PROJECT`, `SETUP`, `INSTALL`, `RUN`, `TEARDOWN`, `READY_MARKER`, `HEALTH_PORTS`, `SECRETS`, `TRIGGER`, `LOG_MARKERS`, `UNCOVERED`, `get_quickstart()` including `activate_venv`.
+- The full data module contract, copied from Task 4's table: `DOCUMENTED_PROJECT`, `SETUP`, `INSTALL`, `RUN`, `TEARDOWN`, `READY_MARKERS`, `HEALTH_PORTS`, `SECRETS`, `REQUESTS` (with its optional `field`, `commands` and `log_marker` keys), `UNCOVERED`, and `get_quickstart()` including `activate_venv`. State plainly that `READY_MARKERS` and `REQUESTS` are read from the `Variables` import and not from `get_quickstart()`, and why: a value a Python keyword returned cannot be overridden, so a mutation check against it proves nothing.
+- Worked examples of the three shapes `REQUESTS` has to cover: one request (langgraph), several requests against several apps (`dapr-agents/multi-agent-workflow`, three apps on 8001-8003 and therefore three readiness markers), and a flow interleaving CLI and HTTP where the second request carries `commands` and expects a different status (`mcp-auth/python`: fail closed, grant, succeed).
+- The undocumented-provisioning decision path from SKILL.md phase 2, with `dapr-agents/durable-agent` as the example.
 - That the three families differ in their documented provisioning, with the three real examples: `agents/*` (`--enable-agent-infrastructure` plus `agent create`, bare `dev run`), `dapr-agents/durable-agent` (no project create, explicit `--project`), `mcp-auth/python` (`project create --use`, `app create`, `apply -f`, then a `dev run` with both `--project` and four `--skip-*` flags).
 - That readiness markers are framework properties, not language properties, and where to find them in a README ("Wait until the output shows ...").
 - That assertions are structural, with the reasoning about model output, and that an undocumented response shape means asserting the status code only.
@@ -2331,15 +2463,22 @@ echo "static verification passed"
 # Run one suite against a real Catalyst project, then prove one of its
 # assertions is not vacuous, then tear down whatever happened.
 #
-# Usage: verify-live.sh <suite-path> <leg-id> [mutation-variable]
-#   suite-path         repo-relative, e.g. agents/langgraph/tests/quickstart.robot
-#   leg-id             name fragment, e.g. agents-langgraph
-#   mutation-variable  Robot variable to break (default READY_MARKER)
+# Usage: verify-live.sh <suite-path> <leg-id> [mutation-assignment]
+#   suite-path          repo-relative, e.g. agents/langgraph/tests/quickstart.robot
+#   leg-id              name fragment, e.g. agents-langgraph
+#   mutation-assignment a Python assignment to override, as NAME=<literal>.
+#                       Default: READY_MARKERS=("__mutation_check__",)
+#
+# The override is written to a generated variable file rather than passed with
+# --variable, because --variable can only set scalars and the assertions worth
+# breaking (READY_MARKERS, REQUESTS) are tuples. A CLI --variablefile outranks the
+# suite's own `Variables` import, so this reaches any module-level name and needs
+# no type guessing here.
 set -uo pipefail
 
-SUITE="${1:?usage: verify-live.sh <suite-path> <leg-id> [mutation-variable]}"
-LEG="${2:?usage: verify-live.sh <suite-path> <leg-id> [mutation-variable]}"
-MUTATE="${3:-READY_MARKER}"
+SUITE="${1:?usage: verify-live.sh <suite-path> <leg-id> [NAME=<python-literal>]}"
+LEG="${2:?usage: verify-live.sh <suite-path> <leg-id> [NAME=<python-literal>]}"
+MUTATION="${3:-READY_MARKERS=(\"__mutation_check__\",)}"
 
 ROOT="$(git rev-parse --show-toplevel)"
 eval "$(bash "$ROOT/tools/qs-tester/ci/project-name.sh" "$LEG" | grep '^PROJECT=')"
@@ -2359,22 +2498,27 @@ if ! uv run robot --variable "PROJECT:$PROJECT" --outputdir "results/$LEG" "../.
   exit 1
 fi
 
-echo "== mutation check: breaking \$$MUTATE, expecting a FAILURE"
+echo "== mutation check: overriding $MUTATION, expecting a FAILURE"
 # Reuses the same project, so the marginal cost is one app restart rather than a
 # second provisioning. The short timeouts keep a run we expect to fail from
 # waiting out the full readiness window.
+mkdir -p "results/$LEG-mutated"
+printf '%s\n' "$MUTATION" > "results/$LEG-mutated/mutate.py"
 if uv run robot --variable "PROJECT:$PROJECT" \
-     --variable "$MUTATE:__mutation_check__" \
+     --variablefile "results/$LEG-mutated/mutate.py" \
      --variable READINESS_TIMEOUT:20s --variable MARKER_TIMEOUT:20s \
      --outputdir "results/$LEG-mutated" "../../$SUITE"; then
-  echo "::error::The suite PASSED with \$$MUTATE broken, so that assertion is vacuous:"
+  echo "::error::The suite PASSED with $MUTATION applied, so that assertion is vacuous:"
   echo "  it cannot fail, which means a broken quickstart would ship green."
+  echo "  Check first that Robot actually loaded the variable file (it errors loudly"
+  echo "  if the path is wrong), then that the suite reads the name from its"
+  echo "  Variables import rather than from get_quickstart()."
   echo "  Fix the assertion; do not report this suite as verified."
   exit 1
 fi
 
 echo
-echo "VERIFIED: $SUITE passed, and failed as expected with \$$MUTATE broken."
+echo "VERIFIED: $SUITE passed, and failed as expected with $MUTATION applied."
 ```
 
 - [ ] **Step 4: Make them executable and check them**
@@ -2465,15 +2609,47 @@ git commit -m "Add preflight, static and live verification scripts to the skill"
       "assertions": [
         "SETUP contains the documented project create --use, app create and apply -f commands in the documented order",
         "RUN keeps all four --skip-* flags exactly as documented",
-        "Grant/revoke phases are either asserted or recorded as an explicit gap in UNCOVERED and in tools/qs-tester/README.md",
+        "The documented fail-closed call and the allowed call after the grant are both in REQUESTS, in order, with their different expected statuses",
+        "The grant command rides on the second request's commands key rather than being dropped or hoisted into SETUP",
+        "Any phase left uncovered is recorded in UNCOVERED with a reason and noted in tools/qs-tester/README.md",
         "No assertion claims coverage of an authorization outcome the suite does not actually check",
         "check_readme_sync.py --all exits 0",
         "The report is BLOCKED or VERIFIED, never an unqualified success claim"
+      ]
+    },
+    {
+      "id": 4,
+      "name": "canonical-undocumented-endpoint",
+      "prompt": "The state quickstart has a DELETE /order/{id} endpoint in all four languages but I don't think it's tested. Add e2e coverage for it.",
+      "expected_output": "A refusal to invent coverage: no README documents that endpoint, so the skill should say so, offer to document it first (which brings it under test) or to record it as a known gap, and not fabricate a request or expected body.",
+      "files": [],
+      "assertions": [
+        "The skill states that no README documents DELETE /order/{id} and that this is why it is untested",
+        "No request or expected response body was invented for the endpoint",
+        "The skill offers documenting the endpoint first as the path to coverage, rather than testing it undocumented",
+        "variables/quickstarts.py was not edited to add an undocumented request",
+        "If anything was written, it is a gap note rather than an assertion",
+        "The skill correctly identifies this as the canonical convention, not agent-family"
       ]
     }
   ]
 }
 ```
+
+Eval 4 looks like a trick question and is the most valuable of the four. The skill's
+whole value rests on assertions being traceable to a documented promise, and its most
+likely failure is being helpful: fabricating a plausible `DELETE` request and an
+expected body, producing something that passes, and quietly asserting behaviour
+nobody promised. The harness README already records this endpoint as untested for
+exactly this reason, so the correct answer is on record.
+
+**What these evals do not cover:** adding a new *language* to a canonical API. All
+sixteen (api, language) pairs already exist, so there is no real gap to exercise
+without inventing a fixture quickstart. When a fifth language does land, add a fifth
+eval from the real directory and assert the language-shaped work: a row in every dict
+in `quickstarts.py`, a tagged test case in the existing suite, a CI matrix entry, and
+a runtime setup step. Until then, `references/canonical-api.md` documents that path
+but nothing verifies the skill follows it.
 
 - [ ] **Step 2: Run the evals**
 

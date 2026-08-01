@@ -249,9 +249,15 @@ RUN = "uv run diagrid dev run -f dev-python-langgraph.yaml --approve"
 # the suite runs it. Otherwise deleting the project is infrastructure and
 # ci/teardown-project.sh owns it.
 TEARDOWN = ()
-READY_MARKER = "Uvicorn running on"
+# A tuple because multi-app quickstarts announce themselves once per app:
+# dapr-agents/multi-agent-workflow runs three.
+READY_MARKERS = ("Uvicorn running on",)
 HEALTH_PORTS = (8005,)
 SECRETS = ("OPENAI_API_KEY",)
+# Ordered, because a documented flow can be several calls. Two optional keys make
+# the harder shapes expressible: `commands` runs documented commands before a
+# request (mcp-auth grants a tool between two calls, which expect different
+# statuses), and `log_marker` is waited for afterwards.
 REQUESTS = (
     {
         "method": "POST",
@@ -263,11 +269,18 @@ REQUESTS = (
         # DaprWorkflowGraphRunner.serve() from an external package, so the field name
         # cannot be read out of this repo. It is discovered during the live run and
         # recorded here with a comment naming the observed response as its source.
-        "expect_field": None,
+        "field": None,
+        "log_marker": "check_availability",
     },
 )
-LOG_MARKERS = ("check_availability",)
 ```
+
+`READY_MARKERS` and `REQUESTS` are read by the suite from its `Variables` import
+rather than from `get_quickstart()`. A value a Python keyword returned cannot be
+overridden from outside the suite, so a mutation check aimed at one would run
+against the real value, pass, and prove nothing. For the same reason the mutation
+check overrides through a generated `--variablefile` rather than `--variable`,
+which can only set scalars.
 
 No agents README documents a response body today, so until the live run reveals the
 actual shape the suite asserts the documented status code and the log marker only. That
@@ -369,10 +382,18 @@ worry about most in a skill whose job is producing trustworthy tests.
   nightly flake risk (a model refusal, a rate limit, a slow completion). No retry logic
   initially. If flake proves real, a single retry on the trigger request is the first
   thing to try.
-- **`mcp-auth`'s grant/revoke phases** may exceed what the generic keywords express.
-  When that happens the skill produces a partial suite plus an explicit gap note in
+- **`mcp-auth`'s grant/revoke phases** are expressible through a request's
+  `commands` key, which is why that key exists, but the quickstart also runs
+  `mcp-client` as a plain local process outside `diagrid dev run` and documents
+  revocation and policy-inspection steps. Where a phase exceeds what the generic
+  keywords express, the skill produces a partial suite plus an explicit gap note in
   `tools/qs-tester/README.md`, rather than assertions that imply coverage it does not
   have.
+- **A quickstart that documents no project creation** (`dapr-agents/durable-agent`
+  passes `--project durable-agent-quickstart` but documents nothing that creates it)
+  needs a human decision about which `ci/setup-project.sh` flags apply. The skill
+  asks rather than guessing, because a flag that works by accident hides the
+  documentation gap readers will hit.
 - **Cost** scales with `nightly: true` membership: one Catalyst project with agent
   infrastructure plus real model tokens per suite per night, serialised behind the
   four-language canonical matrix.
