@@ -4,8 +4,7 @@ Section 4 is a single whole-workspace `uv sync --all-packages`, and section 5 is
 prefixed with `uv run`, so the venv that sync creates next to the
 `diagrid dev run` config is the one the launched app resolves `uvicorn` from.
 Nothing is ever activated, which is why there is no OS-specific install step in
-the python READMEs any more. See
-docs/superpowers/specs/2026-07-31-python-quickstart-uv-workspaces-design.md.
+the python READMEs any more.
 """
 
 import pytest

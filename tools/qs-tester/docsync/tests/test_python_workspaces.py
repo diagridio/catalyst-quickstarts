@@ -3,8 +3,7 @@
 Each holds two apps in subdirectories while `diagrid dev run` runs from the parent
 directory, so the virtual environment has to live at the parent. A workspace root
 gives both apps one lock and one venv, which is what makes a single
-`uv sync --all-packages` able to serve both. See
-docs/superpowers/specs/2026-07-31-python-quickstart-uv-workspaces-design.md.
+`uv sync --all-packages` able to serve both.
 """
 
 import tomllib
