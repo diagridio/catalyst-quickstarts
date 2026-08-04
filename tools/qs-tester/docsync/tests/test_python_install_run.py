@@ -11,24 +11,15 @@ docs/superpowers/specs/2026-07-31-python-quickstart-uv-workspaces-design.md.
 import pytest
 import quickstarts as qs
 
-PYTHON_APIS = qs.APIS
 
-
-@pytest.mark.parametrize("api", PYTHON_APIS)
+@pytest.mark.parametrize("api", qs.APIS)
 def test_install_is_one_whole_workspace_sync(api):
     assert qs.INSTALL[(api, "python")] == "uv sync --all-packages"
 
 
-@pytest.mark.parametrize("api", PYTHON_APIS)
+@pytest.mark.parametrize("api", qs.APIS)
 def test_run_is_prefixed_with_uv_run(api):
     assert qs.RUN[(api, "python")].startswith("uv run diagrid dev run")
-
-
-@pytest.mark.parametrize("api", PYTHON_APIS)
-def test_nothing_creates_or_activates_a_venv(api):
-    install = qs.INSTALL[(api, "python")]
-    assert "uv venv" not in install
-    assert "activate" not in install
 
 
 def test_harness_no_longer_tracks_venv_activation():
