@@ -67,6 +67,16 @@ SUITES = (
         "nightly": True,
         "secrets": (),
     },
+    {
+        "suite": "agents/langgraph/tests/quickstart.robot",
+        "family": "agent",
+        "name": "langgraph",
+        "data": "agents_langgraph",
+        "language": "python",
+        "runtime": "python",
+        "nightly": True,
+        "secrets": ("OPENAI_API_KEY",),
+    },
 )
 
 _REQUIRED = {
