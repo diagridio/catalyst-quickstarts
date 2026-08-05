@@ -13,4 +13,4 @@ dev = ["pytest>=8"]
 
 [tool.pytest.ini_options]
 pythonpath = ["docsync", "variables"]
-testpaths = ["docsync/tests"]
+testpaths = ["docsync/tests", "tests"]

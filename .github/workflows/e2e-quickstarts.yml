@@ -57,8 +57,8 @@ jobs:
             ../../invocation/tests/quickstart.robot
       - name: Check READMEs match the harness
         run: (cd tools/qs-tester && uv run python docsync/check_readme_sync.py --all)
-      - name: Unit-test the doc-sync checker
-        run: (cd tools/qs-tester && uv run pytest docsync/tests -q)
+      - name: Unit-test the harness
+        run: (cd tools/qs-tester && uv run pytest -q)
       - name: Smoke-test process teardown keywords
         run: (cd tools/qs-tester && uv run robot --outputdir results/smoke resources/tests/smoke.robot)
 
