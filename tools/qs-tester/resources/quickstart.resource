@@ -62,3 +62,36 @@ GET And Expect
         ...    msg=GET ${path} body mismatch.\nExpected: ${expected_body}\nActual: ${body}
     END
     RETURN    ${body}
+
+Require Env Var
+    [Documentation]    Fail unless ${name} is set to a non-empty value, naming the
+    ...    quickstart that needs it. Agent quickstarts need a model provider key,
+    ...    and a revoked or unset secret should read as a configuration error here
+    ...    rather than as an opaque 401 from the provider several keywords later.
+    ...    An empty value fails too: that is what a misconfigured GitHub secret
+    ...    looks like, and a bare existence check would wave it through.
+    [Arguments]    ${name}    ${quickstart}
+    ${value}=    Get Environment Variable    ${name}    default=${EMPTY}
+    Should Not Be Empty    ${value}
+    ...    msg=${name} is not set, and the ${quickstart} quickstart needs it. Export it before running this suite; in CI it comes from the job's env block.
+
+POST And Expect Field
+    [Documentation]    POST ${payload} and assert the status code, plus (when
+    ...    ${field} is given) that the named JSON field is present and non-empty.
+    ...    Agent responses contain model output, so an exact body comparison is
+    ...    impossible; presence and non-emptiness are what remains assertable.
+    ...    Where a README documents no response body at all, pass no field and the
+    ...    status code is the only assertion — weak on purpose, and honest about it.
+    ...    The timeout is 120s rather than the 30s used elsewhere because a model
+    ...    call sits inside this request.
+    [Arguments]    ${port}    ${path}    ${payload}    ${status}    ${field}=${NONE}
+    ${response}=    POST    http://localhost:${port}${path}    json=${payload}
+    ...    expected_status=${status}    timeout=120
+    ${body}=    Set Variable    ${response.json()}
+    IF    $field is not None
+        Dictionary Should Contain Key    ${body}    ${field}
+        ...    msg=POST ${path} returned no "${field}" field.\nBody: ${body}
+        Should Not Be Empty    ${body}[${field}]
+        ...    msg=POST ${path} returned an empty "${field}".\nBody: ${body}
+    END
+    RETURN    ${body}

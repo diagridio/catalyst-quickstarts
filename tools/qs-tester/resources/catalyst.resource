@@ -48,3 +48,32 @@ Stop Quickstart
     Run Keyword And Ignore Error    Stop Process Tree    apps
     Run Process    diagrid dev stop --project ${project}    shell=True
     ...    stderr=STDOUT    timeout=120s
+
+Run Documented Commands
+    [Documentation]    Run an ordered list of documented commands, substituting the
+    ...    ephemeral project name, and stop at the first non-zero exit.
+    ...
+    ...    Agent-family READMEs document their own provisioning (`project create
+    ...    --enable-agent-infrastructure --wait --use`, `agent create`, `app
+    ...    create`, `apply -f`), so the suite runs those commands verbatim instead
+    ...    of an invented equivalent. Stopping at the first failure keeps the real
+    ...    cause visible: an `agent create` that runs after a failed `project
+    ...    create` fails for a second, more confusing reason.
+    ...
+    ...    The 600s default matches Run And Expect RC Zero's: `project create
+    ...    --wait` blocks until managed services are ready.
+    [Arguments]    ${commands}    ${project}    ${cwd}=${EMPTY}    ${timeout}=600s
+    FOR    ${template}    IN    @{commands}
+        ${command}=    Resolve Project In Command    ${template}    ${project}
+        Log    Documented command: ${command}    console=True
+        Run And Expect RC Zero    ${command}    cwd=${cwd}    timeout=${timeout}
+    END
+
+Wait Until Ready Marker
+    [Documentation]    Wait for a per-quickstart readiness string in the captured
+    ...    `diagrid dev run` output. Agent quickstarts do not emit the canonical
+    ...    `Connected App ID "<id>" to http://localhost:<port>` line that
+    ...    Wait Until Apps Connected waits for; langgraph prints `Uvicorn running
+    ...    on`, and the marker is a property of the framework, not the language.
+    [Arguments]    ${logfile}    ${marker}
+    Wait Until Log Contains    ${logfile}    ${marker}    timeout=${READINESS_TIMEOUT}
