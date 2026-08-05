@@ -16,7 +16,7 @@ Design spec: `docs/superpowers/specs/2026-07-31-quickstart-e2e-test-skill-design
 - Every ephemeral project name starts with `qs-ci-`. `ci/reap-orphans.sh` collects leaked projects by that prefix; a name without it leaks forever.
 - Never more than two concurrent Catalyst projects across the whole workflow.
 - `max-parallel` is per-job, so two e2e jobs must never run concurrently.
-- No new files under `resources/`. New keywords go in the existing `catalyst.resource` and `quickstart.resource`.
+- No new `.resource` keyword files. New keywords go in the existing `catalyst.resource` and `quickstart.resource`, beside the keywords they relate to. Adding test files under `resources/tests/` is expected and not covered by this constraint.
 - Existing suite behaviour must not change. The four canonical suites and their timeouts keep working exactly as they do now.
 - Never invent an expected value. If a README does not document it and it cannot be read out of the repo, assert only what is documented and leave a comment naming the gap.
 - Python 3.12+, no new third-party dependencies (in particular no PyYAML).
