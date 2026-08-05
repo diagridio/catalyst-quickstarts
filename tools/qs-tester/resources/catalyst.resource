@@ -38,7 +38,7 @@ Wait Until Apps Connected
         ${app_id}=    Set Variable    ${app}[0]
         ${port}=    Set Variable    ${app}[1]
         Wait Until Log Contains    ${logfile}
-        ...    Connected App ID "${app_id}" to http://localhost:${port}    timeout=180s
+        ...    Connected App ID "${app_id}" to http://localhost:${port}    timeout=${READINESS_TIMEOUT}
     END
 
 Stop Quickstart

@@ -10,6 +10,14 @@ explain why each layer exists.
 Library    Process
 Library    OperatingSystem
 
+*** Variables ***
+# Both are overridable with `robot --variable`, which is how the mutation check
+# makes a run it expects to fail give up in seconds instead of minutes. The
+# defaults are the values these waits used before they were parameterised: do not
+# change them, or every existing suite's timing changes with them.
+${MARKER_TIMEOUT}       60s
+${READINESS_TIMEOUT}    180s
+
 *** Keywords ***
 Start Background Process
     [Documentation]    Launch ${command} without blocking, merging stdout and stderr
@@ -28,7 +36,7 @@ Wait Until Log Contains
     [Documentation]    Poll ${logfile} every 2s until it contains ${text}.
     ...    App logging is asynchronous with respect to the HTTP response, so
     ...    every log assertion has to be a wait rather than a single read.
-    [Arguments]    ${logfile}    ${text}    ${timeout}=60s
+    [Arguments]    ${logfile}    ${text}    ${timeout}=${MARKER_TIMEOUT}
     Wait Until Keyword Succeeds    ${timeout}    2s
     ...    Log Should Contain    ${logfile}    ${text}
 

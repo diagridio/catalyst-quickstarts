@@ -32,7 +32,7 @@ Wait Until Apps Healthy
     ...    marker, so the timeout is generous enough for a JVM or .NET cold start.
     [Arguments]    ${qs}
     FOR    ${port}    IN    @{qs}[health_ports]
-        Wait Until Keyword Succeeds    180s    3s    Health Check Returns 200    ${port}
+        Wait Until Keyword Succeeds    ${READINESS_TIMEOUT}    3s    Health Check Returns 200    ${port}
     END
 
 Health Check Returns 200

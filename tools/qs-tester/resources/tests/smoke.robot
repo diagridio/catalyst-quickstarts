@@ -51,6 +51,24 @@ Nested Children Are Killed When SIGINT Is Ignored
     Should Be Equal As Integers    ${check.stdout.strip()}    1
     ...    msg=Grandchild process ${grandchild} is still alive after Stop Process Tree
 
+Marker Timeout Variable Bounds The Wait
+    # Robot resolves a keyword's default argument values at call time against the
+    # current variable scope, so setting the variable here changes what
+    # `Wait Until Log Contains` waits for without passing timeout= explicitly.
+    # That is exactly how the mutation check shortens a run it expects to fail:
+    # `robot --variable MARKER_TIMEOUT:20s`.
+    Set Test Variable    ${MARKER_TIMEOUT}    3s
+    Create File    ${TEMPDIR}/timeout.log    nothing useful here
+    ${start}=    Get Time    epoch
+    ${status}=    Run Keyword And Return Status
+    ...    Wait Until Log Contains    ${TEMPDIR}/timeout.log    absent-marker
+    ${end}=    Get Time    epoch
+    Should Be Equal    ${status}    ${False}
+    ...    msg=Waiting for a marker that is not in the log must fail
+    ${elapsed}=    Evaluate    ${end} - ${start}
+    Should Be True    ${elapsed} < 30
+    ...    msg=Gave up after ${elapsed}s; MARKER_TIMEOUT was not honoured
+
 *** Keywords ***
 Log Should Not Contain Stale
     [Arguments]    ${logfile}    ${text}
