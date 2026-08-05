@@ -506,7 +506,8 @@ Add `Library    DateTime` to that file's `*** Settings ***` is not needed: `Get 
 - [ ] **Step 2: Run it to verify it fails**
 
 Run: `cd tools/qs-tester && uv run robot --outputdir results/smoke --test "Marker Timeout Variable Bounds The Wait" resources/tests/smoke.robot`
-Expected: FAIL with `Variable '${MARKER_TIMEOUT}' not found.`
+
+Expected: FAIL with `Gave up after 60s; MARKER_TIMEOUT was not honoured`, after roughly 60 seconds. Not a "variable not found" error: pre-change, `Wait Until Log Contains`'s default is the literal `60s`, so nothing forces a variable lookup. The keyword ignores `${MARKER_TIMEOUT}` entirely and blocks for the full hardcoded minute, which is precisely what the elapsed-time assertion catches. Verified both ways against `c9a8008`.
 
 - [ ] **Step 3: Define the variables and use them**
 
