@@ -468,9 +468,9 @@ git commit -m "Add a suite manifest and the CLI that reads it"
 ## Task 2: Overridable timeout variables
 
 **Files:**
-- Modify: `tools/qs-tester/resources/process.resource:9-33`
-- Modify: `tools/qs-tester/resources/catalyst.resource:47-48`
-- Modify: `tools/qs-tester/resources/quickstart.resource:34-36`
+- Modify: `tools/qs-tester/resources/process.resource` (add a variables table after line 11; `Wait Until Log Contains` signature at line 31)
+- Modify: `tools/qs-tester/resources/catalyst.resource:41` (the `timeout=180s` in `Wait Until Apps Connected`)
+- Modify: `tools/qs-tester/resources/quickstart.resource:35` (the `180s` in `Wait Until Apps Healthy`)
 - Test: `tools/qs-tester/resources/tests/smoke.robot`
 
 **Interfaces:**
@@ -1291,7 +1291,7 @@ Add `import importlib` to the imports at the top of the file, and extend `main()
 - [ ] **Step 4: Run the tests**
 
 Run: `cd tools/qs-tester && uv run pytest -q`
-Expected: PASS, 25 tests (6 existing doc-sync, 10 manifest, 9 agent-sync).
+Expected: PASS, 49 tests (27 already on main, 10 manifest from Task 1, 12 agent-sync).
 
 - [ ] **Step 5: Confirm the existing checker still passes**
 
@@ -1319,7 +1319,7 @@ git commit -m "Check agent-family READMEs against their data modules both ways"
 
 **Interfaces:**
 - Consumes: all four keywords from Task 3; `${READINESS_TIMEOUT}` from Task 2; the data module contract from Task 4.
-- Produces: the module-level names from Task 4's contract table (`SETUP`, `INSTALL`, `RUN`, `TEARDOWN`, `READY_MARKERS`, `HEALTH_PORTS`, `SECRETS`, `REQUESTS`, `UNCOVERED`, `DOCUMENTED_PROJECT`), plus `agents_langgraph.get_quickstart() -> dict` with keys `family, name, language, dir, setup, install, run, teardown, health_ports, secrets, activate_venv`. `READY_MARKERS` and `REQUESTS` are deliberately absent from that dict; see Step 1. Also `ci/project-name.sh` exporting `PROJECT`, and `ci/login.sh`. Task 6 calls both scripts; Task 8's reference file describes this module as the template.
+- Produces: the module-level names from Task 4's contract table (`SETUP`, `INSTALL`, `RUN`, `TEARDOWN`, `READY_MARKERS`, `HEALTH_PORTS`, `SECRETS`, `REQUESTS`, `UNCOVERED`, `DOCUMENTED_PROJECT`), plus `agents_langgraph.get_quickstart() -> dict` with keys `family, name, language, dir, setup, install, run, teardown, health_ports, secrets`. `READY_MARKERS` and `REQUESTS` are deliberately absent from that dict, and so is `activate_venv`; see Step 1. Also `ci/project-name.sh` exporting `PROJECT`, and `ci/login.sh`. Task 6 calls both scripts; Task 8's reference file describes this module as the template.
 
 - [ ] **Step 1: Write the data module**
 
@@ -1450,11 +1450,13 @@ def get_quickstart():
         "teardown": list(TEARDOWN),
         "health_ports": list(HEALTH_PORTS),
         "secrets": list(SECRETS),
-        # `Start Quickstart` reads this. langgraph's README documents no
-        # `uv venv` + activate step, because `uv run` resolves the environment.
-        "activate_venv": False,
     }
 ```
+
+No `activate_venv` key: `Start Quickstart` stopped reading one when the python
+quickstarts became uv workspaces, and `catalyst.resource` no longer has the
+`bash -c '. .venv/bin/activate && ...'` branch. Every documented python run command
+is now `uv run diagrid dev run`, which resolves the environment itself.
 
 **Note what this dict deliberately omits: `READY_MARKERS` and `REQUESTS`.** A value
 returned by a Python keyword cannot be overridden from the command line, so a
@@ -1694,7 +1696,7 @@ uv run python ci/list-suites.py --matrix agent
 bash ci/project-name.sh agents-langgraph
 ```
 
-Expected: manifest valid (5 suites); doc-sync reports 16 canonical READMEs in sync and no agent problems; 29 tests pass (6 doc-sync, 10 manifest, 13 agent-sync); the dryrun now resolves 17 tests; the matrix prints one JSON object; the name script prints `PROJECT=qs-ci-agents-langgraph-local<epoch>`.
+Expected: manifest valid (5 suites); doc-sync reports 16 canonical READMEs in sync and no agent problems; 49 tests pass (27 already on main, 10 manifest, 12 agent-sync); the dryrun now resolves 17 tests; the matrix prints one JSON object; the name script prints `PROJECT=qs-ci-agents-langgraph-local<epoch>`.
 
 If doc-sync reports a problem, fix `agents_langgraph.py` to match the README, not the other way around. Consult `agents/langgraph/README.md` and re-read the guiding principle first.
 
@@ -2011,6 +2013,12 @@ Do not skip to the nightly schedule: the first real run is the one most likely t
 
 - [ ] **Step 1: Document the manifest and agent-family suites**
 
+While in this file, resolve its dangling design pointer. Line 9 reads
+`Design: docs/superpowers/specs/2026-07-28-quickstart-e2e-tests-design.md`, and that
+file is not in the repository: commit `622e732` removed the committed design and plan
+documents, and this pointer was missed. Either point it at a spec that is actually
+committed or drop the line. Do not leave a reference to a file a reader cannot open.
+
 In `tools/qs-tester/README.md`, add to the `## Layout` list:
 
 ```markdown
@@ -2300,7 +2308,7 @@ because everything downstream trusts that claim.
 
 Transcribe, from the spec's "Per-quickstart data module", "Project lifecycle for agent-family suites" and "doc-sync" sections plus the real `agents_langgraph.py`:
 
-- The full data module contract, copied from Task 4's table: `DOCUMENTED_PROJECT`, `SETUP`, `INSTALL`, `RUN`, `TEARDOWN`, `READY_MARKERS`, `HEALTH_PORTS`, `SECRETS`, `REQUESTS` (with its optional `field`, `commands` and `log_marker` keys), `UNCOVERED`, and `get_quickstart()` including `activate_venv`. State plainly that `READY_MARKERS` and `REQUESTS` are read from the `Variables` import and not from `get_quickstart()`, and why: a value a Python keyword returned cannot be overridden, so a mutation check against it proves nothing.
+- The full data module contract, copied from Task 4's table: `DOCUMENTED_PROJECT`, `SETUP`, `INSTALL`, `RUN`, `TEARDOWN`, `READY_MARKERS`, `HEALTH_PORTS`, `SECRETS`, `REQUESTS` (with its optional `field`, `commands` and `log_marker` keys), `UNCOVERED`, and `get_quickstart()`. State plainly that `READY_MARKERS` and `REQUESTS` are read from the `Variables` import and not from `get_quickstart()`, and why: a value a Python keyword returned cannot be overridden, so a mutation check against it proves nothing.
 - Worked examples of the three shapes `REQUESTS` has to cover: one request (langgraph), several requests against several apps (`dapr-agents/multi-agent-workflow`, three apps on 8001-8003 and therefore three readiness markers), and a flow interleaving CLI and HTTP where the second request carries `commands` and expects a different status (`mcp-auth/python`: fail closed, grant, succeed).
 - The undocumented-provisioning decision path from SKILL.md phase 2, with `dapr-agents/durable-agent` as the example.
 - That the three families differ in their documented provisioning, with the three real examples: `agents/*` (`--enable-agent-infrastructure` plus `agent create`, bare `dev run`), `dapr-agents/durable-agent` (no project create, explicit `--project`), `mcp-auth/python` (`project create --use`, `app create`, `apply -f`, then a `dev run` with both `--project` and four `--skip-*` flags).

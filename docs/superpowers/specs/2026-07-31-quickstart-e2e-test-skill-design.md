@@ -159,19 +159,25 @@ So the suite runs a second time inside the same project with one assertion delib
 broken, and it has to fail. If it passes, that assertion is vacuous and the skill does
 not report success.
 
-The mechanism needs no test-only code path. Robot Framework gives command-line
-variables the highest precedence, so a marker exposed as a module-level variable can be
-replaced at run time:
+The mechanism needs no test-only code path. A command-line `--variablefile` outranks a
+suite's own `Variables` import, so any module-level name can be replaced at run time by
+generating a one-line file:
 
 ```bash
-uv run robot --variable STATE_SAVE_MARKER:__mutation_check__ \
-             --variable MARKER_TIMEOUT:30s ...
+printf '%s\n' 'READY_MARKERS = ("__mutation_check__",)' > mutate.py
+uv run robot --variablefile mutate.py --variable READINESS_TIMEOUT:20s ...
 ```
 
-Suites read timeouts from `${MARKER_TIMEOUT}` (default `180s`) so the failing run gives
-up in seconds instead of waiting out a three-minute readiness timeout. Reusing the
+A generated file rather than `--variable`, because `--variable` can only set scalars and
+the assertions worth breaking (`READY_MARKERS`, `REQUESTS`) are tuples. One mechanism
+covers both.
+
+Suites read their waits from `${MARKER_TIMEOUT}` (default `60s`) and
+`${READINESS_TIMEOUT}` (default `180s`), the values those waits used before they were
+parameterised, so the failing run gives up in seconds instead of waiting out a
+three-minute readiness timeout and no existing suite's timing changes. Reusing the
 project means the marginal cost is one application restart, plus one LLM call for
-agent-family suites. The skill records in its report which variable it mutated.
+agent-family suites. The skill records in its report which name it overrode.
 
 **7. Wire CI and docs, then report.** The report has exactly two shapes:
 
