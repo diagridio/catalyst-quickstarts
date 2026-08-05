@@ -161,6 +161,23 @@ def normalise_project(command, documented_project):
     return command.replace(documented_project, "{project}").strip()
 
 
+# The attributes check_agent reads off a data module. Data modules are
+# hand-authored (Task 5+), so a forgotten field is a realistic mistake; reporting
+# it as a scoped problem here — rather than letting the attribute access raise —
+# means one bad module costs its own row's check, not the other sixteen READMEs
+# `--all` also checks in the same run.
+_REQUIRED_MODULE_ATTRS = (
+    "DOCUMENTED_PROJECT",
+    "SETUP",
+    "INSTALL",
+    "RUN",
+    "TEARDOWN",
+    "READY_MARKERS",
+    "REQUESTS",
+    "UNCOVERED",
+)
+
+
 def check_agent(row, repo_root, module=None):
     """Check one agent-family suite's data module against its README.
 
@@ -178,13 +195,20 @@ def check_agent(row, repo_root, module=None):
     if module is None:
         module = importlib.import_module(row["data"])
 
+    where = row["name"]
+    missing = [name for name in _REQUIRED_MODULE_ATTRS if not hasattr(module, name)]
+    if missing:
+        return [
+            f"{where}: data module {module!r} is missing required attribute(s): "
+            f"{', '.join(missing)}"
+        ]
+
     quickstart_dir = Path(row["suite"]).parent.parent
     readme = repo_root / quickstart_dir / "README.md"
     if not readme.is_file():
         return [f"{row['name']}: {readme} not found"]
 
     markdown = readme.read_text()
-    where = row["name"]
     problems = []
     project = module.DOCUMENTED_PROJECT
 

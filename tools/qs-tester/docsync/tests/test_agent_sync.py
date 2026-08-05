@@ -205,6 +205,17 @@ def test_check_agent_checks_a_requests_log_marker(tmp_path):
     assert any("log marker" in p for p in problems)
 
 
+def test_check_agent_reports_a_missing_required_attribute_instead_of_raising(tmp_path):
+    # Data modules are hand-authored (Task 5+), so a forgotten field is a
+    # realistic mistake. It must come back as a scoped problem string, not an
+    # uncaught AttributeError that would abort the whole --all run.
+    row, root = _fixture(tmp_path)
+    module = data_module()
+    del module.REQUESTS
+    problems = check_agent(row, root, module=module)
+    assert any("REQUESTS" in p for p in problems)
+
+
 def _fixture(tmp_path):
     """Write README into a fake repo root and return (manifest row, root)."""
     readme_dir = tmp_path / "agents" / "langgraph"
