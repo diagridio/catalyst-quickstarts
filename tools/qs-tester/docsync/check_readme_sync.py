@@ -17,6 +17,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import importlib
 import json
 import re
 import shlex
@@ -115,6 +116,166 @@ def normalise_run_command(command: str) -> str:
     """Collapse the one sanctioned divergence: the READMEs document
     `--project <api>-quickstart`, the harness passes `{project}`."""
     return re.sub(r"--project \S+", "--project PROJECT", command).strip()
+
+
+# Documented lines the harness deliberately expresses another way. Each entry is
+# a prefix, with the reason it is not a command the suite runs.
+_NOT_COMMANDS = (
+    # The harness passes cwd= to the process instead of running `cd`.
+    "cd ",
+    # `diagrid login` is one of the two sanctioned exceptions: CI runs
+    # `diagrid login --api-key "$DIAGRID_API_KEY"` because the documented bare
+    # form blocks on an interactive browser prompt.
+    "diagrid login",
+    # Secrets arrive as environment variables from the CI job's env block, so
+    # the documented `export FOO=...` has no harness equivalent to match.
+    "export ",
+    # The trigger is checked as a URL plus payload, not as a shell string,
+    # because the README documents it three ways (curl, PowerShell, REST client).
+    "curl",
+)
+
+
+def all_bash_lines(markdown):
+    """Every command line in every ```bash block, anywhere in the file.
+
+    Agent-family READMEs have named sections ("## Setup", "## Run with
+    Catalyst"), not the numbered ones `_section_span` needs, so loose mode reads
+    the whole file. Backslash continuations are joined first: the documented curl
+    spans three lines, and comparing fragments would match nothing.
+    """
+    lines = []
+    for lang, body in ((m.group(1), m.group(2)) for m in _FENCE.finditer(markdown)):
+        if lang != "bash":
+            continue
+        joined = body.replace("\\\n", " ")
+        for line in joined.splitlines():
+            line = " ".join(line.split())
+            if line and not line.startswith("#"):
+                lines.append(line)
+    return lines
+
+
+def normalise_project(command, documented_project):
+    """Map a documented command onto the harness's `{project}` placeholder."""
+    return command.replace(documented_project, "{project}").strip()
+
+
+def check_agent(row, repo_root, module=None):
+    """Check one agent-family suite's data module against its README.
+
+    Two directions, unlike the canonical check:
+
+      documented -> harness   every documented bash line is either run by the
+                              suite or listed in UNCOVERED with a reason
+      harness -> documented   every command the suite runs appears in the README
+
+    The second direction is what enforces the guiding principle. The first turns
+    "out of scope" from a claim in prose into a list a machine checks, so a
+    README that grows a new documented step fails CI until someone decides
+    whether the suite should run it.
+    """
+    if module is None:
+        module = importlib.import_module(row["data"])
+
+    quickstart_dir = Path(row["suite"]).parent.parent
+    readme = repo_root / quickstart_dir / "README.md"
+    if not readme.is_file():
+        return [f"{row['name']}: {readme} not found"]
+
+    markdown = readme.read_text()
+    where = row["name"]
+    problems = []
+    project = module.DOCUMENTED_PROJECT
+
+    documented = [normalise_project(line, project) for line in all_bash_lines(markdown)]
+    harness = [
+        *module.SETUP,
+        *_install_lines(module.INSTALL),
+        module.RUN,
+        *module.TEARDOWN,
+        # A request's `commands` are documented commands like any other: mcp-auth's
+        # `diagrid mcp grant` sits between two calls, so it belongs in this list
+        # rather than escaping the check by being nested in a request.
+        *[c for request in module.REQUESTS for c in request.get("commands", ())],
+    ]
+    harness = [normalise_project(command, project) for command in harness]
+    excused = [normalise_project(command, project) for command, _ in module.UNCOVERED]
+
+    for command in harness:
+        if command not in documented:
+            problems.append(
+                f"{where}: harness runs a command that is not documented in the README:\n"
+                f"  {command}\n  README has: {documented}"
+            )
+
+    for line in documented:
+        if line.startswith(_NOT_COMMANDS):
+            continue
+        if line in harness or line in excused:
+            continue
+        problems.append(
+            f"{where}: README documents a command nothing accounts for:\n"
+            f"  {line}\n"
+            "  Either run it from the suite, or add it to UNCOVERED with the reason."
+        )
+
+    for marker in module.READY_MARKERS:
+        if marker not in markdown:
+            problems.append(
+                f"{where}: readiness marker {marker!r} does not appear in the README"
+            )
+
+    payloads = [call["payload"] for call in extract_curl_calls_anywhere(markdown)]
+    for request in module.REQUESTS:
+        url = f"http://localhost:{request['port']}{request['path']}"
+        if url not in markdown:
+            problems.append(f"{where}: request URL {url} does not appear in the README")
+        if request["payload"] is not None and request["payload"] not in payloads:
+            problems.append(
+                f"{where}: request payload {request['payload']!r} is not documented.\n"
+                f"  README documents: {payloads!r}"
+            )
+
+    for marker in [r["log_marker"] for r in module.REQUESTS if r.get("log_marker")]:
+        if marker not in markdown:
+            problems.append(f"{where}: log marker {marker!r} does not appear in the README")
+
+    return problems
+
+
+def _install_lines(install):
+    """INSTALL is a single command or a tuple of them."""
+    return [install] if isinstance(install, str) else list(install)
+
+
+def extract_curl_calls_anywhere(markdown):
+    """extract_curl_calls, but over the whole file rather than section 6."""
+    calls = []
+    for line in all_bash_lines(markdown):
+        if not line.startswith("curl"):
+            continue
+        tokens = shlex.split(line)
+        method, url, payload = "GET", None, None
+        i = 0
+        while i < len(tokens):
+            token = tokens[i]
+            if token in ("-X", "--request"):
+                method, i = tokens[i + 1], i + 2
+            elif token in ("-d", "--data"):
+                try:
+                    payload = json.loads(tokens[i + 1])
+                except json.JSONDecodeError:
+                    payload = None
+                i += 2
+            elif token in ("-H", "--header"):
+                i += 2
+            elif token.startswith("http"):
+                url, i = token, i + 1
+            else:
+                i += 1
+        calls.append({"method": method, "url": url, "payload": payload})
+    return calls
 
 
 def check(api: str, language: str, repo_root: Path) -> list[str]:
@@ -221,6 +382,14 @@ def main() -> int:
     problems = []
     for api, language in pairs:
         problems.extend(check(api, language, args.repo_root))
+
+    # Agent-family suites are registered in the manifest rather than being a
+    # fixed api x language product, so they are checked from there.
+    if args.all:
+        import suites
+
+        for row in suites.agent_suites():
+            problems.extend(check_agent(row, args.repo_root))
 
     if problems:
         for problem in problems:
