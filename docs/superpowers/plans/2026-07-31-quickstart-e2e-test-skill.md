@@ -2694,3 +2694,31 @@ git commit -m "Add evals for the add-quickstart-e2e-test skill"
 | Keyword tests | `uv run robot resources/tests/smoke.robot resources/tests/keywords.robot` | none |
 | All of the above | `scripts/verify-static.sh` | none |
 | Live plus mutation | `scripts/verify-live.sh agents/langgraph/tests/quickstart.robot agents-langgraph` | `DIAGRID_API_KEY`, `OPENAI_API_KEY` |
+
+---
+
+## Before merging: remove this plan and the spec
+
+This repository does not keep superpowers specs and plans in git. Commit `622e732`
+("docs: remove the design and plan documents") deleted the equivalent pair for the
+python uv-workspace work once that work was done, and the only reason this pair is
+committed now is to have something reviewable while the work is in progress.
+
+So the last change on this branch, after every task above is done and green, is:
+
+```bash
+git rm docs/superpowers/plans/2026-07-31-quickstart-e2e-test-skill.md \
+       docs/superpowers/specs/2026-07-31-quickstart-e2e-test-skill-design.md
+git commit -m "Remove the design and plan documents"
+```
+
+Two things to check in the same commit, because removing these files is what makes
+them dangle:
+
+1. Nothing references either path. `grep -rn "2026-07-31-quickstart-e2e-test-skill"`
+   must come back empty, including `tools/qs-tester/README.md` and any docstring in
+   `variables/suites.py` or `variables/agents_langgraph.py`. Task 7 already fixes the
+   pre-existing dangling pointer on line 9 of the harness README; do not add a new one.
+2. Keep a copy outside the repository if the reasoning is still useful. The comments
+   that matter are already in the code they explain, which is the point of writing
+   them there.
