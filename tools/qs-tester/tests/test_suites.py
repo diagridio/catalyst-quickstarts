@@ -61,6 +61,16 @@ def test_validate_reports_a_duplicate_suite_path(monkeypatch):
     assert any("duplicate" in p for p in problems)
 
 
+def test_validate_reports_a_duplicate_agent_name(monkeypatch):
+    row = {"suite": "agents/langgraph/tests/quickstart.robot", "family": "agent",
+           "name": "langgraph", "data": "agents_langgraph", "language": "python",
+           "runtime": "python", "nightly": True, "secrets": ("OPENAI_API_KEY",)}
+    other = dict(row, suite="agents/other/tests/quickstart.robot")
+    monkeypatch.setattr(suites, "SUITES", (row, other))
+    problems = suites.validate(REPO_ROOT)
+    assert any("duplicate" in p and "name" in p for p in problems)
+
+
 def test_validate_rejects_a_lowercase_secret_name(monkeypatch):
     broken = ({"suite": "agents/langgraph/tests/quickstart.robot", "family": "agent",
                "name": "langgraph", "data": "agents_langgraph", "language": "python",

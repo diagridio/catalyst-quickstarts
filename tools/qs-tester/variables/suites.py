@@ -137,6 +137,7 @@ def validate(repo_root):
     """
     problems = []
     seen = set()
+    seen_names = set()
 
     for row in SUITES:
         where = row.get("suite", "<row with no suite key>")
@@ -166,6 +167,15 @@ def validate(repo_root):
                 )
 
         if family == "agent":
+            if row["name"] in seen_names:
+                problems.append(
+                    f"{where}: duplicate agent name {row['name']!r}; name keys the "
+                    "ephemeral project, the CI artifact and the failure summary "
+                    "file, so a second suite reusing it would collide with the "
+                    "first at runtime"
+                )
+            seen_names.add(row["name"])
+
             if row["runtime"] not in RUNTIMES:
                 problems.append(
                     f"{where}: runtime must be one of {RUNTIMES}, got {row['runtime']!r}"
