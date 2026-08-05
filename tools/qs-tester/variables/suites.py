@@ -74,7 +74,13 @@ SUITES = (
         "data": "agents_langgraph",
         "language": "python",
         "runtime": "python",
-        "nightly": True,
+        # False until this suite has had a green live run and a mutation check
+        # proving its assertions can fail. A suite that has never run against real
+        # Catalyst would fail the nightly build every night for everyone, and a
+        # nightly failure also leaks its project until reap-orphans.sh collects it.
+        # Flip to True in the same commit that records the live-run evidence; the
+        # dispatch-triggered path runs it before then.
+        "nightly": False,
         "secrets": ("OPENAI_API_KEY",),
     },
 )

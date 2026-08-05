@@ -21,6 +21,7 @@ on:
     paths:
       - 'tools/qs-tester/**'
       - '*/tests/quickstart.robot'
+      - '*/*/tests/quickstart.robot'
       - '*/*/README.md'
       - '.github/workflows/e2e-quickstarts.yml'
 
@@ -47,20 +48,22 @@ jobs:
       - uses: astral-sh/setup-uv@v5
       - name: Sync harness
         run: (cd tools/qs-tester && uv sync)
+      - name: Validate the suite manifest
+        run: (cd tools/qs-tester && uv run python ci/list-suites.py --validate)
       - name: Resolve suites without executing
         run: |
           cd tools/qs-tester
           uv run robot --dryrun --variable PROJECT:dryrun --outputdir results/dryrun \
-            ../../workflow/tests/quickstart.robot \
-            ../../state/tests/quickstart.robot \
-            ../../pubsub/tests/quickstart.robot \
-            ../../invocation/tests/quickstart.robot
+            $(uv run python ci/list-suites.py --paths)
       - name: Check READMEs match the harness
         run: (cd tools/qs-tester && uv run python docsync/check_readme_sync.py --all)
       - name: Unit-test the harness
         run: (cd tools/qs-tester && uv run pytest -q)
-      - name: Smoke-test process teardown keywords
-        run: (cd tools/qs-tester && uv run robot --outputdir results/smoke resources/tests/smoke.robot)
+      - name: Smoke-test the harness keywords
+        run: |
+          cd tools/qs-tester
+          uv run robot --outputdir results/smoke \
+            resources/tests/smoke.robot resources/tests/keywords.robot
 
   reap:
     if: github.event_name == 'schedule' && github.repository_owner == 'diagridio'
@@ -76,6 +79,34 @@ jobs:
           sudo mv ./diagrid /usr/local/bin
       - name: Delete qs-ci-* projects older than 6h
         run: bash tools/qs-tester/ci/reap-orphans.sh
+
+  # The agents matrix comes from the suite manifest rather than being written out
+  # here, so registering a suite is one row in variables/suites.py and no YAML
+  # edit at all.
+  discover:
+    if: github.event_name != 'pull_request' && github.repository_owner == 'diagridio'
+    runs-on: ubuntu-latest
+    outputs:
+      agents: ${{ steps.list.outputs.agents }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - name: Sync harness
+        run: (cd tools/qs-tester && uv sync)
+      - id: list
+        name: List agent suites
+        run: |
+          cd tools/qs-tester
+          # A scheduled run takes only the suites opted into `nightly`, because
+          # each one costs a project with agent infrastructure plus real model
+          # tokens. A manual dispatch runs every registered agent suite.
+          nightly=""
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            nightly="--nightly"
+          fi
+          agents="$(uv run python ci/list-suites.py --matrix agent $nightly)"
+          echo "agents=$agents" >> "$GITHUB_OUTPUT"
+          echo "Agent suites for this run: $agents"
 
   e2e:
     if: github.event_name != 'pull_request' && github.repository_owner == 'diagridio'
@@ -207,8 +238,100 @@ jobs:
         if: always()
         run: bash tools/qs-tester/ci/teardown-project.sh
 
+  # Runs AFTER e2e, not alongside it. `max-parallel` is per-job, so two jobs at
+  # 2 would allow four concurrent Catalyst projects and break the two-project
+  # cap this workflow's concurrency comment relies on. `always()` is what still
+  # runs these suites when a language leg failed: a nightly run should report
+  # every broken quickstart, not stop at the first.
+  e2e-agents:
+    needs: [e2e, discover]
+    if: >-
+      always()
+      && github.event_name != 'pull_request'
+      && github.repository_owner == 'diagridio'
+      && needs.discover.result == 'success'
+      && needs.discover.outputs.agents != '[]'
+    runs-on: ubuntu-latest
+    environment: shared-production
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        include: ${{ fromJSON(needs.discover.outputs.agents) }}
+    env:
+      DIAGRID_API_KEY: ${{ secrets.DIAGRID_API_KEY }}
+      # Declared literally rather than indexed from the matrix so the set of
+      # providers this workflow can reach is greppable. A suite only needs the
+      # one in its manifest row, and `Require Env Var` fails loudly if it is
+      # missing or empty.
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+
+      - name: Set up .NET
+        if: matrix.runtime == 'dotnet'
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Set up Java
+        if: matrix.runtime == 'java'
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Node
+        if: matrix.runtime == 'javascript'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 'lts/*'
+
+      - name: Install diagrid CLI
+        run: |
+          curl -sL https://downloads.diagrid.io/cli/install.sh | RELEASE_VERSION="$DIAGRID_CLI_VERSION" bash
+          sudo mv ./diagrid /usr/local/bin
+          diagrid version
+
+      - name: Sync harness
+        run: (cd tools/qs-tester && uv sync)
+
+      # The suite provisions itself from its README's documented commands, but the
+      # project name must be known before that can fail, so teardown always has
+      # something to delete.
+      - name: Compute the ephemeral project name
+        run: bash tools/qs-tester/ci/project-name.sh agents-${{ matrix.name }}
+
+      - name: Log in to Catalyst
+        run: bash tools/qs-tester/ci/login.sh
+
+      - name: Run the suite
+        run: |
+          cd tools/qs-tester
+          if ! uv run robot --outputdir "results/agents-${{ matrix.name }}" \
+               --variable "PROJECT:$PROJECT" \
+               "../../${{ matrix.suite }}"; then
+            echo "agents/${{ matrix.name }}" > "results/failed-agents-${{ matrix.name }}.txt"
+            echo "::error::Agent suite failed: agents/${{ matrix.name }}"
+            exit 1
+          fi
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: robot-agents-${{ matrix.name }}
+          path: tools/qs-tester/results/
+
+      - name: Delete the ephemeral Catalyst project
+        if: always()
+        run: bash tools/qs-tester/ci/teardown-project.sh
+
   report:
-    needs: [lint, e2e]
+    needs: [lint, e2e, e2e-agents]
     if: failure() && github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     steps:
