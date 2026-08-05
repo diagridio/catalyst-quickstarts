@@ -1595,7 +1595,13 @@ Add to `SUITES` in `tools/qs-tester/variables/suites.py`, after the four canonic
         "data": "agents_langgraph",
         "language": "python",
         "runtime": "python",
-        "nightly": True,
+        # False until this suite has had a green live run and a mutation check
+        # proving its assertions can fail. A suite that has never run against real
+        # Catalyst would fail the nightly build every night for everyone, and a
+        # nightly failure also leaks its project until reap-orphans.sh collects it.
+        # Flip to True in the same commit that records the live-run evidence; the
+        # dispatch-triggered path runs it before then.
+        "nightly": False,
         "secrets": ("OPENAI_API_KEY",),
     },
 ```
@@ -2695,6 +2701,37 @@ git commit -m "Add evals for the add-quickstart-e2e-test skill"
 | Keyword tests | `uv run robot resources/tests/smoke.robot resources/tests/keywords.robot` | none |
 | All of the above | `scripts/verify-static.sh` | none |
 | Live plus mutation | `scripts/verify-live.sh agents/langgraph/tests/quickstart.robot agents-langgraph` | `DIAGRID_API_KEY`, `OPENAI_API_KEY` |
+
+---
+
+## Outstanding: prove the langgraph suite, then enable it nightly
+
+Task 5's Steps 8-11 were not run: no model provider key was available, and
+`agents/langgraph` calls OpenAI. So `agents/langgraph` is registered with
+`nightly: False`, and three things remain undone. Nothing else in this plan depends
+on them, which is why the remaining tasks proceeded, but the suite is unproven until
+they are done:
+
+1. The live run (Step 8). One ephemeral Catalyst project with agent infrastructure,
+   plus one model call.
+2. Recording the observed response field (Step 9), which is why `REQUESTS[0]["field"]`
+   is still `None`.
+3. The mutation check (Step 10), which is the only evidence that the suite's
+   assertions can fail at all.
+
+To finish: export `DIAGRID_API_KEY` and `OPENAI_API_KEY`, then
+
+```bash
+bash .claude/skills/add-quickstart-e2e-test/scripts/verify-live.sh \
+  agents/langgraph/tests/quickstart.robot agents-langgraph
+```
+
+which does the live run, the mutation check, and teardown on every exit path. Then set
+that manifest row to `nightly: True` in the same commit as the evidence.
+
+Until then the suite still earns its keep: the lint job dryruns it on every PR, the
+doc-sync checker holds it to `agents/langgraph/README.md` in both directions, and a
+`workflow_dispatch` run executes it, because dispatch ignores the `nightly` filter.
 
 ---
 
