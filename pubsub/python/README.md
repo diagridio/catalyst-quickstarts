@@ -77,27 +77,8 @@ cd catalyst-quickstarts\pubsub\python
 
 Install the dependencies for both the publisher and subscriber applications.
 
-Create and activate a Python virtual environment:
-
-**macOS/Linux:**
-
 ```bash
-uv venv
-source .venv/bin/activate
-```
-
-**Windows:**
-
-```powershell
-uv venv
-.venv\Scripts\activate
-# or use .venv\Scripts\Activate.ps1
-```
-
-Install dependencies:
-
-```bash
-uv sync --active --directory publisher && uv sync --active --directory subscriber
+uv sync --all-packages
 ```
 
 ## 5. Run the application with Catalyst Cloud
@@ -105,7 +86,7 @@ uv sync --active --directory publisher && uv sync --active --directory subscribe
 The `diagrid dev run` command creates your Catalyst project, provisions resources (apps, Diagrid Pub/Sub service and topic), configures environment variables, and launches your application connected to Catalyst Cloud.
 
 ```bash
-diagrid dev run -f pubsub-quickstart.yaml --project pubsub-quickstart --approve
+uv run diagrid dev run -f pubsub-quickstart.yaml --project pubsub-quickstart --approve
 ```
 
 > **Tip:** Wait a few seconds until you see the logs `Connected App ID "publisher" to http://localhost:5001` and `Connected App ID "subscriber" to http://localhost:5002` in the terminal before proceeding, to ensure both applications are up and running.

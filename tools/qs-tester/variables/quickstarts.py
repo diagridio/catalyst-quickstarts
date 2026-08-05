@@ -25,39 +25,26 @@ def quickstart_dir(api, language):
 
 
 # --- README section 4: install commands -------------------------------------
-# The three python entries with `uv venv` run through a shell that then stays
-# activated for the run command; see ACTIVATE_VENV below.
+# Every python entry is the same single whole-workspace sync. `--all-packages` is
+# what keeps the multi-app quickstarts safe: a sync scoped to one app would
+# uninstall the other's dependencies from the shared venv.
 INSTALL = {
     ("workflow", "csharp"): "dotnet build",
     ("workflow", "java"): "mvn clean install",
     ("workflow", "javascript"): "npm ci",
-    ("workflow", "python"): "uv sync",
+    ("workflow", "python"): "uv sync --all-packages",
     ("state", "csharp"): "dotnet restore",
     ("state", "java"): "mvn clean install",
     ("state", "javascript"): "npm ci",
-    ("state", "python"): "uv venv && . .venv/bin/activate && uv sync",
+    ("state", "python"): "uv sync --all-packages",
     ("pubsub", "csharp"): "dotnet restore ./publisher && dotnet restore ./subscriber",
     ("pubsub", "java"): "mvn clean install -f ./publisher && mvn clean install -f ./subscriber",
     ("pubsub", "javascript"): "npm ci --prefix ./publisher && npm ci --prefix ./subscriber",
-    ("pubsub", "python"): (
-        "uv venv && . .venv/bin/activate && "
-        "uv sync --active --directory publisher && uv sync --active --directory subscriber"
-    ),
+    ("pubsub", "python"): "uv sync --all-packages",
     ("invocation", "csharp"): "dotnet restore ./client && dotnet restore ./server",
     ("invocation", "java"): "mvn clean install -f ./client && mvn clean install -f ./server",
     ("invocation", "javascript"): "npm ci --prefix ./client && npm ci --prefix ./server",
-    ("invocation", "python"): (
-        "uv venv && . .venv/bin/activate && "
-        "uv sync --active --directory client && uv sync --active --directory server"
-    ),
-}
-
-# True where README section 4 documents `uv venv` + activate, meaning the run
-# command must execute inside that activated virtual environment.
-ACTIVATE_VENV = {
-    ("state", "python"),
-    ("pubsub", "python"),
-    ("invocation", "python"),
+    ("invocation", "python"): "uv sync --all-packages",
 }
 
 # --- README section 5: run commands -----------------------------------------
@@ -65,27 +52,30 @@ ACTIVATE_VENV = {
 # `--project <api>-quickstart`, CI passes its ephemeral project name.
 _DEV_RUN = "diagrid dev run -f {file} --project {project} --approve"
 
+# Python quickstarts prefix the CLI with `uv run` instead of activating a venv:
+# uv puts .venv/bin on PATH, so the bare `uvicorn` command in the dev config
+# resolves, and the app inherits it.
+_UV_DEV_RUN = "uv run " + _DEV_RUN
+
 RUN = {
     ("workflow", "csharp"): _DEV_RUN.format(file="workflow-quickstart.yaml", project="{project}"),
     ("workflow", "java"): (
         "diagrid dev run --project {project} --app-id order-workflow --approve -- mvn spring-boot:run"
     ),
     ("workflow", "javascript"): _DEV_RUN.format(file="workflow-quickstart.yaml", project="{project}"),
-    ("workflow", "python"): (
-        "uv run diagrid dev run -f workflow-quickstart.yaml --project {project} --approve"
-    ),
+    ("workflow", "python"): _UV_DEV_RUN.format(file="workflow-quickstart.yaml", project="{project}"),
     ("state", "csharp"): _DEV_RUN.format(file="state-quickstart.yaml", project="{project}"),
     ("state", "java"): _DEV_RUN.format(file="state-quickstart.yaml", project="{project}"),
     ("state", "javascript"): _DEV_RUN.format(file="state-quickstart.yaml", project="{project}"),
-    ("state", "python"): _DEV_RUN.format(file="state-quickstart.yaml", project="{project}"),
+    ("state", "python"): _UV_DEV_RUN.format(file="state-quickstart.yaml", project="{project}"),
     ("pubsub", "csharp"): _DEV_RUN.format(file="pubsub-quickstart.yaml", project="{project}"),
     ("pubsub", "java"): _DEV_RUN.format(file="pubsub-quickstart.yaml", project="{project}"),
     ("pubsub", "javascript"): _DEV_RUN.format(file="pubsub-quickstart.yaml", project="{project}"),
-    ("pubsub", "python"): _DEV_RUN.format(file="pubsub-quickstart.yaml", project="{project}"),
+    ("pubsub", "python"): _UV_DEV_RUN.format(file="pubsub-quickstart.yaml", project="{project}"),
     ("invocation", "csharp"): _DEV_RUN.format(file="invocation-quickstart.yaml", project="{project}"),
     ("invocation", "java"): _DEV_RUN.format(file="invocation-quickstart.yaml", project="{project}"),
     ("invocation", "javascript"): _DEV_RUN.format(file="invocation-quickstart.yaml", project="{project}"),
-    ("invocation", "python"): _DEV_RUN.format(file="invocation-quickstart.yaml", project="{project}"),
+    ("invocation", "python"): _UV_DEV_RUN.format(file="invocation-quickstart.yaml", project="{project}"),
 }
 
 # --- Apps, ports, and readiness ---------------------------------------------
@@ -221,7 +211,6 @@ def get_quickstart(api, language):
         "dir": quickstart_dir(api, language),
         "install": INSTALL[(api, language)],
         "run": RUN[(api, language)],
-        "activate_venv": (api, language) in ACTIVATE_VENV,
         "health_ports": list(HEALTH_PORTS[api]),
         "connected_apps": [list(pair) for pair in CONNECTED_APPS[(api, language)]],
     }

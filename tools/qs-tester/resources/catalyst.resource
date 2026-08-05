@@ -13,13 +13,6 @@ Start Quickstart
     ...    background under alias `apps`, substituting the ephemeral project name.
     [Arguments]    ${qs}    ${project}    ${logfile}
     ${command}=    Resolve Project In Command    ${qs}[run]    ${project}
-    # The three python quickstarts whose README documents `uv venv` + activate run
-    # a bare `diagrid dev run`, so the command must execute inside that activated
-    # virtual environment. A shell wrapper is the only way to express that, and it
-    # is why Stop Process Tree needs its PID-tree fallback.
-    IF    ${qs}[activate_venv]
-        ${command}=    Set Variable    bash -c '. .venv/bin/activate && ${command}'
-    END
     Log    Starting: ${command}    console=True
     ${handle}=    Start Background Process    ${command}    ${logfile}    apps
     ...    cwd=${qs}[dir]

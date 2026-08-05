@@ -25,7 +25,7 @@ jobs:
 
       - name: build local
         run: |
-          cd pubsub/python/publisher && uv sync && cd ../subscriber && uv sync
+          cd pubsub/python && uv sync --all-packages
 
       - name: Configure AWS credentials
         if: github.event_name != 'pull_request'
