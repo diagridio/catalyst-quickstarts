@@ -49,11 +49,11 @@ $env:OPENAI_API_KEY = "your-key-here"
 
 ### 1. Deploy and Run
 
-Log in, create the Catalyst project with agent infrastructure enabled (and set it as the default for this session), register the agent, then run:
+Log in, create the Catalyst project with managed workflow enabled (and set it as the default for this session), register the agent, then run:
 
 ```bash
 diagrid login
-diagrid project create spring-ai-crash-recovery --enable-agent-infrastructure --wait --use
+diagrid project create spring-ai-crash-recovery --enable-managed-workflow --wait --use
 diagrid agent create spring-ai-crash-recovery --wait
 diagrid dev run -f dev-spring-ai-crash-recovery.yaml --approve
 ```

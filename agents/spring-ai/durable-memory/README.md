@@ -36,7 +36,7 @@ export OPENAI_API_KEY="your-key-here"   # PowerShell: $env:OPENAI_API_KEY = "you
 
 ```bash
 diagrid login
-diagrid project create spring-ai-durable-memory --enable-agent-infrastructure --wait --use
+diagrid project create spring-ai-durable-memory --enable-managed-workflow --deploy-managed-kv --wait --use
 diagrid agent create spring-ai-durable-memory --wait
 diagrid dev run -f dev-spring-ai-durable-memory.yaml --approve
 ```
@@ -121,8 +121,8 @@ written in the `after` phase, is recorded once — on success.
 - On a crash or a `DurableCallTimeoutException`, the `after` phase never runs. The workflow is durable;
   the caller-side advisor response phase is not. Re-attaching with the same instance id
   (`DurableAdvisor.INSTANCE_ID_KEY`) is what lets the full chain complete.
-- Chat memory is backed by the Catalyst-managed `agent-memory` store via `dapr-spring-ai-memory`
-  (`dapr.spring-ai.memory.statestore=agent-memory`).
+- Chat memory is backed by the Catalyst-managed `kvstore` store via `dapr-spring-ai-memory`
+  (`dapr.spring-ai.memory.statestore=kvstore`).
 
 > **Design takeaway.** Put anything that must survive a crash *inside* the workflow — as a `@Tool`
 > activity, whose result is checkpointed. Advisor response-phase side effects (memory, logging,
