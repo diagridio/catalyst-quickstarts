@@ -1,7 +1,7 @@
 # Spring AI Quickstarts
 
 Build **durable [Spring AI](https://docs.spring.io/spring-ai/reference/) agents** on Diagrid Catalyst
-using the `io.diagrid.dapr:dapr-spring-ai-starter` package.
+using the `io.diagrid:diagrid-spring-ai-starter` package.
 
 The key idea: an ordinary Spring AI app — a `ChatClient` plus `@Tool` beans — becomes **durable across
 restarts purely by adding the starter to the classpath**. There is no durability code in your app. With
@@ -31,7 +31,7 @@ Each quickstart has its own README with the full run steps.
 
 ## How durability works
 
-- `dapr-spring-ai-starter` auto-configures a `DurableAdvisor` (attached to every `ChatClient` built
+- `diagrid-spring-ai-starter` auto-configures a `DurableAdvisor` (attached to every `ChatClient` built
   from the injected `ChatClient.Builder`) and an in-process Dapr Workflow worker.
 - Each `ChatClient.call()` becomes a Dapr Workflow; the model turn and each `@Tool` call run as
   separate checkpointed activities.

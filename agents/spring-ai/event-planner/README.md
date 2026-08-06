@@ -1,7 +1,7 @@
 # Spring AI Quickstart - Event Planner
 
 This quickstart demonstrates how to run a [Spring AI](https://docs.spring.io/spring-ai/reference/)
-agent as a durable Dapr Workflow using the `io.diagrid.dapr:dapr-spring-ai-starter` package. The agent
+agent as a durable Dapr Workflow using the `io.diagrid:diagrid-spring-ai-starter` package. The agent
 acts as an **Event Planner** with three tools that it calls in sequence — tool 2 deliberately crashes
 the process to demonstrate automatic recovery.
 
@@ -122,7 +122,7 @@ and execution continues from `step_two_compare`:
 
 ## How It Works
 
-- `dapr-spring-ai-starter` auto-configures a `DurableAdvisor` (attached to every `ChatClient` built
+- `diagrid-spring-ai-starter` auto-configures a `DurableAdvisor` (attached to every `ChatClient` built
   from the injected `ChatClient.Builder`) and an in-process Dapr Workflow worker.
 - Each `ChatClient.call()` runs as a Dapr Workflow; the model turn and each `@Tool` call run as
   separate **checkpointed activities**. A crash resumes from the last completed step — completed

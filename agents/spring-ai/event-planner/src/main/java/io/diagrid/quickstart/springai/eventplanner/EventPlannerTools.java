@@ -8,7 +8,7 @@ import org.springframework.stereotype.Component;
 
 /**
  * The Event Planner's three tools, which the agent calls in sequence. These are plain Spring AI
- * {@code @Tool} methods — there is no durability code here. Because the {@code dapr-spring-ai-starter}
+ * {@code @Tool} methods — there is no durability code here. Because the {@code diagrid-spring-ai-starter}
  * is on the classpath, each call runs as a checkpointed Dapr Workflow activity.
  *
  * <p><b>Why a {@code @Tool} Spring bean</b> (and not a per-call {@code .defaultTools(new ...)}): the
