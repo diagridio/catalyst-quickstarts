@@ -129,8 +129,13 @@ A canonical row in `tools/qs-tester/variables/suites.py` carries `suite`,
 and `secrets` (empty for every canonical row today — no canonical quickstart
 needs a model key). It does **not** duplicate ports, bodies, or markers — those
 stay solely in `quickstarts.py`, read only through `get_quickstart(api,
-language)`. `nightly` on a canonical row is read by the dryrun and doc-sync
-tooling only; canonical scheduling is still the hand-written `e2e` job's own
-business, unlike agent-family rows where `nightly` actually gates the CI
-matrix — see `references/agent-quickstart.md` if you are working on an
-agent-family suite instead.
+language)`. `nightly` is present on a canonical row only because
+`_REQUIRED["canonical"]` in `suites.py` demands the key for every row regardless
+of family — nothing ever reads its value for a canonical row. The only code
+that reads `nightly` anywhere is `suites.agent_suites(nightly_only=...)`, and
+that function filters to `family == "agent"` before it ever looks at the field,
+so a canonical row's `nightly` is inert: set it to whatever you like and
+nothing downstream changes. Canonical scheduling is entirely the hand-written
+`e2e` job's own `lang` matrix, unrelated to this manifest. Contrast
+`references/agent-quickstart.md`, where `nightly` on an *agent* row really does
+gate the `e2e-agents` CI matrix.

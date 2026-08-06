@@ -27,7 +27,7 @@ A new agent-family suite gets its own module,
 | `SECRETS` | `tuple[str, ...]` | Environment variable names the suite's `Require Env Var` loop checks before doing anything else — the model provider keys. |
 | `REQUESTS` | `tuple[dict, ...]` | The documented trigger calls, in documented order. Keys below. |
 | `UNCOVERED` | `tuple[tuple[str, str], ...]` | `(documented command, reason)` pairs for commands the suite deliberately does not run. |
-| `get_quickstart()` | function | Returns one flat dict: `family`, `name`, `language`, `dir`, `setup`, `install`, `run`, `teardown`, `health_ports`, `secrets`. Mirrors the shape `quickstarts.get_quickstart(api, language)` returns so the shared keywords need no changes. |
+| `get_quickstart()` | function | Returns one flat dict: `family`, `name`, `language`, `dir`, `setup`, `install`, `run`, `teardown`, `health_ports`, `secrets`. Not identical to what `quickstarts.get_quickstart(api, language)` returns (that one has `api` and `connected_apps` instead of `family`/`name`/`setup`/`teardown`/`secrets`) — the two dicts share exactly the five keys the *shared* keywords actually read (`dir`, `install`, `run`, `health_ports`, `language`), which is what lets `Build Quickstart`, `Start Quickstart` and `Wait Until Apps Healthy` work unchanged against either shape. |
 
 ### What doc-sync actually enforces — and what it does not
 
@@ -99,9 +99,10 @@ Library         ../../../tools/qs-tester/variables/agents_langgraph.py
 `Variables` exposes the module's top-level names directly as Robot variables
 (`@{REQUESTS}`, `@{READY_MARKERS}`). `Library` exposes `get_quickstart` as a
 keyword. The suite deliberately reads `@{READY_MARKERS}` and `@{REQUESTS}` from
-the `Variables` import rather than out of the dict `Get Quickstart` returns, and
-`get_quickstart()`'s dict does not include `ready_markers` or `requests` at all
-— only `setup`, `install`, `run`, `teardown`, `health_ports`, `secrets`.
+the `Variables` import rather than out of the dict `Get Quickstart` returns —
+`get_quickstart()`'s dict has no `ready_markers` or `requests` key at all (it
+returns `family`, `name`, `language`, `dir`, `setup`, `install`, `run`,
+`teardown`, `health_ports`, `secrets` only, per the contract table above).
 
 The reason is the mutation check (see the harness README's "To prove an
 assertion is not vacuous..."): it re-runs the suite with `robot --variablefile`
@@ -166,11 +167,17 @@ REQUESTS = (
 ```
 
 **Several apps, one documented endpoint — `dapr-agents/multi-agent-workflow`
-(no suite yet; read the README yourself before writing one).** Its `dev run`
-starts three FastAPI/uvicorn processes — the workflow app on 8001, a triage
-agent on 8002, an expert agent on 8003 — so `READY_MARKERS` needs one entry per
-app (each one prints its own `Uvicorn running on` line) and `HEALTH_PORTS` needs
-all three ports. But the README documents exactly one HTTP call, `POST
+(no suite yet; read the README yourself before writing one).** Its `dapr.yaml`
+declares three apps — the workflow app on 8001 (`main.py`, a plain
+`uvicorn.run(app, ...)`), a triage agent on 8002 and an expert agent on 8003
+(`triage_agent.py`/`expert_agent.py`, both calling `AgentRunner.serve(...,
+port=...)` from the `dapr_agents` package, whose `serve()` also auto-starts
+uvicorn internally when no app loop is already running). All three would
+therefore print their own `Uvicorn running on` line, so `READY_MARKERS` needs
+one entry per app and `HEALTH_PORTS` needs all three ports — but this has not
+been confirmed against a captured log, since no suite runs this quickstart yet;
+confirm it against the real `diagrid dev run` output before trusting it in a
+live suite. The README documents exactly one HTTP call, `POST
 http://localhost:8001/workflow/start`: the triage and expert agents are reached
 only as child workflows, never directly over HTTP. So `REQUESTS` still has a
 single entry even though three apps have to come up first:
