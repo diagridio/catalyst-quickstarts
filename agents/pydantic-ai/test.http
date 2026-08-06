@@ -1,5 +1,5 @@
 ### Trigger Decoration Planner agent
-POST http://localhost:8888/agent/run
+POST http://localhost:8008/agent/run
 Content-Type: application/json
 
 {

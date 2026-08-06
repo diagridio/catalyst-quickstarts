@@ -91,7 +91,7 @@ Choose one of the following to trigger the endpoint:
 **macOS/Linux (curl):**
 
 ```bash
-curl -X POST http://localhost:8888/agent/run \
+curl -X POST http://localhost:8008/agent/run \
   -H "Content-Type: application/json" \
   -d '{"task": "Find decorations for a garden wedding at a medium venue"}'
 ```
@@ -99,7 +99,7 @@ curl -X POST http://localhost:8888/agent/run \
 **Windows (PowerShell):**
 
 ```powershell
-Invoke-RestMethod -Method Post -Uri 'http://localhost:8888/agent/run' -ContentType 'application/json' -Body '{"task": "Find decorations for a garden wedding at a medium venue"}'
+Invoke-RestMethod -Method Post -Uri 'http://localhost:8008/agent/run' -ContentType 'application/json' -Body '{"task": "Find decorations for a garden wedding at a medium venue"}'
 ```
 
 **VS Code REST Client (any OS):** Open [`test.http`](./test.http) and click *Send Request* above the request. Requires the [REST Client](https://marketplace.visualstudio.com/items?itemName=humao.rest-client) extension.

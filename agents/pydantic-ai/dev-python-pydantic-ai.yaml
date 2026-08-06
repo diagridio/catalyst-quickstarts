@@ -6,8 +6,8 @@ common:
 apps:
   - appID: decoration-planner
     appDirPath: ./
-    appPort: 8888
+    appPort: 8008
     appProtocol: http
     command: ["python", "main.py"]
     env:
-      APP_PORT: "8888"
+      APP_PORT: "8008"
