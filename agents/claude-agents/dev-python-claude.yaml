@@ -1,11 +1,10 @@
 version: 1
 common:
   appLogDestination: console
-  resourcesPath: ./resources
   enableAppHealthCheck: false
   logLevel: info
 apps:
-  - appID: claude-agent
+  - appID: photography-planner
     appDirPath: ./
     appPort: 8010
     appProtocol: http

@@ -4,7 +4,7 @@ common:
   enableAppHealthCheck: false
   logLevel: info
 apps:
-  - appID: langgraph-agent
+  - appID: schedule-planner
     appDirPath: ./
     appPort: 8005
     appProtocol: http

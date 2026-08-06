@@ -1,5 +1,5 @@
 ### Trigger Transportation Planner agent
-POST http://localhost:8888/agent/run
+POST http://localhost:8009/agent/run
 Content-Type: application/json
 
 {

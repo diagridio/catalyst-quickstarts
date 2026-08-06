@@ -2,6 +2,6 @@ version: 1
 common:
   appLogDestination: console
 apps:
-  - appID: claude-crash-test
+  - appID: photography-planner
     appDirPath: ./
     command: ["python", "crash_test.py"]

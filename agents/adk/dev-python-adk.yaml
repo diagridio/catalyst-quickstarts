@@ -4,10 +4,10 @@ common:
   enableAppHealthCheck: false
   logLevel: info
 apps:
-  - appID: adk-agent
+  - appID: entertainment-planner
     appDirPath: ./
-    appPort: 8888
+    appPort: 8003
     appProtocol: http
     command: ["python", "main.py"]
     env:
-      APP_PORT: "8888"
+      APP_PORT: "8003"

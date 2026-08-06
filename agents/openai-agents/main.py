@@ -30,13 +30,13 @@ agent = Agent(
 runner = DaprWorkflowAgentRunner(
     name="catering-coordinator",
     agent=agent,
-    state_store=DaprStateStore(store_name="agent-memory"),
+    state_store=DaprStateStore(store_name="kvstore"),
 )
 
 # PubSub: subscribe for incoming tasks, publish results
 runner.serve(
     port=int(os.environ.get("APP_PORT", "8002")),
-    pubsub_name="agent-pubsub",
+    pubsub_name="pubsub",
     subscribe_topic="catering.requests",
     publish_topic="catering.results",
 )

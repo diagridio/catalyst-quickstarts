@@ -60,7 +60,7 @@ runner = DaprWorkflowGraphRunner(
 runner.serve(
     port=int(os.environ.get("APP_PORT", "8005")),
     input_mapper=lambda req: {"messages": [HumanMessage(content=req["task"])]},
-    pubsub_name="agent-pubsub",
+    pubsub_name="pubsub",
     subscribe_topic="schedule.requests",
     publish_topic="schedule.results",
 )

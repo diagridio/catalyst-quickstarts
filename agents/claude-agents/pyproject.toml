@@ -3,7 +3,7 @@ name = "claude-agent"
 version = "0.1.0"
 requires-python = ">=3.11,<3.14"
 dependencies = [
-    "diagrid[claude-agents]==0.4.2",
+    "diagrid[claude-agents]==0.4.3",
     "claude-agent-sdk==0.2.106",
     "anthropic==0.111.0",
     "fastapi==0.136.1",

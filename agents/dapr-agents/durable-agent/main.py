@@ -51,17 +51,19 @@ def main() -> None:
         llm=DaprChatClient(component_name="llm-provider"),
         memory=AgentMemoryConfig(
             store=ConversationDaprStateMemory(
-                store_name="agent-workflow"
+                store_name="kvstore"
             )
         ),
         state=AgentStateConfig(
-            store=StateStoreService(store_name="agent-memory"),
+            store=StateStoreService(
+                store_name="kvstore", key_prefix="invitations-manager:"
+            ),
         ),
         registry=AgentRegistryConfig(
-            store=StateStoreService(store_name="agent-registry"),
+            store=StateStoreService(store_name="kvstore"),
         ),
         pubsub=AgentPubSubConfig(
-            pubsub_name="agent-pubsub",
+            pubsub_name="pubsub",
             agent_topic="events.invitations.requests",
             broadcast_topic="agents.broadcast",
         ),

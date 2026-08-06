@@ -2,6 +2,6 @@ version: 1
 common:
   appLogDestination: console
 apps:
-  - appID: openai-agent
+  - appID: catering-coordinator
     appDirPath: ./
     command: ["python", "crash_test.py"]

@@ -73,15 +73,15 @@ This starts all agents on ports 8001-8009:
 
 | Port | App ID | Agent | Framework |
 |------|--------|-------|-----------|
-| 8001 | adk-agent | Entertainment Planner | ADK |
-| 8002 | crew-agent | Venue Scout | CrewAI |
-| 8003 | dapr-agent | Invitations Manager | Dapr Agents |
-| 8004 | agent-orchestration-agent | Event Coordinator | Dapr Agents |
-| 8005 | langgraph-agent | Schedule Planner | LangGraph |
-| 8006 | openai-agent | Catering Coordinator | OpenAI Agents |
-| 8007 | pydanticai-agent | Decoration Planner | Pydantic AI |
-| 8008 | strands-agent | Budget Analyst | Strands |
-| 8009 | claude-agent | Photography Planner | Claude Agents |
+| 8001 | entertainment-planner | Entertainment Planner | ADK |
+| 8002 | venue-scout | Venue Scout | CrewAI |
+| 8003 | invitations-manager | Invitations Manager | Dapr Agents |
+| 8004 | event-coordinator | Event Coordinator | Dapr Agents |
+| 8005 | schedule-planner | Schedule Planner | LangGraph |
+| 8006 | catering-coordinator | Catering Coordinator | OpenAI Agents |
+| 8007 | decoration-planner | Decoration Planner | Pydantic AI |
+| 8008 | budget-planner | Budget Analyst | Strands |
+| 8009 | photography-planner | Photography Planner | Claude Agents |
 
 ## Trigger an Orchestration
 

@@ -48,7 +48,7 @@ options = ClaudeAgentOptions(
 
 # ── Durable workflow runner ──────────────────────────────────
 runner = DaprWorkflowAgentRunner(
-    name="crash-recovery-demo",
+    name="photography-planner",
     options=options,
     tools=[step_one_search, step_two_compare, step_three_confirm],
     max_iterations=10,

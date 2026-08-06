@@ -2,6 +2,6 @@ version: 1
 common:
   appLogDestination: console
 apps:
-  - appID: strands-crash-test
+  - appID: budget-planner
     appDirPath: ./
     command: ["python", "crash_test.py"]

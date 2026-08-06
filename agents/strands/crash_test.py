@@ -70,7 +70,7 @@ agent = Agent(
 )
 
 # ── Durable workflow runner ──────────────────────────────────
-runner = DaprWorkflowAgentRunner(name="crash-recovery-demo", agent=agent, max_iterations=10)
+runner = DaprWorkflowAgentRunner(name="budget-planner", agent=agent, max_iterations=10)
 
 
 # ── FastAPI server ───────────────────────────────────────────

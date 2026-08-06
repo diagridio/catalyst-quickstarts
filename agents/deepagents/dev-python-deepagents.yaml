@@ -4,10 +4,10 @@ common:
   enableAppHealthCheck: false
   logLevel: info
 apps:
-  - appID: deepagents-agent
+  - appID: transportation-planner
     appDirPath: ./
-    appPort: 8888
+    appPort: 8009
     appProtocol: http
     command: ["python", "main.py"]
     env:
-      APP_PORT: "8888"
+      APP_PORT: "8009"

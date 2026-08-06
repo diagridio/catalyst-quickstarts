@@ -4,7 +4,7 @@ common:
   enableAppHealthCheck: false
   logLevel: info
 apps:
-  - appID: openai-agent
+  - appID: catering-coordinator
     appDirPath: ./
     appPort: 8002
     appProtocol: http
