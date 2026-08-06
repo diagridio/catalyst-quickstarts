@@ -2446,9 +2446,12 @@ cd "$(git rev-parse --show-toplevel)/tools/qs-tester" || exit 1
 failed=()
 
 run() {
-  echo "== $1"
+  # Capture the label BEFORE the shift. Reading $1 after shifting yields the
+  # command's first word instead, so every check invoked as `uv run ...` would
+  # report the failure as "uv" and the summary line would be useless for triage.
+  label="$1"
   shift
-  if ! "$@"; then failed+=("$1"); fi
+  if ! "$@"; then failed+=("$label"); fi
 }
 
 run "manifest"  uv run python ci/list-suites.py --validate
