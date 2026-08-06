@@ -1,7 +1,7 @@
 package io.diagrid.quickstart.springai.crashrecovery;
 
-import io.diagrid.dapr.springai.durable.boot.DurableAdvisor;
-import io.diagrid.dapr.springai.durable.client.DurableCallTimeoutException;
+import io.diagrid.springai.durable.boot.DurableAdvisor;
+import io.diagrid.springai.durable.client.DurableCallTimeoutException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;

@@ -1,7 +1,7 @@
 # Spring AI Quickstart - Crash Recovery
 
 This quickstart demonstrates how to recover a durable [Spring AI](https://docs.spring.io/spring-ai/reference/)
-agent from a hard crash using the `io.diagrid.dapr:dapr-spring-ai-starter` package. A booking agent
+agent from a hard crash using the `io.diagrid:diagrid-spring-ai-starter` package. A booking agent
 schedules its work under an **instance id you own**, so if the app is killed mid-call you can re-issue
 the same request and **attach** to the still-running workflow instead of starting a second booking.
 
