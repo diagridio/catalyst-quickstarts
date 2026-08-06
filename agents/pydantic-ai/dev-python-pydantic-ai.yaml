@@ -4,7 +4,7 @@ common:
   enableAppHealthCheck: false
   logLevel: info
 apps:
-  - appID: pydantic-ai-agent
+  - appID: decoration-planner
     appDirPath: ./
     appPort: 8888
     appProtocol: http

@@ -48,7 +48,7 @@ builder.Services.AddDaprAgents()
                 3. Finally call step_three_confirm with the result from step 2
                 Do NOT skip any steps.
                 """,
-            name: "EventPlannerAgent",
+            name: "event-planner",
             tools: tools);
     })
     .WithCatalyst(
@@ -64,7 +64,7 @@ var app = builder.Build();
 
 app.MapPost("/run", async (IDaprAgentInvoker invoker, RunRequest req, CancellationToken ct) =>
 {
-    var agent = invoker.GetAgent("EventPlannerAgent");
+    var agent = invoker.GetAgent("event-planner");
     var result = await invoker.RunAgentAsync(agent, req.Prompt, cancellationToken: ct);
     return Results.Ok(new { response = result.Text });
 });

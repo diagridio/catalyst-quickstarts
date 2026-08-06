@@ -46,11 +46,11 @@ agent = create_deep_agent(
     2. Then call step_two_compare with the output from step 1
     3. Finally call step_three_confirm with the output from step 2
     Do NOT skip any steps. Always call all three tools.""",
-    name="crash-recovery-demo",
+    name="transportation-planner",
 )
 
 # ── Durable workflow runner ──────────────────────────────────
-runner = DaprWorkflowDeepAgentRunner(agent=agent, name="crash-recovery-demo", max_steps=10)
+runner = DaprWorkflowDeepAgentRunner(agent=agent, name="transportation-planner", max_steps=10)
 
 
 # ── FastAPI server ───────────────────────────────────────────

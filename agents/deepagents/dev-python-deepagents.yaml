@@ -4,7 +4,7 @@ common:
   enableAppHealthCheck: false
   logLevel: info
 apps:
-  - appID: deepagents-agent
+  - appID: transportation-planner
     appDirPath: ./
     appPort: 8888
     appProtocol: http

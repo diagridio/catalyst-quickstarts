@@ -4,7 +4,7 @@ common:
   enableAppHealthCheck: false
   logLevel: info
 apps:
-  - appID: crewai-agent
+  - appID: venue-scout
     appDirPath: ./
     appPort: 8001
     appProtocol: http

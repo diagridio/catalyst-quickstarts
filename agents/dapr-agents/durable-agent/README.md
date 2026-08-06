@@ -50,13 +50,13 @@ diagrid login
 2. Create a new Catalyst project for the quickstart and use it as the default project for the current session:
 
 ```bash
-diagrid project create durable-agent-quickstart --enable-agent-infrastructure --wait --use
+diagrid project create durable-agent-quickstart --enable-managed-workflow --deploy-managed-kv --deploy-managed-pubsub --wait --use
 ```
 
 3. Create an agent for the project:
 
 ```bash
-diagrid agent create dapr-agent --wait
+diagrid agent create invitations-manager --wait
 ```
 
 4. Run the agent with Catalyst:

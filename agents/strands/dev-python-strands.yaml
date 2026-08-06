@@ -4,7 +4,7 @@ common:
   enableAppHealthCheck: false
   logLevel: info
 apps:
-  - appID: strands-agent
+  - appID: budget-planner
     appDirPath: ./
     appPort: 8004
     appProtocol: http

@@ -43,7 +43,7 @@ runner = DaprWorkflowDeepAgentRunner(
 runner.serve(
     port=int(os.environ.get("APP_PORT", "8009")),
     input_mapper=lambda req: {"messages": [HumanMessage(content=req["task"])]},
-    pubsub_name="agent-pubsub",
+    pubsub_name="pubsub",
     subscribe_topic="transportation.requests",
     publish_topic="transportation.results",
 )

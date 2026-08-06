@@ -3,7 +3,7 @@ name = "crewai-agent"
 version = "0.1.0"
 requires-python = ">=3.11,<3.14"
 dependencies = [
-    "diagrid[crewai]==0.4.2",
+    "diagrid[crewai]==0.4.3",
     "fastapi==0.136.1",
     "uvicorn[standard]==0.46.0",
 ]
