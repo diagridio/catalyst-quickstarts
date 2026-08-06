@@ -169,7 +169,12 @@ WORKFLOW_INSTANCE_KEY = {
 # --- Log markers ------------------------------------------------------------
 # Substrings expected in the captured `diagrid dev run` output. Shared
 # constants are language-invariant; per-language dicts hold genuine divergence.
-# Truncation points are deliberate: see the design spec's assertion matrix.
+# Every truncation point below is deliberate. Where the reason is recoverable
+# it is recorded next to the marker (see INVOCATION_CLIENT_MARKER's csharp
+# entry for a concrete example: truncated before a status value because that
+# language renders an enum where the others render a number). Where no such
+# reason is recorded, the truncation is still deliberate — it just has no
+# documented rationale beyond "this is the substring that matches."
 
 STATE_SAVE_MARKER = "Save state item successful."
 STATE_RETRIEVE_MARKER = "Get state item successful. Order retrieved"
