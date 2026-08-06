@@ -2318,7 +2318,7 @@ Transcribe, from the spec's "Per-quickstart data module", "Project lifecycle for
 - The full data module contract, copied from Task 4's table: `DOCUMENTED_PROJECT`, `SETUP`, `INSTALL`, `RUN`, `TEARDOWN`, `READY_MARKERS`, `HEALTH_PORTS`, `SECRETS`, `REQUESTS` (with its optional `field`, `commands` and `log_marker` keys), `UNCOVERED`, and `get_quickstart()`. State plainly that `READY_MARKERS` and `REQUESTS` are read from the `Variables` import and not from `get_quickstart()`, and why: a value a Python keyword returned cannot be overridden, so a mutation check against it proves nothing.
 - Worked examples of the three shapes `REQUESTS` has to cover: one request (langgraph), several requests against several apps (`dapr-agents/multi-agent-workflow`, three apps on 8001-8003 and therefore three readiness markers), and a flow interleaving CLI and HTTP where the second request carries `commands` and expects a different status (`mcp-auth/python`: fail closed, grant, succeed).
 - The undocumented-provisioning decision path from SKILL.md phase 2, with `dapr-agents/durable-agent` as the example.
-- That the three families differ in their documented provisioning, with the three real examples: `agents/*` (`--enable-agent-infrastructure` plus `agent create`, bare `dev run`), `dapr-agents/durable-agent` (no project create, explicit `--project`), `mcp-auth/python` (`project create --use`, `app create`, `apply -f`, then a `dev run` with both `--project` and four `--skip-*` flags).
+- That the three families differ in their documented provisioning, with the three real examples: `agents/*` (`--enable-agent-infrastructure` plus `agent create`, bare `dev run`), `dapr-agents/durable-agent` (no project create, explicit `--project`), `mcp-auth/python` (`project create --use`, `app create`, `apply -f`, then a `dev run` with both `--project` and three `--skip-*` flags: `--skip-managed-kv --skip-managed-pubsub --skip-default-resiliency`).
 - That readiness markers are framework properties, not language properties, and where to find them in a README ("Wait until the output shows ...").
 - That assertions are structural, with the reasoning about model output, and that an undocumented response shape means asserting the status code only.
 - The mcp-auth warning from the spec's Limitations: if the grant/revoke phases exceed the generic keywords, produce a partial suite plus an explicit gap note in `tools/qs-tester/README.md` rather than assertions implying coverage that does not exist.
@@ -2619,12 +2619,12 @@ git commit -m "Add preflight, static and live verification scripts to the skill"
       "id": 3,
       "name": "mcp-auth-multi-phase",
       "prompt": "Write a Robot end-to-end test for the mcp-auth/python quickstart.",
-      "expected_output": "A suite covering the documented happy path (project create --use, app create, apply -f, the dev run with its four --skip-* flags), with the grant/revoke phases either covered or explicitly listed as gaps rather than faked.",
+      "expected_output": "A suite covering the documented happy path (project create --use, app create, apply -f, the dev run with its three --skip-* flags), with the grant/revoke phases either covered or explicitly listed as gaps rather than faked.",
       "files": [],
       "assertions": [
         "SETUP contains the documented project create --use, app create and apply -f commands in the documented order",
-        "RUN keeps all four --skip-* flags exactly as documented",
-        "The documented fail-closed call and the allowed call after the grant are both in REQUESTS, in order, with their different expected statuses",
+        "RUN keeps all three --skip-* flags exactly as documented: --skip-managed-kv, --skip-managed-pubsub, --skip-default-resiliency",
+        "The documented fail-closed call and the allowed call after the grant are both in REQUESTS, in order. Note both return HTTP 200 from the local client: the upstream 404 (caller matches no rule) or 403 (ACCESS_DENIED) is surfaced inside the response body, so what distinguishes them is the asserted field, not the status code",
         "The grant command rides on the second request's commands key rather than being dropped or hoisted into SETUP",
         "Any phase left uncovered is recorded in UNCOVERED with a reason and noted in tools/qs-tester/README.md",
         "No assertion claims coverage of an authorization outcome the suite does not actually check",

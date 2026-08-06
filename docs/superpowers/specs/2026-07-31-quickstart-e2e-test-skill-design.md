@@ -245,7 +245,7 @@ ordered list rather than a fixed shape, because the three families genuinely dif
 `agent create` then a bare `dev run`; `dapr-agents/durable-agent` documents no project
 create and passes `--project` explicitly; `mcp-auth/python` documents
 `project create --use`, `app create`, and `apply -f resources/mcp-server.yaml`, then a
-`dev run` carrying both `--project` and four `--skip-*` flags.
+`dev run` carrying both `--project` and three `--skip-*` flags.
 
 ```python
 SETUP = (
