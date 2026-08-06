@@ -141,7 +141,11 @@ quickstart lives. Loads one family reference file.
 the test needs (app port, appID), read the dev config YAML or the app source, and
 record in a comment where the value came from. Nothing is invented: an assertion that
 cannot be traced to a source is worse than no assertion, because it looks like
-coverage.
+coverage. Where the README documents no project creation at all (an agent-family
+quickstart that passes `--project <name>-quickstart` but never shows the command that
+creates it), this phase does not guess: it leaves `SETUP` empty and asks which
+`ci/setup-project.sh` flags the project needs, the same undocumented-provisioning
+decision the Limitations section calls out below.
 
 **3. Write.** Data module, suite, manifest row, in the conventions the existing files
 use. That means a `*** Comments ***` header naming what the suite mirrors, and a
@@ -313,9 +317,11 @@ No new resource files. The additions go where the related keywords already live.
 | `Require Env Var` | `quickstart.resource` | Fail immediately naming the missing secret and the quickstart needing it, so a revoked key reads as a configuration error rather than a mysterious model failure. |
 | `POST And Expect Field` | `quickstart.resource` | Assert the status code plus a named JSON field present and non-empty. |
 
-One further change to existing keywords: the readiness and log-marker timeouts currently
-hardcode `180s` in `quickstart.resource` and `catalyst.resource`. They become
-`${MARKER_TIMEOUT}`, defaulting to `180s`, so the mutation check can pass a short
+One further change to existing keywords: the log-marker timeout hardcoded `60s` in
+`process.resource`'s `Wait Until Log Contains`, and the readiness timeout hardcoded
+`180s` in `catalyst.resource` and `quickstart.resource`. Both become overridable
+variables defined in `process.resource`: `${MARKER_TIMEOUT}` (default `60s`) and
+`${READINESS_TIMEOUT}` (default `180s`), so the mutation check can pass a short
 timeout and fail in seconds instead of waiting out three minutes. Default behaviour is
 unchanged for every existing suite.
 
@@ -334,11 +340,17 @@ locally.
 ### doc-sync
 
 `docsync/check_readme_sync.py` gains a loose mode for agent-family READMEs, which have
-no numbered sections. It checks that `SETUP`, `RUN`, and `TEARDOWN` appear as literal
-strings anywhere in the README modulo the project name, and likewise the install
-command, the trigger URL and payload, and the readiness marker. Under the guiding
-principle this is a stronger check than the canonical one, because it verifies the whole
-documented command sequence rather than only the run line.
+no numbered sections, and it checks total agreement in both directions, not just one.
+`harness -> documented`: every command the harness runs (`SETUP`, the install
+command, `RUN`, `TEARDOWN`, and any request's `commands`) must appear as a literal
+string somewhere in the README modulo the project name, and likewise the readiness
+marker(s) and each request's trigger URL, payload and log marker. `documented ->
+harness`: every command line in the README must in turn be accounted for — either run
+by the harness or listed in the data module's `UNCOVERED` tuple with a reason,
+so a README that grows a new documented step fails the check until someone decides
+whether the suite should run it, rather than the step being silently ignored. Under
+the guiding principle this is a stronger check than the canonical one, because it
+verifies the whole documented command sequence rather than only the run line.
 
 ## CI changes
 

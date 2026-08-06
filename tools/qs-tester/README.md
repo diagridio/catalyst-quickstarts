@@ -6,11 +6,16 @@ commands each quickstart's README documents and assert the responses and log out
 that README promises, so drift between the docs, the code, and Catalyst is caught
 automatically.
 
-Design: `docs/superpowers/specs/2026-07-28-quickstart-e2e-tests-design.md`.
-
 ## Layout
 
 - `resources/process.resource` — background process lifecycle and PID-tree teardown.
+  `Stop Process Tree` is not idempotent: calling it against a process that has
+  already exited raises (`PermissionError`/`EPERM` on Darwin, surfacing through
+  Robot's `Process` library) instead of doing nothing. This was discovered twice
+  during implementation, which is why every call site wraps it in
+  `Run Keyword And Ignore Error` — see `Stop Quickstart` in `catalyst.resource`
+  and `Clean Up Quickstart` in `agents/langgraph/tests/quickstart.robot`. Do the
+  same in any new teardown keyword that calls it directly.
 - `resources/catalyst.resource` — `diagrid dev run` launch, stop, readiness markers.
 - `resources/quickstart.resource` — build, health polling, HTTP assertions.
 - `resources/tests/smoke.robot` — tests the process-teardown keywords themselves.
@@ -20,10 +25,19 @@ Design: `docs/superpowers/specs/2026-07-28-quickstart-e2e-tests-design.md`.
   transcribed from a README.** Change a README, change this file.
 - `docsync/check_readme_sync.py` — asserts the two stay in agreement.
 - `ci/` — Catalyst project lifecycle scripts.
+- `variables/suites.py` — the registry of every suite. The lint dryrun, the CI
+  agents matrix and doc-sync all read it, so registering a suite is one row here
+  rather than three edits in the workflow.
+- `variables/agents_<name>.py` — one per agent-family quickstart, holding that
+  quickstart's documented command sequence verbatim.
+- `ci/list-suites.py` — reads the manifest for CI (`--paths`, `--matrix agent`,
+  `--validate`).
+- `ci/project-name.sh`, `ci/login.sh` — the ephemeral name, and the API-key login.
 
 Each suite lives next to the quickstarts it tests: `state/tests/quickstart.robot`,
-`pubsub/tests/quickstart.robot`, and so on. Each has four tests tagged `csharp`,
-`java`, `javascript`, `python`.
+`pubsub/tests/quickstart.robot`, and so on. Each canonical suite has four tests
+tagged `csharp`, `java`, `javascript`, `python`. Agent-family suites (see "Two
+kinds of quickstart" below) have exactly one test each, at `<family>/<name>/tests/quickstart.robot`.
 
 ## Running locally
 
@@ -92,30 +106,112 @@ share appIDs (`order-app`, `publisher`/`subscriber`, `client`/`server`,
 `order-workflow`) and ports 5001/5002, so two languages cannot run concurrently in
 one project or on one machine.
 
+### Two kinds of quickstart
+
+The canonical APIs (`workflow`, `state`, `pubsub`, `invocation`) are an
+(api × language) matrix: one suite per API, four language-tagged tests, all data
+in `variables/quickstarts.py`.
+
+Agent-family quickstarts (`agents/*`, `dapr-agents/*`, `mcp-auth/*`) are a flat
+list. Each has exactly one language, its own suite at
+`<family>/<name>/tests/quickstart.robot`, and its own data module. Three things
+differ and are worth knowing before you touch one:
+
+1. **They provision themselves.** Their READMEs document `diagrid project create`
+   (with `--enable-agent-infrastructure` for `agents/*`), `agent create` and
+   sometimes `app create` and `apply -f`, so the suite runs those documented
+   commands through `Run Documented Commands`. `ci/setup-project.sh` is for the
+   canonical suites, whose READMEs document no provisioning at all.
+2. **The `dev run` command can be bare.** `agents/*` documents
+   `project create ... --use` followed by a `dev run` with no `--project`. The
+   suite reproduces that exactly, so a regression in `--use` fails here.
+3. **Assertions are structural.** Responses contain model output, so the suites
+   assert the documented status code, a named field being present and non-empty
+   where a response shape is known, and a log marker showing the expected tool
+   ran.
+
+Nightly membership is per suite (`nightly` in the manifest), and CI reads it
+only for agent-family rows — canonical scheduling stays the business of the
+`e2e` job's own hand-written language matrix. Each agent leg costs a project
+with agent infrastructure plus real model tokens, so suites left at
+`nightly: False` run only on `workflow_dispatch`.
+
+### Running an agent-family suite locally
+
+Every suite's log-marker and readiness waits read from two variables defined in
+`resources/process.resource`: `${MARKER_TIMEOUT}` (default `60s`) and
+`${READINESS_TIMEOUT}` (default `180s`) — the values these waits used before
+they were parameterised. Both are overridable with `robot --variable`, which is
+what lets the mutation check below give up in seconds instead of waiting out a
+three-minute readiness timeout.
+
+```bash
+export DIAGRID_API_KEY=...
+export OPENAI_API_KEY=...           # whichever secrets the manifest row lists
+eval "$(bash tools/qs-tester/ci/project-name.sh agents-langgraph | grep '^PROJECT=')"
+bash tools/qs-tester/ci/login.sh
+cd tools/qs-tester
+uv run robot --variable PROJECT:$PROJECT --outputdir results/agents-langgraph \
+  ../../agents/langgraph/tests/quickstart.robot
+bash ci/teardown-project.sh "$PROJECT"
+```
+
+`agents/langgraph/README.md` documents no cleanup step, so `TEARDOWN` in its data
+module is empty and `ci/teardown-project.sh` is what actually deletes the
+project here — not a safety net finding nothing already gone, which is what it
+would be for an agent quickstart whose README documents its own
+`diagrid project delete` (`agents/microsoft-dotnet` does). It stays in the
+sequence either way, because for a quickstart that does self-delete it is the
+net for a suite that died before reaching its own teardown.
+
+To prove an assertion is not vacuous, re-run against the same project with the
+assertion broken and require a failure. The override goes through a generated
+variable file rather than `--variable`, because `--variable` can only set
+scalars and the interesting targets (`READY_MARKERS`, `REQUESTS`) are tuples:
+
+```bash
+mkdir -p results/mutation
+cat > results/mutation/mutate.py <<'EOF'
+READY_MARKERS = ("__mutation_check__",)
+EOF
+uv run robot --variable PROJECT:$PROJECT \
+  --variablefile results/mutation/mutate.py --variable READINESS_TIMEOUT:20s \
+  --outputdir results/mutated ../../agents/langgraph/tests/quickstart.robot
+```
+
+A PASS means the assertion never fails and is worthless.
+
 ### Checks that need no Catalyst project
 
 ```bash
 cd tools/qs-tester
 
-# resolve syntax, keywords and variables without running anything
-uv run robot --dryrun --variable PROJECT:dryrun ../../*/tests/quickstart.robot
+# resolve syntax, keywords and variables without running anything — every suite
+# in the manifest, canonical and agent-family alike
+uv run robot --dryrun --variable PROJECT:dryrun --outputdir results/dryrun \
+  $(uv run python ci/list-suites.py --paths)
 
-# assert the READMEs and the harness still agree
+# assert every registered suite's manifest row is well-formed
+uv run python ci/list-suites.py --validate
+
+# assert the READMEs and the harness still agree, canonical and agent-family alike
 uv run python docsync/check_readme_sync.py --all
 
-# unit-test the doc-sync checker itself
-uv run pytest docsync/tests -q
+# unit-test the doc-sync checker and the manifest itself
+uv run pytest -q
 
-# process-lifecycle keywords, no Catalyst project or credentials needed
-uv run robot resources/tests/smoke.robot
+# process-lifecycle and harness keywords, no Catalyst project or credentials needed
+uv run robot resources/tests/smoke.robot resources/tests/keywords.robot
 ```
 
-The glob in the dryrun command resolves from `tools/qs-tester/` to exactly the four
-suites in this repo (`../../workflow/tests/quickstart.robot`, `state`, `pubsub`,
-`invocation`) — there is no other `tests/quickstart.robot` anywhere else in the tree.
-If a future quickstart directory adds a fifth `tests/quickstart.robot` that is not
-meant to be part of this run, switch to the explicit four paths CI's `lint` job
-uses instead of the glob.
+`ci/list-suites.py --paths` reads `variables/suites.py`, so this is the same
+command the CI `lint` job runs, and registering a new suite there is what puts it
+under this check — no separate edit here. Filtering to only the four canonical
+suites, for a quicker local loop, means falling back to the glob
+(`../../*/tests/quickstart.robot`): the single `*` matches one path segment, so
+it resolves to exactly `workflow`, `state`, `pubsub`, `invocation` and does not
+reach agent-family suites, which live two segments deep
+(`agents/langgraph/tests/quickstart.robot`).
 
 ### CLI version
 
@@ -143,7 +239,8 @@ Two failure shapes worth recognising:
   the README before changing the table.
 - **A log marker timing out** usually means the wording changed in the app. The
   marker table records which markers are language-invariant and which are not;
-  see the design spec's assertion matrix for why each is truncated where it is.
+  see the per-marker comments in the "Log markers" section of
+  `variables/quickstarts.py` for why each is truncated where it is.
 
 ### Readiness markers are not uniform per API
 
@@ -169,14 +266,34 @@ config, not a typo.
 
 ## Limitations
 
-- **Nothing in this harness has been run against a real Catalyst project.** Every
-  suite here has been verified only with `robot --dryrun` (syntax, keywords,
-  variables resolve) and the doc-sync checker (the READMEs and the harness agree on
-  what commands exist). No suite has executed `diagrid dev run` against live
-  Catalyst, so no assertion below has actually been seen to pass — or to fail
-  correctly — against the real thing. Confirming that is on whoever runs this
-  harness with real credentials first.
-- Three things in particular remain unproven and matter most:
+- **The four canonical suites' situation is unchanged.** Each has been verified
+  only with `robot --dryrun` (syntax, keywords, variables resolve) and the
+  doc-sync checker (the READMEs and the harness agree on what commands exist). No
+  suite has executed `diagrid dev run` against live Catalyst, so no assertion
+  below has actually been seen to pass — or to fail correctly — against the real
+  thing. Confirming that is on whoever runs this harness with real credentials
+  first.
+- **The new `agents/langgraph` suite has never run against real Catalyst
+  either.** No model provider key was available while it was written:
+  `DIAGRID_API_KEY` is set in the dev environment, but `OPENAI_API_KEY`,
+  `GEMINI_API_KEY` and `ANTHROPIC_API_KEY` are all unset, and this quickstart
+  calls OpenAI. Consequently no assertion in it has been seen to fail when the
+  thing it checks is broken — no mutation check has run — and
+  `REQUESTS[0]["field"]` in `variables/agents_langgraph.py` is still `None`,
+  because the response shape can only come from an observed live response. What
+  *is* verified: the lint dryrun resolves the suite, the doc-sync checker holds
+  it to `agents/langgraph/README.md` in both directions, and it fails fast on a
+  missing model key — `Require Env Var` fails before `Build Quickstart`,
+  `Run Documented Commands` and `Start Quickstart` ever run (all three are
+  recorded `NOT RUN`), so a missing secret cannot leak a Catalyst project. It is
+  registered `nightly: False` for exactly that reason; flipping that flag needs a
+  green live run plus a mutation check, with the flag flip landing in the same
+  commit as the evidence (see "Running an agent-family suite locally" above).
+- **The CI workflow itself has never been executed.** Everything wired for
+  agent-family suites is static analysis (YAML parse, `actionlint`, the
+  credential-free harness commands above). Someone has to push the branch and
+  run one `workflow_dispatch` before the nightly schedule can be trusted.
+- Three things in particular remain unproven for the canonical suites and matter most:
   1. That the log-marker assertions (readiness markers, "log marker timing out"
      above) genuinely **fail** when the marker they wait for is absent from the
      `diagrid dev run` output, rather than passing vacuously.
@@ -195,3 +312,11 @@ config, not a typo.
 - The suites test only the documented flow. `DELETE /order/{id}` and
   `POST /workflow/terminate/{id}` exist in every implementation but are documented
   in no README, so they are untested. Documenting them brings them under test.
+- **Model nondeterminism.** Agent-family suites assert structure, not content: a
+  documented status code, a non-empty named field where a shape is known, and a
+  tool-call log marker. A model refusal, a rate limit or an unusually slow
+  completion can fail a leg without anything being wrong in the quickstart.
+  There is no retry; if this proves noisy, one retry on the trigger request is
+  the first thing to try.
+- **One mutation check per suite** proves one assertion. The others are unproven
+  in the same sense as the log markers above.
