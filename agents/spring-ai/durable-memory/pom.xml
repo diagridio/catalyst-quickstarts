@@ -73,7 +73,7 @@
       <version>${dapr-spring-ai.version}</version>
     </dependency>
 
-    <!-- Chat memory backed by a Dapr state store (the Catalyst-managed 'agent-memory' store). Backs
+    <!-- Chat memory backed by a Dapr state store (the Catalyst-managed 'kvstore' store). Backs
          Spring AI's ChatMemory so MessageChatMemoryAdvisor persists conversations durably. -->
     <dependency>
       <groupId>io.diagrid.dapr</groupId>
