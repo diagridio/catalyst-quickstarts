@@ -7,6 +7,8 @@ from langchain_core.messages import HumanMessage, ToolMessage
 from langchain_core.tools import tool
 from langgraph.graph import StateGraph, START, MessagesState
 from diagrid.agent.langgraph import DaprWorkflowGraphRunner
+from dapr_agents.agents.configs import AgentRegistryConfig
+from dapr_agents.storage.daprstores.stateservice import StateStoreService
 from langchain_openai import ChatOpenAI
 
 
@@ -54,6 +56,10 @@ runner = DaprWorkflowGraphRunner(
     name="schedule-planner",
     role="Schedule Planner",
     goal="Check venue date and time availability using the check_availability tool. Provide available time slots for a given venue and date.",
+    registry_config=AgentRegistryConfig(
+        store=StateStoreService(store_name="kvstore"),
+        team_name="default"
+    )
 )
 
 # State + PubSub: subscribe for incoming tasks, publish results
