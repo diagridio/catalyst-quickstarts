@@ -1,0 +1,146 @@
+---
+name: add-quickstart-e2e-test
+description: Add a Robot Framework end-to-end test for a quickstart in this repository and wire it into the nightly GitHub Actions workflow. Use this whenever someone wants a quickstart covered by tests or CI, in any phrasing, including "add an e2e test for the langgraph quickstart", "the microsoft-dotnet quickstart has no CI coverage", "write a Robot test for mcp-auth", "we just added a Go state quickstart, test it", or just "is this quickstart tested?" followed by "fix that". Handles both conventions in this repo: the canonical (api x language) quickstarts and the flat agent-family ones under agents/, dapr-agents/ and mcp-auth/.
+---
+
+# Add a quickstart end-to-end test
+
+## What you are building
+
+A suite that runs the commands a quickstart's README documents and asserts what
+that README promises, so drift between the docs, the code and Catalyst is caught
+automatically. The harness lives in `tools/qs-tester`; read its README first if
+you have not.
+
+## The rule that decides every judgement call
+
+If a README documents a command, run that command verbatim, substituting only the
+project name. Where a README documents nothing, the harness supplies its own
+command and labels it infrastructure.
+
+Two exceptions, both already implemented, neither to be re-litigated:
+
+1. `diagrid login` becomes `diagrid login --api-key "$DIAGRID_API_KEY"` via
+   `ci/login.sh`. The documented bare form blocks on a browser prompt.
+2. The documented project name becomes `qs-ci-<leg>-<run-id>` via
+   `ci/project-name.sh`. The `qs-ci-` prefix is what `ci/reap-orphans.sh`
+   collects by; a name without it leaks forever.
+
+Never invent an expected value. If the README does not document it and it cannot
+be read out of the repo, assert only what is documented and leave a comment
+naming the gap. An assertion nobody can trace to a source is worse than no
+assertion, because it reads as coverage.
+
+## Phase 0: preflight, before writing anything
+
+Run `scripts/preflight.sh <family>`. It checks the credentials, CLI version and
+harness sync you need to finish. A missing key found now costs seconds; found
+after you have written four files, it costs the whole run.
+
+If something is missing, say so immediately and ask whether to continue writing
+without being able to verify. Do not quietly proceed to a state you cannot prove.
+
+## Phase 1: classify
+
+Which convention is this quickstart?
+
+- Path is `workflow/`, `state/`, `pubsub/` or `invocation/`, README has numbered
+  sections (`## 4. Install`, `## 5. Run`, `## 6.`): **canonical**. Read
+  `references/canonical-api.md`.
+- Path is `agents/`, `dapr-agents/`, `mcp-auth/` or similar, README has named
+  sections: **agent-family**. Read `references/agent-quickstart.md`.
+
+Read one reference, not both. They share little and the differences are what
+matter.
+
+## Phase 2: extract the facts
+
+From the README first, in this order: install, provisioning, run, readiness
+marker, trigger request, expected response, log markers, cleanup, required
+secrets.
+
+Where the README is silent about something the test needs, read the dev config
+YAML (`appPort`, `appID`) or the app source, and record in a comment where the
+value came from. Where the README is silent about something the test would only
+guess at, such as a response body shape, leave it unasserted and say why in a
+comment.
+
+List every documented command you are NOT going to run, with its reason. That
+list becomes `UNCOVERED`, and doc-sync fails if a documented command is in
+neither `UNCOVERED` nor the suite. Crash-recovery flows that need source edits,
+and endpoints no README documents, belong in `UNCOVERED`.
+
+### When the README documents no project creation
+
+Some quickstarts need a project but never say how to make one.
+`dapr-agents/durable-agent` is the clearest case: its prerequisites list only the
+CLI, Python and an OpenAI key, yet its `dev run` passes
+`--project durable-agent-quickstart`. Under the guiding principle, provisioning is
+then infrastructure, and `ci/setup-project.sh` owns it, exactly as for the
+canonical APIs.
+
+That script's flags were chosen for the canonical APIs, though
+(`--deploy-managed-kv --deploy-managed-pubsub --enable-managed-workflow`), and an
+agent quickstart may also need `--enable-agent-infrastructure`. Deciding that from
+nothing is guessing, which is the one thing this skill must not do.
+
+So: leave `SETUP` empty, note in the data module that provisioning is
+undocumented, and **ask** which flags the project needs before running anything.
+Say what you know (the quickstart passes `--project X`, nothing documents creating
+X, the canonical flags are these) and what you need decided. A wrong flag here
+either fails the whole leg or, worse, provisions something that works by accident
+and hides a documentation gap readers will hit.
+
+## Phase 3: write
+
+Follow the files that already exist rather than inventing a layout:
+`tools/qs-tester/variables/agents_langgraph.py` and
+`agents/langgraph/tests/quickstart.robot` are the agent-family template;
+`variables/quickstarts.py` and `state/tests/quickstart.robot` are the canonical
+one. `references/harness-keywords.md` lists the keywords available with their
+signatures, so you do not write a keyword that already exists.
+
+Conventions that matter here: a `*** Comments ***` header naming which README
+sections the suite mirrors, and a comment on every truncation, divergence or
+value that came from somewhere other than the README. The next person to read
+this file will be debugging a nightly failure at speed.
+
+Register the suite in `tools/qs-tester/variables/suites.py`. For a genuinely new
+runtime, also add the setup step to the `e2e-agents` job; otherwise touch no YAML.
+
+## Phase 4: static verification
+
+Run `scripts/verify-static.sh`. It runs the manifest validation, the dryrun,
+doc-sync and the unit tests, which is exactly what CI's lint job runs. Loop until
+green.
+
+When doc-sync disagrees with you, the README is right and your data module is
+wrong, unless you have positive evidence the README itself drifted. Say so
+explicitly if you conclude that.
+
+## Phase 5: live verification
+
+Run `scripts/verify-live.sh <suite-path> <leg-id>`. It computes the name, logs
+in, runs the suite, runs the mutation check, and tears down on every exit path.
+
+A green run alone is not enough. The mutation check re-runs the suite with one
+assertion deliberately broken and requires a failure. If the mutated run passes,
+that assertion is vacuous, and a vacuous assertion is worse than none: it makes a
+broken quickstart ship green. Investigate rather than reporting success.
+
+## Phase 6: report
+
+Exactly two shapes. There is no "probably fine".
+
+**VERIFIED.** The live run passed and the mutation check failed as expected.
+State which suite, which assertions it makes, which variable you mutated, and
+what remains unproven (undocumented response shapes, other assertions no
+mutation check covered).
+
+**BLOCKED.** You could not complete the live run. State what is missing, what
+you wrote anyway, what static checks passed, and the exact commands that finish
+the job.
+
+Reporting BLOCKED honestly is a success. Reporting VERIFIED without a green live
+run and a failed mutation run is the one outcome that damages the harness,
+because everything downstream trusts that claim.
