@@ -8,7 +8,8 @@ import org.springframework.context.annotation.Configuration;
  * Defines the booking agent as a <b>named {@link ChatClient} bean</b> so it runs under its own
  * per-agent workflow name ({@code spring-ai.crashRecoveryAgent.workflow}) instead of the generic
  * {@code spring-ai.workflow}. The name is assigned at wiring time from the bean name, and it shows up
- * in the Catalyst dashboard / {@code dapr workflow list}.
+ * in the Catalyst dashboard / {@code dapr workflow list}. The sibling {@code event-planner} quickstart
+ * does the same, for the same reason plus agent-registry registration.
  *
  * <p>It must be a {@code ChatClient} <em>bean</em> (not a {@code @Component} that holds a client): the
  * durability auto-config registers a per-agent workflow name on the in-process worker for every
