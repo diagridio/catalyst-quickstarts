@@ -21,7 +21,7 @@
     <java.version>21</java.version>
     <spring-ai.version>2.0.0</spring-ai.version>
     <dapr.version>1.18.0</dapr.version>
-    <dapr-spring-ai.version>0.1.0</dapr-spring-ai.version>
+    <diagrid-spring-ai.version>0.1.0</diagrid-spring-ai.version>
   </properties>
 
   <dependencyManagement>
@@ -69,9 +69,9 @@
     <!-- Durability. This quickstart also uses the library API directly (DurableAdvisor.INSTANCE_ID_KEY,
          DurableCallTimeoutException) to schedule under a caller-owned instance id. -->
     <dependency>
-      <groupId>io.diagrid.dapr</groupId>
-      <artifactId>dapr-spring-ai-starter</artifactId>
-      <version>${dapr-spring-ai.version}</version>
+      <groupId>io.diagrid</groupId>
+      <artifactId>diagrid-spring-ai-starter</artifactId>
+      <version>${diagrid-spring-ai.version}</version>
     </dependency>
   </dependencies>
 

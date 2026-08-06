@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 /**
  * Ordinary Spring AI usage — no durability code. The {@link ChatClient} is built from the injected
- * {@link ChatClient.Builder}, which lets the dapr-spring-ai {@code DurableAdvisor} attach automatically.
+ * {@link ChatClient.Builder}, which lets the diagrid-spring-ai {@code DurableAdvisor} attach automatically.
  * Every {@code chatClient...call()} then runs as a Dapr Workflow: the model turns and each tool call
  * are checkpointed activities, so a crash resumes from the last completed step.
  *
