@@ -7,8 +7,8 @@ the process to demonstrate automatic recovery.
 
 The app itself is **plain Spring AI** — a `ChatClient` bean + three `@Tool` beans + a REST endpoint.
 There is no durability code anywhere in it: adding the starter to the classpath is what turns every
-`ChatClient.call()` into a checkpointed Dapr Workflow. A second dependency,
-`diagrid-spring-ai-agent-registry`, records the `ChatClient` bean as a Catalyst agent.
+`ChatClient.call()` into a checkpointed Dapr Workflow — and, as of 0.2.0, the starter also records the
+`ChatClient` bean as a Catalyst agent (registration ships in the starter, no separate dependency).
 
 ## What This Quickstart Demonstrates
 
@@ -54,7 +54,7 @@ Log in, create the Catalyst project with managed workflow enabled (and set it as
 
 ```bash
 diagrid login
-diagrid project create spring-ai-quickstart --enable-managed-workflow --wait --use
+diagrid project create spring-ai-quickstart --enable-managed-workflow --deploy-managed-kv --wait --use
 diagrid agent create spring-ai-event-planner --wait
 diagrid dev run -f dev-spring-ai-event-planner.yaml --approve
 ```
@@ -138,9 +138,9 @@ and execution continues from `step_two_compare`:
   activities are replayed from history rather than re-executed.
 - The three tools are global `@Tool` beans, so they are rediscovered on the restarted worker and the
   resumed workflow can run the pending activity.
-- `diagrid-spring-ai-agent-registry` records the agent under the app id in `application.properties`,
-  named after the bean (`spring-ai-event-planner`). It derives the workflow name it records from that
-  same bean name, so the workflow on the agent record is the workflow that actually runs.
+- The **starter** records the agent under the app id in `application.properties`, named after the
+  bean (`spring-ai-event-planner`). It derives the workflow name it records from that same bean name,
+  so the workflow on the agent record is the workflow that actually runs.
 
 > **A note on idempotency.** A durable activity is *at-least-once*: the tool that was in flight at
 > crash time re-runs on recovery. This quickstart's tools are side-effect-free, so re-running is
