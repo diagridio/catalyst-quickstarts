@@ -5,13 +5,14 @@ agent as a durable Dapr Workflow using the `io.diagrid:diagrid-spring-ai-starter
 acts as an **Event Planner** with three tools that it calls in sequence — tool 2 deliberately crashes
 the process to demonstrate automatic recovery.
 
-The app itself is **plain Spring AI** — a `ChatClient` + three `@Tool` beans + a REST endpoint. There
-is no durability code anywhere in it: adding the starter to the classpath is what turns every
-`ChatClient.call()` into a checkpointed Dapr Workflow.
+The app itself is **plain Spring AI** — a `ChatClient` bean + three `@Tool` beans + a REST endpoint.
+There is no durability code anywhere in it: adding the starter to the classpath is what turns every
+`ChatClient.call()` into a checkpointed Dapr Workflow. A second dependency,
+`diagrid-spring-ai-agent-registry`, records the `ChatClient` bean as a Catalyst agent.
 
 ## What This Quickstart Demonstrates
 
-- **Spring AI + Dapr Workflows**: run a Spring AI agent with durable execution — by adding one dependency, no code changes
+- **Spring AI + Dapr Workflows**: run a Spring AI agent with durable execution, added by dependency rather than by durability code
 - **OpenAI via Spring AI**: calls OpenAI directly through the `spring-ai-starter-model-openai` `ChatClient`
 - **Crash Recovery**: tool 2 crashes the process; on restart, Catalyst resumes the workflow automatically — completed steps are not re-run
 - **REST API**: trigger the agent via an HTTP endpoint
@@ -57,6 +58,11 @@ diagrid project create spring-ai-quickstart --enable-managed-workflow --wait --u
 diagrid agent create spring-ai-event-planner --wait
 diagrid dev run -f dev-spring-ai-event-planner.yaml --approve
 ```
+
+> `diagrid agent create` is **required**, not optional. It creates the App ID the agent registry files
+> this agent under, and the managed `agent-registry` connection is only scoped to App IDs backed by an
+> agent. `diagrid dev run` starts fine without it, but the agent registration then fails against a
+> connection it cannot load.
 
 ### 2. Trigger the Agent
 
@@ -122,13 +128,19 @@ and execution continues from `step_two_compare`:
 
 ## How It Works
 
-- `diagrid-spring-ai-starter` auto-configures a `DurableAdvisor` (attached to every `ChatClient` built
-  from the injected `ChatClient.Builder`) and an in-process Dapr Workflow worker.
+- `diagrid-spring-ai-starter` auto-configures a `DurableAdvisor` and an in-process Dapr Workflow
+  worker. Because the agent is a `ChatClient` **bean** (`EventPlannerAgentConfig`), the starter
+  attaches a *per-agent* advisor to that bean and names its workflow after it:
+  `spring-ai.spring-ai-event-planner.workflow`. A `ChatClient` built ad hoc from the injected
+  `ChatClient.Builder` instead gets the generic advisor and the shared `spring-ai.workflow` name.
 - Each `ChatClient.call()` runs as a Dapr Workflow; the model turn and each `@Tool` call run as
   separate **checkpointed activities**. A crash resumes from the last completed step — completed
   activities are replayed from history rather than re-executed.
 - The three tools are global `@Tool` beans, so they are rediscovered on the restarted worker and the
   resumed workflow can run the pending activity.
+- `diagrid-spring-ai-agent-registry` records the agent under the app id in `application.properties`,
+  named after the bean (`spring-ai-event-planner`). It derives the workflow name it records from that
+  same bean name, so the workflow on the agent record is the workflow that actually runs.
 
 > **A note on idempotency.** A durable activity is *at-least-once*: the tool that was in flight at
 > crash time re-runs on recovery. This quickstart's tools are side-effect-free, so re-running is
