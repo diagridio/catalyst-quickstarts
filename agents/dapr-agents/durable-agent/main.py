@@ -60,7 +60,7 @@ def main() -> None:
             ),
         ),
         registry=AgentRegistryConfig(
-            store=StateStoreService(store_name="kvstore"),
+            store=StateStoreService(store_name="agent-registry"),
         ),
         pubsub=AgentPubSubConfig(
             pubsub_name="pubsub",
