@@ -36,7 +36,7 @@ def main() -> None:
             store=StateStoreService(store_name="kvstore", key_prefix="event-coordinator:"),
         ),
         registry=AgentRegistryConfig(
-            store=StateStoreService(store_name="kvstore"),
+            store=StateStoreService(store_name="agent-registry"),
         ),
         execution=AgentExecutionConfig(
             max_iterations=25,
