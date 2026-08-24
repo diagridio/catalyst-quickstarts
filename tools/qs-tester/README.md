@@ -19,8 +19,15 @@ automatically.
 - `resources/catalyst.resource` — `diagrid dev run` launch, stop, readiness markers.
 - `resources/quickstart.resource` — build, health polling, HTTP assertions.
 - `resources/tests/smoke.robot` — tests the process-teardown keywords themselves.
-  Needs no credentials, runs in under a minute, and is **not** currently run by CI —
-  it is a local sanity check for anyone touching `process.resource`.
+  Needs no credentials and runs in under a minute. CI's `lint` job runs it on
+  every PR, together with `resources/tests/keywords.robot`, so a change to
+  `process.resource` is guarded rather than relying on someone remembering to run
+  it locally.
+- `resources/tests/keywords.robot` — tests the keywords the agent-family suites
+  depend on (`Require Env Var`, `Run Documented Commands`,
+  `Wait Until Ready Marker`, `POST And Expect Field`, the health probe), against
+  `resources/tests/echo_server.py` on localhost. No Catalyst project, no
+  credentials, no network. Also in the `lint` job.
 - `variables/quickstarts.py` — the per-(API, language) table. **Everything in it is
   transcribed from a README.** Change a README, change this file.
 - `docsync/check_readme_sync.py` — asserts the two stay in agreement.
