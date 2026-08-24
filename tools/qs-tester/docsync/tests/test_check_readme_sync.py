@@ -1,4 +1,9 @@
+import subprocess
+import sys
+from pathlib import Path
+
 import pytest
+import quickstarts
 from check_readme_sync import (
     extract_bash_blocks,
     extract_curl_calls,
@@ -105,3 +110,30 @@ def test_normalise_run_command_keeps_other_differences_visible():
     a = "diagrid dev run -f state-quickstart.yaml --project {project} --approve"
     b = "diagrid dev run -f wrong-file.yaml --project {project} --approve"
     assert normalise_run_command(a) != normalise_run_command(b)
+
+
+# --- The summary line's denominator -----------------------------------------
+# `--all` checks the sixteen (api, language) READMEs plus one per agent-family
+# suite in the manifest. The count it prints has to include both: a run that
+# reads seventeen READMEs and reports sixteen hides the one added last, which is
+# always the newest and least proven.
+
+
+def _run_all():
+    return subprocess.run(
+        [sys.executable, "docsync/check_readme_sync.py", "--all"],
+        cwd=Path(__file__).resolve().parents[2],
+        capture_output=True,
+        text=True,
+    )
+
+
+def test_all_counts_the_agent_rows_as_well_as_the_api_language_pairs():
+    import suites
+
+    expected = len(quickstarts.APIS) * len(quickstarts.LANGUAGES) + len(
+        suites.agent_suites()
+    )
+    result = _run_all()
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert f"All {expected} README(s) in sync" in result.stdout

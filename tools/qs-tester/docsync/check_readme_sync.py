@@ -387,7 +387,12 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("api", nargs="?", choices=qs.APIS)
     parser.add_argument("language", nargs="?", choices=qs.LANGUAGES)
-    parser.add_argument("--all", action="store_true", help="check all 16")
+    parser.add_argument(
+        "--all",
+        action="store_true",
+        help="check every (api, language) README plus every agent-family suite "
+        "registered in variables/suites.py",
+    )
     parser.add_argument(
         "--repo-root",
         type=Path,
@@ -404,7 +409,13 @@ def main() -> int:
         parser.error("give both api and language, or --all")
 
     problems = []
+    # One entry per README this run actually checked. Counting `pairs` alone
+    # under-reports as soon as an agent-family suite is registered: `--all`
+    # checks those too, and a count that says 16 while 17 READMEs were read
+    # quietly hides whichever one was added last.
+    checked = []
     for api, language in pairs:
+        checked.append(f"{api}/{language}")
         problems.extend(check(api, language, args.repo_root))
 
     # Agent-family suites are registered in the manifest rather than being a
@@ -413,15 +424,16 @@ def main() -> int:
         import suites
 
         for row in suites.agent_suites():
+            checked.append(str(Path(row["suite"]).parent.parent))
             problems.extend(check_agent(row, args.repo_root))
 
     if problems:
         for problem in problems:
             print(f"::error::{problem}")
-        print(f"\n{len(problems)} README/harness mismatch(es) in {len(pairs)} directories")
+        print(f"\n{len(problems)} README/harness mismatch(es) in {len(checked)} directories")
         return 1
 
-    print(f"All {len(pairs)} README(s) in sync with the harness")
+    print(f"All {len(checked)} README(s) in sync with the harness")
     return 0
 
 
