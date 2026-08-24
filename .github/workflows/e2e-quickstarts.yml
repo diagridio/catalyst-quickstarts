@@ -37,7 +37,7 @@ permissions:
 env:
   # The install.sh installer reads this as an env var (RELEASE_VERSION), not a
   # positional argument, and its GCS layout requires the leading "v".
-  DIAGRID_CLI_VERSION: 'v1.36.0'
+  DIAGRID_CLI_VERSION: 'v1.67.0'
 
 jobs:
   lint:
