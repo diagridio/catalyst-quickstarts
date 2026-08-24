@@ -53,6 +53,7 @@ jobs:
       - name: Resolve suites without executing
         run: |
           cd tools/qs-tester
+          # shellcheck disable=SC2046  # word splitting is the point: one path per suite
           uv run robot --dryrun --variable PROJECT:dryrun --outputdir results/dryrun \
             $(uv run python ci/list-suites.py --paths)
       - name: Check READMEs match the harness
@@ -345,8 +346,11 @@ jobs:
           script: |
             const fs = require('fs');
             const path = require('path');
-            // Each failing leg wrote failed-<lang>.txt (e.g. "python: pubsub")
-            // into its artifact; gather them so the issue names exact failures.
+            // Each failing leg wrote a failed-*.txt into its artifact; gather
+            // them so the issue names exact failures. Two shapes, because the
+            // two jobs differ: a canonical leg writes "python: pubsub state"
+            // (language, then the APIs that failed), an agent leg writes
+            // "agents/langgraph" (the suite, which has one language and one test).
             const lines = [];
             const walk = (dir) => {
               for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -364,20 +368,27 @@ jobs:
               ? lines.map(l => `  - \`${l}\``).join('\n')
               : '  - (no per-API detail captured — check the failing job logs)';
             const legs = [...new Set(lines.map(l => l.split(':')[0].trim()))].filter(Boolean);
+            // The artifact name is robot-<lang> for a canonical leg and
+            // robot-agents-<name> for an agent one (upload-artifact steps above).
+            // An agent leg's failure line is "agents/<name>", and a slash in the
+            // name is not what was uploaded -- so slugify it the same way the
+            // upload does, or the issue's copy-paste command 404s.
+            const artifact = (leg) => `robot-${leg.replace(/\//g, '-')}`;
             const downloads = (legs.length ? legs : ['<lang>'])
-              .map(l => `gh run download ${context.runId} -n robot-${l} -D ./report-${l}`)
+              .map(l => `gh run download ${context.runId} -n ${artifact(l)} -D ./report-${l.replace(/\//g, '-')}`)
               .join('\n');
             const title = 'Quickstart e2e tests failing';
             const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
             const body = [
               `The quickstart end-to-end tests **failed**.`,
               ``,
-              `**Failing legs (\`language: api …\`):**`,
+              `**Failing legs:** (\`language: api …\` for a canonical leg, \`agents/<name>\` for an agent suite)`,
               details,
               ``,
               `- Run: ${runUrl}`,
-              `- For a per-language index, download the \`robot-<lang>\` artifact and open`,
-              `  \`report.html\` (every API listed, failures in red) or \`log.html\`.`,
+              `- For a per-leg index, download the leg's artifact (\`robot-<lang>\`, or`,
+              `  \`robot-agents-<name>\` for an agent suite) and open \`report.html\``,
+              `  (every test listed, failures in red) or \`log.html\`.`,
               ``,
               `Download the report(s) for the failing leg(s):`,
               '```bash',
