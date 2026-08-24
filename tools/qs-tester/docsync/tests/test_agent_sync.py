@@ -8,6 +8,12 @@ from check_readme_sync import all_bash_lines, check_agent, normalise_project
 # file has none) so the teardown path is covered too. Named sections rather than
 # numbers, a documented project name, an out-of-scope crash-test flow, and a `cd`
 # the harness expresses as a working directory instead of a command.
+#
+# It also carries a ```powershell fence, because every real agent-family README
+# documents its trigger three ways and `all_bash_lines` has to ignore the two
+# that are not bash. Without a powershell block here, the assertion that no
+# Invoke-RestMethod line survives could not fail, and would read as coverage of a
+# filter nothing tested.
 README = """\
 # LangGraph Quickstart - Schedule Planner
 
@@ -46,10 +52,18 @@ Wait until the output shows `Uvicorn running on <localhost:port>`.
 
 ### 2. Trigger a Workflow
 
+**macOS/Linux (curl):**
+
 ```bash
 curl -i -X POST http://localhost:8005/agent/run \\
   -H "Content-Type: application/json" \\
   -d '{"task": "Check if the Grand Ballroom is available on March 15th"}'
+```
+
+**Windows (PowerShell):**
+
+```powershell
+Invoke-RestMethod -Method Post -Uri 'http://localhost:8005/agent/run' -ContentType 'application/json' -Body '{"task": "Check if the Grand Ballroom is available on March 15th"}'
 ```
 
 ## Crash Recovery Test With Catalyst
