@@ -2589,7 +2589,7 @@ git commit -m "Add preflight, static and live verification scripts to the skill"
       "prompt": "The agents/pydantic-ai quickstart has no end-to-end test. Add one and wire it into the nightly workflow like the langgraph one.",
       "expected_output": "A data module at tools/qs-tester/variables/agents_pydantic_ai.py transcribed from agents/pydantic-ai/README.md, a suite at agents/pydantic-ai/tests/quickstart.robot, a row in variables/suites.py, static checks green, and a BLOCKED report naming the missing credentials.",
       "files": [],
-      "assertions": [
+      "expectations": [
         "A data module exists at tools/qs-tester/variables/agents_pydantic_ai.py",
         "A suite exists at agents/pydantic-ai/tests/quickstart.robot",
         "variables/suites.py has a row whose suite path matches that suite",
@@ -2609,7 +2609,7 @@ git commit -m "Add preflight, static and live verification scripts to the skill"
       "prompt": "We need CI coverage for the Microsoft Agent Framework .NET quickstart under agents/microsoft-dotnet. Can you set that up?",
       "expected_output": "Same artifacts as eval 1, plus runtime: dotnet in the manifest row, and confirmation that the e2e-agents job's existing .NET setup step covers it.",
       "files": [],
-      "assertions": [
+      "expectations": [
         "The manifest row sets runtime to dotnet and language to csharp or dotnet consistently with suites.RUNTIMES",
         "The data module's SETUP includes the documented project create with --enable-agent-infrastructure and the documented agent create",
         "The data module's RUN matches the README's documented dev run command verbatim modulo the project name",
@@ -2624,7 +2624,7 @@ git commit -m "Add preflight, static and live verification scripts to the skill"
       "prompt": "Write a Robot end-to-end test for the mcp-auth/python quickstart.",
       "expected_output": "A suite covering the documented happy path (project create --use, app create, apply -f, the dev run with its three --skip-* flags), with the grant/revoke phases either covered or explicitly listed as gaps rather than faked.",
       "files": [],
-      "assertions": [
+      "expectations": [
         "SETUP contains the documented project create --use, app create and apply -f commands in the documented order",
         "RUN keeps all three --skip-* flags exactly as documented: --skip-managed-kv, --skip-managed-pubsub, --skip-default-resiliency",
         "The documented fail-closed call and the allowed call after the grant are both in REQUESTS, in order. Note both return HTTP 200 from the local client: the upstream 404 (caller matches no rule) or 403 (ACCESS_DENIED) is surfaced inside the response body, so what distinguishes them is the asserted field, not the status code",
@@ -2641,7 +2641,7 @@ git commit -m "Add preflight, static and live verification scripts to the skill"
       "prompt": "The state quickstart has a DELETE /order/{id} endpoint in all four languages but I don't think it's tested. Add e2e coverage for it.",
       "expected_output": "A refusal to invent coverage: no README documents that endpoint, so the skill should say so, offer to document it first (which brings it under test) or to record it as a known gap, and not fabricate a request or expected body.",
       "files": [],
-      "assertions": [
+      "expectations": [
         "The skill states that no README documents DELETE /order/{id} and that this is why it is untested",
         "No request or expected response body was invented for the endpoint",
         "The skill offers documenting the endpoint first as the path to coverage, rather than testing it undocumented",
@@ -2653,6 +2653,12 @@ git commit -m "Add preflight, static and live verification scripts to the skill"
   ]
 }
 ```
+
+**Field name:** the per-eval list is `expectations`, not `assertions`. skill-creator's
+prose says "assertions", but its `references/schemas.md` defines `evals[].expectations`
+and its scripts only ever read `expectations` — an evals.json using `assertions` parses
+and presents zero checks to the grader. `grading.json` also uses `expectations`, with
+per-item `text`/`passed`/`evidence`.
 
 Eval 4 looks like a trick question and is the most valuable of the four. The skill's
 whole value rests on assertions being traceable to a documented promise, and its most
