@@ -59,8 +59,11 @@ jobs:
         run: (cd tools/qs-tester && uv run python docsync/check_readme_sync.py --all)
       - name: Unit-test the doc-sync checker
         run: (cd tools/qs-tester && uv run pytest docsync/tests -q)
-      - name: Smoke-test process teardown keywords
-        run: (cd tools/qs-tester && uv run robot --outputdir results/smoke resources/tests/smoke.robot)
+      # The whole directory, not smoke.robot alone: these are the harness's own
+      # credential-free tests (process teardown, the readiness gate) and a new
+      # file here must not need a workflow edit to start running.
+      - name: Test the harness keywords
+        run: (cd tools/qs-tester && uv run robot --outputdir results/harness resources/tests)
 
   reap:
     if: github.event_name == 'schedule' && github.repository_owner == 'diagridio'
