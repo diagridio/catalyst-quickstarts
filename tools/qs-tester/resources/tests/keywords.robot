@@ -74,6 +74,35 @@ Run Documented Commands Fails On The First Non-Zero Exit
     # be followed by an `agent create` whose error message hides the real cause.
     File Should Not Exist    ${TEMPDIR}/unreachable.txt
 
+Health Check Returns 200 Defaults To The Path The Canonical Apps Serve
+    # No path argument: the default has to stay `/`, because that is what all
+    # sixteen canonical implementations route and what their `health_probes`
+    # pair every port with.
+    Health Check Returns 200    ${ECHO_PORT}
+
+Health Check Returns 200 Fails On A Path The App Does Not Serve
+    # The regression this guards: agents/langgraph's app registers no `/`, so a
+    # suite that probes `/` there polls a 404 until the readiness timeout expires
+    # and then fails on a healthy quickstart. The probe must reject a path the app
+    # does not serve, or that mistake is undetectable until a live run.
+    ${status}=    Run Keyword And Return Status
+    ...    Health Check Returns 200    ${ECHO_PORT}    /not-a-route
+    Should Be Equal    ${status}    ${False}
+
+Wait Until Apps Healthy Probes The Path The Quickstart Declares
+    # An agent-shaped probe: a path other than `/`. `/dapr/subscribe` is what
+    # agents/langgraph declares in HEALTH_PROBES, and the fixture serves it.
+    ${qs}=    Create Dictionary    health_probes=${{ [[$ECHO_PORT, '/dapr/subscribe']] }}
+    Wait Until Apps Healthy    ${qs}
+
+Wait Until Apps Healthy Fails When The Declared Path Is Not Served
+    # And it must fail, rather than pass, when the declared path is wrong — the
+    # end-to-end version of the check above, through the keyword the suites call.
+    Set Test Variable    ${READINESS_TIMEOUT}    3s
+    ${qs}=    Create Dictionary    health_probes=${{ [[$ECHO_PORT, '/not-a-route']] }}
+    ${status}=    Run Keyword And Return Status    Wait Until Apps Healthy    ${qs}
+    Should Be Equal    ${status}    ${False}
+
 Wait Until Ready Marker Finds A Marker That Arrives Late
     Start Background Process    bash -c 'sleep 2; echo "Uvicorn running on http://127.0.0.1:8005"'
     ...    ${TEMPDIR}/ready.log    readytest

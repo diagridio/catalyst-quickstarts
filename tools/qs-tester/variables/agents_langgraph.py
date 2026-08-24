@@ -54,8 +54,34 @@ TEARDOWN = ()
 # runs three. langgraph has one.
 READY_MARKERS = ("Uvicorn running on",)
 
-# appPort in dev-python-langgraph.yaml, and the port the documented curl targets.
-HEALTH_PORTS = (8005,)
+# (port, path) pairs `Wait Until Apps Healthy` polls for a 200 before asserting
+# anything. Port 8005 is the appPort in dev-python-langgraph.yaml, and the port
+# the documented curl targets.
+#
+# The path is NOT `/`, which is what the canonical suites probe. This app serves
+# no `/`: main.py builds the graph and calls DaprWorkflowGraphRunner.serve(...),
+# and that method (diagrid==0.4.2, pinned in this quickstart's pyproject.toml and
+# uv.lock; diagrid/agent/core/workflow/runner.py, serve()) creates a bare
+# `FastAPI()` and registers exactly four routes:
+#
+#   POST /agent/run
+#   GET  /agent/run/{workflow_id}
+#   GET  /dapr/subscribe                 (only when pubsub_name and subscribe_topic
+#   POST /events/{subscribe_topic}        are both passed — main.py passes both)
+#
+# There is no root route and no /health, so `GET /` returns 404 and a `/` probe
+# would wait out the full readiness timeout on a perfectly healthy app.
+# `GET /dapr/subscribe` is used instead: it is a route this app really registers
+# (runner.serve() adds it because main.py passes pubsub_name="agent-pubsub" and
+# subscribe_topic="schedule.requests"), it needs no request body, and it answers
+# 200 with the subscription list. Verified by rebuilding that exact route set on
+# fastapi==0.136.1 (the version this quickstart's uv.lock pins) and requesting
+# each path: `/` -> 404, `/dapr/subscribe` -> 200.
+#
+# Applies to every entry: one path per port, so an agent quickstart whose apps
+# serve different probe paths states them per app here rather than needing a new
+# keyword.
+HEALTH_PROBES = ((8005, "/dapr/subscribe"),)
 
 SECRETS = ("OPENAI_API_KEY",)
 
@@ -108,8 +134,16 @@ UNCOVERED = (
 def get_quickstart():
     """Everything the suite needs, in one flat dict.
 
-    Robot calls this as a keyword: `${qs}=  Get Quickstart`. Mirrors the shape
-    quickstarts.get_quickstart returns so the shared keywords need no changes.
+    Robot calls this as a keyword: `${qs}=  Get Quickstart`.
+
+    This is NOT the same dict `quickstarts.get_quickstart(api, language)`
+    returns. The two share exactly the five keys the *shared* keywords read —
+    `language`, `dir`, `install`, `run`, `health_probes` — which is what lets
+    `Build Quickstart`, `Start Quickstart` and `Wait Until Apps Healthy` work
+    against either shape unchanged. Everything else differs: this one adds
+    `family`, `name`, `setup`, `teardown` and `secrets`; the canonical one adds
+    `api` and `connected_apps` (agent quickstarts emit no `Connected App ID`
+    line, so there is nothing for `Wait Until Apps Connected` to wait for).
     """
     return {
         "family": FAMILY,
@@ -120,6 +154,6 @@ def get_quickstart():
         "install": INSTALL,
         "run": RUN,
         "teardown": list(TEARDOWN),
-        "health_ports": list(HEALTH_PORTS),
+        "health_probes": [list(probe) for probe in HEALTH_PROBES],
         "secrets": list(SECRETS),
     }

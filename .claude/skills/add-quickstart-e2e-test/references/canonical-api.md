@@ -49,7 +49,13 @@ consistently:
 - `HEALTH_PORTS` — keyed by **`api` only**. The apps always listen on
   5001/5002 regardless of `appPort` (`appPort` only controls whether Catalyst
   opens an inbound tunnel to that port, not what the app itself binds to), so
-  this stays uniform across languages for a given API.
+  this stays uniform across languages for a given API. `get_quickstart` turns
+  each port into a `(port, "/")` probe for `Wait Until Apps Healthy`, and `/` is
+  correct here because every canonical implementation routes it — check that the
+  implementation you are adding does too (`app.get('/')`, `app.MapGet("/")`,
+  `@GetMapping(path = "/")`, `app.get("/", ...)`) rather than inheriting the
+  assumption. An app that serves no `/` makes the health gate a guaranteed
+  timeout; that is exactly the trap `agents/langgraph` fell into.
 - `CONNECTED_APPS` — keyed `(api, language)`, **not** `api` alone, because the
   divergence here is real: pubsub's `publisher` has a non-zero `appPort` in
   csharp and python but not in java or javascript (verified against each

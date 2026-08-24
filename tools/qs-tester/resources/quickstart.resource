@@ -27,17 +27,33 @@ Suite Log File
     RETURN    ${OUTPUT DIR}/${api}-${language}-dev-run.log
 
 Wait Until Apps Healthy
-    [Documentation]    Poll `GET /` on every app port until it answers 200. This is
-    ...    the only readiness gate for workflow and state, which emit no connection
-    ...    marker, so the timeout is generous enough for a JVM or .NET cold start.
+    [Documentation]    Poll every `(port, path)` probe in ${qs}[health_probes] until
+    ...    it answers 200. This is the only readiness gate for workflow and state,
+    ...    which emit no connection marker, so the timeout is generous enough for a
+    ...    JVM or .NET cold start.
+    ...
+    ...    The path is part of the probe, not hardcoded to `/`, because "GET /
+    ...    answers 200" is a property of the specific app and not of apps in
+    ...    general. The canonical quickstarts all route `/` themselves
+    ...    (state/python/main.py, state/csharp/Program.cs, state/javascript/index.js,
+    ...    state/java Controller.java), so `quickstarts.get_quickstart` pairs every
+    ...    port with `/`. An agent app built on the Diagrid SDK's
+    ...    DaprWorkflowGraphRunner.serve() does not: it registers its own routes on a
+    ...    bare FastAPI() and answers 404 on `/`, so probing `/` there would wait out
+    ...    the whole timeout on a perfectly healthy app. See HEALTH_PROBES in
+    ...    variables/agents_langgraph.py for that case.
     [Arguments]    ${qs}
-    FOR    ${port}    IN    @{qs}[health_ports]
-        Wait Until Keyword Succeeds    ${READINESS_TIMEOUT}    3s    Health Check Returns 200    ${port}
+    FOR    ${probe}    IN    @{qs}[health_probes]
+        Wait Until Keyword Succeeds    ${READINESS_TIMEOUT}    3s
+        ...    Health Check Returns 200    ${probe}[0]    ${probe}[1]
     END
 
 Health Check Returns 200
-    [Arguments]    ${port}
-    GET    http://localhost:${port}/    expected_status=200    timeout=10
+    [Documentation]    One probe attempt. ${path} defaults to `/` because that is
+    ...    what the canonical apps serve; pass the app's real path for anything
+    ...    that does not route `/`.
+    [Arguments]    ${port}    ${path}=/
+    GET    http://localhost:${port}${path}    expected_status=200    timeout=10
 
 POST And Expect
     [Documentation]    POST ${payload} as JSON and assert the status code and, if

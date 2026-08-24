@@ -6,9 +6,12 @@ a POST response body, so a fixture is unavoidable. Kept to the standard library
 on purpose: this file must not add a dependency to the harness.
 
 Routes:
-    POST /full   -> 200 {"result": "some text", "blank": ""}
-    POST /empty  -> 200 {"result": ""}
-    POST /none   -> 200 {"other": "value"}
+    POST /full           -> 200 {"result": "some text", "blank": ""}
+    POST /empty          -> 200 {"result": ""}
+    POST /none           -> 200 {"other": "value"}
+    GET  /               -> 200 (what the canonical quickstart apps serve)
+    GET  /dapr/subscribe -> 200 (what agents/langgraph's app serves instead)
+    GET  anything else   -> 404
 
 Usage:
     python echo_server.py 8099
@@ -24,6 +27,14 @@ BODIES = {
     "/none": {"other": "value"},
 }
 
+# GET paths that answer 200. This is a closed list on purpose: an earlier version
+# answered 200 to *any* GET path, which made the readiness probe untestable — a
+# suite that polled a path its app does not serve looked healthy here and then
+# waited out the full readiness timeout against the real app. A real app 404s an
+# unknown path, so the fixture does too, and keywords.robot asserts the probe
+# fails on one.
+GET_OK = ("/", "/dapr/subscribe")
+
 
 class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
@@ -38,11 +49,15 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(payload.encode())
 
     def do_GET(self):
-        # The readiness probe the test suite polls before sending any POST.
-        self.send_response(200)
-        self.send_header("Content-Length", "2")
+        # The readiness probe the test suite polls before sending any POST — but
+        # only on a path in GET_OK, so an unserved path fails the probe here the
+        # same way it would against a real app.
+        served = self.path in GET_OK
+        payload = b"ok" if served else b"not found"
+        self.send_response(200 if served else 404)
+        self.send_header("Content-Length", str(len(payload)))
         self.end_headers()
-        self.wfile.write(b"ok")
+        self.wfile.write(payload)
 
     def log_message(self, *args):
         # Silence per-request logging; the Robot log is the record that matters.

@@ -23,11 +23,11 @@ A new agent-family suite gets its own module,
 | `RUN` | `str` | The `dev run` command, verbatim except for `{project}` where the README documents one. Left bare (no `--project`) where the README's `dev run` is bare — see "Documented provisioning differs by family" below. |
 | `TEARDOWN` | `tuple[str, ...]` | The README's own cleanup commands. Empty if the README documents none. |
 | `READY_MARKERS` | `tuple[str, ...]` | One string per app that announces itself in the `diagrid dev run` output. |
-| `HEALTH_PORTS` | `tuple[int, ...]` | Ports `Wait Until Apps Healthy` polls with `GET /` before any assertion runs. |
+| `HEALTH_PROBES` | `tuple[tuple[int, str], ...]` | `(port, path)` pairs `Wait Until Apps Healthy` polls for a 200 before any assertion runs. The path is per app and must be a route the app actually serves — see "Probe a path the app really serves" below. |
 | `SECRETS` | `tuple[str, ...]` | Environment variable names the suite's `Require Env Var` loop checks before doing anything else — the model provider keys. |
 | `REQUESTS` | `tuple[dict, ...]` | The documented trigger calls, in documented order. Keys below. |
 | `UNCOVERED` | `tuple[tuple[str, str], ...]` | `(documented command, reason)` pairs for commands the suite deliberately does not run. |
-| `get_quickstart()` | function | Returns one flat dict: `family`, `name`, `language`, `dir`, `setup`, `install`, `run`, `teardown`, `health_ports`, `secrets`. Not identical to what `quickstarts.get_quickstart(api, language)` returns (that one has `api` and `connected_apps` instead of `family`/`name`/`setup`/`teardown`/`secrets`) — the two dicts share exactly the five keys the *shared* keywords actually read (`dir`, `install`, `run`, `health_ports`, `language`), which is what lets `Build Quickstart`, `Start Quickstart` and `Wait Until Apps Healthy` work unchanged against either shape. |
+| `get_quickstart()` | function | Returns one flat dict: `family`, `name`, `language`, `dir`, `setup`, `install`, `run`, `teardown`, `health_probes`, `secrets`. Not identical to what `quickstarts.get_quickstart(api, language)` returns (that one has `api` and `connected_apps` instead of `family`/`name`/`setup`/`teardown`/`secrets`) — the two dicts share exactly the five keys the *shared* keywords actually read (`dir`, `install`, `run`, `health_probes`, `language`), which is what lets `Build Quickstart`, `Start Quickstart` and `Wait Until Apps Healthy` work unchanged against either shape. |
 
 ### What doc-sync actually enforces — and what it does not
 
@@ -38,16 +38,17 @@ attributes, `_REQUIRED_MODULE_ATTRS`:
 DOCUMENTED_PROJECT, SETUP, INSTALL, RUN, TEARDOWN, READY_MARKERS, REQUESTS, UNCOVERED
 ```
 
-Note what is **not** in that list: `HEALTH_PORTS`, `SECRETS`, and `get_quickstart`.
-If your module is missing one of the eight listed names, `check_agent` returns it
-as a problem string (`"... is missing required attribute(s): ..."`) — a normal
-doc-sync failure, not a crash, so one bad module costs its own row and not the
-other suites `--all` also checks in the same run. But a missing `HEALTH_PORTS`,
-`SECRETS`, or `get_quickstart` is not caught here at all: the suite will fail at
-Robot runtime instead (a `Wait Until Apps Healthy` FOR loop with nothing to
-iterate, or a keyword error), which is a slower and noisier way to find the same
-mistake. Do not skip these three just because doc-sync will not complain about
-their absence.
+Note what is **not** in that list: `HEALTH_PROBES`, `SECRETS`, and
+`get_quickstart`. If your module is missing one of the eight listed names,
+`check_agent` returns it as a problem string (`"... is missing required
+attribute(s): ..."`) — a normal doc-sync failure, not a crash, so one bad module
+costs its own row and not the other suites `--all` also checks in the same run.
+But a missing `HEALTH_PROBES`, `SECRETS`, or `get_quickstart` is not caught here
+at all: the suite will fail at Robot runtime instead (a `Wait Until Apps Healthy`
+FOR loop with nothing to iterate, or a keyword error), which is a slower and
+noisier way to find the same mistake. Do not skip these three just because
+doc-sync will not complain about their absence. Nothing static can check that a
+probe *path* is real either — that one is on you, see below.
 
 Beyond presence, `check_agent` cross-checks values against the README:
 
@@ -102,7 +103,7 @@ keyword. The suite deliberately reads `@{READY_MARKERS}` and `@{REQUESTS}` from
 the `Variables` import rather than out of the dict `Get Quickstart` returns —
 `get_quickstart()`'s dict has no `ready_markers` or `requests` key at all (it
 returns `family`, `name`, `language`, `dir`, `setup`, `install`, `run`,
-`teardown`, `health_ports`, `secrets` only, per the contract table above).
+`teardown`, `health_probes`, `secrets` only, per the contract table above).
 
 The reason is the mutation check (see the harness README's "To prove an
 assertion is not vacuous..."): it re-runs the suite with `robot --variablefile`
@@ -174,7 +175,7 @@ declares three apps — the workflow app on 8001 (`main.py`, a plain
 port=...)` from the `dapr_agents` package, whose `serve()` also auto-starts
 uvicorn internally when no app loop is already running). All three would
 therefore print their own `Uvicorn running on` line, so `READY_MARKERS` needs
-one entry per app and `HEALTH_PORTS` needs all three ports — but this has not
+one entry per app and `HEALTH_PROBES` needs all three ports — but this has not
 been confirmed against a captured log, since no suite runs this quickstart yet;
 confirm it against the real `diagrid dev run` output before trusting it in a
 live suite. The README documents exactly one HTTP call, `POST
@@ -184,7 +185,13 @@ single entry even though three apps have to come up first:
 
 ```python
 READY_MARKERS = ("Uvicorn running on", "Uvicorn running on", "Uvicorn running on")
-HEALTH_PORTS = (8001, 8002, 8003)
+# Ports from dapr.yaml. The probe PATHS are left as a question here on purpose:
+# read each app's routes before filling them in (see "Probe a path the app really
+# serves" below). 8001 is a plain uvicorn app whose own routes you can read in
+# main.py; 8002/8003 come from dapr_agents' AgentRunner.serve(), which is a
+# different package from the one agents/langgraph uses, so langgraph's
+# /dapr/subscribe answer does not carry over.
+HEALTH_PROBES = ((8001, "<read main.py>"), (8002, "<read AgentRunner.serve>"), (8003, "<same>"))
 REQUESTS = (
     {
         "method": "POST",
@@ -287,6 +294,44 @@ undocumented, and ask which flags the project actually needs before running
 anything against Catalyst. State what you know (the quickstart passes `--project
 X`; the README documents no command that creates `X`; the canonical flags are
 these) and what needs a decision.
+
+## Probe a path the app really serves
+
+`Wait Until Apps Healthy` polls each `(port, path)` in `HEALTH_PROBES` until it
+answers 200, and it is the last gate before the suite starts asserting. A probe
+path the app does not route is the worst kind of mistake this skill can make:
+the quickstart is healthy, the readiness marker has already arrived, and the
+suite still burns the full `${READINESS_TIMEOUT}` on a 404 and then fails —
+*after* paying for `project create --enable-agent-infrastructure --wait` and
+`agent create --wait`. Nothing static catches it. Confirm it yourself:
+
+1. Find where the app starts its HTTP server. For `agents/langgraph` that is
+   `main.py`'s `runner.serve(...)`, which is
+   `DaprWorkflowGraphRunner.serve()` in the `diagrid` package (version pinned in
+   the quickstart's `pyproject.toml`/`uv.lock`).
+2. Read the routes it registers. `serve()` creates a **bare `FastAPI()`** and
+   registers `POST /agent/run`, `GET /agent/run/{workflow_id}`, and — only when
+   `pubsub_name` and `subscribe_topic` are both passed — `GET /dapr/subscribe`
+   and `POST /events/{subscribe_topic}`. There is no `/` and no `/health`.
+3. Pick a GET route that needs no arguments and answers 200. For
+   `agents/langgraph` that is `GET /dapr/subscribe`, which is why its
+   `HEALTH_PROBES` is `((8005, "/dapr/subscribe"),)` and not `((8005, "/"),)`.
+   `GET /agent/run/{workflow_id}` is a route too, but with a made-up id it
+   answers 404 by design, so it is not a 200 probe.
+4. Write down in a comment where the answer came from, and say why it differs
+   from `/` if it does.
+
+Do not carry another quickstart's probe path over on the assumption that agent
+apps look alike. `agents/langgraph` (diagrid SDK) and
+`dapr-agents/*` (the `dapr_agents` package) start their servers from different
+code, so the route sets are unrelated until you have read both.
+
+The canonical suites are the contrast, and the reason `/` is still the default
+for `Health Check Returns 200`: all sixteen canonical implementations really do
+route `/` (`state/python/main.py`, `state/csharp/Program.cs`,
+`state/javascript/index.js`, `state/java` `Controller.java`, and the same in
+`workflow`, `pubsub` and `invocation`), so
+`quickstarts.get_quickstart` pairs every port with `/`.
 
 ## Readiness markers are a framework property, not a language property
 
