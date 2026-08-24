@@ -1,11 +1,14 @@
 """Read the suite manifest for CI and for the lint dryrun.
 
-Three modes:
+Four modes:
 
     --paths              space-separated suite paths, ready to paste after
                          `robot --dryrun`, run from tools/qs-tester
     --matrix agent       JSON array for a GitHub Actions matrix
     --validate           print problems and exit 1, or confirm and exit 0
+    --row <suite-path>   KEY=value lines describing one registered suite, for
+                         shell scripts that must branch on its family; exits 1
+                         if the suite is not in the manifest
 
 Usage from the workflow:
 
@@ -33,6 +36,7 @@ def main() -> int:
     mode.add_argument("--paths", action="store_true")
     mode.add_argument("--matrix", choices=("agent",))
     mode.add_argument("--validate", action="store_true")
+    mode.add_argument("--row", metavar="SUITE_PATH")
     parser.add_argument(
         "--nightly",
         action="store_true",
@@ -66,6 +70,29 @@ def main() -> int:
         ]
         # Compact separators: this lands in $GITHUB_OUTPUT, which is line-based.
         print(json.dumps(matrix, separators=(",", ":")))
+        return 0
+
+    if args.row:
+        # A leading "../../" is how robot receives a suite path, so accept it
+        # here too rather than making callers strip it.
+        suite = args.row.removeprefix("../../")
+        row = suites.row_for_suite(suite)
+        if row is None:
+            print(
+                f"::error::{suite} is not registered in variables/suites.py. "
+                "Add its row there first: the manifest is what CI, the dryrun and "
+                "doc-sync all read.",
+                file=sys.stderr,
+            )
+            return 1
+        # KEY=value lines rather than JSON: the only consumer is a shell script,
+        # and the values come from the manifest, never from user input.
+        print(f"FAMILY={row['family']}")
+        if row["family"] == "canonical":
+            print(f"API={row['api']}")
+            print(f"LANGUAGES={' '.join(row['languages'])}")
+        else:
+            print(f"NAME={row['name']}")
         return 0
 
     problems = suites.validate(args.repo_root)

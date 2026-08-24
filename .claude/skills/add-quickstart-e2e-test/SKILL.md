@@ -120,13 +120,40 @@ explicitly if you conclude that.
 
 ## Phase 5: live verification
 
-Run `scripts/verify-live.sh <suite-path> <leg-id>`. It computes the name, logs
-in, runs the suite, runs the mutation check, and tears down on every exit path.
+The two families need different procedures, because they get their project from
+different places.
+
+**Agent-family:** run `scripts/verify-live.sh <suite-path> <leg-id>`. It computes
+two ephemeral project names, logs in, runs the suite, runs the mutation check
+against the *second* project, and tears both down on every exit path. Two
+projects, not one: an agent-family suite provisions itself in `SETUP` from its
+README's documented `project create`/`agent create`, and `Run Documented
+Commands` stops at the first non-zero exit, so a mutated run against the
+already-provisioned first project dies in `SETUP` before it ever reaches the
+mutated assertion.
+
+**Canonical:** the script refuses these, and prints the procedure to run instead
+— it is documented in `tools/qs-tester/README.md` under "Create a project and run
+a suite". The difference is that `ci/setup-project.sh` provisions the project
+from outside the suite, and all four language tests share appIDs and ports
+5001/5002, so you run one language per project with `--include <language>`. The
+mutation check is the same idea with a different target: the canonical suites
+read their expected bodies from the `Variables` import too
+(`${STATE_STORE_BODY}` and friends), so a generated `--variablefile` can break
+one, and `ci/check_mutation.py` confirms which keyword failed.
 
 A green run alone is not enough. The mutation check re-runs the suite with one
-assertion deliberately broken and requires a failure. If the mutated run passes,
-that assertion is vacuous, and a vacuous assertion is worse than none: it makes a
-broken quickstart ship green. Investigate rather than reporting success.
+assertion deliberately broken and requires a failure. Two ways that check can lie
+to you, both of which the tooling now catches — do not talk yourself past either:
+
+- If the mutated run **passes**, the assertion is vacuous, which is worse than
+  having no assertion: it makes a broken quickstart ship green.
+- If the mutated run **fails for another reason** — a project that already
+  exists, a build error, a missing key — that failure would have happened without
+  the mutation and proves nothing. `ci/check_mutation.py` parses the mutated
+  run's `output.xml` and requires the *named keyword* to have status FAIL with
+  the mutation's sentinel in its message; a keyword recorded `NOT RUN` fails the
+  check. Take its verdict, not robot's exit code.
 
 ## Phase 6: report
 

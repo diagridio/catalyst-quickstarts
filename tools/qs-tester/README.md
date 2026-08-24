@@ -31,7 +31,10 @@ automatically.
 - `variables/agents_<name>.py` — one per agent-family quickstart, holding that
   quickstart's documented command sequence verbatim.
 - `ci/list-suites.py` — reads the manifest for CI (`--paths`, `--matrix agent`,
-  `--validate`).
+  `--validate`, `--row <suite>`).
+- `ci/check_mutation.py` — the mutation check's verdict: did the mutated run fail
+  on the assertion the mutation broke, or on something else? See "Running an
+  agent-family suite locally" below.
 - `ci/project-name.sh`, `ci/login.sh` — the ephemeral name, and the API-key login.
 
 Each suite lives next to the quickstarts it tests: `state/tests/quickstart.robot`,
@@ -164,22 +167,59 @@ would be for an agent quickstart whose README documents its own
 sequence either way, because for a quickstart that does self-delete it is the
 net for a suite that died before reaching its own teardown.
 
-To prove an assertion is not vacuous, re-run against the same project with the
-assertion broken and require a failure. The override goes through a generated
-variable file rather than `--variable`, because `--variable` can only set
-scalars and the interesting targets (`READY_MARKERS`, `REQUESTS`) are tuples:
+To prove an assertion is not vacuous, re-run with the assertion broken and
+require a failure. Two things make this check mean something.
+
+**A second, empty project.** Not the one the green run just used. An
+agent-family suite provisions itself inside `SETUP` from its README's documented
+`project create` and `agent create`, and `Run Documented Commands` stops at the
+first non-zero exit — so against the first project the `project create` fails,
+the suite dies in `SETUP`, and the mutated assertion is never reached. That run
+exits non-zero without proving anything.
+
+**A verdict on which keyword failed**, not on robot's exit code. Any failure
+makes robot exit non-zero; only a FAIL on the mutated assertion is evidence.
+`ci/check_mutation.py` reads the mutated run's `output.xml`, requires a keyword
+with the given name to have status FAIL, and (given a third argument) requires
+the mutation's sentinel to appear in its failure message. A keyword the run never
+reached is recorded `NOT RUN` and fails this check.
+
+The override goes through a generated variable file rather than `--variable`,
+because `--variable` can only set scalars and the interesting targets
+(`READY_MARKERS`, `REQUESTS`) are tuples:
 
 ```bash
-mkdir -p results/mutation
-cat > results/mutation/mutate.py <<'EOF'
+eval "$(bash ci/project-name.sh agents-langgraph-mut | grep '^PROJECT=')"
+MUT_PROJECT="$PROJECT"
+
+mkdir -p results/mutated
+cat > results/mutated/mutate.py <<'EOF'
 READY_MARKERS = ("__mutation_check__",)
 EOF
-uv run robot --variable PROJECT:$PROJECT \
-  --variablefile results/mutation/mutate.py --variable READINESS_TIMEOUT:20s \
+uv run robot --variable PROJECT:$MUT_PROJECT \
+  --variablefile results/mutated/mutate.py \
+  --variable READINESS_TIMEOUT:20s --variable MARKER_TIMEOUT:20s \
   --outputdir results/mutated ../../agents/langgraph/tests/quickstart.robot
+
+# The verdict. Exits non-zero unless the mutated assertion is what failed.
+uv run python ci/check_mutation.py results/mutated/output.xml \
+  "Wait Until Ready Marker" "__mutation_check__"
+
+bash ci/teardown-project.sh "$MUT_PROJECT"
 ```
 
-A PASS means the assertion never fails and is worthless.
+A PASS from the mutated robot run means the assertion never fails and is
+worthless. A non-zero exit that `check_mutation.py` rejects means the run broke
+somewhere else and the assertion is still unproven.
+
+`.claude/skills/add-quickstart-e2e-test/scripts/verify-live.sh` runs this whole
+sequence — green run, mutated run against a second project, verdict, teardown of
+both on every exit path including SIGINT — for agent-family suites. It refuses
+canonical suites, which need `ci/setup-project.sh` and one language at a time
+(see "Create a project and run a suite" above); for those, run the two robot
+invocations by hand with `--include <language>` and finish with the same
+`check_mutation.py` call, naming the keyword your mutation targets
+(`POST And Expect`, say, if you broke `STATE_STORE_BODY`).
 
 ### Checks that need no Catalyst project
 
