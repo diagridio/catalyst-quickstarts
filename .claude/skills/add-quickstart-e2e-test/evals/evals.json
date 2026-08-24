@@ -1,0 +1,75 @@
+{
+  "skill_name": "add-quickstart-e2e-test",
+  "note": "These four evals do not cover adding a new language to a canonical API: all sixteen (api, language) pairs in workflow/state/pubsub/invocation already exist, so there is no real gap to exercise without inventing a fixture quickstart. When a fifth language lands for a canonical API, add a fifth eval from that real directory asserting the language-shaped work: a row in every dict in tools/qs-tester/variables/quickstarts.py, a tagged test case in the existing <api>/tests/quickstart.robot, a CI matrix entry in .github/workflows/e2e-quickstarts.yml's hand-written lang matrix, and a runtime setup step if the language is new to that job. Until then, references/canonical-api.md documents that path but nothing in this eval set verifies the skill follows it.",
+  "evals": [
+    {
+      "id": 1,
+      "name": "agent-python-common-case",
+      "prompt": "The agents/pydantic-ai quickstart has no end-to-end test. Add one and wire it into the nightly workflow like the langgraph one.",
+      "expected_output": "A data module at tools/qs-tester/variables/agents_pydantic_ai.py transcribed from agents/pydantic-ai/README.md, a suite at agents/pydantic-ai/tests/quickstart.robot, a row in variables/suites.py, static checks green, and a BLOCKED report naming the missing credentials.",
+      "files": [],
+      "assertions": [
+        "A data module exists at tools/qs-tester/variables/agents_pydantic_ai.py",
+        "A suite exists at agents/pydantic-ai/tests/quickstart.robot",
+        "variables/suites.py has a row whose suite path matches that suite",
+        "uv run python ci/list-suites.py --validate exits 0",
+        "uv run python docsync/check_readme_sync.py --all exits 0",
+        "uv run robot --dryrun --variable PROJECT:dryrun against the full suite list (including the new one) resolves without errors",
+        "Every command in the data module's SETUP, INSTALL, RUN and TEARDOWN appears literally in agents/pydantic-ai/README.md, modulo the {project} substitution",
+        "Documented commands the suite does not run (at minimum the crash-recovery dev-crash-test.yaml flow, which needs a source edit to crash_test.py) are listed in UNCOVERED with a reason, matching the pattern in variables/agents_langgraph.py",
+        "No expected response body was invented: every REQUESTS entry's field is either None with a comment saying no README/framework documents a response shape, or traceable to the README or an explicitly-observed response",
+        "The row sets nightly to False, since the run never reached a live Catalyst project and this quickstart also requires OPENAI_API_KEY like langgraph",
+        "The final report is explicitly BLOCKED (not an unqualified success claim) and names the specific missing credential(s), e.g. DIAGRID_API_KEY and/or OPENAI_API_KEY",
+        "No workflow YAML under .github/workflows/ was edited, because pydantic-ai is Python and the e2e-agents job's existing steps (astral-sh/setup-uv) already cover Python with no conditional runtime-setup step needed"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "agent-dotnet-new-runtime",
+      "prompt": "We need CI coverage for the Microsoft Agent Framework .NET quickstart under agents/microsoft-dotnet. Can you set that up?",
+      "expected_output": "Same artifacts as eval 1, plus a manifest row with runtime: dotnet and language: csharp, and confirmation that the e2e-agents job's existing .NET setup step (actions/setup-dotnet, gated on matrix.runtime == 'dotnet') already covers it without a YAML edit.",
+      "files": [],
+      "assertions": [
+        "The new row in variables/suites.py sets runtime to \"dotnet\" (one of suites.RUNTIMES) and language to \"csharp\" (the quickstart's actual implementation language; suites.py does not validate language against RUNTIMES, so the two fields are set independently, not interchangeably)",
+        "The data module's SETUP includes, in order, 'diagrid project create {project} --enable-agent-infrastructure --wait --use' and 'diagrid agent create dotnet-agent --wait', matching agents/microsoft-dotnet/README.md lines 54 and 60",
+        "The data module's RUN is the bare 'diagrid dev run -f dev-dotnet-agent.yaml --approve' (no --project), matching README line 66, because the documented project create already carries --use",
+        "The suite's Require Env Var loop checks the model provider secret(s) the README's Prerequisites section documents, before Build Quickstart or Start Quickstart runs",
+        "uv run python ci/list-suites.py --matrix agent includes an entry with \"runtime\":\"dotnet\" for the new suite",
+        "The report does not claim actions/setup-dotnet needed to be added to .github/workflows/e2e-quickstarts.yml's e2e-agents job; it states that the existing 'if: matrix.runtime == ...dotnet...' step already covers it, and that only ci/list-suites.py --matrix agent output (consumed by needs.discover.outputs.agents) needed the new row to exist",
+        "The report distinguishes what the static checks (manifest validation, dryrun, doc-sync, unit tests) proved from what only a live run against Catalyst could prove (readiness marker text, response field shape, whether the mutation check can fail an assertion)"
+      ]
+    },
+    {
+      "id": 3,
+      "name": "mcp-auth-multi-phase",
+      "prompt": "Write a Robot end-to-end test for the mcp-auth/python quickstart.",
+      "expected_output": "A suite covering the documented happy path (project create --use, app create --wait, apply -f, the dev run with its three --skip-* flags), with the grant phase expressed via a request's commands list, and the revoke/get/list/access-test/appendix phases either covered or explicitly listed as gaps in tools/qs-tester/README.md rather than faked.",
+      "files": [],
+      "assertions": [
+        "SETUP contains, in order, 'diagrid project create mcp-auth --use', 'diagrid app create mcp-client --wait', and 'diagrid apply -f resources/mcp-server.yaml', matching mcp-auth/python/README.md",
+        "RUN keeps all three --skip-* flags exactly as documented on README line 115: --skip-managed-kv, --skip-managed-pubsub, --skip-default-resiliency, plus --project mcp-auth and --approve",
+        "The documented fail-closed POST /run call and the POST /run call after the grant are both in REQUESTS, in that order. Both entries have status 200 (mcp_client/main.py's /run handler always returns 200; there is no error-status code path). The two are told apart only by the asserted field: the first asserts a field that is non-empty when every tool call is denied (e.g. errors), the second asserts add_result once granted. The upstream 404 ('caller matches no rule', README lines 174-179) and 403 (ACCESS_DENIED, README lines 273-287) are values inside the JSON body, never the local client's HTTP status",
+        "The grant command 'diagrid mcpserver access grant mcp-server --caller mcp-client --allow-tools add --wait' rides on the second REQUESTS entry's commands key, not on the first entry, and is not hoisted into module-level SETUP",
+        "Any of revoke, access get, access list, access test, and the 'Appendix: Run Every Process Manually' flow that the suite does not cover is recorded either in UNCOVERED with a reason (if it is a documented command outside a request) or as an explicit gap note added to tools/qs-tester/README.md's Limitations section (for phases, like access test or the appendix, that don't fit Run Documented Commands / POST And Expect Field at all)",
+        "No assertion or comment claims the suite verifies an authorization outcome (e.g. 'revoke actually blocks access') that no REQUESTS entry or UNCOVERED-documented gap actually checks",
+        "uv run python docsync/check_readme_sync.py --all exits 0",
+        "The final report is exactly BLOCKED or VERIFIED, never an unqualified success claim, since no Catalyst credentials are available to run it live"
+      ]
+    },
+    {
+      "id": 4,
+      "name": "canonical-undocumented-endpoint",
+      "prompt": "The state quickstart has a DELETE /order/{id} endpoint in all four languages but I don't think it's tested. Add e2e coverage for it.",
+      "expected_output": "A refusal to invent coverage: no state README documents DELETE /order/{id} (tools/qs-tester/README.md's Limitations section already records this on the record as untested), so the skill should say so, offer to document the endpoint first (which brings it under test) or record it as a known gap, and not fabricate a request or expected body for it.",
+      "files": [],
+      "assertions": [
+        "The skill states plainly that no state/{csharp,java,javascript,python}/README.md documents a DELETE /order/{id} endpoint, and that this documentation gap is why the endpoint is untested, not an oversight in the suite",
+        "No request dict, payload, or expected response body was invented for DELETE /order/{id} anywhere in the session's output",
+        "The skill offers documenting the endpoint in the relevant README(s) first, as the path to bringing it under test, rather than adding test coverage for an undocumented endpoint",
+        "tools/qs-tester/variables/quickstarts.py was not edited to add a DELETE /order/{id} request, payload constant, or response-body constant",
+        "If the skill writes anything to disk, it is limited to a gap note (e.g. reinforcing the existing tools/qs-tester/README.md Limitations entry) rather than a new assertion, request, or suite change claiming coverage",
+        "The skill correctly identifies state as the canonical (api x language) convention, not the agent-family convention, and does not apply agent-family concepts (REQUESTS commands, POST And Expect Field, UNCOVERED tuples in a data module) to it"
+      ]
+    }
+  ]
+}
