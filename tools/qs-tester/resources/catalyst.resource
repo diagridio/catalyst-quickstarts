@@ -7,6 +7,12 @@ Library     Collections
 Library     String
 Resource    process.resource
 
+*** Variables ***
+# App IDs whose local app connection Stop Quickstart has to release. Start
+# Quickstart overwrites this per test; the empty default keeps teardown a no-op
+# when a test fails before the launch (a build failure still runs teardown).
+@{CONNECTED_APP_IDS}    @{EMPTY}
+
 *** Keywords ***
 Start Quickstart
     [Documentation]    Launch the quickstart's documented run command in the
@@ -14,6 +20,10 @@ Start Quickstart
     [Arguments]    ${qs}    ${project}    ${logfile}
     ${command}=    Resolve Project In Command    ${qs}[run]    ${project}
     Log    Starting: ${command}    console=True
+    # Record the app IDs for teardown. Set Test Variable, not a local: Stop
+    # Quickstart runs as Test Teardown, where this keyword's locals are gone.
+    ${app_ids}=    Evaluate    [app[0] for app in $qs["connected_apps"]]
+    Set Test Variable    @{CONNECTED_APP_IDS}    @{app_ids}
     ${handle}=    Start Background Process    ${command}    ${logfile}    apps
     ...    cwd=${qs}[dir]
     RETURN    ${handle}
@@ -44,7 +54,34 @@ Wait Until Apps Connected
 Stop Quickstart
     [Documentation]    CTRL+C equivalent, then release the local app connections.
     ...    Safe to call when the process is already gone.
+    ...
+    ...    SIGINT alone is not enough: the CLI prints `Disconnected App ID "<id>"`
+    ...    and then tells you the dev session is still active, and the app ID keeps
+    ...    a `trust.diagrid.io` app endpoint pointing at a tunnel that no longer
+    ...    exists. Invocations to a project in that state fail with the same
+    ...    `app is not in a healthy state` 500 as a genuinely broken app, which
+    ...    makes the next run's diagnosis harder than it needs to be.
     [Arguments]    ${project}
     Run Keyword And Ignore Error    Stop Process Tree    apps
-    Run Process    diagrid dev stop --project ${project}    shell=True
-    ...    stderr=STDOUT    timeout=120s
+    FOR    ${app_id}    IN    @{CONNECTED_APP_IDS}
+        Release App Connection    ${app_id}    ${project}
+    END
+
+Release App Connection
+    [Documentation]    `diagrid dev stop` for one app ID, asserting it actually
+    ...    disconnected.
+    ...
+    ...    Two CLI behaviours (v1.36.0) force both the flag choice and the
+    ...    assertion. `--project` on its own — what this used to run — prints
+    ...    "Dev config file or App ID is required" and does nothing. `-f
+    ...    <dev-config>` cannot parse the quickstarts' own dev config files at all:
+    ...    their `command:` is a YAML list, `dev stop` expects a string, and it
+    ...    fails with "Json: cannot unmarshal number into Go struct field
+    ...    App.Apps.RunConfig.Command of type string". `--app-id` is the one form
+    ...    that works. Every one of those failures exits 0, so an rc check proves
+    ...    nothing and the success line has to be asserted instead.
+    [Arguments]    ${app_id}    ${project}
+    ${result}=    Run Process    diagrid dev stop --app-id ${app_id} --project ${project}
+    ...    shell=True    stderr=STDOUT    timeout=120s
+    Should Contain    ${result.stdout}    disconnected
+    ...    msg=Could not release the app connection for '${app_id}' in ${project} (rc=${result.rc}): ${result.stdout}

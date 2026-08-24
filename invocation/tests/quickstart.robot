@@ -55,6 +55,15 @@ Run Invocation Quickstart
     # matching the README, which names server and not client.
     Wait Until Apps Connected   ${qs}    ${log}
     Wait Until Apps Healthy     ${qs}
+    # Neither wait above proves Catalyst can route INTO the server app, and for
+    # this API that is the whole test: invocation answers 500 ERR_DIRECT_INVOKE
+    # ("app is not in a healthy state") for a stretch after both signals pass.
+    # This gate absorbs that window only — see Wait Until Not Server Error — so
+    # the assertion below stays a single strict check on status and body. It
+    # replays the same documented request, so the server receives the order more
+    # than once; nothing here asserts a request count, and the API is a plain
+    # echo, so that is harmless.
+    Wait Until Not Server Error    5001    /order    ${ORDER_PAYLOAD}
 
     # README 6.1 — client invokes server. Body is identical in all four languages.
     POST And Expect     5001    /order    ${ORDER_PAYLOAD}    200    ${INVOCATION_BODY}

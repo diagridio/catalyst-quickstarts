@@ -88,7 +88,7 @@ The `diagrid dev run` command creates your Catalyst project, provisions resource
 diagrid dev run -f invocation-quickstart.yaml --project invocation-quickstart --approve
 ```
 
-> **Tip:** Wait a few seconds until you see the log `Connected App ID "server" to http://localhost:5002` in the terminal before proceeding, to ensure both applications are up and running.
+> **Tip:** Wait until you see the log `Connected App ID "server" to http://localhost:5002` in the terminal before proceeding, to ensure both applications are up and running. That line means the server app is connected, but Catalyst needs a few more seconds after it before invocations can be routed to the app: if the request in step 6.1 returns an error instead of the response shown there, wait a few seconds and send it again.
 
 ## 6. Invoke the service
 

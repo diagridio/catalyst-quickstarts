@@ -13,9 +13,12 @@ Design: `docs/superpowers/specs/2026-07-28-quickstart-e2e-tests-design.md`.
 - `resources/process.resource` — background process lifecycle and PID-tree teardown.
 - `resources/catalyst.resource` — `diagrid dev run` launch, stop, readiness markers.
 - `resources/quickstart.resource` — build, health polling, HTTP assertions.
-- `resources/tests/smoke.robot` — tests the process-teardown keywords themselves.
-  Needs no credentials, runs in under a minute, and is **not** currently run by CI —
-  it is a local sanity check for anyone touching `process.resource`.
+- `resources/tests/` — the harness's own tests. `smoke.robot` covers the
+  process-teardown keywords, `readiness.robot` covers the readiness gate against
+  `flaky_server.py`, `teardown.robot` covers the two Stop Quickstart paths that
+  release nothing. None need credentials, they run in seconds, and CI's `lint` job
+  runs the whole directory on every PR — run them locally too when you touch
+  `process.resource`, `catalyst.resource` or the gate.
 - `variables/quickstarts.py` — the per-(API, language) table. **Everything in it is
   transcribed from a README.** Change a README, change this file.
 - `docsync/check_readme_sync.py` — asserts the two stay in agreement.
@@ -106,8 +109,8 @@ uv run python docsync/check_readme_sync.py --all
 # unit-test the doc-sync checker itself
 uv run pytest docsync/tests -q
 
-# process-lifecycle keywords, no Catalyst project or credentials needed
-uv run robot resources/tests/smoke.robot
+# the harness's own keyword tests, no Catalyst project or credentials needed
+uv run robot resources/tests
 ```
 
 The glob in the dryrun command resolves from `tools/qs-tester/` to exactly the four
@@ -144,6 +147,20 @@ Two failure shapes worth recognising:
 - **A log marker timing out** usually means the wording changed in the app. The
   marker table records which markers are language-invariant and which are not;
   see the design spec's assertion matrix for why each is truncated where it is.
+- **A 500 on the invocation request** means Catalyst could not reach the server app
+  through the dev tunnel. Curl the API directly to see the error the client app
+  discards (`client/main.py` logs only `result.reason`):
+
+  ```bash
+  TOKEN=$(diagrid appid get client --project "$PROJECT" -o json | jq -r .status.apiToken)
+  URL=$(diagrid project get "$PROJECT" -o json | jq -r .status.endpoints.http.url)
+  curl -i -X POST "$URL/neworder" -H 'dapr-app-id: server' -H "dapr-api-token: $TOKEN" \
+    -H 'content-type: application/json' -d '{"orderId":1}'
+  ```
+
+  `ERR_DIRECT_INVOKE ... app is not in a healthy state` means the app channel is
+  not routable: either the startup window the gate exists to absorb, or a project
+  whose app connection was never released (see `Release App Connection`).
 
 ### Readiness markers are not uniform per API
 
@@ -169,13 +186,17 @@ config, not a typo.
 
 ## Limitations
 
-- **Nothing in this harness has been run against a real Catalyst project.** Every
-  suite here has been verified only with `robot --dryrun` (syntax, keywords,
-  variables resolve) and the doc-sync checker (the READMEs and the harness agree on
-  what commands exist). No suite has executed `diagrid dev run` against live
-  Catalyst, so no assertion below has actually been seen to pass — or to fail
-  correctly — against the real thing. Confirming that is on whoever runs this
-  harness with real credentials first.
+- **Only the invocation suite has been run against a real Catalyst project**, and
+  only its `python` leg (2026-08-24). It failed first — the client returned 500
+  because Catalyst could not yet route to the server app — which is what
+  `Wait Until Not Server Error` was added for; it then passed, and a repeat run
+  logged the gate absorbing two real 500s over 6.5s before the documented 200. The
+  teardown fix was verified the same way: the `server` app ID's app endpoint is
+  cleared after the suite, where it used to keep a dead `trust.diagrid.io` tunnel.
+  The other three suites have been verified only with `robot --dryrun` (syntax,
+  keywords, variables resolve) and the doc-sync checker (the READMEs and the harness
+  agree on what commands exist), so their assertions have not been seen to pass —
+  or to fail correctly — against the real thing.
 - Three things in particular remain unproven and matter most:
   1. That the log-marker assertions (readiness markers, "log marker timing out"
      above) genuinely **fail** when the marker they wait for is absent from the

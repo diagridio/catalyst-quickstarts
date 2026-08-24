@@ -39,6 +39,39 @@ Health Check Returns 200
     [Arguments]    ${port}
     GET    http://localhost:${port}/    expected_status=200    timeout=10
 
+Wait Until Not Server Error
+    [Documentation]    Poll POST ${path} until it answers with anything other than
+    ...    5xx, then return without asserting the body.
+    ...
+    ...    Neither readiness signal the harness can observe proves Catalyst can
+    ...    route INTO an app. `diagrid dev run` prints
+    ...    `Connected App ID "<id>" to http://localhost:<port>` when the tunnel is
+    ...    established, and `GET /` answers 200 as soon as the app's own server is
+    ...    up, but Catalyst marks the app channel healthy only after it has probed
+    ...    the app through that tunnel itself. Measured against a real project:
+    ...    invocation answered 500 `ERR_DIRECT_INVOKE ... app is not in a healthy
+    ...    state` at the instant both signals were satisfied, and 200 sixteen
+    ...    seconds later. A suite that fires its documented request the moment the
+    ...    signals pass is racing that window, which is exactly how this failed.
+    ...
+    ...    Deliberately narrow: 5xx is waited out, everything else returns
+    ...    immediately, and the caller still has to assert the documented status and
+    ...    body afterwards. A permanently broken app makes this keyword time out and
+    ...    fail rather than pass vacuously — see resources/tests/readiness.robot,
+    ...    which tests all three of those properties.
+    [Arguments]    ${port}    ${path}    ${payload}    ${timeout}=90s    ${interval}=3s
+    Wait Until Keyword Succeeds    ${timeout}    ${interval}
+    ...    Request Is Not Server Error    ${port}    ${path}    ${payload}
+
+Request Is Not Server Error
+    [Arguments]    ${port}    ${path}    ${payload}
+    # expected_status=anything: a 500 here is the condition being polled, not a
+    # failure to report, so RequestsLibrary must not raise on it.
+    ${response}=    POST    http://localhost:${port}${path}    json=${payload}
+    ...    expected_status=anything    timeout=30
+    Should Be True    ${response.status_code} < 500
+    ...    msg=POST ${path} still answering ${response.status_code}: ${response.text}
+
 POST And Expect
     [Documentation]    POST ${payload} as JSON and assert the status code and, if
     ...    given, the exact parsed response body.
