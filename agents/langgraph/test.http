@@ -11,5 +11,5 @@ POST http://localhost:8001/run
 Content-Type: application/json
 
 {
-    "topic": "company gala on March 15"
+    "topic": "plan a company gala on March 15"
 }
