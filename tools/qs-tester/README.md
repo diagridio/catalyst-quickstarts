@@ -336,6 +336,17 @@ config, not a typo.
   registered `nightly: False` for exactly that reason; flipping that flag needs a
   green live run plus a mutation check, with the flag flip landing in the same
   commit as the evidence (see "Running an agent-family suite locally" above).
+- **Its health probe is reasoned, not observed.** `HEALTH_PROBES` polls
+  `GET /dapr/subscribe` on 8005 rather than `GET /`, because the app serves no
+  `/`: `main.py` calls `DaprWorkflowGraphRunner.serve()`, which builds a bare
+  `FastAPI()` and registers four routes, none of them `/`. That was checked by
+  reading the installed SDK (`diagrid` 0.4.2, the version this quickstart pins)
+  and by rebuilding the same route set on `fastapi==0.136.1`, where `GET /`
+  answers 404 and `GET /dapr/subscribe` answers 200. What that does **not**
+  prove is that the real app, behind `diagrid dev run`, answers 200 there at the
+  moment the suite starts polling. A live run is what settles that; if this
+  probe is wrong, the symptom is a readiness timeout on an otherwise healthy
+  quickstart.
 - **The CI workflow itself has never been executed.** Everything wired for
   agent-family suites is static analysis (YAML parse, `actionlint`, the
   credential-free harness commands above). Someone has to push the branch and
@@ -367,3 +378,9 @@ config, not a typo.
   the first thing to try.
 - **One mutation check per suite** proves one assertion. The others are unproven
   in the same sense as the log markers above.
+- **The mutation procedure itself has never been executed end to end.**
+  `ci/check_mutation.py`'s verdict is unit-tested and was checked against two
+  real `output.xml` files, and `verify-live.sh` parses correctly and refuses
+  canonical suites (both checked), but neither script has run against Catalyst,
+  so "the mutated run reaches its assertion because it gets its own project" is
+  reasoning about `Run Documented Commands`, not an observation.
