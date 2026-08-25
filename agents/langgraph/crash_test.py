@@ -27,7 +27,9 @@ def check_venues(state: PlannerState) -> dict:
 
 def compare_options(state: PlannerState) -> dict:
     print(">>> STEP 2: Comparing venue options...", flush=True)
-    os._exit(1)  # 💥 Simulates a crash — comment out this line before the second run
+    if os.environ.get("CRASH_AT_STEP_2", "true").lower() == "true":
+        print(">>> Simulating a crash. Rerun with dev-crash-test-resume.yaml.", flush=True)
+        os._exit(1)
     result = "Grand Ballroom (6PM-11PM) is the best option for 200 guests"
     print(f">>> STEP 2 COMPLETE: {result}", flush=True)
     return {"results": state["results"] + [result]}

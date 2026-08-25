@@ -6,4 +6,4 @@ apps:
     appDirPath: ./
     command: ["python", "crash_test.py"]
     env:
-      CRASH_AT_STEP_2: "true"
+      CRASH_AT_STEP_2: "false"
