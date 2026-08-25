@@ -56,6 +56,12 @@ $env:OPENAI_API_KEY = ""
 $env:ANTHROPIC_API_KEY = ""
 ```
 
+> **Note on the LangGraph agent.** The `schedule-planner` defaults to an offline canned model, which
+> would answer every delegated scheduling task identically. This scenario needs a real provider, so it
+> sets `DIAGRID_QUICKSTART_MODEL=openai`. The combined dev file already does that for you: there is
+> nothing extra to export beyond the keys above. See
+> [Using a real LLM provider](../../langgraph/README.md#using-a-real-llm-provider).
+
 ## Running the Full Team
 
 The orchestrator requires the specialist agents to be running and registered. Use the combined dev file to start all 9 services at once:

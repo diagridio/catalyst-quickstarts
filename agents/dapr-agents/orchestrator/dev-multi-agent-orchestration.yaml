@@ -44,6 +44,7 @@ apps:
     command: ["uv", "run", "python", "main.py"]
     env:
       APP_PORT: "8005"
+      DIAGRID_QUICKSTART_MODEL: "openai"
 
   - appID: catering-coordinator
     appDirPath: ../../openai-agents
