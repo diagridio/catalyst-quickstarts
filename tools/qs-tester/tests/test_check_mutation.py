@@ -64,6 +64,47 @@ def test_fails_when_the_suite_died_before_reaching_the_keyword(tmp_path):
     assert "NOT RUN" in problems[0]
 
 
+def write_swallowed_output(tmp_path: Path, keyword: str, message: str) -> Path:
+    """Write an output.xml shaped exactly like a real Robot 7 run in which
+    `keyword` FAILs but the failure is caught by `Run Keyword And Return
+    Status` and turned into a boolean, so the enclosing test still PASSes.
+
+    This is the shape `/tmp/fool/output.xml` has for `Wait Until Ready Marker`
+    after `uv run robot --outputdir /tmp/fool resources/tests/smoke.robot
+    resources/tests/keywords.robot`: the suite is 20/20 PASS, and the keyword
+    is nested two levels deep (`Run Keyword And Return Status` wrapping the
+    named keyword) with its own `<status status="FAIL">`, while the `<test>`
+    and `<suite>` around it both report PASS.
+    """
+    path = tmp_path / "output.xml"
+    path.write_text(
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<robot generator="Robot 7.0">'
+        '<suite name="Quickstart"><test name="T">'
+        '<kw name="Run Keyword And Return Status" owner="BuiltIn">'
+        f'<kw name="{keyword}" owner="catalyst">'
+        f'<status status="FAIL">{message}</status></kw>'
+        '<status status="PASS"/></kw>'
+        '<status status="PASS"/></test>'
+        '<status status="PASS"/></suite></robot>'
+    )
+    return path
+
+
+def test_fails_when_the_keyword_failed_but_the_enclosing_test_swallowed_it(tmp_path):
+    # The exact fooling case a reviewer demonstrated: `Wait Until Ready Marker`
+    # FAILs inside `Run Keyword And Return Status`, which turns that into
+    # `${status}=False` and the test asserts on the boolean, so the test (and
+    # the whole suite) PASSES. A checker that looks only at the keyword's own
+    # status prints "Mutation caught" here and exits 0 -- against a run that is
+    # 20/20 PASS. Even a message that names the sentinel must not save this,
+    # because the failure never reached anything that could fail a real run.
+    output = write_swallowed_output(tmp_path, KEYWORD, f'Log does not contain "{SENTINEL}"')
+    problems = check(output, KEYWORD, SENTINEL)
+    assert problems and "swallowed" in problems[0]
+    assert "PASSED" in problems[0]
+
+
 def test_fails_when_the_keyword_passed_and_something_else_broke(tmp_path):
     output = write_output(
         tmp_path,

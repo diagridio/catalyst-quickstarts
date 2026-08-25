@@ -8,9 +8,18 @@ those is a failure the mutation did not cause, and treating it as proof is how a
 vacuous assertion gets certified as verified.
 
 So this reads the mutated run's output.xml and requires that a keyword with the
-given name is present with status FAIL -- and, when a message substring is
-given, that the failure message names it (the mutation sentinel). A keyword that
-never ran comes back NOT RUN, which fails this check with that fact stated.
+given name is present with status FAIL, that its ENCLOSING TEST also failed --
+and, when a message substring is given, that the failure message names it (the
+mutation sentinel). A keyword that never ran comes back NOT RUN, which fails
+this check with that fact stated.
+
+The enclosing-test requirement exists because a keyword can FAIL and still be
+swallowed: `resources/tests/keywords.robot` has tests that deliberately break a
+keyword inside `Run Keyword And Return Status` and then assert the returned
+status is False, so the test itself PASSES with a FAILing `<kw>` inside it. A
+checker that looks only at the keyword's own status calls that "caught" -- it
+is not, because nothing about a swallowed failure shows the assertion can fail
+a real run.
 
 Usage:
     python ci/check_mutation.py <output.xml> <keyword-name> [message-substring]
@@ -25,23 +34,44 @@ from pathlib import Path
 from xml.etree import ElementTree
 
 
-def keyword_statuses(output_xml: Path, keyword: str) -> list[tuple[str, str]]:
-    """(status, message) for every `<kw>` in the run with this name.
+def keyword_statuses(output_xml: Path, keyword: str) -> list[tuple[str, str, str]]:
+    """(status, message, enclosing_status) for every `<kw>` in the run with this name.
 
     Robot writes one `<kw name="...">` element per invocation, at any nesting
     depth, each with a `<status status="PASS|FAIL|NOT RUN|SKIP">` child whose
     text is the failure message when there is one. Matching on the name is what
     ties the check to the mutated assertion rather than to "something failed".
+
+    `enclosing_status` is the status of the nearest ancestor `<test>` (or, for a
+    keyword outside any test -- suite setup/teardown -- the nearest `<suite>`).
+    That is what tells a FAIL that made it out of the keyword apart from a FAIL
+    that got caught by something like `Run Keyword And Return Status` and turned
+    into a boolean: in the latter case the keyword is FAIL but the enclosing
+    test still PASSes.
     """
     tree = ElementTree.parse(output_xml)
+    root = tree.getroot()
+    parent_of = {child: parent for parent in root.iter() for child in parent}
+
+    def enclosing_status(element: ElementTree.Element) -> str:
+        node = parent_of.get(element)
+        while node is not None:
+            if node.tag in ("test", "suite"):
+                status = node.find("status")
+                return status.get("status", "") if status is not None else ""
+            node = parent_of.get(node)
+        return ""
+
     found = []
-    for element in tree.iter("kw"):
+    for element in root.iter("kw"):
         if element.get("name") != keyword:
             continue
         status = element.find("status")
         if status is None:
             continue
-        found.append((status.get("status", ""), (status.text or "").strip()))
+        found.append(
+            (status.get("status", ""), (status.text or "").strip(), enclosing_status(element))
+        )
     return found
 
 
@@ -66,17 +96,39 @@ def check(output_xml: Path, keyword: str, message_contains: str = "") -> list[st
             "the suite -- check the keyword name in the suite, then read log.html."
         ]
 
-    failures = [(status, message) for status, message in statuses if status == "FAIL"]
-    if not failures:
-        seen = ", ".join(sorted({status for status, _ in statuses}))
+    genuine_failures = [
+        (status, message)
+        for status, message, enclosing in statuses
+        if status == "FAIL" and enclosing == "FAIL"
+    ]
+    swallowed_failures = [
+        (status, message)
+        for status, message, enclosing in statuses
+        if status == "FAIL" and enclosing != "FAIL"
+    ]
+
+    if not genuine_failures:
+        if swallowed_failures:
+            messages = " | ".join(m for _, m in swallowed_failures) or "(no message)"
+            return [
+                f"{keyword!r} FAILED {len(swallowed_failures)} time(s) in {output_xml}, "
+                "but every one of those failures was inside a test that ultimately "
+                "PASSED -- something upstream (a `Run Keyword And Return Status` or "
+                "similar) caught the failure and swallowed it. A FAIL that never makes "
+                "the test itself fail is not evidence the assertion can fail a real "
+                "run; it proves the opposite, that whatever calls this keyword has a "
+                "safety net around it.\n"
+                f"  messages: {messages}"
+            ]
+        seen = ", ".join(sorted({status for status, _, _ in statuses}))
         return [
             f"{keyword!r} ran {len(statuses)} time(s) in {output_xml} but never "
             f"failed (statuses seen: {seen}). The mutated run failed for some other "
             "reason, so it proves nothing about this assertion."
         ]
 
-    if message_contains and not any(message_contains in m for _, m in failures):
-        messages = " | ".join(m for _, m in failures) or "(no message)"
+    if message_contains and not any(message_contains in m for _, m in genuine_failures):
+        messages = " | ".join(m for _, m in genuine_failures) or "(no message)"
         return [
             f"{keyword!r} failed, but no failure message mentions "
             f"{message_contains!r}, so this is probably not the mutation's doing.\n"

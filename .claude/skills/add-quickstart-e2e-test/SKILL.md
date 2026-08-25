@@ -151,9 +151,15 @@ to you, both of which the tooling now catches — do not talk yourself past eith
 - If the mutated run **fails for another reason** — a project that already
   exists, a build error, a missing key — that failure would have happened without
   the mutation and proves nothing. `ci/check_mutation.py` parses the mutated
-  run's `output.xml` and requires the *named keyword* to have status FAIL with
-  the mutation's sentinel in its message; a keyword recorded `NOT RUN` fails the
-  check. Take its verdict, not robot's exit code.
+  run's `output.xml` and requires the *named keyword* to have status FAIL
+  **inside a test that also FAILed**, with the mutation's sentinel in its
+  message; a keyword recorded `NOT RUN` fails the check, and so does a keyword
+  that FAILed but got caught and swallowed by something like `Run Keyword And
+  Return Status`, leaving the enclosing test PASSing (`resources/tests/
+  keywords.robot` does exactly this on purpose, to prove the checker rejects
+  it). Because a clean verdict already requires the enclosing test to have
+  failed, it implies robot's own exit code was non-zero — take the checker's
+  verdict; there is no separate exit-code check to add on top.
 
 ## Phase 6: report
 
