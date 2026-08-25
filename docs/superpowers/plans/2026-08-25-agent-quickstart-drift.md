@@ -732,18 +732,11 @@ Run: `cd tools/qs-tester && uv run python docsync/check_skill_docs.py`
 
 Expected: **non-zero**, reporting the stale `--enable-agent-infrastructure` and `langgraph-agent` commands in `SKILL.md` and `references/agent-quickstart.md`. That is Task 6's work. Record the exact list in your report; it is Task 6's checklist.
 
-- [ ] **Step 6: Wire it into CI and verify-static**
+- [ ] **Step 6: Do NOT wire it into CI yet**
 
-In the `lint` job, after the doc-sync step:
-
-```yaml
-      - name: Check the skill's examples against the READMEs
-        run: (cd tools/qs-tester && uv run python docsync/check_skill_docs.py)
-```
-
-In `scripts/verify-static.sh`, add it in the same position relative to the other checks, so local order keeps matching CI's.
-
-Both will fail until Task 6 lands. Note that in your report and commit anyway: a checker that reports real drift is working.
+Task 6 wires the checker into the `lint` job and `verify-static.sh`, in the same commit that
+makes it pass. Wiring it here would land a commit whose own gate is knowingly red, which teaches
+the next person that a red check is something you scroll past.
 
 - [ ] **Step 7: Commit**
 
@@ -798,7 +791,22 @@ In `SKILL.md`'s phase 2, one sentence, because the checker cannot stop an agent 
 
 Also record the harder-won fact from Task 7 and 8's targets: neither new app serves any GET route, so `HEALTH_PROBES` is empty for both. The instruction to probe only a path the app really serves already exists; these are the examples that show it is not hypothetical.
 
-- [ ] **Step 6: Verify the checker now passes**
+- [ ] **Step 6: Wire the checker into CI and verify-static, now that it passes**
+
+In the `lint` job, after the doc-sync step:
+
+```yaml
+      - name: Check the skill's examples against the READMEs
+        run: (cd tools/qs-tester && uv run python docsync/check_skill_docs.py)
+```
+
+In `scripts/verify-static.sh`, add it in the same position relative to the other checks, so the
+local order keeps matching CI's.
+
+This lands here rather than in Task 5 so that no commit ever introduces a gate that is red at
+the moment it is introduced.
+
+- [ ] **Step 7: Verify the checker passes and the wiring holds**
 
 ```bash
 cd tools/qs-tester
@@ -807,13 +815,14 @@ uv run pytest -q
 bash ../../.claude/skills/add-quickstart-e2e-test/scripts/verify-static.sh
 ```
 
-Expected: the checker exits 0 and `verify-static.sh` passes.
+Expected: the checker exits 0, and `verify-static.sh` passes with the new check listed among the
+others.
 
-- [ ] **Step 7: Confirm the checker still catches drift**
+- [ ] **Step 8: Confirm the checker still catches drift**
 
 Reintroduce `--enable-agent-infrastructure` into one reference file, run the checker, confirm non-zero, and revert. Quote the output.
 
-- [ ] **Step 8: Commit**
+- [ ] **Step 9: Commit**
 
 ```bash
 git add -A
