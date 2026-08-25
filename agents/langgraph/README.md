@@ -5,7 +5,7 @@ This quickstart demonstrates how to run a LangGraph graph as a durable Dapr Work
 ## What This Quickstart Demonstrates
 
 - **LangGraph + Dapr Workflows**: Run a compiled LangGraph StateGraph with durable execution per node
-- **Direct LLM Integration**: Calls OpenAI directly via `langchain-openai` (no Dapr conversation component needed)
+- **Direct LLM Integration**: Runs on a deterministic canned model by default, so no API key is needed; a real provider is opt-in via `langchain-openai` (no Dapr conversation component needed)
 - **Tool Integration**: Availability check tool with mock schedule data
 - **Conditional Routing**: LangGraph conditional edges for tool-calling loop
 - **REST API**: Trigger graph workflows via HTTP endpoints
@@ -16,7 +16,6 @@ This quickstart demonstrates how to run a LangGraph graph as a durable Dapr Work
 1. [Diagrid CLI](https://docs.diagrid.io/references/catalyst/catalyst-cli-intro/) installed
 2. [Python 3.11–3.13](https://www.python.org/downloads/)
 3. [uv](https://docs.astral.sh/uv/getting-started/installation/) installed
-4. An [OpenAI API key](https://platform.openai.com/api-keys)
 
 ## Setup
 
@@ -27,19 +26,24 @@ cd agents/langgraph
 uv sync
 ```
 
-### Set your API key
+<!-- The Catalyst console deep-links to this heading's anchor (#using-a-real-llm-provider).
+     Renaming this heading breaks that link silently. -->
 
-This quickstart uses OpenAI, but you can use any LLM provider supported by LangGraph.
+### Using a real LLM provider
+
+This quickstart runs offline by default. It uses a canned model, needs no API key, and returns the same tool call and the same answer on every run, whatever task you send. To use a real model instead, set `DIAGRID_QUICKSTART_MODEL` to `openai` and export your key. The example below uses OpenAI, but you can use any LLM provider supported by LangGraph.
 
 **macOS/Linux (bash/zsh):**
 
 ```bash
+export DIAGRID_QUICKSTART_MODEL="openai"
 export OPENAI_API_KEY="your-key-here"
 ```
 
 **Windows (PowerShell):**
 
 ```powershell
+$env:DIAGRID_QUICKSTART_MODEL = "openai"
 $env:OPENAI_API_KEY = "your-key-here"
 ```
 
@@ -97,7 +101,7 @@ Invoke-RestMethod -Method Post -Uri 'http://localhost:8005/agent/run' -ContentTy
 
 The agent will:
 1. Receive the scheduling request
-2. Call the LLM to determine the right tool call
+2. Call the LLM to determine the right tool call. The canned offline model always returns the same fixed tool call and the same answer, whatever task you send. See [Using a real LLM provider](#using-a-real-llm-provider) to run this step against a real model
 3. Use the `check_availability` tool to check venue availability
 4. Return available time slots for the requested date
 
@@ -140,7 +144,7 @@ Open the [Catalyst dashboard](https://catalyst.diagrid.io/agents) in your browse
 
 ## Crash Recovery Test With Catalyst
 
-The `crash_test.py` file demonstrates durable crash recovery — a capability not offered by LangGraph natively. It defines a 3-node graph where node 2 crashes with `os._exit(1)`:
+The `crash_test.py` file demonstrates durable crash recovery, a capability not offered by LangGraph natively. It defines a 3-node graph where node 2 crashes with `os._exit(1)`. The crash is armed by the `CRASH_AT_STEP_2` environment variable, which defaults to armed when unset and which `dev-crash-test.yaml` sets to `true`:
 
 1. **check_venues** — checks venue availability (completes successfully)
 2. **compare_options** — compares options (crashes before completing)
@@ -182,21 +186,15 @@ Go to the terminal where you started `uv run diagrid dev run`. You'll see step 1
 ❌ App process "schedule-planner" exited with error code: exit status 1
 ```
 
-### 2. Fix and resume
+### 2. Resume
 
-Open `crash_test.py` and comment out the crash line (line 30):
-
-```python
-# os._exit(1)  # 💥 Simulates a crash — comment out this line before the second run
-```
-
-Restart the application:
+Restart the application with the resume run file, which sets `CRASH_AT_STEP_2` to `false`. Pass `--approve`: this is a different run file, so it is deployed to your project.
 
 ```bash
-uv run diagrid dev run -f dev-crash-test.yaml
+uv run diagrid dev run -f dev-crash-test-resume.yaml --approve
 ```
 
-The workflow **resumes from step 2** — step 1 is not re-executed. The Dapr workflow engine replays the saved result from Catalyst instead of re-running the node.
+The workflow **resumes from step 2**: step 1 is not re-executed. The Dapr workflow engine replays the saved result from Catalyst instead of re-running the node.
 
 ## Part of the Event Planning Team
 
