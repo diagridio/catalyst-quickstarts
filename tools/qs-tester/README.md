@@ -323,13 +323,29 @@ config, not a typo.
 
 ## Limitations
 
-- **The four canonical suites' situation is unchanged.** Each has been verified
-  only with `robot --dryrun` (syntax, keywords, variables resolve) and the
-  doc-sync checker (the READMEs and the harness agree on what commands exist). No
-  suite has executed `diagrid dev run` against live Catalyst, so no assertion
-  below has actually been seen to pass — or to fail correctly — against the real
-  thing. Confirming that is on whoever runs this harness with real credentials
-  first.
+- **Only the invocation suite has been run against a real Catalyst project**, and
+  only its `python` and `csharp` legs (2026-08-24). python failed first — the client
+  returned 500 because Catalyst could not yet route to the server app — which is
+  what `Wait Until Not Server Error` was added for; it then passed, and a repeat run
+  logged the gate absorbing two real 500s over 6.5s before the documented 200. The
+  race is not python-specific: a hand-run csharp session answered 500 on the first
+  POST after both readiness signals were satisfied too. Both legs pass with the
+  gate. The teardown fix was verified the same way: the `server` app ID's app
+  endpoint is cleared after the suite, where it used to keep a dead
+  `trust.diagrid.io` tunnel.
+  The other three suites have been verified only with `robot --dryrun` (syntax,
+  keywords, variables resolve) and the doc-sync checker (the READMEs and the harness
+  agree on what commands exist), so their assertions have not been seen to pass —
+  or to fail correctly — against the real thing.
+- java and javascript were checked by reading their clients, not by running them:
+  both return 500 for a failed invocation (`ResponseEntity.status(500)`,
+  `res.status(500)`), which is the signal the gate polls, so the gate is sound for
+  all four. The way to confirm a client's failure mapping without waiting for the
+  race is to disconnect the target app mid-session
+  (`diagrid dev stop --app-id server`) and POST to the client: that is how csharp's
+  mapping was verified. Note that `dev stop` also kills the local `diagrid dev run`
+  process, which is harmless in teardown (the process tree is already stopped by
+  then) but will end a session you are still using.
 - **The new `agents/langgraph` suite has never run against real Catalyst
   either.** No model provider key was available while it was written:
   `DIAGRID_API_KEY` is set in the dev environment, but `OPENAI_API_KEY`,
