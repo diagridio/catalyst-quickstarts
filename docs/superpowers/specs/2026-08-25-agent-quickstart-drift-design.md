@@ -166,7 +166,8 @@ mechanical.
 | `tools/qs-tester/variables/agents_spring_ai_event_planner.py` | New. `runtime: java`, port 8080, `POST /run`, the reduced flag set, and a documented `project delete`. |
 | `agents/microsoft-dotnet/tests/quickstart.robot` | New suite. |
 | `agents/spring-ai/event-planner/tests/quickstart.robot` | New suite, and the first at three levels deep. |
-| `tools/qs-tester/variables/suites.py` | Three agent rows with compound path-derived names, all `nightly: False`. |
+| `tools/qs-tester/variables/suites.py` | Three agent rows with compound path-derived names, all `nightly: False`. Plus a `validate()` rule rejecting a name whose ephemeral project name would exceed 55 characters, with the budget computed from the name format, and support for an explicit `leg` override. |
+| `tools/qs-tester/tests/test_suites.py` | Tests for the length rule: a name at the budget passes, one over it fails naming the limit and the overflow, and an explicit `leg` shorter than a too-long derived name passes. |
 | `docsync/check_skill_docs.py` + `docsync/tests/test_skill_docs.py` | New checker and its tests, per the section above. |
 | `.claude/skills/add-quickstart-e2e-test/SKILL.md` | The guiding-principle example, which still shows `--enable-agent-infrastructure` and `langgraph-agent`; plus the phase-2 sentence about reading flags from the README under test. |
 | `references/agent-quickstart.md` | The same flag and name in every worked example; the `agent-pubsub` references; add the spring-ai flag variant and the three-level path shape; move the no-provisioning example to `agents/dapr-agents/orchestrator` and the multi-app example off the legacy `multi-agent-workflow`. |
@@ -255,11 +256,44 @@ Settled with the project owner:
 4. **Machine-check the skill's examples** rather than relying on an instruction to re-read them,
    per the section above.
 
-One sub-question stays open and becomes a pre-flight check rather than an assumption:
-`qs-ci-agents-spring-ai-event-planner-<run-id>` is roughly 48 characters, and Catalyst's
-project-name length limit is unknown. Verify it before the spring-ai suite is written. If the
-limit is tighter, drop the `agents-` infix from the leg id, which is the smallest change that
-preserves uniqueness.
+5. **The ephemeral project name stays under 55 characters**, and `validate()` enforces it.
+
+### The 55-character budget
+
+`ci/project-name.sh` builds `qs-ci-<leg>-<run-id>`, and the agent legs use
+`agents-<name>`, so the full name is `qs-ci-agents-<name>-<run-id>`.
+
+The binding case is a local run, not CI: `GITHUB_RUN_ID` is about 11 digits, but the local
+fallback is `local` plus a 10-digit epoch, which is 15 characters. So the fixed overhead is
+`qs-ci-` (6) plus `agents-` (7) plus a separator (1) plus 15, giving 29, and leaving **26
+characters for `name`**.
+
+Every name this convention produces today fits, though not by much:
+
+| `name` | len | full project name | len |
+|---|---|---|---|
+| langgraph | 9 | qs-ci-agents-langgraph-local… | 38 |
+| microsoft-dotnet | 16 | qs-ci-agents-microsoft-dotnet-local… | 45 |
+| spring-ai-event-planner | 23 | … | 52 |
+| spring-ai-crash-recovery | 24 | … | 53 |
+| dapr-agents-orchestrator | 24 | … | 53 |
+| dapr-agents-durable-agent | 25 | … | 54 |
+
+One character of headroom on the longest is too little to leave to chance, so this becomes a
+manifest rule rather than a convention people remember:
+
+- `suites.validate()` rejects any agent row whose derived name exceeds the budget, and computes
+  the budget from the actual name format rather than hard-coding 26, so the check stays true if
+  the prefix or the leg format ever changes. The failure then arrives in the lint job on a PR,
+  which is seconds, instead of at `diagrid project create` inside a nightly leg, which is hours
+  and leaks a half-made project.
+- When a future path would exceed the budget, the row may carry an explicit shorter `leg`
+  that overrides the derived name, and `validate()` checks whichever is used. Dropping the
+  `agents-` infix is the other option and buys 7 characters, but it costs the at-a-glance
+  distinction between an agent leg and a canonical one in the Catalyst console.
+
+Catalyst's real limit is still unverified; 55 is the ceiling the project owner set, and it is
+enforced regardless of what the service would actually accept.
 
 ### Why these three suites
 
@@ -307,8 +341,9 @@ Three checks specific to this work, because each closes a gap that let something
    `--enable-agent-infrastructure` into a reference file and require a non-zero exit. A checker
    nobody has seen fail is worth as little as an assertion nobody has seen fail.
 
-Then verify the Catalyst project-name length limit before writing the spring-ai suite, per the
-open sub-question in Decisions.
+And confirm the length rule can fail: add a manifest row whose derived name is one character
+over the budget and require `--validate` to exit non-zero naming the limit. The rule exists to
+turn a nightly-time failure into a PR-time one, so a rule that cannot fail buys nothing.
 
 ## Out of scope
 
