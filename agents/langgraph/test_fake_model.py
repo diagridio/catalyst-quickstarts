@@ -18,7 +18,7 @@ import pytest
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 from langchain_core.runnables import Runnable
 
-from fake_model import CannedToolCallingModel
+from fake_model import CannedToolCallingChatModel
 
 # The two canned turns below mirror what build_model() constructs in main.py.
 # They are duplicated here deliberately: main.py is not import-safe (see the
@@ -51,16 +51,16 @@ TOOL_RESULT = (
 TIME_SLOTS = ["9AM-1PM", "2PM-6PM", "6PM-11PM"]
 
 
-def build_canned_model() -> CannedToolCallingModel:
+def build_canned_model() -> CannedToolCallingChatModel:
     """A fresh model, wired the way main.py's build_model() wires it."""
-    return CannedToolCallingModel(
+    return CannedToolCallingChatModel(
         first_turn=FIRST_TURN.model_copy(deep=True),
         final_turn=FINAL_TURN.model_copy(deep=True),
     )
 
 
 @pytest.fixture
-def model() -> CannedToolCallingModel:
+def model() -> CannedToolCallingChatModel:
     """A new instance per test, since this fixture is function scoped."""
     return build_canned_model()
 
@@ -161,3 +161,13 @@ def test_bind_tools_returns_a_runnable(model):
 
     assert isinstance(bound, Runnable)
     assert bound is model, "binding tools must not swap the canned model out"
+
+
+def test_console_can_read_the_model_name(model):
+    # The Catalyst agent registry finds the model by scanning the graph node's
+    # globals for a type whose name contains "chat" and which exposes
+    # model_name or model. Both halves are load-bearing: drop either and the
+    # console reports this agent's model as "unknown" on the page the README
+    # sends the reader to.
+    assert "chat" in type(model).__name__.lower(), "the class name must contain 'chat'"
+    assert model.model_name == "canned-offline"

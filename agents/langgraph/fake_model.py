@@ -15,17 +15,24 @@ from langchain_core.outputs import ChatGeneration, ChatResult
 from langchain_core.runnables import Runnable
 
 
-class CannedToolCallingModel(BaseChatModel):
+class CannedToolCallingChatModel(BaseChatModel):
     """Returns `first_turn` until a tool has run, then `final_turn`.
 
     The decision reads the conversation rather than counting calls. That matters
     here: each graph node is a Dapr workflow activity, so after a restart the
     replayed history is the only reliable state. A call counter resets with the
     process and would ask for the tool a second time.
+
+    Both the class name and `model_name` are load-bearing for the Catalyst
+    console. The agent registry finds the model by scanning the node's globals
+    for a type whose name contains "chat" and which exposes `model_name` or
+    `model`, so without either the console reports this agent's model as
+    "unknown".
     """
 
     first_turn: AIMessage
     final_turn: AIMessage
+    model_name: str = "canned-offline"
 
     @property
     def _llm_type(self) -> str:

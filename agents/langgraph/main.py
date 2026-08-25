@@ -7,7 +7,7 @@ from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 from langchain_core.tools import tool
 from langgraph.graph import StateGraph, START, MessagesState
 from diagrid.agent.langgraph import DaprWorkflowGraphRunner
-from fake_model import CannedToolCallingModel
+from fake_model import CannedToolCallingChatModel
 
 
 @tool
@@ -32,7 +32,7 @@ def build_model():
         "Using the canned offline model: no API key needed and the answer is "
         "always the same. Set DIAGRID_QUICKSTART_MODEL=openai for a real provider."
     )
-    return CannedToolCallingModel(
+    return CannedToolCallingChatModel(
         first_turn=AIMessage(
             content="",
             tool_calls=[
