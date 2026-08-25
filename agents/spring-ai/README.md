@@ -1,7 +1,7 @@
 # Spring AI Quickstarts
 
 Build **durable [Spring AI](https://docs.spring.io/spring-ai/reference/) agents** on Diagrid Catalyst
-using the `io.diagrid.dapr:dapr-spring-ai-starter` package.
+using the `io.diagrid:diagrid-spring-ai-starter` package.
 
 The key idea: an ordinary Spring AI app — a `ChatClient` plus `@Tool` beans — becomes **durable across
 restarts purely by adding the starter to the classpath**. There is no durability code in your app. With
@@ -17,7 +17,7 @@ starting over. On Catalyst the workflow state store is managed for you — no co
 | [crash-recovery](crash-recovery/) | The idempotency story: schedules under a **caller-owned instance id**. Kill the app mid-booking, restart, and re-issue the same id — the call **attaches** to the resumed run and returns the same confirmation code instead of booking twice. |
 | [durable-memory](durable-memory/) | Where the durability boundary sits: durable chat with a `MessageChatMemoryAdvisor`. Spring AI runs advisors **synchronously**, so the memory advisor's response phase (saving the answer) runs only **after a successful call** — a crash keeps the workflow but not the answer, until you re-attach. |
 
-Start with **event-planner** for the "add one dependency, get durability" experience, then
+Start with **event-planner** for the "add the starter, get durability" experience, then
 **crash-recovery** to make a side-effecting tool safe to retry, then **durable-memory** to see where
 the durability boundary sits — the workflow, not Spring AI's caller-side advisor chain.
 
@@ -31,8 +31,12 @@ Each quickstart has its own README with the full run steps.
 
 ## How durability works
 
-- `dapr-spring-ai-starter` auto-configures a `DurableAdvisor` (attached to every `ChatClient` built
+- `diagrid-spring-ai-starter` auto-configures a `DurableAdvisor` (attached to every `ChatClient` built
   from the injected `ChatClient.Builder`) and an in-process Dapr Workflow worker.
+- Declaring the client as a `ChatClient` **bean** upgrades that: the starter attaches a *per-agent*
+  advisor and names the workflow after the bean (`spring-ai.<beanName>.workflow`) instead of the shared
+  `spring-ai.workflow`. **event-planner** and **crash-recovery** do this; **durable-memory** builds its
+  client from the injected builder and takes the generic path.
 - Each `ChatClient.call()` becomes a Dapr Workflow; the model turn and each `@Tool` call run as
   separate checkpointed activities.
 - `@Tool` **beans** (not per-call `.defaultTools(...)`) are rediscovered on the restarted worker, so a
@@ -44,5 +48,18 @@ Each quickstart has its own README with the full run steps.
   chain. `DurableAdvisor` is terminal; an advisor's response phase (chat memory, logging, post-processing)
   runs synchronously *after a successful call* — so it is skipped on a crash/timeout. The
   **durable-memory** quickstart shows this and how re-attaching completes the chain.
+
+## Agent registration
+
+Durability and registration are separate packages. The starter makes an agent durable; a second
+dependency, `io.diagrid:diagrid-spring-ai-agent-registry`, is what records it as a Catalyst agent.
+
+The registry records one agent per `ChatClient` **bean**, named after the bean, filed under
+`diagrid.spring-ai.registry.app-id`. That app id must match the app's Dapr app id, or Catalyst drops
+the record with no error logged. A client built from the injected `ChatClient.Builder` is not a bean
+and so is never registered.
+
+**event-planner** wires this up; **crash-recovery** and **durable-memory** do not yet, so they run
+durably but register nothing.
 
 The library lives at [diagridio/java-ai](https://github.com/diagridio/java-ai).

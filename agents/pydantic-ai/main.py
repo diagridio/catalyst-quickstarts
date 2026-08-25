@@ -33,13 +33,13 @@ agent = Agent(
 runner = DaprWorkflowAgentRunner(
     name="decoration-planner",
     agent=agent,
-    state_store=DaprStateStore(store_name="agent-memory"),
+    state_store=DaprStateStore(store_name="kvstore"),
 )
 
 # PubSub: subscribe for incoming tasks, publish results
 runner.serve(
     port=int(os.environ.get("APP_PORT", "8008")),
-    pubsub_name="agent-pubsub",
+    pubsub_name="pubsub",
     subscribe_topic="decorations.requests",
     publish_topic="decorations.results",
 )

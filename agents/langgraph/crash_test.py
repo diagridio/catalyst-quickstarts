@@ -53,7 +53,7 @@ graph.add_edge("confirm_booking", END)
 # ── Durable workflow runner ──────────────────────────────────
 runner = DaprWorkflowGraphRunner(
     graph=graph.compile(),
-    name="crash-recovery-demo",
+    name="schedule-planner",
 )
 
 

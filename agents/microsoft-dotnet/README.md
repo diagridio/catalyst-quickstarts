@@ -51,13 +51,13 @@ diagrid login
 2. Create a new Catalyst project for the quickstart and use it as the default project for the current session:
 
 ```bash
-diagrid project create dotnet-quickstart --enable-agent-infrastructure --wait --use
+diagrid project create dotnet-quickstart --enable-managed-workflow --deploy-managed-kv --deploy-managed-pubsub --wait --use
 ```
 
 3. Create an agent for the project:
 
 ```bash
-diagrid agent create dotnet-agent --wait
+diagrid agent create event-planner --wait
 ```
 
 4. Run the agent with Catalyst:
@@ -131,7 +131,7 @@ You do **not** need to send a request again — the existing workflow resumes au
 
 ### 4. Inspecting the Results in Catalyst
 
-Open the [Catalyst dashboard](https://catalyst.diagrid.io/agents) in your browser and navigate to Agents > EventPlannerAgent. Then select the most recent agent workflow run to view output.
+Open the [Catalyst dashboard](https://catalyst.diagrid.io/agents) in your browser and navigate to Agents > event-planner. Then select the most recent agent workflow run to view output.
 
 ## Clean Up
 

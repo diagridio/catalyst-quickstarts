@@ -27,7 +27,7 @@ def calculate_budget(items: str) -> str:
 
 # State: persist conversation history across invocations
 session_manager = DaprStateSessionManager(
-    store_name="agent-memory"
+    store_name="kvstore"
 )
 
 agent = Agent(
@@ -40,13 +40,13 @@ agent = Agent(
 runner = DaprWorkflowAgentRunner(
     name="budget-planner",
     agent=agent,
-    state_store=DaprStateStore(store_name="agent-memory"),
+    state_store=DaprStateStore(store_name="kvstore"),
 )
 
 # PubSub: subscribe for incoming tasks, publish results
 runner.serve(
     port=int(os.environ.get("APP_PORT", "8004")),
-    pubsub_name="agent-pubsub",
+    pubsub_name="pubsub",
     subscribe_topic="budget.requests",
     publish_topic="budget.results",
 )

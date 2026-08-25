@@ -1,8 +1,8 @@
 # Spring AI Quickstart - Durable Memory
 
 This quickstart shows **what durability does and does not cover** when you combine the
-`dapr-spring-ai-starter` with Spring AI's memory. It is a durable chat agent whose conversation is
-persisted with a `MessageChatMemoryAdvisor` backed by the `dapr-spring-ai-memory` Dapr state store.
+`diagrid-spring-ai-starter` with Spring AI's memory. It is a durable chat agent whose conversation is
+persisted with a `MessageChatMemoryAdvisor` backed by the `diagrid-spring-ai-memory` Dapr state store.
 
 The key lesson: **Spring AI runs advisors synchronously, and an advisor's response phase runs only
 after a successful call.** The durable Dapr Workflow (the model call and each `@Tool` call) survives a
@@ -36,7 +36,7 @@ export OPENAI_API_KEY="your-key-here"   # PowerShell: $env:OPENAI_API_KEY = "you
 
 ```bash
 diagrid login
-diagrid project create spring-ai-durable-memory --enable-agent-infrastructure --wait --use
+diagrid project create spring-ai-durable-memory --enable-managed-workflow --deploy-managed-kv --wait --use
 diagrid agent create spring-ai-durable-memory --wait
 diagrid dev run -f dev-spring-ai-durable-memory.yaml --approve
 ```
@@ -113,7 +113,7 @@ written in the `after` phase, is recorded once — on success.
 
 ## How It Works
 
-- `DurableAdvisor` (from `dapr-spring-ai-starter`) is a **terminal** advisor: it runs the model + tool
+- `DurableAdvisor` (from `diagrid-spring-ai-starter`) is a **terminal** advisor: it runs the model + tool
   loop as a Dapr Workflow and returns, short-circuiting the chain. That workflow is what's durable.
 - `MessageChatMemoryAdvisor` sits **before** it in the chain. Its `before` phase (retrieve history, add
   the user message) runs on the caller thread going in; its `after` phase (add the assistant reply)
@@ -121,8 +121,8 @@ written in the `after` phase, is recorded once — on success.
 - On a crash or a `DurableCallTimeoutException`, the `after` phase never runs. The workflow is durable;
   the caller-side advisor response phase is not. Re-attaching with the same instance id
   (`DurableAdvisor.INSTANCE_ID_KEY`) is what lets the full chain complete.
-- Chat memory is backed by the Catalyst-managed `agent-memory` store via `dapr-spring-ai-memory`
-  (`dapr.spring-ai.memory.statestore=agent-memory`).
+- Chat memory is backed by the Catalyst-managed `kvstore` store via `diagrid-spring-ai-memory`
+  (`diagrid.spring-ai.memory.statestore=kvstore`).
 
 > **Design takeaway.** Put anything that must survive a crash *inside* the workflow — as a `@Tool`
 > activity, whose result is checkpointed. Advisor response-phase side effects (memory, logging,

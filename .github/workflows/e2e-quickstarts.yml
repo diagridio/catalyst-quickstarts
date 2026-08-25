@@ -22,6 +22,7 @@ on:
       - 'tools/qs-tester/**'
       - '*/tests/quickstart.robot'
       - '*/*/tests/quickstart.robot'
+      - '*/*/*/tests/quickstart.robot'
       - '*/*/README.md'
       - '.github/workflows/e2e-quickstarts.yml'
 
@@ -38,7 +39,7 @@ permissions:
 env:
   # The install.sh installer reads this as an env var (RELEASE_VERSION), not a
   # positional argument, and its GCS layout requires the leading "v".
-  DIAGRID_CLI_VERSION: 'v1.36.0'
+  DIAGRID_CLI_VERSION: 'v1.67.0'
 
 jobs:
   lint:
@@ -60,11 +61,11 @@ jobs:
         run: (cd tools/qs-tester && uv run python docsync/check_readme_sync.py --all)
       - name: Unit-test the harness
         run: (cd tools/qs-tester && uv run pytest -q)
-      - name: Smoke-test the harness keywords
-        run: |
-          cd tools/qs-tester
-          uv run robot --outputdir results/smoke \
-            resources/tests/smoke.robot resources/tests/keywords.robot
+      # The whole directory, not smoke.robot alone: these are the harness's own
+      # credential-free tests (process teardown, the readiness gate) and a new
+      # file here must not need a workflow edit to start running.
+      - name: Test the harness keywords
+        run: (cd tools/qs-tester && uv run robot --outputdir results/harness resources/tests)
 
   reap:
     if: github.event_name == 'schedule' && github.repository_owner == 'diagridio'

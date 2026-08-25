@@ -457,3 +457,9 @@ archive/*
 */target/*
 /.idea/
 /durable-agent/python/travel-assistant-agent_state.json
+
+# Local demo config — may hold real API keys, never commit
+.demo/
+
+# Per-quickstart editor settings (the root .vscode/ stays tracked)
+agents/**/.vscode/

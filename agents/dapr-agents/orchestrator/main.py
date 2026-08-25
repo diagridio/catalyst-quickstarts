@@ -17,7 +17,7 @@ def main() -> None:
     logging.basicConfig(level=logging.INFO)
 
     orchestrator = DurableAgent(
-        name="EventCoordinator",
+        name="event-coordinator",
         role="Event Planning Coordinator",
         goal="Coordinate the event planning team to deliver a complete event plan by delegating to all available specialist agents",
         instructions=[
@@ -28,12 +28,12 @@ def main() -> None:
         ],
         llm=DaprChatClient(component_name="llm-provider"),
         pubsub=AgentPubSubConfig(
-            pubsub_name="agent-pubsub",
+            pubsub_name="pubsub",
             agent_topic="events.orchestrator.requests",
             broadcast_topic="agents.broadcast",
         ),
         state=AgentStateConfig(
-            store=StateStoreService(store_name="agent-workflow", key_prefix="orchestrator:"),
+            store=StateStoreService(store_name="kvstore", key_prefix="event-coordinator:"),
         ),
         registry=AgentRegistryConfig(
             store=StateStoreService(store_name="agent-registry"),

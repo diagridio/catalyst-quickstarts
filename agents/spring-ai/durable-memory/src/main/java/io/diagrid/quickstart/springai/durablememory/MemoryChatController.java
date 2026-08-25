@@ -1,7 +1,7 @@
 package io.diagrid.quickstart.springai.durablememory;
 
-import io.diagrid.dapr.springai.durable.boot.DurableAdvisor;
-import io.diagrid.dapr.springai.durable.client.DurableCallTimeoutException;
+import io.diagrid.springai.durable.boot.DurableAdvisor;
+import io.diagrid.springai.durable.client.DurableCallTimeoutException;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

@@ -56,13 +56,13 @@ diagrid login
 2. Create a new Catalyst project for the quickstart and use it as the default project for the current session:
 
 ```bash
-diagrid project create langgraph-quickstart --enable-agent-infrastructure --wait --use
+diagrid project create langgraph-quickstart --enable-managed-workflow --deploy-managed-kv --deploy-managed-pubsub --wait --use
 ```
 
 3. Create an agent for the project:
 
 ```bash
-diagrid agent create langgraph-agent --wait
+diagrid agent create schedule-planner --wait
 ```
 
 4. Run the graph with Catalyst:
@@ -142,11 +142,11 @@ Invoke-RestMethod -Method Post -Uri 'http://localhost:8001/run' -ContentType 'ap
 Go to the terminal where you started `uv run diagrid dev run`. You'll see step 1 complete and the process crash at step 2.
 
 ```text
-== APP - langgraph-crash-test == >>> STEP 1: Checking venue availability for 'company gala on March 15'...
-== APP - langgraph-crash-test == >>> STEP 1 COMPLETE: Grand Ballroom available on March 15 (2PM-6PM, 6PM-11PM)
+== APP - schedule-planner == >>> STEP 1: Checking venue availability for 'company gala on March 15'...
+== APP - schedule-planner == >>> STEP 1 COMPLETE: Grand Ballroom available on March 15 (2PM-6PM, 6PM-11PM)
 ...
-== APP - langgraph-crash-test == >>> STEP 2: Comparing venue options...
-❌ App process "langgraph-crash-test" exited with error code: exit status 1
+== APP - schedule-planner == >>> STEP 2: Comparing venue options...
+❌ App process "schedule-planner" exited with error code: exit status 1
 ```
 
 ### 2. Fix and resume

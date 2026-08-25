@@ -2,7 +2,7 @@ version: 1
 common:
   appLogDestination: console
 apps:
-  - appID: dotnet-agent
+  - appID: event-planner
     appDirPath: ./
     appPort: 5050
     command: ["dotnet", "run", "--urls", "http://localhost:5050"]

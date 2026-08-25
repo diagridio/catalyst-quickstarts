@@ -14,7 +14,7 @@ This quickstart demonstrates how to run a Deep Agents agent as a durable Dapr Wo
 
 ### Role
 
-- **Agent**: `deepagents-agent`
+- **Agent**: `transportation-planner`
 - **Port**: 8009
 - **Subscribe topic**: `transportation.requests`
 - **Publish topic**: `transportation.results`
@@ -68,13 +68,13 @@ diagrid login
 2. Create a new Catalyst project for the quickstart and use it as the default project for the current session:
 
 ```bash
-diagrid project create deepagents-quickstart --enable-agent-infrastructure --wait --use
+diagrid project create deepagents-quickstart --enable-managed-workflow --deploy-managed-kv --deploy-managed-pubsub --wait --use
 ```
 
 3. Create an agent for the project:
 
 ```bash
-diagrid agent create deepagents-agent --wait
+diagrid agent create transportation-planner --wait
 ```
 
 4. Run the agent with Catalyst:
@@ -92,7 +92,7 @@ Choose one of the following to trigger the endpoint:
 **macOS/Linux (curl):**
 
 ```bash
-curl -X POST http://localhost:8888/agent/run \
+curl -X POST http://localhost:8009/agent/run \
   -H "Content-Type: application/json" \
   -d '{"task": "Find transportation for a corporate gala with 200 guests"}'
 ```
@@ -100,7 +100,7 @@ curl -X POST http://localhost:8888/agent/run \
 **Windows (PowerShell):**
 
 ```powershell
-Invoke-RestMethod -Method Post -Uri 'http://localhost:8888/agent/run' -ContentType 'application/json' -Body '{"task": "Find transportation for a corporate gala with 200 guests"}'
+Invoke-RestMethod -Method Post -Uri 'http://localhost:8009/agent/run' -ContentType 'application/json' -Body '{"task": "Find transportation for a corporate gala with 200 guests"}'
 ```
 
 **VS Code REST Client (any OS):** Open [`test.http`](./test.http) and click *Send Request* above the request. Requires the [REST Client](https://marketplace.visualstudio.com/items?itemName=humao.rest-client) extension.
@@ -172,9 +172,9 @@ The `subagent_workflows.py` file demonstrates a supervisor/sub-agent pattern whe
 ### Create the sub-agents
 
 ```bash
-diagrid agent create deepagents-researcher --wait
-diagrid agent create deepagents-analyst --wait
-diagrid agent create deepagents-supervisor --wait
+diagrid agent create researcher --wait
+diagrid agent create analyst --wait
+diagrid agent create supervisor --wait
 ```
 
 ### Run
@@ -184,8 +184,8 @@ uv run diagrid dev run -f dev-subagent-workflows.yaml --approve
 ```
 
 This starts three processes:
-- `deepagents-researcher` on port 8001
-- `deepagents-analyst` on port 8002
-- `deepagents-supervisor` which delegates to the other two
+- `researcher` on port 8001
+- `analyst` on port 8002
+- `supervisor` which delegates to the other two
 
 The supervisor automatically runs the research and analysis pipeline on startup and prints the final synthesized response.
