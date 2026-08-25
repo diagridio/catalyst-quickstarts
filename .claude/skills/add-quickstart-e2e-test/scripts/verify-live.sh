@@ -107,6 +107,14 @@ trap 'exit 143' TERM
 bash "$HARNESS/ci/login.sh" || exit 1
 cd "$HARNESS" || exit 1
 
+# Clear any results left by a previous iteration before each run, not just
+# before the mutation check. A run that dies before robot writes a fresh
+# output.xml (a uv sync failure, an interrupted process) must leave nothing
+# for a human to misread from log.html/report.html, and must not let a later
+# `if ! uv run robot ...` success accidentally reuse a directory that still
+# has other stale artifacts sitting next to the new output.xml.
+rm -rf "results/$LEG"
+
 echo "== live run: $SUITE (project $PROJECT)"
 if ! uv run robot --variable "PROJECT:$PROJECT" --outputdir "results/$LEG" "../../$SUITE"; then
   echo "::error::live run FAILED. Read results/$LEG/log.html and the captured dev-run log."
@@ -115,6 +123,16 @@ fi
 
 echo "== mutation check: overriding $MUTATION, expecting $EXPECT_KEYWORD to FAIL"
 echo "   (fresh project $PROJECT_MUTATED, because the suite provisions its own)"
+# Same clearing here, and it matters more: unlike the live leg above, this
+# leg's verdict comes from ci/check_mutation.py reading results/$LEG-mutated/
+# output.xml, not from robot's own exit code. If the mutated run below dies
+# before writing a new output.xml (a bad --variablefile, a fatal data error,
+# an interrupted run) and a previous accepted run's output.xml were still
+# sitting here, the checker would read THAT stale file and could certify
+# VERIFIED on evidence from a run that did not just happen. Removing the
+# directory first means the checker can only ever see output from this run,
+# or (correctly) none at all.
+rm -rf "results/$LEG-mutated"
 mkdir -p "results/$LEG-mutated"
 printf '%s\n' "$MUTATION" > "results/$LEG-mutated/mutate.py"
 # The short timeouts keep a run we expect to fail from waiting out the full
