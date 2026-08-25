@@ -126,6 +126,12 @@ git commit -m "Merge origin/main into the agent-family harness work"
 
 ## Task 2: Give agent data modules the `connected_apps` key main now requires
 
+> **Land Tasks 2 and 3 as one commit.** The merge leaves `pytest` red: a doc-sync test asserts the
+> checker exits 0, and langgraph's module is stale against main's rewritten README. Both tasks touch
+> only `variables/agents_langgraph.py`, neither depends on the other, and splitting them leaves the
+> suite red across two commits for no gain. Do Task 2's steps, then Task 3's, verify once, and
+> commit once with the message from Task 3's final step. Skip Task 2's Step 5 commit block.
+
 **Files:**
 - Modify: `tools/qs-tester/variables/agents_langgraph.py`
 - Modify: `agents/langgraph/tests/quickstart.robot`
@@ -225,6 +231,10 @@ git commit -m "Record the connected app IDs for agent suites too"
 ---
 
 ## Task 3: Realign the langgraph module with its current README
+
+> **Executed together with Task 2, in one commit.** See the note at the top of Task 2. Use this
+> task's final commit message for the combined change:
+> `Record connected app IDs and realign the langgraph module`.
 
 **Files:**
 - Modify: `tools/qs-tester/variables/agents_langgraph.py`
