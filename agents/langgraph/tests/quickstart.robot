@@ -54,6 +54,7 @@ Python Langgraph Quickstart
     Run Documented Commands     ${qs}[setup]    ${PROJECT}    cwd=${qs}[dir]
     Start Quickstart            ${qs}    ${PROJECT}    ${log}
 
+    Wait Until Apps Connected   ${qs}    ${log}
     # @{READY_MARKERS} and @{REQUESTS} come from the `Variables` import, NOT from
     # ${qs}, and that is deliberate: a --variablefile override replaces a variable
     # file's value but cannot touch what a Python keyword returned. Reading these

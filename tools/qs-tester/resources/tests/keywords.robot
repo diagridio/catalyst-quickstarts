@@ -121,6 +121,19 @@ Wait Until Ready Marker Fails When The Marker Never Arrives
     ...    Wait Until Ready Marker    ${TEMPDIR}/never.log    Uvicorn running on
     Should Be Equal    ${status}    ${False}
 
+Start Quickstart Records The Connected App IDs For Teardown
+    # Regression test for a merge hazard: Start Quickstart reads
+    # ${qs}[connected_apps] to remember which app connections Stop Quickstart must
+    # release. An agent data module that omits the key fails here at launch, and a
+    # --dryrun cannot catch it because the failure is a runtime dict access.
+    ${qs}=    Create Dictionary
+    ...    run=bash -c 'echo started; sleep 5'
+    ...    dir=${TEMPDIR}
+    ...    connected_apps=${{ [['probe-app', 8099]] }}
+    Start Quickstart    ${qs}    qs-ci-demo-1    ${TEMPDIR}/connected.log
+    Should Be Equal    ${CONNECTED_APP_IDS}[0]    probe-app
+    [Teardown]    Run Keyword And Ignore Error    Stop Process Tree    apps
+
 *** Keywords ***
 Start Echo Server
     Start Background Process    python ${CURDIR}/echo_server.py ${ECHO_PORT}

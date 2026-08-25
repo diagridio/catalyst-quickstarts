@@ -27,10 +27,12 @@ DOCUMENTED_PROJECT = "langgraph-quickstart"
 
 QUICKSTART_DIR = str(REPO_ROOT / "agents" / "langgraph")
 
-# README "## Run with Catalyst", steps 2 and 3.
+# README "## Run with Catalyst", steps 2 and 3. `--enable-agent-infrastructure`
+# was replaced by the three managed-service flags; the agent is now named for its
+# role in the shared event-planning scenario rather than for its framework.
 SETUP = (
-    "diagrid project create {project} --enable-agent-infrastructure --wait --use",
-    "diagrid agent create langgraph-agent --wait",
+    "diagrid project create {project} --enable-managed-workflow --deploy-managed-kv --deploy-managed-pubsub --wait --use",
+    "diagrid agent create schedule-planner --wait",
 )
 
 # README "## Setup". The documented `cd agents/langgraph` is expressed as the
@@ -82,6 +84,23 @@ READY_MARKERS = ("Uvicorn running on",)
 # serve different probe paths states them per app here rather than needing a new
 # keyword.
 HEALTH_PROBES = ((8005, "/dapr/subscribe"),)
+
+# (appID, port) pairs that `diagrid dev run` reports as
+# `Connected App ID "<id>" to http://localhost:<port>`. Read from
+# dev-python-langgraph.yaml, whose single app has appID schedule-planner on
+# appPort 8005.
+#
+# Required, not optional: `Start Quickstart` records these so `Stop Quickstart`
+# can release each local app connection, and a run that skips that leaves a
+# trust.diagrid.io endpoint pointing at a dead tunnel, which makes the next run's
+# 500s ambiguous.
+#
+# INFERRED, NOT OBSERVED: the harness README's rule is that the CLI prints the
+# connection line for an app with a non-zero appPort, and this app's is 8005. No
+# live run has confirmed the line appears for an agent app. If it does not,
+# `Wait Until Apps Connected` waits out READINESS_TIMEOUT and the fix is to drop
+# the gate rather than to widen the timeout.
+CONNECTED_APPS = (("schedule-planner", 8005),)
 
 SECRETS = ("OPENAI_API_KEY",)
 
@@ -138,12 +157,16 @@ def get_quickstart():
 
     This is NOT the same dict `quickstarts.get_quickstart(api, language)`
     returns. The two share exactly the five keys the *shared* keywords read —
-    `language`, `dir`, `install`, `run`, `health_probes` — which is what lets
-    `Build Quickstart`, `Start Quickstart` and `Wait Until Apps Healthy` work
-    against either shape unchanged. Everything else differs: this one adds
-    `family`, `name`, `setup`, `teardown` and `secrets`; the canonical one adds
-    `api` and `connected_apps` (agent quickstarts emit no `Connected App ID`
-    line, so there is nothing for `Wait Until Apps Connected` to wait for).
+    `dir`, `install`, `run`, `health_probes` and `connected_apps` (grep
+    `${qs}[...]` and `$qs["..."]` across resources/catalyst.resource and
+    resources/quickstart.resource for the complete set) — which is what lets
+    `Build Quickstart`, `Start Quickstart`, `Wait Until Apps Connected` and
+    `Wait Until Apps Healthy` work against either shape unchanged. `language`
+    is NOT among them, even though both dicts happen to carry a `language` key
+    of their own (this module's `LANGUAGE` constant; the canonical dict's
+    `language` parameter): no shared keyword reads either one. Beyond the
+    shared five, this dict adds `family`, `name`, `language`, `setup`,
+    `teardown` and `secrets`; the canonical one adds `api` and `language`.
     """
     return {
         "family": FAMILY,
@@ -155,5 +178,6 @@ def get_quickstart():
         "run": RUN,
         "teardown": list(TEARDOWN),
         "health_probes": [list(probe) for probe in HEALTH_PROBES],
+        "connected_apps": [list(pair) for pair in CONNECTED_APPS],
         "secrets": list(SECRETS),
     }
