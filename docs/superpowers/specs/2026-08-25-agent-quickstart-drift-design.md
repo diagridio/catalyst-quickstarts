@@ -90,11 +90,25 @@ What breaks: the workflow's `pull_request.paths` entry `'*/*/tests/quickstart.ro
 three path segments and will not match four. A PR touching only a `spring-ai` suite would run
 no checks at all.
 
-### 5. There are now two `dapr-agents` trees
+### 5. There are now two `dapr-agents` trees, and only one is canonical
 
 Top-level `dapr-agents/` (43 files) and `agents/dapr-agents/` (22 files) both exist on `main`.
-The skill's references name the top-level one. Which is canonical is a repository question,
-not a harness question, and it is listed under Open questions below.
+The root README links only to `agents/dapr-agents/`, and both trees were last touched by the
+same commit, "Restore Dapr component files since they are used in Dapr university tracks".
+
+Confirmed with the project owner: **`agents/dapr-agents/` is canonical; the top-level tree is
+retained only for the Dapr University component files.**
+
+Two of the skill's worked examples point at the legacy tree, and one of them at a quickstart
+that exists nowhere else:
+
+- `dapr-agents/durable-agent`, cited as the "documents no project create" example, becomes
+  `agents/dapr-agents/durable-agent`. Note that this quickstart now *does* document a
+  `project create`, so the example needs a different subject: the no-provisioning case is now
+  `agents/dapr-agents/orchestrator`.
+- `dapr-agents/multi-agent-workflow`, cited as the multi-app example, has no counterpart under
+  `agents/`. Replace it with `agents/dapr-agents/orchestrator`, which runs nine apps on ports
+  8001 through 8009 and is a stronger example anyway.
 
 ### 6. The pinned CLI version moved
 
@@ -146,47 +160,169 @@ mechanical.
 
 | File | Change |
 |---|---|
+| Merge `origin/main` first | Three conflicts to resolve before anything else: `.github/workflows/e2e-quickstarts.yml`, `tools/qs-tester/README.md`, `tools/qs-tester/resources/catalyst.resource`. Keep main's CLI pin (`v1.67.0`). |
 | `tools/qs-tester/variables/agents_langgraph.py` | `SETUP` to the managed-service flags and `diagrid agent create schedule-planner --wait`. Re-check `UNCOVERED` against the current crash-test commands. |
-| `.claude/skills/add-quickstart-e2e-test/SKILL.md` | The guiding-principle example, which still shows `--enable-agent-infrastructure` and `langgraph-agent`. |
-| `references/agent-quickstart.md` | The same flag and name in every worked example; the `agent-pubsub` references; add the `spring-ai` flag variant and the three-level path shape; refresh the multi-app example against `orchestrator`'s nine apps. |
+| `tools/qs-tester/variables/agents_microsoft_dotnet.py` | New. `runtime: dotnet`, port 5050, `POST /run`, the gRPC readiness marker, and a non-empty `TEARDOWN` from its documented `project delete`. |
+| `tools/qs-tester/variables/agents_spring_ai_event_planner.py` | New. `runtime: java`, port 8080, `POST /run`, the reduced flag set, and a documented `project delete`. |
+| `agents/microsoft-dotnet/tests/quickstart.robot` | New suite. |
+| `agents/spring-ai/event-planner/tests/quickstart.robot` | New suite, and the first at three levels deep. |
+| `tools/qs-tester/variables/suites.py` | Three agent rows with compound path-derived names, all `nightly: False`. |
+| `docsync/check_skill_docs.py` + `docsync/tests/test_skill_docs.py` | New checker and its tests, per the section above. |
+| `.claude/skills/add-quickstart-e2e-test/SKILL.md` | The guiding-principle example, which still shows `--enable-agent-infrastructure` and `langgraph-agent`; plus the phase-2 sentence about reading flags from the README under test. |
+| `references/agent-quickstart.md` | The same flag and name in every worked example; the `agent-pubsub` references; add the spring-ai flag variant and the three-level path shape; move the no-provisioning example to `agents/dapr-agents/orchestrator` and the multi-app example off the legacy `multi-agent-workflow`. |
 | `references/harness-keywords.md` | Only if a signature moved; none did. Verify rather than assume. |
-| `.github/workflows/e2e-quickstarts.yml` | Add `'*/*/*/tests/quickstart.robot'` to `pull_request.paths`. Resolve the merge conflict against main's version, keeping main's CLI pin. |
-| `tools/qs-tester/README.md` | The v1.36.0 install line; resolve the merge conflict. |
-| `tools/qs-tester/resources/catalyst.resource` | Resolve the merge conflict (main changed this file too). |
-| `.claude/skills/add-quickstart-e2e-test/scripts/preflight.sh` | No change. It parses the pin from the workflow. Confirm that still holds after the merge. |
+| `.github/workflows/e2e-quickstarts.yml` | Add `'*/*/*/tests/quickstart.robot'` to `pull_request.paths`, and a step running the new skill-docs checker in `lint`. |
+| `tools/qs-tester/README.md` | The v1.36.0 install line; document the compound naming convention and the new checker. |
+| `scripts/verify-static.sh` | Add the skill-docs checker, keeping the order matching CI's `lint` job. |
+| `scripts/preflight.sh` | No change. It parses the pin from the workflow. Confirm that still holds after the merge. |
 
-## Open questions
+## Keeping the skill's own documentation true
+name-1234567890123456789012345678901234567890
+name-12345678901234567890123456789012345678901234567890
 
-1. **Which `dapr-agents` tree is canonical**, the top-level one or `agents/dapr-agents/`?
-   The references should name one and only one.
-2. **Should coverage expand beyond langgraph in this cycle?** Nine of the agent quickstarts now
-   share one shape (python, `runner.serve()`, `POST /agent/run`, a Uvicorn marker), so the
-   second and third suites would be cheap. The counter-argument is that none of them can be
-   proven without a model provider key, so they would all land `nightly: False`.
-3. **How should `spring-ai` be covered**, given it is one directory with three independent
-   quickstarts, each with its own project name and its own flags?
-4. **Should the skill gain an explicit "re-read the flags from the README you are testing"
-   step?** This drift was a flag change, and a skill that treats provisioning flags as
-   quickstart-specific data rather than as a constant would have been immune to it.
+The harness was already immune to this drift. `SETUP` is per-quickstart data transcribed from a
+README, and doc-sync compares the two in both directions, which is how the four problems in
+finding 10 surfaced. What rotted is the skill's *teaching material*: static examples in
+`SKILL.md` and `references/agent-quickstart.md` that show `--enable-agent-infrastructure` and
+`langgraph-agent` as though they were constants.
+
+Those examples have two failure modes. They become false, and an agent may copy them instead of
+reading the README it is actually testing. The second is worse, because it produces a suite that
+fails doc-sync for a reason the agent just introduced.
+
+So the same discipline the harness applies to suites now applies to the skill's own docs: a
+claim that cannot be traced to a source does not survive CI.
+
+### `docsync/check_skill_docs.py`
+
+A fourth checker beside the three that exist, run in CI's `lint` job and by
+`scripts/verify-static.sh`.
+
+**What it checks.** Every fenced block in `SKILL.md` and `references/*.md`, and within each
+block, the lines beginning `diagrid`. Each must appear verbatim in at least one quickstart
+README after the project name is masked. Nothing else in those files is inspected.
+
+**Corpus.** Every `README.md` under `agents/`, `mcp-auth/`, and the canonical
+`<api>/<language>/` directories. The legacy top-level `dapr-agents/` tree is excluded, since it
+is no longer a place a reader should be sent.
+
+**Name masking, and what is deliberately not masked.** Three spellings of the project name
+collapse to one token: `{project}`, the positional name in `project create|delete <name>`, and
+`--project <name>`. Agent names are *not* masked, so `diagrid agent create langgraph-agent
+--wait` fails once no README documents it. That is the second half of this drift, and it should
+be caught rather than normalised away.
+
+**Reuse.** `all_bash_lines()` already joins backslash continuations and normalises whitespace;
+both sides of the comparison go through it. `normalise_run_command()` already handles
+`--project`.
+
+**Escape hatch.** `<!-- illustrative: reason -->` immediately above a block exempts it. A
+missing or empty reason is itself a failure, so the hatch cannot decay into a silent bypass.
+This mirrors `UNCOVERED`'s (command, reason) shape, which already forces the same decision for
+suites.
+
+**Failure output** names the file and line, the offending command, and the closest documented
+line, so the fix is visible without hunting.
+
+**Tests** (`docsync/tests/test_skill_docs.py`): a documented command passes; a command carrying
+`--enable-agent-infrastructure` fails against the current READMEs, as a regression test for this
+exact drift; a tagged block with a reason is skipped; a tagged block without one fails; all
+three project-name spellings match; an agent name no README documents fails.
+
+**One complementary sentence in SKILL.md's phase 2**, because a checker cannot stop an agent
+copying a stale example into a new suite: read the flags from the README you are testing, since
+these examples are verified but they are still examples.
+
+**What this does not do.** It verifies commands, not prose. The invented `nightly` consumer that
+a review caught in `canonical-api.md` would still pass, because that class of error needs a
+reader rather than a parser. It also only detects drift once the READMEs and the skill are in the
+same tree, which is the guarantee doc-sync already gives, no more.
+
+## Decisions
+
+Settled with the project owner:
+
+1. **`agents/dapr-agents/` is canonical.** Top-level `dapr-agents/` is retained only for Dapr
+   University component files, and the skill's examples move off it (see finding 5).
+2. **Three suites in this cycle**, chosen for distinct shape rather than count:
+   `agents/langgraph` (realigned), `agents/microsoft-dotnet`, `agents/spring-ai/event-planner`.
+   Rationale in the next section.
+3. **Compound path-derived manifest names**: the path below `agents/` with slashes replaced by
+   dashes. So `langgraph`, `microsoft-dotnet`, `spring-ai-event-planner`,
+   `dapr-agents-orchestrator`. The `name` keys the ephemeral project, the CI artifact and the
+   failure summary, so it must be unique forever; deriving it from the path makes collisions
+   impossible by construction and a leaked project self-describing in the Catalyst console.
+4. **Machine-check the skill's examples** rather than relying on an instruction to re-read them,
+   per the section above.
+
+One sub-question stays open and becomes a pre-flight check rather than an assumption:
+`qs-ci-agents-spring-ai-event-planner-<run-id>` is roughly 48 characters, and Catalyst's
+project-name length limit is unknown. Verify it before the spring-ai suite is written. If the
+limit is tighter, drop the `agents-` infix from the leg id, which is the smallest change that
+preserves uniqueness.
+
+### Why these three suites
+
+`agents/langgraph` alone would leave the `dotnet` and `java` CI setup steps unexercised and six
+contract features implemented but used by no real suite. These three cover all but two of them:
+
+| Feature | Exercised by |
+|---|---|
+| `runtime: dotnet` CI setup step | microsoft-dotnet |
+| `runtime: java` CI setup step | spring-ai/event-planner |
+| Non-empty `TEARDOWN` (documented `project delete`) | microsoft-dotnet, spring-ai/event-planner |
+| A non-Uvicorn readiness marker | microsoft-dotnet (`Established gRPC bidirectional stream with Dapr sidecar`) |
+| A three-level suite path, and the new `paths` glob | spring-ai/event-planner |
+| The reduced flag set (no `--deploy-managed-pubsub`) | spring-ai/event-planner |
+
+Two features still have no real user, and the spec records that rather than implying otherwise:
+a request's `commands` key (needs `mcp-auth`) and several `READY_MARKERS` for a multi-app
+quickstart (needs `agents/dapr-agents/orchestrator`). Both remain unit-tested only.
+
+All three suites land `nightly: False`, because none can be proven without a model provider key.
+That is not a new gap: it is the same gap langgraph already has, recorded in the harness README's
+Limitations.
 
 ## Verification
 
 The same credential-free gate as before, all of which must be green:
 
-- `uv run python ci/list-suites.py --validate`
+- `uv run python ci/list-suites.py --validate`, now with three agent rows
 - `uv run pytest -q`
-- `uv run python docsync/check_readme_sync.py --all`, which must report zero problems for every
-  registered agent suite against the current READMEs
-- the manifest-driven dryrun
+- `uv run python docsync/check_readme_sync.py --all`, which must report zero problems for all
+  three agent suites against the current READMEs
+- `uv run python docsync/check_skill_docs.py`, the new checker
+- the manifest-driven dryrun, which should resolve 20 tests: 16 canonical plus three agent suites
 - `smoke.robot` plus `keywords.robot`
 - `scripts/verify-static.sh`
 
-Plus one new check that would have caught this class of drift earlier: after resolving the
-merge, confirm doc-sync passes against `origin/main`'s READMEs rather than the branch's copies.
+Three checks specific to this work, because each closes a gap that let something ship unverified:
+
+1. After resolving the merge, run doc-sync against `origin/main`'s READMEs rather than the
+   branch's copies. Running it against stale copies is what would have hidden this drift.
+2. Confirm the new `'*/*/*/tests/quickstart.robot'` glob actually matches the spring-ai suite.
+   A path filter with nothing behind it is the kind of fix that looks done and is not, and until
+   this cycle there was no three-level suite to match.
+3. Confirm the skill-docs checker fails when it should: temporarily reintroduce
+   `--enable-agent-infrastructure` into a reference file and require a non-zero exit. A checker
+   nobody has seen fail is worth as little as an assertion nobody has seen fail.
+
+Then verify the Catalyst project-name length limit before writing the spring-ai suite, per the
+open sub-question in Decisions.
 
 ## Out of scope
 
-- The langgraph live run and mutation check. Still blocked on a model provider key, unchanged
-  by any of this.
-- Deduplicating the two `dapr-agents` trees, which is a repository decision.
-- Anything under `mcp-auth/`, which has not changed.
+- The live runs and mutation checks for all three suites. Still blocked on a model provider key,
+  unchanged by any of this. All three land `nightly: False`.
+- The remaining eleven agent quickstarts. They keep no suite and therefore no drift detection
+  beyond the skill-docs checker, which validates the skill's examples against their READMEs but
+  holds those READMEs to nothing. Adding them is what the skill is for, and the first real test
+  of it should be a human asking for one.
+- Deleting the legacy top-level `dapr-agents/` tree. It is retained deliberately for Dapr
+  University, so the only change here is that the skill stops pointing at it.
+- Anything under `mcp-auth/`, which has not changed since the fork. Its three `--skip-*` flags
+  and its two documented calls both returning HTTP 200 are still accurate in the references.
+- Why CI has never run on PR #293. Six minutes of polling produced zero check-runs even though
+  the workflow is active and runs nightly on `main`. That is a real problem, because the `lint`
+  job is what would have surfaced this drift at review time, but it is a CI configuration
+  question rather than part of this realignment.
