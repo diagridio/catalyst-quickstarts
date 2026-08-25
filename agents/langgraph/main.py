@@ -3,11 +3,11 @@ import os
 
 logging.basicConfig(level=logging.INFO)
 
-from langchain_core.messages import HumanMessage, ToolMessage
+from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 from langchain_core.tools import tool
 from langgraph.graph import StateGraph, START, MessagesState
 from diagrid.agent.langgraph import DaprWorkflowGraphRunner
-from langchain_openai import ChatOpenAI
+from fake_model import CannedToolCallingModel
 
 
 @tool
@@ -18,7 +18,42 @@ def check_availability(venue: str, date: str) -> str:
 
 tools = [check_availability]
 tools_by_name = {t.name: t for t in tools}
-model = ChatOpenAI(model="gpt-4.1-2025-04-14").bind_tools(tools)
+
+
+def build_model():
+    """Real provider on request, canned model otherwise."""
+    if os.environ.get("DIAGRID_QUICKSTART_MODEL") == "openai":
+        from langchain_openai import ChatOpenAI
+
+        logging.info("Using OpenAI (gpt-4.1-2025-04-14).")
+        return ChatOpenAI(model="gpt-4.1-2025-04-14")
+
+    logging.info(
+        "Using the canned offline model: no API key needed and the answer is "
+        "always the same. Set DIAGRID_QUICKSTART_MODEL=openai for a real provider."
+    )
+    return CannedToolCallingModel(
+        first_turn=AIMessage(
+            content="",
+            tool_calls=[
+                {
+                    "name": "check_availability",
+                    "args": {"venue": "Grand Ballroom", "date": "March 15th"},
+                    "id": "call_availability_1",
+                    "type": "tool_call",
+                }
+            ],
+        ),
+        final_turn=AIMessage(
+            content=(
+                "Yes, the Grand Ballroom is available on March 15th. "
+                "Open slots are 9AM-1PM, 2PM-6PM, and 6PM-11PM."
+            )
+        ),
+    )
+
+
+model = build_model().bind_tools(tools)
 
 
 def call_model(state: MessagesState) -> dict:
