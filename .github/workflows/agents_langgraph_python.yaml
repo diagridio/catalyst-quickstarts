@@ -1,0 +1,33 @@
+name: python langgraph agent quickstart
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/agents_langgraph_python.yaml
+      - agents/langgraph/**
+  pull_request:
+    branches:
+      - main
+    paths:
+      - .github/workflows/agents_langgraph_python.yaml
+      - agents/langgraph/**
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: "read"
+    if: github.repository_owner == 'diagridio'
+    steps:
+      - uses: actions/checkout@v3
+      - uses: astral-sh/setup-uv@v4
+
+      # pytest is an ephemeral dependency on purpose. Adding it to
+      # pyproject.toml would force a uv.lock regeneration, and a stale lock
+      # fails "uv sync --frozen" in the quickstart's Dockerfile. --frozen here
+      # makes this job a guard on that: it fails rather than re-resolving.
+      - name: offline model tests
+        run: |
+          cd agents/langgraph && uv run --frozen --with pytest pytest test_fake_model.py -v

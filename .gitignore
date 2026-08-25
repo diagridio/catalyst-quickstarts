@@ -463,3 +463,7 @@ archive/*
 
 # Per-quickstart editor settings (the root .vscode/ stays tracked)
 agents/**/.vscode/
+
+# pytest scratch. Today pytest writes a self-ignoring .gitignore inside this
+# directory, so it is only ignored by accident; be explicit instead.
+.pytest_cache/
