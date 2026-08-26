@@ -83,6 +83,18 @@ SUITES = (
         "nightly": False,
         "secrets": ("OPENAI_API_KEY",),
     },
+    {
+        "suite": "agents/microsoft-dotnet/tests/quickstart.robot",
+        "family": "agent",
+        "name": "microsoft-dotnet",
+        "data": "agents_microsoft_dotnet",
+        "language": "csharp",
+        "runtime": "dotnet",
+        # False until a live run and a mutation check prove it. See the harness
+        # README's Limitations.
+        "nightly": False,
+        "secrets": ("OPENAI_API_KEY",),
+    },
 )
 
 _REQUIRED = {
