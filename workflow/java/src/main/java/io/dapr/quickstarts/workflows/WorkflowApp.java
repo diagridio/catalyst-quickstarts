@@ -32,6 +32,7 @@ import java.util.concurrent.TimeoutException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 
 import io.dapr.quickstarts.workflows.models.*;
 
@@ -47,8 +48,11 @@ public class WorkflowApp {
   private static final Logger logger = LoggerFactory.getLogger(WorkflowApp.class);
 
   // The wait budget for the blocking /crash/run. Kept comfortably above the slow activity's
-  // default 30s so the first call is still blocked when you kill the app.
-  private static final int CRASH_WAIT_SECONDS = 120;
+  // default 30s so the first call is still blocked when you kill the app. Overridable through
+  // CRASH_WAIT_SECONDS, which is how the e2e suite exercises the 202 branch without waiting
+  // two minutes for it.
+  @Value("${CRASH_WAIT_SECONDS:120}")
+  private int crashWaitSeconds;
 
   @Autowired
   private DaprWorkflowClient workflowClient;
@@ -157,6 +161,10 @@ public class WorkflowApp {
   @PostMapping("/crash/run")
   public ResponseEntity<CrashRunResponse> crashRun(@RequestBody CrashRunRequest request) {
     String id = request.getId();
+    if (id == null || id.isBlank()) {
+      return ResponseEntity.badRequest().body(new CrashRunResponse(id, null, "id is required"));
+    }
+
     try {
       if (workflowClient.getInstanceState(id, false) == null) {
         logger.info("Starting crash-recovery workflow {} for reservation {}", id, request.getReference());
@@ -166,7 +174,16 @@ public class WorkflowApp {
       }
 
       WorkflowInstanceStatus status = workflowClient.waitForInstanceCompletion(
-          id, Duration.ofSeconds(CRASH_WAIT_SECONDS), true);
+          id, Duration.ofSeconds(crashWaitSeconds), true);
+
+      // The wait returns on ANY terminal state, so a failed or terminated instance would
+      // otherwise be reported as a 200 carrying a null result.
+      if (!"COMPLETED".equals(status.getRuntimeStatus().toString())) {
+        logger.error("Crash-recovery workflow {} ended as {}", id, status.getRuntimeStatus());
+        return ResponseEntity.status(500).body(new CrashRunResponse(id, null,
+            "workflow " + id + " ended as " + status.getRuntimeStatus()));
+      }
+
       return ResponseEntity.ok(new CrashRunResponse(id, status.readOutputAs(String.class), null));
     } catch (TimeoutException e) {
       // Not a failure: the run is still going. Re-issue the same request with the same ID to
@@ -189,8 +206,8 @@ public class WorkflowApp {
   public void crashKill() {
     logger.warn(">>> /crash/kill: halting the JVM to simulate a worker crash");
     // halt, not System.exit: halt skips the JVM shutdown hooks, so this is an abrupt crash rather
-    // than a controlled one, and it avoids deadlocking on Spring Boot's graceful shutdown, which
-    // would wait on this very request thread.
+    // than a controlled one. System.exit would also run the container's stop sequence on this very
+    // request thread, which is not what a crashed worker does.
     Runtime.getRuntime().halt(137);
   }
 

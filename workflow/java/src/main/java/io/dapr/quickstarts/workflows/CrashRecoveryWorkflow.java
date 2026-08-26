@@ -33,17 +33,20 @@ public class CrashRecoveryWorkflow implements Workflow {
       String reference = ctx.getInput(String.class);
 
       // Fast, and first. See the class comment: this is not an arbitrary ordering.
-      Notification notification = new Notification();
-      notification.setMessage("Reservation " + demoId + " received for " + reference);
-      ctx.callActivity(NotifyActivity.class.getCanonicalName(), notification).await();
+      Notification received = new Notification();
+      received.setMessage("Reservation " + demoId + " received for " + reference);
+      ctx.callActivity(NotifyActivity.class.getCanonicalName(), received).await();
 
       // Slow. Kill the app while this is running.
       String confirmation = ctx
           .callActivity(CommitReservationActivity.class.getCanonicalName(), reference, String.class)
           .await();
 
-      notification.setMessage("Reservation " + demoId + " has completed! " + confirmation);
-      ctx.callActivity(NotifyActivity.class.getCanonicalName(), notification).await();
+      // A fresh object rather than a setter on the one above. Reusing and mutating an input
+      // across an await is the pattern a reader should not copy out of a workflow.
+      Notification completed = new Notification();
+      completed.setMessage("Reservation " + demoId + " has completed! " + confirmation);
+      ctx.callActivity(NotifyActivity.class.getCanonicalName(), completed).await();
 
       ctx.complete(confirmation);
     };
