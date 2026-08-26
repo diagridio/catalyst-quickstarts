@@ -3,7 +3,7 @@ End-to-end test for the workflow quickstart, all four languages.
 
 Mirrors workflow/<language>/README.md: section 6.1 starts an instance, 6.2 gets
 its status, and section 7 runs the crash-recovery demo in the three languages
-that ship one. POST /workflow/terminate/{id} is deliberately absent — no README
+that ship one. POST /workflow/terminate/{id} is deliberately absent: no README
 documents it.
 
 Completion is gated on the log marker `Order <id> has completed!`, not on the
@@ -128,7 +128,6 @@ Run Workflow Crash Recovery
 
     ${crash_id}=    Replace String    ${CRASH_INSTANCE_ID}    {language}    ${language}
     ${payload}=     Create Dictionary    id=${crash_id}    reference=${CRASH_REFERENCE}
-    ${committing}=  Set Variable    ${CRASH_COMMITTING_MARKER}
     ${received}=    Replace String    ${CRASH_RECEIVED_MARKER}    {id}    ${crash_id}
     ${done}=        Replace String    ${CRASH_DONE_MARKER}    {id}    ${crash_id}
 
@@ -137,28 +136,28 @@ Run Workflow Crash Recovery
     Wait Until Apps Connected   ${qs}    ${log_first}
     Wait Until Apps Healthy     ${qs}
 
-    # README 7.1 — start the run. The response never arrives: /crash/run blocks for the
+    # README 7.1: start the run. The response never arrives: /crash/run blocks for the
     # length of the slow activity and the app is killed while it is still blocked. So the
     # client timeout is short and its failure is expected; the log is the signal.
     Run Keyword And Ignore Error
     ...    POST    http://localhost:5001/crash/run    json=${payload}    timeout=2
-    Wait Until Log Contains     ${log_first}    ${received}      timeout=120s
-    Wait Until Log Contains     ${log_first}    ${committing}    timeout=60s
+    Wait Until Log Contains     ${log_first}    ${received}                  timeout=120s
+    Wait Until Log Contains     ${log_first}    ${CRASH_COMMITTING_MARKER}    timeout=60s
 
-    # README 7.2 — kill the app mid-activity. This request cannot answer either: the
+    # README 7.2: kill the app mid-activity. This request cannot answer either: the
     # process is gone before a response is written.
     Run Keyword And Ignore Error
     ...    POST    http://localhost:5001/crash/kill    timeout=2
     Run Keyword And Ignore Error    Stop Process Tree    apps
 
-    # README 7.3 — restart with the same run command and wait for the run to finish.
+    # README 7.3: restart with the same run command and wait for the run to finish.
     Start Quickstart            ${qs}    ${PROJECT}    ${log_again}
     Wait Until Apps Connected   ${qs}    ${log_again}
     Wait Until Apps Healthy     ${qs}
     Wait Until Log Contains     ${log_again}    ${CRASH_COMMITTED_MARKER}    timeout=180s
     Wait Until Log Contains     ${log_again}    ${done}                      timeout=60s
 
-    # README 7.3 — re-issue the IDENTICAL request. It attaches to the finished instance
+    # README 7.3: re-issue the IDENTICAL request. It attaches to the finished instance
     # rather than reserving again, and returns the same confirmation code.
     ${body}=    POST And Expect    5001    /crash/run    ${payload}    200
     Should Be Equal    ${body}[result]    ${CRASH_CONFIRMATION}

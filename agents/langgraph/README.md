@@ -146,9 +146,9 @@ Open the [Catalyst dashboard](https://catalyst.diagrid.io/agents) in your browse
 
 The `crash_test.py` file demonstrates durable crash recovery, a capability not offered by LangGraph natively. It defines a 3-node graph whose middle node deliberately takes about 30 seconds, and a `POST /crash/kill` endpoint that kills the process outright. Nothing is armed: the crash is a request you make, so there is no source edit, no environment variable to unset, and no second run file.
 
-1. **check_venues** — checks venue availability. Instant, and completes
-2. **compare_options** — compares options over ~30 seconds. Kill the app during this
-3. **confirm_booking** — confirms the booking. Instant
+1. **check_venues**: checks venue availability. Instant, and completes
+2. **compare_options**: compares options over ~30 seconds. Kill the app during this
+3. **confirm_booking**: confirms the booking. Instant
 
 The node order is the point. Step 1 completes and Catalyst records its result before step 2 starts, so the crash lands between two known points and the restart can show that only the interrupted node ran again.
 

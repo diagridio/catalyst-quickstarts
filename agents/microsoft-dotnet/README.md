@@ -92,9 +92,9 @@ Invoke-RestMethod -Method Post -Uri 'http://localhost:5050/run' -ContentType 'ap
 **VS Code REST Client (any OS):** Open [`test.http`](./test.http) and click *Send Request* above the request. Requires the [REST Client](https://marketplace.visualstudio.com/items?itemName=humao.rest-client) extension.
 
 The agent will:
-1. Call `step_one_search` — finds venues. Instant
-2. Call `step_two_compare` — compares them over about 30 seconds
-3. Call `step_three_confirm` — confirms the booking. Instant
+1. Call `step_one_search`: finds venues. Instant
+2. Call `step_two_compare`: compares them over about 30 seconds
+3. Call `step_three_confirm`: confirms the booking. Instant
 
 So this request takes about half a minute. You'll see:
 
@@ -156,7 +156,7 @@ The workflow instance `gala-42` is unaffected. It lives in Catalyst, not in the 
 
 If the wait budget elapses before the run finishes, the response is a `202` carrying the instance ID. That is not a failure: re-issue the same request to attach again.
 
-> The final sentence the agent writes is composed by the model, so it can differ word for word between the two calls even though the tool results are identical. The proof to read is the app log and the execution trace in the console, not the prose. The two Java and Python workflow crash demos have a deterministic answer instead, because they run no model at all.
+> The final sentence the agent writes is composed by the model, so it can differ word for word between the two calls even though the tool results are identical. The proof to read is the app log and the execution trace in the console, not the prose. The crash demos in the [workflow quickstarts](../../workflow) return a deterministic answer instead, because they run no model at all.
 
 The length of tool 2 is configurable through the `CRASH_DELAY_SECONDS` environment variable, which defaults to 30. Set it lower to shorten the window, or higher if you need more time to aim.
 
