@@ -95,6 +95,16 @@ SUITES = (
         "nightly": False,
         "secrets": ("OPENAI_API_KEY",),
     },
+    {
+        "suite": "agents/spring-ai/event-planner/tests/quickstart.robot",
+        "family": "agent",
+        "name": "spring-ai-event-planner",
+        "data": "agents_spring_ai_event_planner",
+        "language": "java",
+        "runtime": "java",
+        "nightly": False,
+        "secrets": ("OPENAI_API_KEY",),
+    },
 )
 
 _REQUIRED = {
