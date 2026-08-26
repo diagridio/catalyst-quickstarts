@@ -14,7 +14,7 @@ Content-Type: application/json
 
 {
     "id": "gala-42",
-    "topic": "plan a company gala on March 15"
+    "topic": "company gala on March 15"
 }
 
 ### Crash Recovery: kill the app while the run above is in flight

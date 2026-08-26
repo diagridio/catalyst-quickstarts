@@ -56,3 +56,30 @@ class CannedToolCallingChatModel(BaseChatModel):
         # Copy, never hand out the field itself: BaseChatModel stamps an `id` on
         # the message it returns, mutating it in place.
         return ChatResult(generations=[ChatGeneration(message=turn.model_copy(deep=True))])
+
+
+def build_canned_model() -> CannedToolCallingChatModel:
+    """The canned two-turn conversation this quickstart runs on.
+
+    It lives here rather than in main.py so that the tests can assert against the
+    real thing instead of a copy of it. main.py's build_model() returns this.
+    """
+    return CannedToolCallingChatModel(
+        first_turn=AIMessage(
+            content="",
+            tool_calls=[
+                {
+                    "name": "check_availability",
+                    "args": {"venue": "Grand Ballroom", "date": "March 15th"},
+                    "id": "call_availability_1",
+                    "type": "tool_call",
+                }
+            ],
+        ),
+        final_turn=AIMessage(
+            content=(
+                "Yes, the Grand Ballroom is available on March 15th. "
+                "Open slots are 9AM-1PM, 2PM-6PM, and 6PM-11PM."
+            )
+        ),
+    )

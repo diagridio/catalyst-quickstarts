@@ -28,6 +28,9 @@ jobs:
       # pyproject.toml would force a uv.lock regeneration, and a stale lock
       # fails "uv sync --frozen" in the quickstart's Dockerfile. --frozen here
       # makes this job a guard on that: it fails rather than re-resolving.
+      #
+      # No filename: pyproject.toml pins python_files to test_*.py, so every test
+      # file in the directory runs and a new one needs no edit here.
       - name: offline model tests
         run: |
-          cd agents/langgraph && uv run --frozen --with pytest pytest test_fake_model.py -v
+          cd agents/langgraph && uv run --frozen --with pytest pytest -v

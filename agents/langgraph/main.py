@@ -3,21 +3,11 @@ import os
 
 logging.basicConfig(level=logging.INFO)
 
-from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
-from langchain_core.tools import tool
+from langchain_core.messages import HumanMessage, ToolMessage
 from langgraph.graph import StateGraph, START, MessagesState
 from diagrid.agent.langgraph import DaprWorkflowGraphRunner
-from fake_model import CannedToolCallingChatModel
-
-
-@tool
-def check_availability(venue: str, date: str) -> str:
-    """Check venue availability for a specific date."""
-    return f"{venue} is available on {date}. Time slots: 9AM-1PM, 2PM-6PM, 6PM-11PM."
-
-
-tools = [check_availability]
-tools_by_name = {t.name: t for t in tools}
+from fake_model import build_canned_model
+from tools import tools, tools_by_name
 
 
 def build_model():
@@ -32,25 +22,7 @@ def build_model():
         "Using the canned offline model: no API key needed and the answer is "
         "always the same. Set DIAGRID_QUICKSTART_MODEL=openai for a real provider."
     )
-    return CannedToolCallingChatModel(
-        first_turn=AIMessage(
-            content="",
-            tool_calls=[
-                {
-                    "name": "check_availability",
-                    "args": {"venue": "Grand Ballroom", "date": "March 15th"},
-                    "id": "call_availability_1",
-                    "type": "tool_call",
-                }
-            ],
-        ),
-        final_turn=AIMessage(
-            content=(
-                "Yes, the Grand Ballroom is available on March 15th. "
-                "Open slots are 9AM-1PM, 2PM-6PM, and 6PM-11PM."
-            )
-        ),
-    )
+    return build_canned_model()
 
 
 model = build_model().bind_tools(tools)
@@ -91,11 +63,14 @@ runner = DaprWorkflowGraphRunner(
     goal="Check venue date and time availability using the check_availability tool. Provide available time slots for a given venue and date.",
 )
 
-# State + PubSub: subscribe for incoming tasks, publish results
-runner.serve(
-    port=int(os.environ.get("APP_PORT", "8005")),
-    input_mapper=lambda req: {"messages": [HumanMessage(content=req["task"])]},
-    pubsub_name="pubsub",
-    subscribe_topic="schedule.requests",
-    publish_topic="schedule.results",
-)
+# Guarded so this module can be imported without starting a server. The tests import
+# check_availability from here to assert against the real tool rather than a copy of it.
+if __name__ == "__main__":
+    # State + PubSub: subscribe for incoming tasks, publish results
+    runner.serve(
+        port=int(os.environ.get("APP_PORT", "8005")),
+        input_mapper=lambda req: {"messages": [HumanMessage(content=req["task"])]},
+        pubsub_name="pubsub",
+        subscribe_topic="schedule.requests",
+        publish_topic="schedule.results",
+    )
