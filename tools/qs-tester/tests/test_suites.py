@@ -131,3 +131,52 @@ def test_row_fails_on_a_suite_that_is_not_registered():
     result = list_suites("--row", "agents/nope/tests/quickstart.robot")
     assert result.returncode == 1
     assert "not registered" in result.stderr
+
+
+# --- project-name budget -----------------------------------------------------
+# ci/project-name.sh builds qs-ci-<leg>-<run-id>, and agent legs use
+# agents-<name>. The binding case is a local run: GITHUB_RUN_ID is unset, so the
+# fallback is `local` plus a 10-digit epoch, which is longer than a real
+# workflow run id. Sizing to the shorter CI form would let a name pass
+# validation here and then fail on someone's laptop.
+
+
+def test_project_name_budget_is_derived_not_hardcoded():
+    # The budget must fall out of the real name format, so it stays true if the
+    # prefix or the leg format changes. 55 - len("qs-ci-") - len("agents-")
+    # - len("-") - len("local" + 10-digit epoch) == 26.
+    assert suites.project_name_budget() == 26
+
+
+def test_leg_id_is_the_path_below_agents_with_dashes():
+    row = suites.row_for_suite("agents/langgraph/tests/quickstart.robot")
+    assert suites.leg_id(row) == "langgraph"
+
+
+def test_validate_rejects_a_name_over_the_budget(monkeypatch):
+    too_long = "a" * (suites.project_name_budget() + 1)
+    broken = ({"suite": "agents/langgraph/tests/quickstart.robot", "family": "agent",
+               "name": too_long, "data": "agents_langgraph", "language": "python",
+               "runtime": "python", "nightly": False, "secrets": ("OPENAI_API_KEY",)},)
+    monkeypatch.setattr(suites, "SUITES", broken)
+    problems = suites.validate(REPO_ROOT)
+    assert any("55" in p and "characters" in p for p in problems)
+
+
+def test_validate_accepts_a_name_exactly_at_the_budget(monkeypatch):
+    exact = "a" * suites.project_name_budget()
+    row = ({"suite": "agents/langgraph/tests/quickstart.robot", "family": "agent",
+            "name": exact, "data": "agents_langgraph", "language": "python",
+            "runtime": "python", "nightly": False, "secrets": ("OPENAI_API_KEY",)},)
+    monkeypatch.setattr(suites, "SUITES", row)
+    assert not any("characters" in p for p in suites.validate(REPO_ROOT))
+
+
+def test_an_explicit_leg_overrides_a_too_long_derived_name(monkeypatch):
+    row = ({"suite": "agents/spring-ai/event-planner/tests/quickstart.robot",
+            "family": "agent", "name": "a" * 40, "leg": "short-leg",
+            "data": "agents_langgraph", "language": "java", "runtime": "java",
+            "nightly": False, "secrets": ("OPENAI_API_KEY",)},)
+    monkeypatch.setattr(suites, "SUITES", row)
+    assert not any("characters" in p for p in suites.validate(REPO_ROOT))
+    assert suites.leg_id(row[0]) == "short-leg"

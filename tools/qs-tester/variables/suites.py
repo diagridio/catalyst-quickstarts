@@ -90,6 +90,38 @@ _REQUIRED = {
     "agent": ("suite", "family", "name", "data", "language", "runtime", "nightly", "secrets"),
 }
 
+# The ephemeral project name must fit Catalyst's limit. `ci/project-name.sh`
+# builds `qs-ci-<leg>-<run-id>`, and agent legs use `agents-<name>`.
+MAX_PROJECT_NAME = 55
+
+# The binding case is a LOCAL run, not CI: GITHUB_RUN_ID is about 11 digits, but
+# the local fallback is `local` plus a 10-digit epoch, which is longer. Sizing to
+# the shorter CI form would let a name pass validation and then fail when someone
+# runs it on their laptop.
+_LEG_PREFIX = "agents-"
+_WORST_RUN_ID = len("local") + 10
+
+
+def project_name_budget():
+    """Characters available for an agent row's `name`.
+
+    Derived from the format rather than hard-coded, so this stays correct if the
+    prefix or the leg format changes.
+    """
+    fixed = len("qs-ci-") + len(_LEG_PREFIX) + len("-") + _WORST_RUN_ID
+    return MAX_PROJECT_NAME - fixed
+
+
+def leg_id(row):
+    """The leg fragment CI passes to ci/project-name.sh.
+
+    Defaults to the row's `name`, which is the quickstart's path below `agents/`
+    with slashes replaced by dashes, and is therefore unique by construction. A
+    row may carry an explicit shorter `leg` when a deep path would exceed the
+    budget.
+    """
+    return row.get("leg") or row["name"]
+
 
 def suite_paths():
     """Suite paths as robot must receive them.
@@ -175,6 +207,16 @@ def validate(repo_root):
                     "first at runtime"
                 )
             seen_names.add(row["name"])
+
+            leg = leg_id(row)
+            if len(leg) > project_name_budget():
+                problems.append(
+                    f"{where}: leg {leg!r} is {len(leg)} characters, over the "
+                    f"{project_name_budget()}-character budget that keeps the ephemeral "
+                    f"project name within {MAX_PROJECT_NAME} characters. Shorten it with an "
+                    f"explicit `leg` on this row. Catching it here costs seconds; catching it "
+                    f"at `diagrid project create` costs a nightly leg and leaks a half-made project."
+                )
 
             if row["runtime"] not in RUNTIMES:
                 problems.append(
