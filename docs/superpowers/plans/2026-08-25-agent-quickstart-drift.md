@@ -1249,7 +1249,7 @@ git commit -m "Document the three agent suites and the skill-docs checker"
 | Dryrun, all suites | `uv run robot --dryrun --variable PROJECT:dryrun $(uv run python ci/list-suites.py --paths)` | none |
 | Harness keyword tests | `uv run robot resources/tests` | none |
 | All of the above | `scripts/verify-static.sh` | none |
-| Live plus mutation, per suite | `scripts/verify-live.sh <suite> <leg>` | `DIAGRID_API_KEY`, `OPENAI_API_KEY` |
+| Live plus mutation, per suite | `scripts/verify-live.sh <suite>` (the leg comes from the manifest via `suites.leg_id`) | `DIAGRID_API_KEY`, `OPENAI_API_KEY` |
 
 Three guards must each be seen failing, not just passing: the length rule (add a row one character over budget), the skill-docs checker (reintroduce `--enable-agent-infrastructure`), and the `connected_apps` test (delete the key). A guard nobody has seen fail is worth as little as an assertion nobody has seen fail.
 
