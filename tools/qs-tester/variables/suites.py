@@ -209,7 +209,18 @@ def validate(repo_root):
             seen_names.add(row["name"])
 
             leg = leg_id(row)
-            if len(leg) > project_name_budget():
+            if not isinstance(leg, str):
+                # `_REQUIRED` only checks key presence, not type, so a `name` (or
+                # `leg`) that is present but not a string reaches here. This must
+                # report a problem rather than raise: validate() runs in CI's lint
+                # job, where an uncaught TypeError is a worse failure mode than a
+                # reported problem, and it would also abort validation of every
+                # row after this one.
+                problems.append(
+                    f"{where}: leg {leg!r} must be a string (from `name` or an "
+                    f"explicit `leg`), got {type(leg).__name__}"
+                )
+            elif len(leg) > project_name_budget():
                 problems.append(
                     f"{where}: leg {leg!r} is {len(leg)} characters, over the "
                     f"{project_name_budget()}-character budget that keeps the ephemeral "

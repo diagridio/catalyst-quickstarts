@@ -305,8 +305,15 @@ jobs:
       # The suite provisions itself from its README's documented commands, but the
       # project name must be known before that can fail, so teardown always has
       # something to delete.
+      #
+      # `matrix.leg` (not `matrix.name`) is what feeds the project name: a row
+      # can set an explicit `leg` shorter than `name` to stay under the
+      # 55-character ceiling `variables/suites.py` enforces, and rebuilding
+      # `agents-${{ matrix.name }}` here would silently ignore that override
+      # and overflow at `diagrid project create` regardless of what
+      # `--validate` said.
       - name: Compute the ephemeral project name
-        run: bash tools/qs-tester/ci/project-name.sh agents-${{ matrix.name }}
+        run: bash tools/qs-tester/ci/project-name.sh agents-${{ matrix.leg }}
 
       - name: Log in to Catalyst
         run: bash tools/qs-tester/ci/login.sh

@@ -418,12 +418,25 @@ scheduled path passes `--nightly` and filters to `True` rows only).
 
 `suites.validate()` (`variables/suites.py`) fails a row whose agent `name`
 already appears in another row, in addition to failing a duplicate `suite`
-path. `name` is not just a label: it keys the ephemeral project's leg id
-(`ci/project-name.sh agents-<name>`), the CI artifact name, and the
-failure-summary file (`failed-agents-<name>.txt`). Two suites sharing a `name`
-would collide at runtime — the second run's project name, log upload and
-failure marker would clobber the first's. Pick a `name` that is unique across
-every agent-family row, not just within the family you are adding to.
+path. `name` is not just a label: it keys the CI artifact name, the
+failure-summary file (`failed-agents-<name>.txt`), and — by default — the
+ephemeral project's leg id (`ci/project-name.sh agents-<name>`). Two suites
+sharing a `name` would collide at runtime — the second run's project name, log
+upload and failure marker would clobber the first's. Pick a `name` that is
+unique across every agent-family row, not just within the family you are
+adding to.
+
+The leg id has its own, tighter limit: `suites.validate()` also rejects a row
+whose leg is over `suites.project_name_budget()` characters (26 today), because
+the full ephemeral name (`qs-ci-agents-<leg>-<run-id>`) has to fit Catalyst's
+55-character ceiling even on a local run, where the run-id fallback is longest.
+A deep suite path can produce a `name` over that budget — this is why the row
+schema also accepts an explicit `leg`, shorter than `name`, used for the
+project's leg id instead. `ci/list-suites.py --matrix agent` and
+`scripts/verify-live.sh` both read `leg` (via `suites.leg_id()`), not `name`,
+for anything that becomes part of the actual project name; only add a `leg`
+when `--validate` tells you `name` is over budget, and keep `name` as the
+readable, unique label everything else still uses.
 
 ## Where the generic keywords run out: mcp-auth's grant/revoke phases
 

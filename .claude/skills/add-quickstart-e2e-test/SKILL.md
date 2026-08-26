@@ -123,14 +123,15 @@ explicitly if you conclude that.
 The two families need different procedures, because they get their project from
 different places.
 
-**Agent-family:** run `scripts/verify-live.sh <suite-path> <leg-id>`. It computes
-two ephemeral project names, logs in, runs the suite, runs the mutation check
-against the *second* project, and tears both down on every exit path. Two
-projects, not one: an agent-family suite provisions itself in `SETUP` from its
-README's documented `project create`/`agent create`, and `Run Documented
-Commands` stops at the first non-zero exit, so a mutated run against the
-already-provisioned first project dies in `SETUP` before it ever reaches the
-mutated assertion.
+**Agent-family:** run `scripts/verify-live.sh <suite-path>`. It reads the row's
+leg from the manifest (`ci/list-suites.py --row`, the same field the nightly
+matrix carries), computes two ephemeral project names from it, logs in, runs
+the suite, runs the mutation check against the *second* project, and tears
+both down on every exit path. Two projects, not one: an agent-family suite
+provisions itself in `SETUP` from its README's documented `project
+create`/`agent create`, and `Run Documented Commands` stops at the first
+non-zero exit, so a mutated run against the already-provisioned first project
+dies in `SETUP` before it ever reaches the mutated assertion.
 
 **Canonical:** the script refuses these, and prints the procedure to run instead
 — it is documented in `tools/qs-tester/README.md` under "Create a project and run

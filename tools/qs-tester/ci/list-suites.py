@@ -58,10 +58,18 @@ def main() -> int:
         # One flat object per matrix leg. `secrets` is a list of names, not
         # values: the workflow declares the values in its env block, and the
         # suite fails loudly through `Require Env Var` if one is missing.
+        # `leg` is `suites.leg_id(row)` — the fragment that actually feeds
+        # `ci/project-name.sh` (via `agents-<leg>`) — kept distinct from `name`,
+        # which stays the artifact and failure-summary key. A row's explicit
+        # `leg` override exists to keep the ephemeral project name under the
+        # 55-character ceiling; if the workflow rebuilt the leg from `name`
+        # instead of reading this field, the override would pass
+        # `--validate` and then still overflow at `diagrid project create`.
         matrix = [
             {
                 "suite": row["suite"],
                 "name": row["name"],
+                "leg": suites.leg_id(row),
                 "language": row["language"],
                 "runtime": row["runtime"],
                 "secrets": list(row["secrets"]),
@@ -93,6 +101,11 @@ def main() -> int:
             print(f"LANGUAGES={' '.join(row['languages'])}")
         else:
             print(f"NAME={row['name']}")
+            # The leg actually used for the ephemeral project name (via
+            # `agents-<leg>`), not necessarily `name` -- see `suites.leg_id`.
+            # A caller that rebuilds `agents-<name>` by hand instead of reading
+            # this ignores a row's explicit `leg` override.
+            print(f"LEG={suites.leg_id(row)}")
         return 0
 
     problems = suites.validate(args.repo_root)

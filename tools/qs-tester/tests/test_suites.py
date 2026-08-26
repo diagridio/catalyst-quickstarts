@@ -1,3 +1,5 @@
+import importlib.util
+import json
 import subprocess
 import sys
 from pathlib import Path
@@ -18,6 +20,25 @@ def list_suites(*args):
         capture_output=True,
         text=True,
     )
+
+
+def _list_suites_module():
+    """Load ci/list-suites.py in-process, so a test can monkeypatch `suites.SUITES`
+    and see it reflected in `--matrix` output.
+
+    `list_suites()` above shells out to a fresh interpreter, which cannot see a
+    monkeypatch made in this process -- there is no other way to exercise
+    `--matrix` against a fabricated row. The hyphen in the filename is why this
+    is a manual `importlib` load rather than a plain `import`; the loaded
+    module's own `import suites` resolves to the same cached module object
+    already imported above, so a `monkeypatch.setattr(suites, "SUITES", ...)`
+    here is visible to it.
+    """
+    path = HARNESS / "ci" / "list-suites.py"
+    spec = importlib.util.spec_from_file_location("list_suites_cli", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 
 def test_every_row_declares_a_known_family():
@@ -180,3 +201,37 @@ def test_an_explicit_leg_overrides_a_too_long_derived_name(monkeypatch):
     monkeypatch.setattr(suites, "SUITES", row)
     assert not any("characters" in p for p in suites.validate(REPO_ROOT))
     assert suites.leg_id(row[0]) == "short-leg"
+
+
+def test_matrix_output_carries_the_leg_override_not_the_name(monkeypatch, capsys):
+    # `--matrix agent` is what the nightly workflow actually reads to build the
+    # project name (via `agents-<leg>`). If it emitted `name` where a row set a
+    # shorter `leg`, the override would satisfy `--validate` and then still
+    # overflow the 55-character ceiling at `diagrid project create` -- the
+    # exact failure this task exists to prevent, this time downstream of the
+    # lint check instead of caught by it.
+    row = ({"suite": "agents/spring-ai/event-planner/tests/quickstart.robot",
+            "family": "agent", "name": "a" * 40, "leg": "short-leg",
+            "data": "agents_langgraph", "language": "java", "runtime": "java",
+            "nightly": False, "secrets": ("OPENAI_API_KEY",)},)
+    monkeypatch.setattr(suites, "SUITES", row)
+    module = _list_suites_module()
+    monkeypatch.setattr(sys, "argv", ["list-suites.py", "--matrix", "agent"])
+    assert module.main() == 0
+    matrix = json.loads(capsys.readouterr().out)
+    assert len(matrix) == 1
+    assert matrix[0]["leg"] == "short-leg"
+    assert matrix[0]["name"] == "a" * 40
+
+
+def test_validate_reports_a_non_string_leg_instead_of_raising(monkeypatch):
+    # `_REQUIRED` only checks key presence, not type. A `name` that is present
+    # but not a string used to reach `len(leg)` unguarded and raise
+    # `TypeError: object of type 'int' has no len()`, which is a worse failure
+    # mode than a reported problem for validate() to have in CI's lint job.
+    broken = ({"suite": "agents/langgraph/tests/quickstart.robot", "family": "agent",
+               "name": 12345, "data": "agents_langgraph", "language": "python",
+               "runtime": "python", "nightly": False, "secrets": ("OPENAI_API_KEY",)},)
+    monkeypatch.setattr(suites, "SUITES", broken)
+    problems = suites.validate(REPO_ROOT)
+    assert any("must be a string" in p for p in problems)

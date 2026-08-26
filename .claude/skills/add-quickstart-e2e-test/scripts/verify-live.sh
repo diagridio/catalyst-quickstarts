@@ -2,13 +2,20 @@
 # Run one agent-family suite against a real Catalyst project, then prove one of
 # its assertions is not vacuous, then tear down everything it created.
 #
-# Usage: verify-live.sh <suite-path> <leg-id> [mutation-assignment] [expected-keyword]
+# Usage: verify-live.sh <suite-path> [mutation-assignment] [expected-keyword]
 #   suite-path         repo-relative, e.g. agents/langgraph/tests/quickstart.robot
-#   leg-id             name fragment, e.g. agents-langgraph
 #   mutation           a Python assignment to override, as NAME=<literal>.
 #                      Default: READY_MARKERS=("__mutation_check__",)
 #   expected-keyword   the keyword the mutation must make FAIL.
 #                      Default: Wait Until Ready Marker
+#
+# The leg is not a parameter here: it is read from `ci/list-suites.py --row`
+# (which reads `suites.leg_id()`), the same field the nightly workflow's matrix
+# now carries. A leg typed by hand as `agents-<name>` would silently ignore a
+# row's explicit `leg` override -- the override exists precisely for suites
+# whose `name` is over `suites.project_name_budget()` -- and this script would
+# then build and try to provision a project name over Catalyst's 55-character
+# ceiling.
 #
 # Agent-family suites only. Canonical suites need a different procedure and this
 # script refuses them rather than running them wrong -- see the check below.
@@ -20,10 +27,9 @@
 # no type guessing here.
 set -uo pipefail
 
-SUITE="${1:?usage: verify-live.sh <suite-path> <leg-id> [NAME=<python-literal>] [expected-keyword]}"
-LEG="${2:?usage: verify-live.sh <suite-path> <leg-id> [NAME=<python-literal>] [expected-keyword]}"
-MUTATION="${3:-READY_MARKERS=(\"__mutation_check__\",)}"
-EXPECT_KEYWORD="${4:-Wait Until Ready Marker}"
+SUITE="${1:?usage: verify-live.sh <suite-path> [NAME=<python-literal>] [expected-keyword]}"
+MUTATION="${2:-READY_MARKERS=(\"__mutation_check__\",)}"
+EXPECT_KEYWORD="${3:-Wait Until Ready Marker}"
 
 # The mutated run must fail for the mutated reason. A sentinel inside the
 # override gives the checker a second, independent handle on that: the failure
@@ -61,7 +67,7 @@ if [ "$FAMILY" != "agent" ]; then
   echo "  eval \"\$(bash tools/qs-tester/ci/setup-project.sh | grep '^PROJECT=')\""
   echo "  cd tools/qs-tester"
   echo "  uv run robot --include $FIRST_LANG --variable PROJECT:\$PROJECT \\"
-  echo "    --outputdir results/$LEG-$FIRST_LANG ../../$SUITE"
+  echo "    --outputdir results/$FIRST_LANG ../../$SUITE"
   echo "  bash ci/teardown-project.sh \"\$PROJECT\""
   echo
   echo "Then the mutation check, against a SECOND project created the same way,"
@@ -74,6 +80,13 @@ if [ "$FAMILY" != "agent" ]; then
   echo "See tools/qs-tester/README.md, 'Create a project and run a suite'."
   exit 2
 fi
+
+# The leg used for the ephemeral project name, read from the manifest via the
+# same `suites.leg_id()` the lint rule and the nightly matrix use -- not
+# reconstructed from `$SUITE` here, so an explicit `leg` override on the row
+# is honored rather than silently ignored.
+LEG_FRAGMENT="$(printf '%s\n' "$ROW" | grep '^LEG=' | cut -d= -f2-)"
+LEG="agents-$LEG_FRAGMENT"
 
 # --- Names first, teardown second, work last ---------------------------------
 # Two projects, because the mutated run cannot reuse the first one: an
