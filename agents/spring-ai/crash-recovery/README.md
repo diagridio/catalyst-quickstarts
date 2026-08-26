@@ -63,7 +63,9 @@ diagrid dev run -f dev-spring-ai-crash-recovery.yaml --approve
 From another terminal (**Terminal A**) — this schedules the booking under `trip-42` and blocks while the slow tool "commits":
 
 ```bash
-curl "http://localhost:8080/crash/book?id=trip-42&reference=ABC123"
+curl -X POST "http://localhost:8080/crash/run" \
+  -H "Content-Type: application/json" \
+  -d '{"id":"trip-42","reference":"ABC123"}'
 ```
 
 Watch the app log for `>>> commitReservation(ABC123) — committing over ~30s`.
@@ -90,7 +92,9 @@ The durable runtime resumes instance `trip-42`; the pre-crash LLM turn is not re
 the **same** call with the **same** id from **Terminal A**:
 
 ```bash
-curl "http://localhost:8080/crash/book?id=trip-42&reference=ABC123"
+curl -X POST "http://localhost:8080/crash/run" \
+  -H "Content-Type: application/json" \
+  -d '{"id":"trip-42","reference":"ABC123"}'
 ```
 
 It **attaches** to the resumed run (waiting if it is still committing, or returning the recorded answer

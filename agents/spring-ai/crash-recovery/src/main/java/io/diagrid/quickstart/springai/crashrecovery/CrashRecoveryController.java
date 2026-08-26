@@ -7,9 +7,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
@@ -23,13 +22,15 @@ import org.springframework.web.bind.annotation.RestController;
  * handle a repeat call re-uses.
  *
  * <pre>
- * # 1. Terminal A — book under an id YOU own. Blocks ~30s while the slow tool "commits".
- * curl "http://localhost:8080/crash/book?id=trip-42&amp;reference=ABC123"
- * # 2. Terminal B — during that window, SIGKILL the app (worker + blocked caller both die):
+ * # 1. Terminal A: book under an id YOU own. Blocks ~30s while the slow tool "commits".
+ * curl -X POST "http://localhost:8080/crash/run" -H "Content-Type: application/json" \
+ *   -d '{"id":"trip-42","reference":"ABC123"}'
+ * # 2. Terminal B: during that window, SIGKILL the app (worker and blocked caller both die):
  * curl -X POST "http://localhost:8080/crash/kill"
  * # 3. Restart the app. The durable runtime resumes instance trip-42.
- * # 4. Terminal A — re-issue the SAME call. It ATTACHES and returns the same confirmation:
- * curl "http://localhost:8080/crash/book?id=trip-42&amp;reference=ABC123"
+ * # 4. Terminal A: re-issue the SAME call. It ATTACHES and returns the same confirmation:
+ * curl -X POST "http://localhost:8080/crash/run" -H "Content-Type: application/json" \
+ *   -d '{"id":"trip-42","reference":"ABC123"}'
  * </pre>
  */
 @RestController
@@ -43,10 +44,16 @@ public class CrashRecoveryController {
     this.agent = agent;
   }
 
-  /** Book under a caller-chosen id; a repeat with the same id attaches to the existing run. */
-  @GetMapping("/crash/book")
-  public ResponseEntity<String> book(
-      @RequestParam String id, @RequestParam(defaultValue = "ABC123") String reference) {
+  /**
+   * Book under a caller-chosen id; a repeat with the same id attaches to the existing run.
+   *
+   * <p>POST with a JSON body rather than GET with query params, so that this demo and the crash
+   * demos in the workflow quickstarts present one command shape rather than two.
+   */
+  @PostMapping("/crash/run")
+  public ResponseEntity<String> run(@RequestBody CrashRunRequest request) {
+    String id = request.id();
+    String reference = request.reference() == null ? "ABC123" : request.reference();
     try {
       String answer = agent.prompt()
           .user("Confirm the booking with reference " + reference + ".")
@@ -59,8 +66,12 @@ public class CrashRecoveryController {
       // same id to attach and collect the result.
       return ResponseEntity.accepted()
           .body("still running as " + e.instanceId()
-              + " — re-issue GET /crash/book?id=" + id + " to attach\n");
+              + ", re-issue POST /crash/run with the same id to attach\n");
     }
+  }
+
+  /** Request body of {@code POST /crash/run}. A null reference falls back to ABC123. */
+  public record CrashRunRequest(String id, String reference) {
   }
 
   /** Simulate a crash: halt the JVM abruptly (skips shutdown hooks), like SIGKILL. Demo only. */
