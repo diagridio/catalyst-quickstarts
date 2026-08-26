@@ -100,8 +100,10 @@ public class WorkflowApp {
   @GetMapping("/workflow/status/{instanceId}")
   public ResponseEntity<WorkflowInstanceStatus> getWorkflowStatus(@PathVariable String instanceId) {
     try {
+      // instanceExists, not a null check: getInstanceState hands back a non-null status
+      // with empty fields when the instance is absent. See instanceExists below.
       WorkflowInstanceStatus status = workflowClient.getInstanceState(instanceId, true);
-      if (status != null) {
+      if (instanceExists(status)) {
         logger.info("Retrieved workflow status for {}.", instanceId);
         return ResponseEntity.ok(status);
       } else {
@@ -122,9 +124,10 @@ public class WorkflowApp {
   @PostMapping("/workflow/terminate/{instanceId}")
   public ResponseEntity<WorkflowInstanceStatus> terminateWorkflow(@PathVariable String instanceId) {
     try {
-      // Check current state first to provide accurate messaging
+      // Check current state first to provide accurate messaging. A missing instance is a
+      // non-null status with empty fields, not a null, so test instanceExists.
       WorkflowInstanceStatus currentStatus = workflowClient.getInstanceState(instanceId, true);
-      if (currentStatus == null) {
+      if (!instanceExists(currentStatus)) {
         logger.info("Workflow with id {} does not exist", instanceId);
         return ResponseEntity.status(204).build();
       }
@@ -166,7 +169,7 @@ public class WorkflowApp {
     }
 
     try {
-      if (workflowClient.getInstanceState(id, false) == null) {
+      if (!instanceExists(workflowClient.getInstanceState(id, false))) {
         logger.info("Starting crash-recovery workflow {} for reservation {}", id, request.getReference());
         workflowClient.scheduleNewWorkflow(CrashRecoveryWorkflow.class, request.getReference(), id);
       } else {
@@ -194,6 +197,32 @@ public class WorkflowApp {
       logger.error("Error running the crash-recovery workflow {}. Exception: {}", id, e.getMessage());
       return ResponseEntity.status(500).body(new CrashRunResponse(id, null, e.getMessage()));
     }
+  }
+
+  /**
+   * Whether getInstanceState actually found an instance.
+   *
+   * <p>A null check is not enough, and this is the same trap the C# quickstart fell into.
+   * getInstanceState returns null only when the layer below it does, and that layer,
+   * DurableTaskGrpcClient.getInstanceMetadata, unconditionally wraps the gRPC response in a
+   * new OrchestrationMetadata. A missing instance therefore comes back as a non-null status
+   * whose fields are simply empty, so `getInstanceState(id, false) == null` is always false:
+   * the schedule branch would be dead and every call would report an attach to a run nobody
+   * had created.
+   *
+   * <p>OrchestrationMetadata answers this with isInstanceFound(), but Dapr's
+   * WorkflowInstanceStatus does not expose it. This is that method's exact condition,
+   * expressed with the two getters the interface does expose.
+   */
+  private static boolean instanceExists(WorkflowInstanceStatus status) {
+    if (status == null) {
+      return false;
+    }
+    return !isNullOrEmpty(status.getName()) || !isNullOrEmpty(status.getInstanceId());
+  }
+
+  private static boolean isNullOrEmpty(String value) {
+    return value == null || value.isEmpty();
   }
 
   /**
