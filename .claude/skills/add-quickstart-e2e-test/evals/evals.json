@@ -32,7 +32,7 @@
       "files": [],
       "expectations": [
         "The new row in variables/suites.py sets runtime to \"dotnet\" (one of suites.RUNTIMES) and language to \"csharp\" (the quickstart's actual implementation language; suites.py does not validate language against RUNTIMES, so the two fields are set independently, not interchangeably)",
-        "The data module's SETUP includes, in order, 'diagrid project create {project} --enable-agent-infrastructure --wait --use' and 'diagrid agent create dotnet-agent --wait', matching agents/microsoft-dotnet/README.md lines 54 and 60",
+        "The data module's SETUP includes, in order, 'diagrid project create {project} --enable-managed-workflow --deploy-managed-kv --deploy-managed-pubsub --wait --use' and 'diagrid agent create event-planner --wait', matching agents/microsoft-dotnet/README.md lines 54 and 60",
         "The data module's RUN is the bare 'diagrid dev run -f dev-dotnet-agent.yaml --approve' (no --project), matching README line 66, because the documented project create already carries --use",
         "The suite's Require Env Var loop checks the model provider secret(s) the README's Prerequisites section documents, before Build Quickstart or Start Quickstart runs",
         "uv run python ci/list-suites.py --matrix agent includes an entry with \"runtime\":\"dotnet\" for the new suite",

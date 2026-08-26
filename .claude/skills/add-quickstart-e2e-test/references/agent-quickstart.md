@@ -24,10 +24,11 @@ A new agent-family suite gets its own module,
 | `TEARDOWN` | `tuple[str, ...]` | The README's own cleanup commands. Empty if the README documents none. |
 | `READY_MARKERS` | `tuple[str, ...]` | One string per app that announces itself in the `diagrid dev run` output. |
 | `HEALTH_PROBES` | `tuple[tuple[int, str], ...]` | `(port, path)` pairs `Wait Until Apps Healthy` polls for a 200 before any assertion runs. The path is per app and must be a route the app actually serves — see "Probe a path the app really serves" below. |
+| `CONNECTED_APPS` | `tuple[tuple[str, int], ...]` | `(appID, port)` pairs `diagrid dev run` reports as `Connected App ID "<id>" to http://localhost:<port>`. Required: `Start Quickstart` records these so `Stop Quickstart` can release each local app connection, and a run that skips this leaves a `trust.diagrid.io` endpoint pointing at a dead tunnel, which makes the next run's 500s ambiguous. See `variables/agents_langgraph.py`'s `CONNECTED_APPS` for the worked example, including the caveat that it is inferred from the dev config, not yet observed against a live run. |
 | `SECRETS` | `tuple[str, ...]` | Environment variable names the suite's `Require Env Var` loop checks before doing anything else — the model provider keys. |
 | `REQUESTS` | `tuple[dict, ...]` | The documented trigger calls, in documented order. Keys below. |
 | `UNCOVERED` | `tuple[tuple[str, str], ...]` | `(documented command, reason)` pairs for commands the suite deliberately does not run. |
-| `get_quickstart()` | function | Returns one flat dict: `family`, `name`, `language`, `dir`, `setup`, `install`, `run`, `teardown`, `health_probes`, `secrets`. Not identical to what `quickstarts.get_quickstart(api, language)` returns (that one has `api` and `connected_apps` instead of `family`/`name`/`setup`/`teardown`/`secrets`) — the two dicts share exactly the five keys the *shared* keywords actually read (`dir`, `install`, `run`, `health_probes`, `language`), which is what lets `Build Quickstart`, `Start Quickstart` and `Wait Until Apps Healthy` work unchanged against either shape. |
+| `get_quickstart()` | function | Returns one flat dict: `family`, `name`, `language`, `dir`, `setup`, `install`, `run`, `teardown`, `health_probes`, `connected_apps`, `secrets`. Not identical to what `quickstarts.get_quickstart(api, language)` returns (that one has `api` instead of `family`/`name`/`setup`/`teardown`/`secrets`, and no `language` in the shared sense either) — the two dicts share exactly the five keys the *shared* keywords actually read (`dir`, `install`, `run`, `health_probes`, `connected_apps`), which is what lets `Build Quickstart`, `Start Quickstart` and `Wait Until Apps Healthy` work unchanged against either shape. |
 
 ### What doc-sync actually enforces — and what it does not
 
@@ -38,17 +39,18 @@ attributes, `_REQUIRED_MODULE_ATTRS`:
 DOCUMENTED_PROJECT, SETUP, INSTALL, RUN, TEARDOWN, READY_MARKERS, REQUESTS, UNCOVERED
 ```
 
-Note what is **not** in that list: `HEALTH_PROBES`, `SECRETS`, and
-`get_quickstart`. If your module is missing one of the eight listed names,
+Note what is **not** in that list: `HEALTH_PROBES`, `CONNECTED_APPS`, `SECRETS`,
+and `get_quickstart`. If your module is missing one of the eight listed names,
 `check_agent` returns it as a problem string (`"... is missing required
 attribute(s): ..."`) — a normal doc-sync failure, not a crash, so one bad module
 costs its own row and not the other suites `--all` also checks in the same run.
-But a missing `HEALTH_PROBES`, `SECRETS`, or `get_quickstart` is not caught here
-at all: the suite will fail at Robot runtime instead (a `Wait Until Apps Healthy`
-FOR loop with nothing to iterate, or a keyword error), which is a slower and
-noisier way to find the same mistake. Do not skip these three just because
-doc-sync will not complain about their absence. Nothing static can check that a
-probe *path* is real either — that one is on you, see below.
+But a missing `HEALTH_PROBES`, `CONNECTED_APPS`, `SECRETS`, or `get_quickstart`
+is not caught here at all: the suite will fail at Robot runtime instead (a `Wait
+Until Apps Healthy` FOR loop with nothing to iterate, a `KeyError` on
+`${qs}[connected_apps]` inside `Start Quickstart`, or a keyword error), which is
+a slower and noisier way to find the same mistake. Do not skip these four just
+because doc-sync will not complain about their absence. Nothing static can
+check that a probe *path* is real either — that one is on you, see below.
 
 Beyond presence, `check_agent` cross-checks values against the README:
 
@@ -167,37 +169,53 @@ REQUESTS = (
 )
 ```
 
-**Several apps, one documented endpoint — `dapr-agents/multi-agent-workflow`
-(no suite yet; read the README yourself before writing one).** Its `dapr.yaml`
-declares three apps — the workflow app on 8001 (`main.py`, a plain
-`uvicorn.run(app, ...)`), a triage agent on 8002 and an expert agent on 8003
-(`triage_agent.py`/`expert_agent.py`, both calling `AgentRunner.serve(...,
-port=...)` from the `dapr_agents` package, whose `serve()` also auto-starts
-uvicorn internally when no app loop is already running). All three would
-therefore print their own `Uvicorn running on` line, so `READY_MARKERS` needs
-one entry per app and `HEALTH_PROBES` needs all three ports — but this has not
-been confirmed against a captured log, since no suite runs this quickstart yet;
-confirm it against the real `diagrid dev run` output before trusting it in a
-live suite. The README documents exactly one HTTP call, `POST
-http://localhost:8001/workflow/start`: the triage and expert agents are reached
-only as child workflows, never directly over HTTP. So `REQUESTS` still has a
-single entry even though three apps have to come up first:
+**Several apps, one documented endpoint — `agents/dapr-agents/orchestrator`
+(no suite yet; read the README yourself before writing one).** Its
+`dev-multi-agent-orchestration.yaml` declares nine apps, one per agent
+framework in the shared event-planning scenario, on ports 8001 through 8009:
+`entertainment-planner` (ADK), `venue-scout` (CrewAI), `invitations-manager`
+(Dapr Agents), `event-coordinator` (Dapr Agents — the orchestrator itself),
+`schedule-planner` (LangGraph), `catering-coordinator` (OpenAI Agents),
+`decoration-planner` (Pydantic AI), `budget-planner` (Strands),
+`photography-planner` (Claude Agents). The orchestrator's own `main.py` calls
+`AgentRunner.serve(orchestrator, port=...)` from the `dapr_agents` package,
+whose `serve()` auto-starts uvicorn internally when no app loop is already
+running; the other eight apps each live in their own quickstart directory and
+are not guaranteed to share that mechanism. All nine would therefore be
+expected to print their own `Uvicorn running on` line, so `READY_MARKERS`
+needs one entry per app and `HEALTH_PROBES` needs all nine ports — but this
+has not been confirmed against a captured log, since no suite runs this
+quickstart yet; confirm it against the real `diagrid dev run` output before
+trusting it in a live suite. The README documents exactly one HTTP call, `POST
+http://localhost:8004/agent/run`, against the orchestrator app itself: the
+other eight agents are reached only through the shared agent registry and
+pub/sub, never directly over HTTP. So `REQUESTS` still has a single entry even
+though nine apps have to come up first:
 
 ```python
-READY_MARKERS = ("Uvicorn running on", "Uvicorn running on", "Uvicorn running on")
-# Ports from dapr.yaml. The probe PATHS are left as a question here on purpose:
-# read each app's routes before filling them in (see "Probe a path the app really
-# serves" below). 8001 is a plain uvicorn app whose own routes you can read in
-# main.py; 8002/8003 come from dapr_agents' AgentRunner.serve(), which is a
-# different package from the one agents/langgraph uses, so langgraph's
-# /dapr/subscribe answer does not carry over.
-HEALTH_PROBES = ((8001, "<read main.py>"), (8002, "<read AgentRunner.serve>"), (8003, "<same>"))
+READY_MARKERS = ("Uvicorn running on",) * 9
+# Ports from dev-multi-agent-orchestration.yaml: 8001-8009. The probe PATHS are
+# left as a question here on purpose: read each app's routes before filling
+# them in (see "Probe a path the app really serves" below) — eight different
+# quickstart directories, potentially eight different route sets, and only
+# event-coordinator's (8004) has been read for this example.
+HEALTH_PROBES = (
+    (8001, "<read entertainment-planner's routes>"),
+    (8002, "<read venue-scout's routes>"),
+    (8003, "<read invitations-manager's routes>"),
+    (8004, "<read event-coordinator's routes>"),
+    (8005, "<read schedule-planner's routes>"),
+    (8006, "<read catering-coordinator's routes>"),
+    (8007, "<read decoration-planner's routes>"),
+    (8008, "<read budget-planner's routes>"),
+    (8009, "<read photography-planner's routes>"),
+)
 REQUESTS = (
     {
         "method": "POST",
-        "port": 8001,
-        "path": "/workflow/start",
-        "payload": {"customer": "Alice", "issue": "My Dapr system fails to start in production."},
+        "port": 8004,
+        "path": "/agent/run",
+        "payload": {"task": "Plan a company offsite in Austin for 50 people"},
         "status": 200,
         "field": None,
     },
@@ -255,16 +273,22 @@ fails.
 Three real quickstarts show three different documented flows. Follow whichever
 one the README you are working from actually shows; do not average them.
 
-- **`agents/*`** (`agents/langgraph`, `agents/microsoft-dotnet`): `diagrid
-  project create <name> --enable-agent-infrastructure --wait --use`, then
-  `diagrid agent create <agent-name> --wait`, then a **bare** `dev run` (no
-  `--project`). The bare form works because `--use` on the documented `project
-  create` made it the CLI's default project, and reproducing that dependency is
-  deliberate — a regression in `--use` should break this suite, not be silently
-  worked around by adding an explicit `--project` the README never shows.
-- **`dapr-agents/durable-agent`**: no `project create` anywhere in the README —
-  only `diagrid login` — yet `dev run` passes `--project
-  durable-agent-quickstart` explicitly. This is the "documents no project
+- **`agents/*`** (`agents/langgraph`, `agents/microsoft-dotnet`,
+  `agents/dapr-agents/durable-agent`): `diagrid project create <name>
+  --enable-managed-workflow --deploy-managed-kv --deploy-managed-pubsub --wait
+  --use`, then `diagrid agent create <agent-name> --wait`, then a **bare** `dev
+  run` (no `--project`). The bare form works because `--use` on the documented
+  `project create` made it the CLI's default project, and reproducing that
+  dependency is deliberate — a regression in `--use` should break this suite,
+  not be silently worked around by adding an explicit `--project` the README
+  never shows. `agents/spring-ai/event-planner` follows the same shape one flag
+  lighter: `--enable-managed-workflow --deploy-managed-kv`, no
+  `--deploy-managed-pubsub` — a reminder that these flags are per-quickstart
+  data transcribed from each README, not a constant this skill can assume.
+- **`agents/dapr-agents/orchestrator`**: no `project create` anywhere in the
+  README, and no `--project` flag on `dev run` either — the whole documented
+  flow is `diagrid login` then `uv run diagrid dev run -f
+  dev-multi-agent-orchestration.yaml`. This is the "documents no project
   creation" case; see below.
 - **`mcp-auth/python`**: `diagrid project create mcp-auth --use`, then `diagrid
   app create mcp-client --wait`, then `diagrid apply -f
@@ -275,25 +299,31 @@ one the README you are working from actually shows; do not average them.
 
 ## Undocumented provisioning: ask, do not guess
 
-`dapr-agents/durable-agent` documents `diagrid login` and a `dev run --project
-durable-agent-quickstart`, and nothing in between. Its prerequisites list only
-the CLI, Python and an OpenAI key — no `project create` at all. Under the
-guiding principle, provisioning here is infrastructure the harness must supply,
-the same as `ci/setup-project.sh` already does for the four canonical APIs.
+`agents/dapr-agents/orchestrator` documents `diagrid login` and then
+`uv run diagrid dev run -f dev-multi-agent-orchestration.yaml`, and nothing in
+between — no `project create`, and no `--project` flag on `dev run` either. Its
+prerequisites list only the CLI, Python, uv and three model API keys (Google,
+OpenAI, Anthropic). Under the guiding principle, provisioning here is
+infrastructure the harness must supply, the same as `ci/setup-project.sh`
+already does for the four canonical APIs.
 
 But `ci/setup-project.sh`'s flags (`--deploy-managed-kv
 --deploy-managed-pubsub --enable-managed-workflow`) were chosen for the
-canonical APIs, and an agent quickstart's project may need
-`--enable-agent-infrastructure` on top, or instead. Deciding that from nothing
-is guessing — the one thing this skill must not do, because a flag that happens
-to work hides a real documentation gap that a reader following the README will
-hit and you will not.
+canonical APIs, and an agent quickstart's project may need different ones.
+Every agent quickstart that *does* document its own provisioning agrees on
+`--enable-managed-workflow --deploy-managed-kv`, and all but `spring-ai` add
+`--deploy-managed-pubsub` on top — but orchestrator brings up nine apps across
+eight frameworks with no documented `project create` of its own, and assuming
+its needs match either set is guessing — the one thing this skill must not do,
+because a flag that happens to work hides a real documentation gap that a
+reader following the README will hit and you will not.
 
 So: leave `SETUP` empty, write a comment in the data module that provisioning is
 undocumented, and ask which flags the project actually needs before running
-anything against Catalyst. State what you know (the quickstart passes `--project
-X`; the README documents no command that creates `X`; the canonical flags are
-these) and what needs a decision.
+anything against Catalyst. State what you know (the quickstart's `dev run`
+passes no `--project` at all; the README documents no command that creates one;
+the flags every other agent quickstart documents are these) and what needs a
+decision.
 
 ## Probe a path the app really serves
 
@@ -302,8 +332,9 @@ answers 200, and it is the last gate before the suite starts asserting. A probe
 path the app does not route is the worst kind of mistake this skill can make:
 the quickstart is healthy, the readiness marker has already arrived, and the
 suite still burns the full `${READINESS_TIMEOUT}` on a 404 and then fails —
-*after* paying for `project create --enable-agent-infrastructure --wait` and
-`agent create --wait`. Nothing static catches it. Confirm it yourself:
+*after* paying for `project create --enable-managed-workflow
+--deploy-managed-kv --deploy-managed-pubsub --wait` and `agent create --wait`.
+Nothing static catches it. Confirm it yourself:
 
 1. Find where the app starts its HTTP server. For `agents/langgraph` that is
    `main.py`'s `runner.serve(...)`, which is
@@ -338,19 +369,40 @@ route `/` (`state/python/main.py`, `state/csharp/Program.cs`,
 Every README that documents a background process tells you, in prose, what to
 wait for before triggering it — the exact phrasing varies, but the pattern is
 consistent: "Wait until the output shows `Uvicorn running on
-<localhost:port>`" (`agents/langgraph`), "Wait until the output shows
-`Established gRPC bidirectional stream with Dapr sidecar`"
-(`agents/microsoft-dotnet`), "Confirm from the logs that `Travel Assistant
-Agent is running`" (`dapr-agents/durable-agent`). Two Python quickstarts here
-(`langgraph`, `durable-agent`) do not share a marker, because the marker comes
-from the agent framework each one is built on, not from the language runtime.
-Read this line out of the README itself; do not assume it is `Uvicorn running
-on` just because the language is Python.
+<localhost:port>`" (`agents/langgraph`, `agents/dapr-agents/durable-agent`),
+"Wait until the output shows `Established gRPC bidirectional stream with Dapr
+sidecar`" (`agents/microsoft-dotnet`). Read this line out of the README
+itself; do not assume it is `Uvicorn running on` just because the language is
+Python — `agents/microsoft-dotnet`'s marker names a Dapr sidecar gRPC stream,
+not the app's own HTTP server, even though the app does end up serving HTTP.
+
+`agents/spring-ai/event-planner` is the harder case: its README documents no
+readiness marker at all, no "Wait until..." sentence anywhere in it, even
+though `diagrid dev run -f dev-spring-ai-event-planner.yaml --approve` is
+exactly the same kind of long-running background process as the other two.
+Together, `agents/microsoft-dotnet` and `agents/spring-ai/event-planner` are
+worth holding side by side: one shows the marker is a property of the agent
+framework, not the language; the other shows a quickstart may not give you a
+marker at all.
 
 `Wait Until Ready Marker` (`catalyst.resource`) is the keyword this maps to —
 see `references/harness-keywords.md`. It exists precisely because agent
-quickstarts do not emit the canonical `Connected App ID "<id>" to
-http://localhost:<port>` line that `Wait Until Apps Connected` waits for.
+quickstarts do not reliably emit the canonical `Connected App ID "<id>" to
+http://localhost:<port>` line that `Wait Until Apps Connected` waits for. Where
+a README gives you no marker to wait for at all, as for
+`agents/spring-ai/event-planner`, that connection line — via
+`${qs}[connected_apps]` and `Wait Until Apps Connected` — is the readiness
+signal that is left; whether the CLI actually prints it for that app has not
+been confirmed by a live run, the same open question `agents_langgraph.py`'s
+`CONNECTED_APPS` comment already flags for `agents/langgraph`.
+
+Neither `agents/microsoft-dotnet` nor `agents/spring-ai/event-planner` serves
+any GET route at all (confirmed by reading both apps' HTTP setup — the .NET
+app maps only its `POST /run` endpoint, and the Spring AI app maps only its own
+`POST /run`), so `HEALTH_PROBES` is empty for both. "Probe a path the app
+really serves" above is not a hypothetical instruction added for effect: these
+are the two real quickstarts that show a suite can have nothing to probe at
+all.
 
 ## Assertions are structural, on purpose
 
@@ -425,6 +477,18 @@ sharing a `name` would collide at runtime — the second run's project name, log
 upload and failure marker would clobber the first's. Pick a `name` that is
 unique across every agent-family row, not just within the family you are
 adding to.
+
+`name` is not invented — it is the quickstart's path below `agents/` with every
+`/` replaced by `-`, and it is what `suites.leg_id()` defaults to when a row
+carries no explicit `leg`. Quickstarts can be nested three levels deep, not
+just the two `agents/langgraph` shows: `agents/spring-ai/event-planner` is a
+real one, so its suite lives at
+`agents/spring-ai/event-planner/tests/quickstart.robot` (`<family>/<group>/
+<name>/tests/quickstart.robot`) and its manifest `name` is
+`spring-ai-event-planner` — 23 characters, inside the 26-character budget
+below, but the tightest real case that exists today. A row whose family is
+`agents` but whose quickstart nests even one level deeper than that would need
+an explicit, shorter `leg`.
 
 The leg id has its own, tighter limit: `suites.validate()` also rejects a row
 whose leg is over `suites.project_name_budget()` characters (26 today), because

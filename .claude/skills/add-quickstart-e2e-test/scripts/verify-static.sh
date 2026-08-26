@@ -19,6 +19,7 @@ echo "== dryrun"
 uv run robot --dryrun --variable PROJECT:dryrun --outputdir results/dryrun \
   $(uv run python ci/list-suites.py --paths) || failed+=("dryrun")
 run "doc-sync"  uv run python docsync/check_readme_sync.py --all
+run "skill doc-sync"  uv run python docsync/check_skill_docs.py
 run "unit tests" uv run pytest -q
 echo "== keyword smoke tests"
 uv run robot --outputdir results/smoke \

@@ -65,6 +65,10 @@ value came from. Where the README is silent about something the test would only
 guess at, such as a response body shape, leave it unasserted and say why in a
 comment.
 
+Read the provisioning flags out of the README you are testing. The examples
+here are checked against real READMEs, but they are still examples: `spring-ai`
+omits `--deploy-managed-pubsub`, and the flags changed once already.
+
 List every documented command you are NOT going to run, with its reason. That
 list becomes `UNCOVERED`, and doc-sync fails if a documented command is in
 neither `UNCOVERED` nor the suite. Crash-recovery flows that need source edits,
@@ -73,23 +77,31 @@ and endpoints no README documents, belong in `UNCOVERED`.
 ### When the README documents no project creation
 
 Some quickstarts need a project but never say how to make one.
-`dapr-agents/durable-agent` is the clearest case: its prerequisites list only the
-CLI, Python and an OpenAI key, yet its `dev run` passes
-`--project durable-agent-quickstart`. Under the guiding principle, provisioning is
-then infrastructure, and `ci/setup-project.sh` owns it, exactly as for the
+`agents/dapr-agents/orchestrator` is the clearest case: its prerequisites list
+only the CLI, Python, uv and three model API keys, and the whole documented
+flow is `diagrid login` then `uv run diagrid dev run -f
+dev-multi-agent-orchestration.yaml` — no `project create` anywhere, and no
+`--project` flag on `dev run` either. Under the guiding principle, provisioning
+is then infrastructure, and `ci/setup-project.sh` owns it, exactly as for the
 canonical APIs.
 
 That script's flags were chosen for the canonical APIs, though
-(`--deploy-managed-kv --deploy-managed-pubsub --enable-managed-workflow`), and an
-agent quickstart may also need `--enable-agent-infrastructure`. Deciding that from
-nothing is guessing, which is the one thing this skill must not do.
+(`--deploy-managed-kv --deploy-managed-pubsub --enable-managed-workflow`), and
+the flags an agent quickstart's own README documents are not a constant either:
+`agents/langgraph` and `agents/microsoft-dotnet` both document
+`--enable-managed-workflow --deploy-managed-kv --deploy-managed-pubsub`, while
+`agents/spring-ai/event-planner` documents `--enable-managed-workflow
+--deploy-managed-kv` only, with no `--deploy-managed-pubsub`. Deciding which
+set an undocumented case like orchestrator's nine apps actually needs, from
+nothing, is guessing, which is the one thing this skill must not do.
 
 So: leave `SETUP` empty, note in the data module that provisioning is
 undocumented, and **ask** which flags the project needs before running anything.
-Say what you know (the quickstart passes `--project X`, nothing documents creating
-X, the canonical flags are these) and what you need decided. A wrong flag here
-either fails the whole leg or, worse, provisions something that works by accident
-and hides a documentation gap readers will hit.
+Say what you know (the quickstart's `dev run` passes no `--project` at all,
+nothing documents creating one, and the flags other agent quickstarts document
+are these) and what you need decided. A wrong flag here either fails the whole
+leg or, worse, provisions something that works by accident and hides a
+documentation gap readers will hit.
 
 ## Phase 3: write
 
