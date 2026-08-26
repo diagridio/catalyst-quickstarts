@@ -16,7 +16,6 @@ For more information, visit: https://docs.diagrid.io/catalyst/quickstart/workflo
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse, Response
-from pydantic import BaseModel
 import json
 import logging
 import os
@@ -24,7 +23,7 @@ import uvicorn
 import uuid
 from dapr.ext.workflow import WorkflowRuntime, DaprWorkflowClient
 from workflow import order_processing_workflow, notify_activity, reserve_inventory_activity, process_payment_activity, update_inventory_activity, crash_recovery_workflow, commit_reservation_activity
-from model import OrderPayload
+from model import OrderPayload, CrashRunRequest
 
 app = FastAPI()
 
@@ -133,11 +132,17 @@ def terminate_workflow(instance_id: str):
 # ── Crash-recovery demo ──────────────────────────────────────────────────────
 # The wait budget for the blocking /crash/run. Kept comfortably above the slow
 # activity's default 30s so the first call is still blocked when you kill the app.
-CRASH_WAIT_SECONDS = 120
+# Overridable through CRASH_WAIT_SECONDS, which is how the e2e suite exercises the
+# 202 branch without waiting two minutes for it.
+CRASH_WAIT_SECONDS = int(os.environ.get('CRASH_WAIT_SECONDS', '120'))
 
-class CrashRunRequest(BaseModel):
-    id: str
-    reference: str = "ABC123"
+def crash_response(instance_id: str, result=None, message=None, status_code: int = 200):
+    """The one response shape every crash demo in this repo returns. All three fields are
+    always present: a 200 carries `result`, while a 202 and a 500 carry `message` instead."""
+    return JSONResponse(
+        status_code=status_code,
+        content={"id": instance_id, "result": result, "message": message},
+    )
 
 # Run the crash-recovery workflow under an instance ID you choose
 # POST /crash/run
@@ -150,6 +155,9 @@ class CrashRunRequest(BaseModel):
 # demo depends on could never be served.
 @app.post("/crash/run")
 def crash_run(req: CrashRunRequest):
+    if not req.id or not req.id.strip():
+        return crash_response(req.id, message="id is required", status_code=400)
+
     try:
         state = workflow_client.get_workflow_state(instance_id=req.id)
         if state is None:
@@ -165,24 +173,39 @@ def crash_run(req: CrashRunRequest):
         completed = workflow_client.wait_for_workflow_completion(
             req.id, timeout_in_seconds=CRASH_WAIT_SECONDS
         )
-        return {"id": req.id, "result": json.loads(completed.serialized_output)}
+
+        # The wait returns on ANY terminal state, and a failed or terminated instance has no
+        # output at all, so read the status before reading the output. json.loads(None) would
+        # otherwise raise and surface as a JSON decoder error rather than the real cause.
+        status_str = str(completed.runtime_status) if completed else ""
+        if "COMPLETED" not in status_str:
+            logger.error(f"Crash-recovery workflow {req.id} ended as {status_str}")
+            return crash_response(
+                req.id, message=f"workflow {req.id} ended as {status_str}", status_code=500
+            )
+
+        return crash_response(req.id, result=json.loads(completed.serialized_output))
     except TimeoutError:
         # Not a failure: the run is still going. Re-issue the same request with the
         # same ID to attach and collect the result.
-        return JSONResponse(
+        return crash_response(
+            req.id,
+            message=f"still running as {req.id}, re-issue POST /crash/run with the same id to attach",
             status_code=202,
-            content={"id": req.id, "message": f"still running as {req.id}, re-issue POST /crash/run with the same id to attach"},
         )
     except Exception as e:
         logger.error(f"Error running the crash-recovery workflow {req.id}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        return crash_response(req.id, message=str(e), status_code=500)
 
 # Simulate a crash: kill this process outright, like SIGKILL. Demo only.
 # POST /crash/kill
 # Returns: nothing. The process is gone before a response can be written, so the
 # caller sees a connection reset.
+#
+# `async def`, unlike /crash/run above: os._exit needs no worker thread, and staying on the
+# event loop means this can never queue behind an in-flight /crash/run for a thread.
 @app.post("/crash/kill")
-def crash_kill():
+async def crash_kill():
     logger.warning(">>> /crash/kill: killing this process to simulate a worker crash")
     # os._exit, not sys.exit: sys.exit raises SystemExit, which unwinds through
     # uvicorn and runs the shutdown paths on the way out. That is a controlled exit,
