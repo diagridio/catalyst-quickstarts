@@ -171,3 +171,45 @@ def test_an_illustrative_tag_without_a_reason_fails_for_an_inline_candidate(tmp_
 See `diagrid mcp grant --caller x --tool add` as an example.
 """)
     assert any("reason" in p for p in check(skill, root))
+
+
+# --- The sanctioned `diagrid login --api-key` exception ------------------------
+#
+# `diagrid login --api-key "$DIAGRID_API_KEY"` is one of exactly two sanctioned
+# deviations from doc-sync (the other is the project-name substitution, already
+# handled by `mask_project_name`): CI runs it in place of the documented bare
+# `diagrid login`, which blocks on an interactive browser prompt, and no README
+# will ever document it. It is a real command CI actually runs, not a
+# constructed example, so it does not get an `illustrative` tag — that would
+# misdescribe it, and the tag's block/paragraph-wide exemption would silently
+# cover any other command that later sits next to it. It is encoded as an exact
+# allowlist entry instead.
+
+
+def test_the_sanctioned_login_api_key_exception_passes(tmp_path):
+    skill, root = _tree(tmp_path, """\
+```bash
+diagrid login --api-key "$DIAGRID_API_KEY"
+```
+""")
+    assert check(skill, root) == []
+
+
+def test_a_different_api_key_value_still_fails(tmp_path):
+    # The allowlist entry is matched exactly, not as a prefix, so a nearby
+    # variation is still held to the same two rules as everything else.
+    skill, root = _tree(tmp_path, """\
+```bash
+diagrid login --api-key "$SOME_OTHER_VAR"
+```
+""")
+    assert check(skill, root) != []
+
+
+def test_a_different_login_flag_still_fails(tmp_path):
+    skill, root = _tree(tmp_path, """\
+```bash
+diagrid login --debug
+```
+""")
+    assert check(skill, root) != []

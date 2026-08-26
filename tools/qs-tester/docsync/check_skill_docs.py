@@ -39,6 +39,11 @@ references rather than full invocations:
      `{project}`, or a real name, and whether or not the skill bothered to spell
      out the leading `diagrid` in that sentence.
 
+A candidate that matches `_SANCTIONED_EXCEPTIONS` exactly skips both rules: the
+design names exactly two commands CI runs that no README will ever document (the
+other is the project name, already handled by `mask_project_name`), and neither
+is a documentation gap to report.
+
 Usage:
     python docsync/check_skill_docs.py
     python docsync/check_skill_docs.py --skill-dir path --repo-root path
@@ -75,6 +80,29 @@ _INLINE_CODE = re.compile(r"`([^`]+)`", re.DOTALL)
 # `suites.validate()` — all of which this skill's prose mentions by a bare
 # flag the same way it mentions diagrid's.
 _COMPOUND_FLAG_TOKEN = re.compile(r"^--[A-Za-z]+(?:-[A-Za-z]+)+$")
+
+# Sanctioned exceptions: commands CI actually runs that no README will ever
+# document, because the design deliberately deviates from the README for a
+# reason that has nothing to do with drift. This list is closed BY THE DESIGN,
+# named in SKILL.md and tools/qs-tester/README.md as exactly two exceptions —
+# it is not a convenience for silencing failures, and is not the place to put
+# a command that merely lacks a README yet. The other sanctioned exception,
+# the project name, is already handled structurally by `mask_project_name`,
+# not by this list.
+#
+# Matched exactly against the masked candidate, never as a prefix or
+# substring: `diagrid login --api-key` with a different value, or `diagrid
+# login` with some other flag, is not this exception and must still be
+# checked normally.
+_SANCTIONED_EXCEPTIONS = (
+    # CI runs this in place of the documented bare `diagrid login`, which
+    # blocks on an interactive browser prompt (`ci/login.sh`). It is a real
+    # command CI actually runs, not a constructed example, so it does not get
+    # an `illustrative` tag either: that would misdescribe it, and the tag's
+    # block/paragraph-wide exemption would silently cover any other command
+    # that later sits next to it in the same paragraph or block.
+    'diagrid login --api-key "$DIAGRID_API_KEY"',
+)
 
 # Directories whose READMEs are the source of truth. The legacy top-level
 # `dapr-agents/` tree is excluded on purpose: it is retained for Dapr University
@@ -183,6 +211,9 @@ def _check_candidate(path, line_no, text, documented, flags_by_object, all_flags
     """Rule 1 (whole-command) then rule 2 (flag-level) for one `diagrid`
     candidate, fenced or inline. Returns a list of problem strings."""
     masked = mask_project_name(text)
+
+    if masked in _SANCTIONED_EXCEPTIONS:
+        return []
 
     # Flags and the CLI object come from the UNMASKED text on purpose.
     # `mask_project_name`'s positional-name pattern assumes `project
