@@ -50,11 +50,14 @@ agent-family suites only: `check_agent` runs from `--all` over
 
 The last two are there for a different reason than the first eight. `check_agent`
 does not read `CONNECTED_APPS` or `HEALTH_PROBES` at all — `get_quickstart()`
-does, and the `.resource` files then index `${qs}[connected_apps]` (both `Start
-Quickstart` and `Stop Quickstart`) and `${qs}[health_probes]` (`Wait Until Apps
+does, and the `.resource` files then index `${qs}[connected_apps]` (`Wait Until
+Apps Connected`) and `${qs}[health_probes]` (`Wait Until Apps
 Healthy`). Omit either and nothing static complains unless doc-sync requires it;
-the failure surfaces as a `KeyError` inside a live credentialed run, after
-`diagrid project create` has already spent a project. Empty is legal for both
+the failure surfaces as a `NameError` inside `get_quickstart()` itself — the
+test's first keyword, before `diagrid project create` runs, so no cloud project
+is spent. (The genuine `KeyError` shape — the attribute exists but
+`get_quickstart()` drops it from the returned dict — is a different failure
+this guard still does not catch.) Empty is legal for both
 (`agents/spring-ai/event-planner` has `HEALTH_PROBES = ()`); absent is not.
 
 Note what is still **not** in the list: `SECRETS` and `get_quickstart`. A module

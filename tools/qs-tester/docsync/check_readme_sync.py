@@ -172,13 +172,16 @@ def normalise_project(command, documented_project):
 #
 # The first eight are what check_agent itself reads. CONNECTED_APPS and
 # HEALTH_PROBES are not — they are read by the module's own `get_quickstart()`
-# and then indexed as `${qs}[connected_apps]` (`catalyst.resource`, by both
-# `Start Quickstart` and `Stop Quickstart`) and `${qs}[health_probes]`
+# and then indexed as `${qs}[connected_apps]` (`catalyst.resource`, by
+# `Wait Until Apps Connected`) and `${qs}[health_probes]`
 # (`quickstart.resource`, by `Wait Until Apps Healthy`). Empty is legal for
-# both; absent is not, and absent otherwise surfaces only as a KeyError inside a
-# live credentialed run, after `diagrid project create` has already spent a
-# project. Doc-sync is the only credential-free check that sees these modules at
-# all, so requiring them here is what makes them required.
+# both; absent is not, and an absent attribute surfaces only as a NameError
+# inside `get_quickstart()` itself — the test's first keyword, before
+# `diagrid project create` runs, so no cloud project is spent. (The genuine
+# KeyError shape — the attribute exists but `get_quickstart()` drops it from
+# the returned dict — is a different failure this guard still does not
+# catch.) Doc-sync is the only credential-free check that sees these modules
+# at all, so requiring them here is what makes them required.
 _REQUIRED_MODULE_ATTRS = (
     "DOCUMENTED_PROJECT",
     "SETUP",

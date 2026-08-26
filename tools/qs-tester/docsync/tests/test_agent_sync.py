@@ -236,11 +236,11 @@ def test_check_agent_reports_a_missing_required_attribute_instead_of_raising(tmp
 
 
 def test_check_agent_reports_a_missing_connected_apps(tmp_path):
-    # CONNECTED_APPS is not read by check_agent, but `Start Quickstart` and
-    # `Stop Quickstart` both index `${qs}[connected_apps]`, so a module that
-    # omits it raises KeyError only inside a live credentialed run — after
-    # `diagrid project create` has already spent a project. Doc-sync is the only
-    # credential-free place that can catch it.
+    # CONNECTED_APPS is not read by check_agent, but `Wait Until Apps Connected`
+    # indexes `${qs}[connected_apps]`, so a module that omits it raises
+    # NameError inside `get_quickstart()` itself — the test's first keyword,
+    # before `diagrid project create` runs, so no cloud project is spent.
+    # Doc-sync is the only credential-free place that can catch it.
     row, root = _fixture(tmp_path)
     module = data_module()
     del module.CONNECTED_APPS
