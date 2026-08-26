@@ -72,6 +72,15 @@ runner = DaprWorkflowGraphRunner(
 
 # Used to wait on a run by its instance ID, which is what lets a re-issued request
 # attach to the run started before the crash instead of starting a second one.
+# DaprWorkflowGraphRunner.run_async always schedules, so it cannot express "attach
+# to an existing instance" and this client is the only way to do it.
+#
+# Note where dapr-ext-workflow comes from: it is not in pyproject.toml. It arrives
+# as an unconditional dependency of diagrid 0.4.3, the same package that provides
+# DaprWorkflowGraphRunner above, so it is always installed here. Declaring it
+# directly would be more honest but would force a uv.lock regeneration. If a future
+# diagrid release drops it, this file breaks with an ImportError and no manifest
+# change will have warned anyone.
 workflow_client = DaprWorkflowClient()
 
 # The wait budget for the blocking POST /crash/run. Kept comfortably above step 2's
