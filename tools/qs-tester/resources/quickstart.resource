@@ -23,8 +23,12 @@ Suite Log File
     ...    suite, and Start Background Process truncates this file, so a per-api
     ...    name left only the last language's log on disk and destroyed the
     ...    evidence for whichever earlier language actually failed.
-    [Arguments]    ${api}    ${language}
-    RETURN    ${OUTPUT DIR}/${api}-${language}-dev-run.log
+    ...
+    ...    ${suffix} exists for the same reason one step down: a test that launches
+    ...    the quickstart twice (the crash-recovery case) must not let the second
+    ...    launch truncate the first launch's evidence away.
+    [Arguments]    ${api}    ${language}    ${suffix}=${EMPTY}
+    RETURN    ${OUTPUT DIR}/${api}-${language}${suffix}-dev-run.log
 
 Wait Until Apps Healthy
     [Documentation]    Poll every `(port, path)` probe in ${qs}[health_probes] until

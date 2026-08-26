@@ -212,6 +212,39 @@ INVOCATION_CLIENT_MARKER = {
 WORKFLOW_START_MARKER = "Received order {id} for 2 Car"
 WORKFLOW_DONE_MARKER = "Order {id} has completed!"
 
+# --- README section 7: the crash-recovery demo -------------------------------
+# csharp, java and python only. javascript has no crash demo, so there is nothing
+# for a javascript case to drive.
+CRASH_LANGUAGES = ("csharp", "java", "python")
+
+# The instance id is per-language on purpose. All four language tests share one
+# ephemeral Catalyst project, so a single shared id would leave the second language
+# attaching to the first language's completed run and never crashing anything.
+CRASH_INSTANCE_ID = "trip-42-{language}"
+CRASH_REFERENCE = "ABC123"
+
+# The delay driven into the app so the suite does not pay 30s per language. Long
+# enough that firing the request, seeing the start marker and firing the kill all
+# fit inside the window.
+CRASH_DELAY_SECONDS = "20"
+
+# Log markers, identical in all three languages: the implementations log the same
+# sentences deliberately, so this needs no per-language dict. `{id}` is the
+# caller-chosen instance id.
+#
+# CRASH_RECEIVED_MARKER is the one that matters most, and it is asserted ABSENT
+# from the restarted app's log. It belongs to the fast activity, which completed and
+# was recorded before the crash, so a replay that re-ran it would mean the crash
+# landed before the first persisted completion and the demo proved nothing.
+CRASH_RECEIVED_MARKER = "Reservation {id} received for ABC123"
+CRASH_COMMITTING_MARKER = "Committing reservation ABC123 over ~"
+CRASH_COMMITTED_MARKER = "Committed reservation ABC123. Confirmation code: BK-E0BEBD22"
+CRASH_DONE_MARKER = "Reservation {id} has completed!"
+
+# The documented 200 body's `result` field. Derived from the reference alone, so it is
+# the same before and after the crash. That sameness is the point of the demo.
+CRASH_CONFIRMATION = "Reservation ABC123 confirmed. Confirmation code: BK-E0BEBD22"
+
 
 def get_quickstart(api, language):
     """Return a flat dict of everything a suite needs for one (api, language).
