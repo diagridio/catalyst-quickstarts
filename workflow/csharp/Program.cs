@@ -15,6 +15,7 @@
  */
 
 
+using System.Diagnostics;
 using System.Text.Json;
 using Dapr.Workflow;
 using Microsoft.AspNetCore.Mvc;
@@ -35,10 +36,12 @@ builder.Services.Configure<Microsoft.AspNetCore.Http.Json.JsonOptions>(options =
 builder.Services.AddDaprWorkflow(options =>
 {
     options.RegisterWorkflow<OrderProcessingWorkflow>();
+    options.RegisterWorkflow<CrashRecoveryWorkflow>();
     options.RegisterActivity<NotifyActivity>();
     options.RegisterActivity<ReserveInventoryActivity>();
     options.RegisterActivity<ProcessPaymentActivity>();
     options.RegisterActivity<UpdateInventoryActivity>();
+    options.RegisterActivity<CommitReservationActivity>();
 });
 
 var app = builder.Build();
@@ -149,6 +152,74 @@ app.MapPost("/workflow/terminate/{id}", async (
         app.Logger.LogError("Error occurred while terminating the workflow: {id}. Exception: {exception}", id, ex.InnerException);
         return Results.Problem(detail: ex.Message, statusCode: 500);
     }
+});
+
+// ── Crash-recovery demo ──────────────────────────────────────────────────────
+// The wait budget for the blocking /crash/run. Kept comfortably above the slow
+// activity's default 30s so the first call is still blocked when you kill the app.
+var crashWait = TimeSpan.FromSeconds(120);
+
+// Run the crash-recovery workflow under an instance ID the caller owns
+// POST /crash/run
+// Body: { "id": "trip-42", "reference": "ABC123" }
+// Returns: 200 with the confirmation, or 202 with the ID if the wait budget elapses
+//
+// Re-issuing this with the same ID attaches to the existing run rather than reserving
+// a second time. That is what the caller-owned ID buys, and it is the point of the demo.
+app.MapPost("/crash/run", async (
+    [FromBody] CrashRunRequest request,
+    [FromServices] DaprWorkflowClient workflowClient) =>
+{
+    var id = request.Id;
+    try
+    {
+        if (await workflowClient.GetWorkflowStateAsync(instanceId: id) == null)
+        {
+            app.Logger.LogInformation(
+                "Starting crash-recovery workflow {id} for reservation {reference}", id, request.Reference);
+            await workflowClient.ScheduleNewWorkflowAsync(
+                name: nameof(CrashRecoveryWorkflow),
+                input: request.Reference,
+                instanceId: id);
+        }
+        else
+        {
+            app.Logger.LogInformation("Attaching to existing crash-recovery workflow {id}", id);
+        }
+
+        // WaitForWorkflowCompletionAsync takes no timeout of its own, so the wait budget
+        // arrives as a cancellation token.
+        using var budget = new CancellationTokenSource(crashWait);
+        var state = await workflowClient.WaitForWorkflowCompletionAsync(
+            instanceId: id, getInputsAndOutputs: true, cancellation: budget.Token);
+
+        return Results.Ok(new CrashRunResponse(id, state.ReadOutputAs<string>(), null));
+    }
+    catch (OperationCanceledException)
+    {
+        // Not a failure: the run is still going. Re-issue the same request with the same
+        // ID to attach and collect the result.
+        return Results.Accepted(value: new CrashRunResponse(id, null,
+            $"still running as {id}, re-issue POST /crash/run with the same id to attach"));
+    }
+    catch (Exception ex)
+    {
+        app.Logger.LogError("Error running the crash-recovery workflow {id}: {error}", id, ex.Message);
+        return Results.Problem(detail: ex.Message, statusCode: 500);
+    }
+});
+
+// Simulate a crash: kill this process outright, like SIGKILL. Demo only.
+// POST /crash/kill
+// Returns: nothing. The process is gone before a response can be written, so the caller
+// sees a connection reset.
+app.MapPost("/crash/kill", () =>
+{
+    app.Logger.LogWarning(">>> /crash/kill: killing this process to simulate a worker crash");
+    // Kill(), not Environment.Exit(): Exit runs the ProcessExit handlers, which makes it a
+    // controlled shutdown wearing a crash's name. Kill() is TerminateProcess on Windows and
+    // SIGKILL on Unix, which is the thing this demo is simulating.
+    Process.GetCurrentProcess().Kill();
 });
 
 app.Run();

@@ -33,4 +33,17 @@ namespace WorkflowApp.Models
 
     public record WorkflowStartResponse(
         [property: JsonPropertyName("instanceId")] string InstanceId);
+
+    // Request body of POST /crash/run: the instance ID the caller owns, and the reference
+    // the confirmation code is derived from.
+    public record CrashRunRequest(
+        [property: JsonPropertyName("id")] string Id,
+        [property: JsonPropertyName("reference")] string Reference = "ABC123");
+
+    // Response body of POST /crash/run. A 200 carries Result; a 202 carries Message, telling
+    // the caller to re-issue the same request to attach.
+    public record CrashRunResponse(
+        [property: JsonPropertyName("id")] string Id,
+        [property: JsonPropertyName("result")] string? Result,
+        [property: JsonPropertyName("message")] string? Message);
 }
