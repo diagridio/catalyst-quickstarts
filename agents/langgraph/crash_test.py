@@ -2,7 +2,7 @@ import os
 import asyncio
 import json
 import time
-from typing import List, TypedDict
+from typing import List, Optional, TypedDict
 from contextlib import asynccontextmanager
 
 import uvicorn
@@ -92,6 +92,8 @@ CRASH_WAIT_SECONDS = 120
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     runner.start()
+    # The runner registers with Catalyst on a background thread. Give it a moment before
+    # announcing readiness, so the first request cannot arrive at an unregistered worker.
     await asyncio.sleep(1)
     print("Runner started, ready to accept requests", flush=True)
     yield
@@ -102,8 +104,20 @@ app = FastAPI(lifespan=lifespan)
 
 
 class CrashRunRequest(BaseModel):
-    id: str
+    # Optional so the handler can reject a missing id with the same 400 and the same body
+    # as the sibling crash demos. A required pydantic field would produce FastAPI's own
+    # 422 in a different shape instead.
+    id: Optional[str] = None
     topic: str = "company gala on March 15"
+
+
+def crash_response(instance_id: str, result=None, message=None, status_code: int = 200):
+    """The one response shape every crash demo in this repo returns. All three fields are
+    always present: a 200 carries `result`, while a 400, a 202 and a 500 carry `message`."""
+    return JSONResponse(
+        status_code=status_code,
+        content={"id": instance_id, "result": result, "message": message},
+    )
 
 
 # Run the graph under a workflow instance ID you choose, and block until it finishes
@@ -112,23 +126,26 @@ class CrashRunRequest(BaseModel):
 # Returns: 200 with the graph output, or 202 with the ID if the wait budget elapses
 @app.post("/crash/run")
 async def crash_run(req: CrashRunRequest):
-    existing = await asyncio.to_thread(workflow_client.get_workflow_state, req.id)
-    if existing is None:
-        # run_async schedules the workflow and then polls it. Advance it once so the
-        # scheduling happens, then close it: the wait below is the blocking part, and it
-        # is the same wait a re-issued request uses.
-        stream = runner.run_async(
-            input={"topic": req.topic, "results": []},
-            thread_id=req.id,
-            workflow_id=req.id,
-        )
-        await anext(stream)
-        await stream.aclose()
-    else:
-        print(f">>> Attaching to the existing run {req.id} instead of starting a second one",
-              flush=True)
+    if not req.id or not req.id.strip():
+        return crash_response(req.id, message="id is required", status_code=400)
 
     try:
+        existing = await asyncio.to_thread(workflow_client.get_workflow_state, req.id)
+        if existing is None:
+            # run_async schedules the workflow and then polls it. Advance it once so the
+            # scheduling happens, then close it: the wait below is the blocking part, and it
+            # is the same wait a re-issued request uses.
+            stream = runner.run_async(
+                input={"topic": req.topic, "results": []},
+                thread_id=req.id,
+                workflow_id=req.id,
+            )
+            await anext(stream)
+            await stream.aclose()
+        else:
+            print(f">>> Attaching to the existing run {req.id} instead of starting a second one",
+                  flush=True)
+
         # to_thread, not a direct call: this blocks for the length of step 2, and blocking
         # the event loop here would leave POST /crash/kill unanswerable.
         state = await asyncio.to_thread(
@@ -138,15 +155,31 @@ async def crash_run(req: CrashRunRequest):
     except TimeoutError:
         # Not a failure: the run is still going. Re-issue the same request with the same
         # ID to attach and collect the result.
-        return JSONResponse(
+        return crash_response(
+            req.id,
+            message=f"still running as {req.id}, re-issue POST /crash/run "
+                    "with the same id to attach",
             status_code=202,
-            content={"id": req.id,
-                     "message": f"still running as {req.id}, re-issue POST /crash/run "
-                                "with the same id to attach"},
+        )
+    except Exception as e:
+        print(f">>> Error running the crash-recovery run {req.id}: {e}", flush=True)
+        return crash_response(req.id, message=str(e), status_code=500)
+
+    # The wait returns on ANY terminal state, and a failed or terminated run has no output at
+    # all, so read the status before reading the output. json.loads(None) would otherwise
+    # raise and surface as a JSON decoder error rather than the real cause.
+    status_str = str(state.runtime_status) if state else ""
+    if "COMPLETED" not in status_str:
+        print(f">>> Crash-recovery run {req.id} ended as {status_str}", flush=True)
+        return crash_response(
+            req.id, message=f"run {req.id} ended as {status_str}", status_code=500
         )
 
-    output = json.loads(state.serialized_output)
-    return {"id": req.id, "status": output["status"], "output": output["output"]}
+    # `result` carries the graph's final output, matching the `result` field of the crash
+    # demos in the workflow quickstarts. The graph's own `status` key is bookkeeping inside
+    # that payload and is not part of this endpoint's contract.
+    payload = json.loads(state.serialized_output)
+    return crash_response(req.id, result=payload.get("output", payload))
 
 
 # Simulate a crash: kill this process outright, like SIGKILL. Demo only.

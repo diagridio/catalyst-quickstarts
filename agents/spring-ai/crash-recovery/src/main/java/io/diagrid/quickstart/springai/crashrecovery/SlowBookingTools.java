@@ -14,14 +14,14 @@ import org.springframework.stereotype.Component;
  * the durability layer rediscovers {@code @Tool} beans at startup, so after the app is killed mid-tool
  * the tool is re-registered on the fresh worker and the resumed activity can run it. A request-scoped
  * tool attached per call is registered in memory at call time and is NOT re-registered after a cold
- * restart — the resumed activity would fail to resolve it.
+ * restart: the resumed activity would fail to resolve it.
  *
  * <p>The tool runs as a durable activity: it logs a start marker, sleeps for {@code delaySeconds}, then
  * logs a commit marker and returns a confirmation code. The sleep is the window in which you SIGKILL
  * the app (see {@link CrashRecoveryController}). Killing there interrupts this activity mid-flight; on
  * restart the durable runtime re-runs this (incomplete) activity from the start, while NOT re-running
  * any activity that already completed before the crash. The confirmation code is derived from the
- * reference, so a re-attached call returns the <em>same</em> code — visible proof the booking was not
+ * reference, so a re-attached call returns the <em>same</em> code, visible proof the booking was not
  * redone.
  */
 @Component
@@ -38,7 +38,7 @@ public class SlowBookingTools {
   @Tool(name = "commitReservation",
       description = "Commit a travel reservation with the provider and return a confirmation code")
   public String commitReservation(@ToolParam(description = "the booking reference") String reference) {
-    LOG.warn(">>> commitReservation({}) — committing over ~{}s. KILL THE APP NOW to test crash"
+    LOG.warn(">>> commitReservation({}): committing over ~{}s. KILL THE APP NOW to test crash"
         + " recovery (POST /crash/kill, or kill -9). It resumes on restart.", reference, delaySeconds);
     try {
       Thread.sleep(delaySeconds * 1000L);
@@ -47,7 +47,7 @@ public class SlowBookingTools {
       throw new IllegalStateException("commitReservation interrupted", e);
     }
     String code = "BK-" + Integer.toHexString(reference.hashCode()).toUpperCase();
-    LOG.info(">>> commitReservation({}) — committed. Confirmation code: {}", reference, code);
+    LOG.info(">>> commitReservation({}): committed. Confirmation code: {}", reference, code);
     return "Booking " + reference + " confirmed. Confirmation code: " + code;
   }
 }

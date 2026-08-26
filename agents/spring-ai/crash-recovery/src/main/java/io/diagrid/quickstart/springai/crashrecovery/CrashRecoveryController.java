@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
  *
  * <p>Uses the named {@code crashRecoveryAgent} ChatClient bean (see {@link CrashRecoveryAgentConfig}),
  * so the run appears under the per-agent workflow name {@code spring-ai.crashRecoveryAgent.workflow}.
- * The instance id is set per call via {@link DurableAdvisor#INSTANCE_ID_KEY} — that is the attach
+ * The instance id is set per call via {@link DurableAdvisor#INSTANCE_ID_KEY}: that is the attach
  * handle a repeat call re-uses.
  *
  * <pre>
@@ -51,8 +51,12 @@ public class CrashRecoveryController {
    * demos in the workflow quickstarts present one command shape rather than two.
    */
   @PostMapping("/crash/run")
-  public ResponseEntity<String> run(@RequestBody CrashRunRequest request) {
+  public ResponseEntity<CrashRunResponse> run(@RequestBody CrashRunRequest request) {
     String id = request.id();
+    if (id == null || id.isBlank()) {
+      return ResponseEntity.badRequest().body(new CrashRunResponse(id, null, "id is required"));
+    }
+
     String reference = request.reference() == null ? "ABC123" : request.reference();
     try {
       String answer = agent.prompt()
@@ -60,13 +64,15 @@ public class CrashRecoveryController {
           .advisors(a -> a.param(DurableAdvisor.INSTANCE_ID_KEY, id))
           .call()
           .content();
-      return ResponseEntity.ok(answer + "\n");
+      return ResponseEntity.ok(new CrashRunResponse(id, answer, null));
     } catch (DurableCallTimeoutException e) {
       // Wait budget elapsed (not a failure): the run is still going. Re-issue the same call with the
       // same id to attach and collect the result.
-      return ResponseEntity.accepted()
-          .body("still running as " + e.instanceId()
-              + ", re-issue POST /crash/run with the same id to attach\n");
+      return ResponseEntity.accepted().body(new CrashRunResponse(e.instanceId(), null,
+          "still running as " + e.instanceId() + ", re-issue POST /crash/run with the same id to attach"));
+    } catch (Exception e) {
+      LOG.error("Error running the crash-recovery booking {}: {}", id, e.getMessage());
+      return ResponseEntity.status(500).body(new CrashRunResponse(id, null, e.getMessage()));
     }
   }
 
@@ -74,10 +80,18 @@ public class CrashRecoveryController {
   public record CrashRunRequest(String id, String reference) {
   }
 
+  /**
+   * Response body of {@code POST /crash/run}, and the one shape every crash demo in this repo
+   * returns. All three fields are always present: a 200 carries {@code result}, while a 202, a 400
+   * and a 500 carry {@code message} instead.
+   */
+  public record CrashRunResponse(String id, String result, String message) {
+  }
+
   /** Simulate a crash: halt the JVM abruptly (skips shutdown hooks), like SIGKILL. Demo only. */
   @PostMapping("/crash/kill")
   public void kill() {
-    LOG.warn(">>> /crash/kill — halting the JVM to simulate a worker crash");
+    LOG.warn(">>> /crash/kill: halting the JVM to simulate a worker crash");
     Runtime.getRuntime().halt(137);
   }
 }
