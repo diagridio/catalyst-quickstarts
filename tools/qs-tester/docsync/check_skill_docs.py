@@ -11,22 +11,36 @@ introduced.
 So the discipline the harness applies to suites applies here too: a command that
 cannot be traced to a README does not survive CI.
 
-Scope is diagrid CLI usage, wherever the skill actually writes it: a line
-beginning `diagrid` inside a fenced block of any language, backtick or tilde,
-indented inside a list item or not, with or without an info string (an untagged
-fence, or one of the ```python/```robotframework blocks that embed a command as
-a quoted string literal — including one Python has wrapped across two adjacent
-literals rather than written on a single line); and an inline single-backtick
-code span in prose, which turns out to be how the skill actually shows most of
-its `diagrid` examples. `uv`, `robot` and `curl` mentions are harness usage no
-README documents and stay out of scope either way: they never start with
-`diagrid`, never start with a CLI object word the corpus actually documents, and
-are never made up entirely of `--flag` tokens.
+Scope is diagrid CLI usage, wherever the skill actually writes it: any line
+beginning `diagrid` — inside a fenced block of any language, backtick or tilde,
+indented inside a list item or not, with or without an info string, nested
+inside a wrapping fence that exists to show a fence, or in a region no fence
+turned out to claim at all (the ```python/```robotframework blocks that embed a
+command as a quoted string literal count too, including one Python has wrapped
+across two adjacent literals rather than written on a single line); and an
+inline single-backtick code span in prose, which turns out to be how the skill
+actually shows most of its `diagrid` examples. `uv`, `robot` and `curl`
+mentions are harness usage no README documents and stay out of scope either
+way: they never start with `diagrid`, never start with a CLI object word the
+corpus actually documents, and are never made up entirely of `--flag` tokens.
 
 A fence with no matching close before end of file is reported as its own
 problem rather than silently treated as running to end of file: for a checker
 whose only value is failing on drift, quietly checking nothing for the rest of
 the document is worse than a false positive.
+
+Fence pairing is not, and deliberately is not, parsed perfectly — chasing
+CommonMark edge cases one shape at a time does not converge, and each widening
+of the pairing so far has opened a new shape it silently dropped. What holds
+instead is an invariant that does not depend on getting the pairing right:
+EVERY line of every checked file whose command text begins with `diagrid`
+reaches the two rules below, by one path or another. Each structured path (a
+fenced body, a command embedded as a string literal, an inline code span)
+records the candidate text it accounted for — whether it checked it or exempted
+it — and `_uncovered_command_lines` then sweeps the file's raw lines and checks
+anything beginning `diagrid` that nobody looked at. So a mispaired fence of any
+shape costs at most a confusing location or a lost `illustrative` exemption,
+never a lost finding.
 
 Two candidates need two different rules, because most inline mentions are partial
 references rather than full invocations:
@@ -448,6 +462,91 @@ def _quoted_command_candidates(body):
         i = j
 
 
+def _command_text(line):
+    """One markdown line read as a shell command line: whitespace collapsed, a
+    blank or `#` comment line collapsing to `''`.
+
+    Deliberately the same normalisation `all_bash_lines` applies to a README's
+    bash block, because the corpus and the skill must be read by one rule — a
+    command normalised two ways could be documented and undocumented at once.
+    """
+    text = " ".join(line.split())
+    if not text or text.startswith("#"):
+        return ""
+    return text
+
+
+def _joined_command_lines(lines):
+    """Yield (0-based index of the run's first line, command text) for `lines`,
+    joining a backslash continuation first.
+
+    The documented `curl` spans three lines and a long `diagrid` invocation can
+    too; comparing the fragments would match nothing, and rule 1 would report a
+    truncated fragment as a command no README documents. `all_bash_lines` joins
+    on a backslash immediately followed by the newline; this also tolerates
+    trailing whitespace after the backslash, which is invisible in a diff and
+    would otherwise split the run in two.
+    """
+    index = 0
+    while index < len(lines):
+        start = index
+        joined = lines[index]
+        while joined.rstrip().endswith("\\") and index + 1 < len(lines):
+            index += 1
+            joined = f"{joined.rstrip()[:-1]} {lines[index]}"
+        index += 1
+        yield start, _command_text(joined)
+
+
+def _fenced_command_lines(body):
+    """Yield (0-based line offset within `body`, text) for each `diagrid`
+    command line in a fence body, read from the body's own lines.
+
+    This replaces round-tripping the body back through
+    `all_bash_lines(f"```bash\\n{body}\\n```")`. That re-parsed the body with
+    `check_readme_sync._FENCE`, so a body which itself contains fence markers —
+    a nested ```` ```python ```` example, or a wrapping ```` ```` ````/`~~~`
+    block whose whole point is to show a fence — was re-split on those markers
+    and every region whose re-derived language was not `bash` was dropped
+    without a word. `_fence_spans` has already decided what is inside this
+    block; reading its lines directly cannot lose one that way, and the offset
+    it yields puts the finding on the line the command is actually written on
+    rather than on the block's opener.
+
+    `all_bash_lines` is still the reader for the README corpus, where it is the
+    shared definition of "a documented command".
+    """
+    for offset, text in _joined_command_lines(body.splitlines()):
+        if text.startswith("diagrid"):
+            yield offset, text
+
+
+def _uncovered_command_lines(markdown, accounted_for):
+    """Yield (line_number, text) for every line whose command text begins with
+    `diagrid` and which no structured extraction path accounted for.
+
+    The last-resort net. A raw `diagrid` line in an orphan gap — the region
+    between a fence close that paired with the wrong opener and the next marker
+    — is seen by neither the fenced-block path (the pairing put the gap outside
+    every block) nor the inline path (the author wrote no backticks, believing
+    the line was inside a fence). It would otherwise vanish with nothing
+    reported at all.
+
+    Detection here asks only what the line says, never what fence state it is
+    in, so no pairing mistake can hide it. `accounted_for` holds the normalised
+    texts the structured paths already handled — including the ones they
+    deliberately exempted — so a line is reported only if nobody looked at it.
+    Deduplication is by text rather than by position: a command appearing both
+    in a well-formed fence and again in a gap is reported once, at the
+    well-formed site. That drops a second location, never a finding — the two
+    texts being equal is exactly what makes the first report say the same thing.
+    """
+    for start, text in _joined_command_lines(markdown.splitlines()):
+        if not text.startswith("diagrid") or text in accounted_for:
+            continue
+        yield start + 1, text
+
+
 def _inline_candidates(markdown, known_objects):
     """Yield (line_number, text) for each inline `` `...` `` code span that
     looks like a diagrid CLI reference: it starts with `diagrid`, it starts
@@ -499,6 +598,38 @@ def _paragraph_text(lines, line_no):
     return "\n".join(lines[start : end + 1])
 
 
+def _prose_candidate_problems(path, lines, line_no, text, vocab, note=""):
+    """Check one candidate found in prose — an inline code span, or a bare line
+    the net picked up — applying the paragraph-scoped `illustrative` hatch.
+
+    Shared by both prose paths so a candidate the net rescues is held to exactly
+    the same rules and the same exemption an inline one gets, rather than to a
+    second, parallel set that could drift from them.
+    """
+    documented, flags_by_object, all_flags = vocab
+    paragraph = _paragraph_text(lines, line_no)
+    tag = _ILLUSTRATIVE.search(paragraph)
+    if tag:
+        return [] if tag.group("reason").strip() else [_no_reason_problem(path, line_no)]
+    problems = []
+    malformed = _malformed_illustrative_problem(path, line_no, paragraph)
+    if malformed:
+        problems.append(malformed)
+    for problem in _check_candidate(path, line_no, text, documented, flags_by_object, all_flags):
+        problems.append(problem + note)
+    return problems
+
+
+# Appended to a net finding only. The location is right — it is the line the
+# command is actually on — but the reason the net had to be the one to find it
+# is worth saying: nothing else was looking at that line.
+_UNCOVERED_NOTE = (
+    "\n  Found by the last-resort scan: this line sits outside every fenced block "
+    "this checker recognised and is not in a code span, which usually means a "
+    "nearby fence was opened or closed wrongly. Check the fences around it too."
+)
+
+
 def check(skill_dir, repo_root):
     """Return a list of problem descriptions. Empty means the skill is in sync."""
     skill_dir, repo_root = Path(skill_dir), Path(repo_root)
@@ -525,11 +656,22 @@ def check(skill_dir, repo_root):
                 "text from the line meant to close it."
             )
 
-        # Fenced blocks: unchanged scope (a line literally starting with
-        # `diagrid`, in a fence of any language), now run through the same
-        # two-rule check as inline candidates, plus a second extraction for a
-        # `diagrid` command embedded as a quoted string literal.
+        # Every candidate text a structured path handled, whether it checked it
+        # or exempted it. The net at the end of this file's pass reports only
+        # what is missing from here, so it can neither double-report a finding
+        # nor override an `illustrative` exemption that was actually read.
+        accounted_for = set()
+
+        # Fenced blocks: unchanged scope (a line starting with `diagrid`, in a
+        # fence of any language), run through the same two-rule check as inline
+        # candidates, plus a second extraction for a `diagrid` command embedded
+        # as a quoted string literal.
         for line_no, body, preceding in _blocks_with_context(markdown):
+            fenced = list(_fenced_command_lines(body))
+            quoted = list(_quoted_command_candidates(body))
+            accounted_for.update(text for _offset, text in fenced)
+            accounted_for.update(content for _offset, content in quoted)
+
             tag = _ILLUSTRATIVE.search(preceding)
             if tag:
                 if not tag.group("reason").strip():
@@ -538,32 +680,27 @@ def check(skill_dir, repo_root):
             malformed = _malformed_illustrative_problem(path, line_no, preceding)
             if malformed:
                 problems.append(malformed)
-            for line in all_bash_lines(f"```bash\n{body}\n```"):
-                if not line.startswith("diagrid"):
-                    continue
-                problems.extend(
-                    _check_candidate(path, line_no, line, documented, flags_by_object, all_flags)
-                )
-            for offset, content in _quoted_command_candidates(body):
+            for offset, text in [*fenced, *quoted]:
                 problems.extend(
                     _check_candidate(
-                        path, line_no + 1 + offset, content, documented, flags_by_object, all_flags
+                        path, line_no + 1 + offset, text, documented, flags_by_object, all_flags
                     )
                 )
 
         # Inline code spans: the skill mostly teaches by prose, not fences.
+        vocab = (documented, flags_by_object, all_flags)
         for line_no, text in _inline_candidates(markdown, known_objects):
-            paragraph = _paragraph_text(lines, line_no)
-            tag = _ILLUSTRATIVE.search(paragraph)
-            if tag:
-                if not tag.group("reason").strip():
-                    problems.append(_no_reason_problem(path, line_no))
-                continue
-            malformed = _malformed_illustrative_problem(path, line_no, paragraph)
-            if malformed:
-                problems.append(malformed)
+            accounted_for.add(text)
+            problems.extend(_prose_candidate_problems(path, lines, line_no, text, vocab))
+
+        # Last resort: a `diagrid` line nobody above looked at. This is what
+        # holds the invariant when fence pairing goes wrong in a shape not
+        # anticipated here — the finding is kept, at the cost of a location
+        # that may point into the middle of what the author believed was a
+        # fence.
+        for line_no, text in _uncovered_command_lines(markdown, accounted_for):
             problems.extend(
-                _check_candidate(path, line_no, text, documented, flags_by_object, all_flags)
+                _prose_candidate_problems(path, lines, line_no, text, vocab, note=_UNCOVERED_NOTE)
             )
     return problems
 

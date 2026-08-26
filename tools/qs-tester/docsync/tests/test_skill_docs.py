@@ -347,3 +347,112 @@ diagrid mcp grant --caller x --tool add
 """)
     problems = check(skill, root)
     assert any("colon" in p for p in problems)
+
+
+# --- I1: no fence shape may leave a `diagrid` line checked by nobody ---------
+#
+# `_fence_spans` treats a wrapping fence (```` , ~~~, or a marker carrying an
+# info string) as ONE block whose body still holds ``` marker lines. Re-wrapping
+# that body as "```bash\n...\n```" and re-parsing it through
+# `check_readme_sync.all_bash_lines` re-split it on those inner markers and
+# silently dropped every region whose re-derived language was not `bash` — with
+# no diagnostic anywhere, because the outer fence closed cleanly. These three
+# shapes are the reviewer's probes B, C and D, each of which produced exit 0.
+
+
+def test_a_mispaired_closer_does_not_silently_drop_a_later_block(tmp_path):
+    # Probe B. `` ``` (note) `` carries trailing text, so it is not a close and
+    # the whole document is one block. Both commands are stale; both must be
+    # reported, each on the line it is actually written on.
+    skill, root = _tree(tmp_path, """\
+```bash
+diagrid agent create alpha-agent --wait --nosuchflag1
+``` (note)
+```python
+diagrid agent create beta-agent --wait --nosuchflag2
+```
+""")
+    problems = check(skill, root)
+    assert any(p.startswith("SKILL.md:2:") and "alpha-agent" in p for p in problems)
+    assert any(p.startswith("SKILL.md:5:") and "beta-agent" in p for p in problems)
+
+
+def test_a_four_backtick_wrapper_does_not_hide_the_block_it_wraps(tmp_path):
+    # Probe C. The shape an author writes to SHOW a fence — the skill teaches
+    # people to write markdown, so this is a realistic thing for it to gain.
+    skill, root = _tree(tmp_path, """\
+Write the block like this:
+
+````markdown
+```bash
+diagrid project create demo --enable-agent-infrastructure --wait --use
+```
+````
+""")
+    problems = check(skill, root)
+    assert any("enable-agent-infrastructure" in p for p in problems)
+    assert any(p.startswith("SKILL.md:5:") for p in problems)
+
+
+def test_a_tilde_wrapper_does_not_hide_the_block_it_wraps(tmp_path):
+    # Probe D. Same shape with the `~~~` marker, which is the marker the fence
+    # widening newly added and the one that introduced this hole.
+    skill, root = _tree(tmp_path, """\
+Write the block like this:
+
+~~~markdown
+```bash
+diagrid project create demo --enable-agent-infrastructure --wait --use
+```
+~~~
+""")
+    problems = check(skill, root)
+    assert any("enable-agent-infrastructure" in p for p in problems)
+    assert any(p.startswith("SKILL.md:5:") for p in problems)
+
+
+# --- I1: the last-resort net that makes the invariant independent of pairing --
+
+
+def test_a_command_in_an_orphan_gap_between_fences_is_still_checked(tmp_path):
+    # The author meant lines 1 and 5 to be the pair and typed a stray ``` at
+    # line 3. Fence pairing takes lines 1-3 as the block, leaves line 4 outside
+    # every block, and reports line 5 as unterminated. Line 4 is in a code span
+    # nobody wrote and a fence nobody recognised: without the net it is checked
+    # by no path at all, and drift there is silent.
+    skill, root = _tree(tmp_path, """\
+```bash
+diagrid agent create alpha-agent --wait --nosuchflag1
+```
+diagrid agent create beta-agent --wait --nosuchflag2
+```
+""")
+    problems = check(skill, root)
+    assert any("alpha-agent" in p for p in problems)
+    assert any(p.startswith("SKILL.md:4:") and "beta-agent" in p for p in problems)
+
+
+def test_the_net_does_not_double_report_a_line_a_fence_already_checked(tmp_path):
+    # Every fenced command line is also a raw line of the file, so the net must
+    # report only what the structured paths did not account for. One stale
+    # command, one finding.
+    skill, root = _tree(tmp_path, """\
+```bash
+diagrid agent create langgraph-agent --wait
+```
+""")
+    problems = check(skill, root)
+    assert len([p for p in problems if "langgraph-agent" in p]) == 1
+
+
+def test_the_net_respects_an_illustrative_exemption(tmp_path):
+    # A block the author exempted is accounted for, exemption included: the net
+    # must not re-report through the back door what the fenced path let through.
+    skill, root = _tree(tmp_path, """\
+<!-- illustrative: constructed to show the commands key; no README documents this -->
+
+```bash
+diagrid mcp grant --caller x --tool add
+```
+""")
+    assert check(skill, root) == []
