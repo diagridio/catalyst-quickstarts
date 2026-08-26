@@ -1,10 +1,14 @@
 import os
 import asyncio
+import json
+import time
 from typing import List, TypedDict
 from contextlib import asynccontextmanager
 
 import uvicorn
+from dapr.ext.workflow import DaprWorkflowClient
 from fastapi import FastAPI
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from langgraph.graph import StateGraph, START, END
 
@@ -18,6 +22,12 @@ class PlannerState(TypedDict):
 
 
 # ── Graph nodes (each becomes a Dapr workflow activity) ──────
+# The node ORDER is the design, not an accident. Step 1 finishes in milliseconds, so
+# Catalyst has persisted its result before step 2 starts, and the crash therefore lands
+# between two known points. After the restart, step 1's lines must NOT appear again:
+# that absence is what proves the replay used the recorded result instead of re-running
+# the node. Put the slow node first and the crash lands before anything has completed,
+# the run restarts from nothing, and the demo proves nothing at all.
 def check_venues(state: PlannerState) -> dict:
     print(f">>> STEP 1: Checking venue availability for '{state['topic']}'...", flush=True)
     result = "Grand Ballroom available on March 15 (2PM-6PM, 6PM-11PM)"
@@ -26,10 +36,12 @@ def check_venues(state: PlannerState) -> dict:
 
 
 def compare_options(state: PlannerState) -> dict:
-    print(">>> STEP 2: Comparing venue options...", flush=True)
-    if os.environ.get("CRASH_AT_STEP_2", "true").lower() == "true":
-        print(">>> Simulating a crash. Rerun with dev-crash-test-resume.yaml.", flush=True)
-        os._exit(1)
+    # The delay is what makes the crash aimable. Without it all three nodes finish in
+    # single-digit milliseconds and there is no window for POST /crash/kill to land in.
+    delay = int(os.environ.get("CRASH_DELAY_SECONDS", "30"))
+    print(f">>> STEP 2: Comparing venue options over ~{delay}s. KILL THE APP NOW to test "
+          "crash recovery (POST /crash/kill, or kill -9). It resumes on restart.", flush=True)
+    time.sleep(delay)
     result = "Grand Ballroom (6PM-11PM) is the best option for 200 guests"
     print(f">>> STEP 2 COMPLETE: {result}", flush=True)
     return {"results": state["results"] + [result]}
@@ -58,6 +70,14 @@ runner = DaprWorkflowGraphRunner(
     name="schedule-planner",
 )
 
+# Used to wait on a run by its instance ID, which is what lets a re-issued request
+# attach to the run started before the crash instead of starting a second one.
+workflow_client = DaprWorkflowClient()
+
+# The wait budget for the blocking POST /crash/run. Kept comfortably above step 2's
+# default 30s so the first call is still blocked when you kill the app.
+CRASH_WAIT_SECONDS = 120
+
 
 # ── FastAPI server ───────────────────────────────────────────
 @asynccontextmanager
@@ -72,19 +92,65 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 
 
-class RunRequest(BaseModel):
-    topic: str
+class CrashRunRequest(BaseModel):
+    id: str
+    topic: str = "company gala on March 15"
 
 
-@app.post("/run")
-async def run(req: RunRequest):
-    async for event in runner.run_async(
-        input={"topic": req.topic, "results": []},
-        thread_id="crash-recovery-demo",
-    ):
-        if event["type"] == "workflow_started":
-            return {"workflow_id": event.get("workflow_id"), "status": "started"}
-    return {"status": "error"}
+# Run the graph under a workflow instance ID you choose, and block until it finishes
+# POST /crash/run
+# Body: { "id": "gala-42", "topic": "company gala on March 15" }
+# Returns: 200 with the graph output, or 202 with the ID if the wait budget elapses
+@app.post("/crash/run")
+async def crash_run(req: CrashRunRequest):
+    existing = await asyncio.to_thread(workflow_client.get_workflow_state, req.id)
+    if existing is None:
+        # run_async schedules the workflow and then polls it. Advance it once so the
+        # scheduling happens, then close it: the wait below is the blocking part, and it
+        # is the same wait a re-issued request uses.
+        stream = runner.run_async(
+            input={"topic": req.topic, "results": []},
+            thread_id=req.id,
+            workflow_id=req.id,
+        )
+        await anext(stream)
+        await stream.aclose()
+    else:
+        print(f">>> Attaching to the existing run {req.id} instead of starting a second one",
+              flush=True)
+
+    try:
+        # to_thread, not a direct call: this blocks for the length of step 2, and blocking
+        # the event loop here would leave POST /crash/kill unanswerable.
+        state = await asyncio.to_thread(
+            workflow_client.wait_for_workflow_completion, req.id,
+            timeout_in_seconds=CRASH_WAIT_SECONDS,
+        )
+    except TimeoutError:
+        # Not a failure: the run is still going. Re-issue the same request with the same
+        # ID to attach and collect the result.
+        return JSONResponse(
+            status_code=202,
+            content={"id": req.id,
+                     "message": f"still running as {req.id}, re-issue POST /crash/run "
+                                "with the same id to attach"},
+        )
+
+    output = json.loads(state.serialized_output)
+    return {"id": req.id, "status": output["status"], "output": output["output"]}
+
+
+# Simulate a crash: kill this process outright, like SIGKILL. Demo only.
+# POST /crash/kill
+# Returns: nothing. The process is gone before a response can be written, so the caller
+# sees a connection reset.
+@app.post("/crash/kill")
+async def crash_kill():
+    print(">>> /crash/kill: killing this process to simulate a worker crash", flush=True)
+    # os._exit, not sys.exit: sys.exit raises SystemExit, which unwinds through uvicorn and
+    # runs the shutdown paths on the way out. That is a controlled exit, which is the
+    # opposite of what this demo simulates.
+    os._exit(1)
 
 
 if __name__ == "__main__":

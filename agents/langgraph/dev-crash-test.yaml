@@ -5,5 +5,3 @@ apps:
   - appID: schedule-planner
     appDirPath: ./
     command: ["python", "crash_test.py"]
-    env:
-      CRASH_AT_STEP_2: "true"

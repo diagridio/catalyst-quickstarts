@@ -144,57 +144,110 @@ Open the [Catalyst dashboard](https://catalyst.diagrid.io/agents) in your browse
 
 ## Crash Recovery Test With Catalyst
 
-The `crash_test.py` file demonstrates durable crash recovery, a capability not offered by LangGraph natively. It defines a 3-node graph where node 2 crashes with `os._exit(1)`. The crash is armed by the `CRASH_AT_STEP_2` environment variable, which defaults to armed when unset and which `dev-crash-test.yaml` sets to `true`:
+The `crash_test.py` file demonstrates durable crash recovery, a capability not offered by LangGraph natively. It defines a 3-node graph whose middle node deliberately takes about 30 seconds, and a `POST /crash/kill` endpoint that kills the process outright. Nothing is armed: the crash is a request you make, so there is no source edit, no environment variable to unset, and no second run file.
 
-1. **check_venues** — checks venue availability (completes successfully)
-2. **compare_options** — compares options (crashes before completing)
-3. **confirm_booking** — confirms the booking
+1. **check_venues** — checks venue availability. Instant, and completes
+2. **compare_options** — compares options over ~30 seconds. Kill the app during this
+3. **confirm_booking** — confirms the booking. Instant
 
-### 1. First run — trigger and crash
+The node order is the point. Step 1 completes and Catalyst records its result before step 2 starts, so the crash lands between two known points and the restart can show that only the interrupted node ran again.
+
+You also choose the workflow instance ID, so you can find the same run again from a second request or in the Catalyst console.
+
+### 1. Start the app
 
 ```bash
 uv run diagrid dev run -f dev-crash-test.yaml --approve
 ```
 
-Wait for `Uvicorn running on <localhost:port>`, then from another terminal:
+Wait for `Uvicorn running on <localhost:port>`.
+
+### 2. Run under an ID you own
+
+From another terminal. This request blocks for about 30 seconds while step 2 runs.
 
 Choose one of the following to trigger the endpoint:
 
 **macOS/Linux (curl):**
 
 ```bash
-curl -X POST http://localhost:8001/run \
+curl -X POST http://localhost:8001/crash/run \
   -H "Content-Type: application/json" \
-  -d '{"topic": "company gala on March 15"}'
+  -d '{"id": "gala-42", "topic": "company gala on March 15"}'
 ```
 
 **Windows (PowerShell):**
 
 ```powershell
-Invoke-RestMethod -Method Post -Uri 'http://localhost:8001/run' -ContentType 'application/json' -Body '{"topic": "company gala on March 15"}'
+Invoke-RestMethod -Method Post -Uri 'http://localhost:8001/crash/run' -ContentType 'application/json' -Body '{"id": "gala-42", "topic": "company gala on March 15"}'
 ```
 
-**VS Code REST Client (any OS):** Open [`test.http`](./test.http) and click *Send Request* above the request. Requires the [REST Client](https://marketplace.visualstudio.com/items?itemName=humao.rest-client) extension.
+**VS Code REST Client (any OS):** Open [`test.http`](./test.http) and click *Send Request* above the *Crash Recovery: run the graph under an ID you own* request. Requires the [REST Client](https://marketplace.visualstudio.com/items?itemName=humao.rest-client) extension.
 
-Go to the terminal where you started `uv run diagrid dev run`. You'll see step 1 complete and the process crash at step 2.
+Go to the terminal where you started `uv run diagrid dev run`. Step 1 completes and step 2 announces its window:
 
 ```text
 == APP - schedule-planner == >>> STEP 1: Checking venue availability for 'company gala on March 15'...
 == APP - schedule-planner == >>> STEP 1 COMPLETE: Grand Ballroom available on March 15 (2PM-6PM, 6PM-11PM)
-...
-== APP - schedule-planner == >>> STEP 2: Comparing venue options...
+== APP - schedule-planner == >>> STEP 2: Comparing venue options over ~30s. KILL THE APP NOW to test crash recovery (POST /crash/kill, or kill -9). It resumes on restart.
+```
+
+### 3. Crash the app
+
+From a third terminal, while step 2 is still running:
+
+**macOS/Linux (curl):**
+
+```bash
+curl -X POST http://localhost:8001/crash/kill
+```
+
+**Windows (PowerShell):**
+
+```powershell
+Invoke-RestMethod -Method Post -Uri 'http://localhost:8001/crash/kill'
+```
+
+**VS Code REST Client (any OS):** Open [`test.http`](./test.http) and click *Send Request* above the *Crash Recovery: kill the app* request.
+
+The endpoint calls `os._exit(1)`, so the process is gone before it can answer and this request itself reports a connection reset rather than a status code. That is expected: a process that answers politely has not crashed. The blocked request from step 2 sees a reset too.
+
+```text
+== APP - schedule-planner == >>> /crash/kill: killing this process to simulate a worker crash
 ❌ App process "schedule-planner" exited with error code: exit status 1
 ```
 
-### 2. Resume
+The workflow instance `gala-42` is unaffected. It lives in Catalyst, not in the process you just killed.
 
-Restart the application with the resume run file, which sets `CRASH_AT_STEP_2` to `false`. Pass `--approve`: this is a different run file, so it is deployed to your project.
+### 4. Restart and re-issue
+
+Restart with the same command as step 1:
 
 ```bash
-uv run diagrid dev run -f dev-crash-test-resume.yaml --approve
+uv run diagrid dev run -f dev-crash-test.yaml --approve
 ```
 
-The workflow **resumes from step 2**: step 1 is not re-executed. The Dapr workflow engine replays the saved result from Catalyst instead of re-running the node.
+Then send the **identical** request from step 2 again. Because the instance already exists, it attaches to the run you started before the crash instead of starting a second one:
+
+```bash
+curl -X POST http://localhost:8001/crash/run \
+  -H "Content-Type: application/json" \
+  -d '{"id": "gala-42", "topic": "company gala on March 15"}'
+```
+
+The workflow **resumes from step 2**: step 1 is not re-executed. The Dapr workflow engine replays the saved result from Catalyst instead of re-running the node, which is why step 1's lines do not appear a second time.
+
+```text
+== APP - schedule-planner == >>> Attaching to the existing run gala-42 instead of starting a second one
+== APP - schedule-planner == >>> STEP 2: Comparing venue options over ~30s. KILL THE APP NOW to test crash recovery (POST /crash/kill, or kill -9). It resumes on restart.
+== APP - schedule-planner == >>> STEP 2 COMPLETE: Grand Ballroom (6PM-11PM) is the best option for 200 guests
+== APP - schedule-planner == >>> STEP 3: Confirming booking...
+== APP - schedule-planner == >>> STEP 3 COMPLETE: Booking confirmed: Grand Ballroom, March 15, 6PM-11PM
+```
+
+If the wait budget elapses before the run finishes, the response is a `202` carrying the instance ID. That is not a failure: re-issue the same request to attach again.
+
+The length of step 2 is configurable through the `CRASH_DELAY_SECONDS` environment variable, which defaults to 30. Set it lower to shorten the window, or higher if you need more time to aim.
 
 ## Part of the Event Planning Team
 
