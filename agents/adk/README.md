@@ -5,7 +5,7 @@ This quickstart demonstrates how to run a Google ADK (Agent Development Kit) age
 ## What This Quickstart Demonstrates
 
 - **Google ADK + Dapr Workflows**: Run an ADK LlmAgent with durable execution and automatic state persistence
-- **Direct LLM Integration**: Calls Google AI directly via the ADK SDK (no Dapr conversation component needed)
+- **Direct LLM Integration**: Calls OpenAI through ADK's LiteLLM model wrapper (no Dapr conversation component needed)
 - **Tool Integration**: Entertainment search tool with mock results
 - **REST API**: Trigger agent workflows via HTTP endpoints
 - **Agent Registry**: Auto-registration in a shared agent registry for orchestration
@@ -15,7 +15,7 @@ This quickstart demonstrates how to run a Google ADK (Agent Development Kit) age
 1. [Diagrid CLI](https://docs.diagrid.io/references/catalyst/catalyst-cli-intro/) installed
 2. [Python 3.11–3.13](https://www.python.org/downloads/)
 3. [uv](https://docs.astral.sh/uv/getting-started/installation/) installed
-4. A [Google API key](https://aistudio.google.com/)
+4. An [OpenAI API key](https://platform.openai.com/api-keys)
 
 ## Setup
 
@@ -31,13 +31,13 @@ uv sync
 **macOS/Linux (bash/zsh):**
 
 ```bash
-export GOOGLE_API_KEY="your-key-here"
+export OPENAI_API_KEY="your-key-here"
 ```
 
 **Windows (PowerShell):**
 
 ```powershell
-$env:GOOGLE_API_KEY = "your-key-here"
+$env:OPENAI_API_KEY = "your-key-here"
 ```
 
 ## Running the Quickstart

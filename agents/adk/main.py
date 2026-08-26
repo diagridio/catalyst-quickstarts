@@ -4,6 +4,7 @@ import os
 logging.basicConfig(level=logging.INFO)
 
 from google.adk.agents import LlmAgent
+from google.adk.models.lite_llm import LiteLlm
 from google.adk.tools import FunctionTool
 from diagrid.agent.adk import DaprWorkflowAgentRunner
 from diagrid.agent.core.state import DaprStateStore
@@ -21,7 +22,9 @@ def find_entertainment(event_type: str) -> str:
 
 agent = LlmAgent(
     name="entertainment_planner",
-    model="gemini-2.0-flash",
+    # LiteLLM routes to OpenAI so the whole Event Planning Team runs on a
+    # single OPENAI_API_KEY, with no Google key needed.
+    model=LiteLlm(model="openai/gpt-4o-mini"),
     instruction="You are an entertainment planner. When asked to find entertainment, use the find_entertainment tool with the event type. Return the available entertainment options with pricing and duration. Always call the tool before responding.",
     tools=[FunctionTool(find_entertainment)],
 )

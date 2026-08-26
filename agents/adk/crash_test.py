@@ -6,6 +6,7 @@ import uvicorn
 from fastapi import FastAPI
 from pydantic import BaseModel
 from google.adk.agents import LlmAgent
+from google.adk.models.lite_llm import LiteLlm
 from google.adk.tools import FunctionTool
 
 from diagrid.agent.adk import DaprWorkflowAgentRunner
@@ -58,7 +59,7 @@ def step_three_confirm(selection: str) -> str:
 # ── Agent ────────────────────────────────────────────────────
 agent = LlmAgent(
     name="entertainment_planner",
-    model="gemini-2.0-flash",
+    model=LiteLlm(model="openai/gpt-4o-mini"),
     instruction="""Execute exactly three tools in sequence:
     1. First call step_one_find with the event type
     2. Then call step_two_compare with the output from step 1
