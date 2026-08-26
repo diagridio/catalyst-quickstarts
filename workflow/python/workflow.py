@@ -1,4 +1,6 @@
+import hashlib
 import logging
+import os
 from dapr.ext.workflow import WorkflowActivityContext, DaprWorkflowContext
 from model import InventoryItem, InventoryRequest, InventoryResult, PaymentRequest, Notification, OrderResult, OrderPayload
 import time
@@ -42,6 +44,48 @@ def update_inventory_activity(ctx: WorkflowActivityContext, input: InventoryRequ
 
     logger.info(f'Not enough {input.item_name} in inventory for the request: only {available} remaining.')
     return InventoryResult(success=False)  
+
+# ── Crash-recovery demo ──────────────────────────────────────────────────────
+# A second workflow, deliberately slow, that exists to be interrupted. The order
+# workflow above cannot do this job: its only delay is the 2s payment, which is
+# not a window a human can aim a second terminal at.
+
+def confirmation_code(reference: str) -> str:
+    """A confirmation code derived only from the booking reference.
+
+    SHA-256 rather than the built-in hash(): hash() is salted per process, so the
+    code would differ before and after the restart and the re-issued call could
+    not show the reader the same answer.
+    """
+    digest = hashlib.sha256(reference.encode('utf-8')).hexdigest()
+    return 'BK-' + digest[:8].upper()
+
+def commit_reservation_activity(ctx: WorkflowActivityContext, input: str):
+    delay = int(os.environ.get('CRASH_DELAY_SECONDS', '30'))
+    logger.info(f'Committing reservation {input} over ~{delay}s. KILL THE APP NOW to test '
+                f'crash recovery (POST /crash/kill, or kill -9). It resumes on restart.')
+    time.sleep(delay)
+    code = confirmation_code(input)
+    logger.info(f'Committed reservation {input}. Confirmation code: {code}')
+    return f'Reservation {input} confirmed. Confirmation code: {code}'
+
+def crash_recovery_workflow(ctx: DaprWorkflowContext, reference: str):
+    demo_id = ctx.instance_id
+
+    # The fast activity runs FIRST and on purpose. It completes in milliseconds, so
+    # the engine has persisted its result before the slow one starts, and the crash
+    # therefore lands between two known points. After the restart this notification
+    # must NOT appear again: that absence is what proves the replay skipped it.
+    yield ctx.call_activity(notify_activity, input=Notification(
+        message=f'Reservation {demo_id} received for {reference}'))
+
+    # The slow activity. Kill the app while this is running.
+    confirmation = yield ctx.call_activity(commit_reservation_activity, input=reference)
+
+    yield ctx.call_activity(notify_activity, input=Notification(
+        message=f'Reservation {demo_id} has completed! {confirmation}'))
+
+    return confirmation
 
 def order_processing_workflow(ctx: DaprWorkflowContext, order: dict):
     order_payload = OrderPayload.parse_obj(order)

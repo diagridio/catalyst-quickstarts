@@ -32,3 +32,21 @@ GET http://localhost:5001/workflow/status/{{instanceId}}
 POST http://localhost:5001/workflow/terminate/{{instanceId}}
 
 ###
+
+### Crash Recovery: run under an ID you own
+### Blocks for ~30s while the slow activity commits. Kill the app during that
+### window with the request below, restart, then send this exact request again.
+POST http://localhost:5001/crash/run
+Content-Type: application/json
+
+{
+  "id": "trip-42",
+  "reference": "ABC123"
+}
+
+###
+
+### Crash Recovery: kill the app while the run above is in flight
+POST http://localhost:5001/crash/kill
+
+###
