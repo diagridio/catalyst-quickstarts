@@ -93,7 +93,7 @@ CRASH_WAIT_SECONDS = 120
 async def lifespan(app: FastAPI):
     runner.start()
     await asyncio.sleep(1)
-    print("Runner started — ready to accept requests", flush=True)
+    print("Runner started, ready to accept requests", flush=True)
     yield
     runner.shutdown()
 
