@@ -27,6 +27,8 @@ import org.springframework.web.bind.annotation.RestController;
 import io.dapr.workflows.client.DaprWorkflowClient;
 import io.dapr.workflows.client.WorkflowInstanceStatus;
 import io.dapr.spring.workflows.config.EnableDaprWorkflows;
+import java.time.Duration;
+import java.util.concurrent.TimeoutException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -43,6 +45,10 @@ import io.dapr.quickstarts.workflows.models.*;
 public class WorkflowApp {
 
   private static final Logger logger = LoggerFactory.getLogger(WorkflowApp.class);
+
+  // The wait budget for the blocking /crash/run. Kept comfortably above the slow activity's
+  // default 30s so the first call is still blocked when you kill the app.
+  private static final int CRASH_WAIT_SECONDS = 120;
 
   @Autowired
   private DaprWorkflowClient workflowClient;
@@ -137,6 +143,55 @@ public class WorkflowApp {
       logger.error("Error occurred while terminating the workflow: {}. Exception: {}", instanceId, e.getMessage());
       return ResponseEntity.status(500).build();
     }
+  }
+
+  /**
+   * Crash-recovery demo: run the slow workflow under an instance ID the caller owns
+   * POST /crash/run
+   * Body: { "id": "trip-42", "reference": "ABC123" }
+   * Returns: 200 with the confirmation, or 202 with the ID if the wait budget elapses
+   *
+   * <p>Re-issuing this with the same ID attaches to the existing run rather than reserving a
+   * second time. That is what the caller-owned ID buys, and it is the point of the demo.
+   */
+  @PostMapping("/crash/run")
+  public ResponseEntity<CrashRunResponse> crashRun(@RequestBody CrashRunRequest request) {
+    String id = request.getId();
+    try {
+      if (workflowClient.getInstanceState(id, false) == null) {
+        logger.info("Starting crash-recovery workflow {} for reservation {}", id, request.getReference());
+        workflowClient.scheduleNewWorkflow(CrashRecoveryWorkflow.class, request.getReference(), id);
+      } else {
+        logger.info("Attaching to existing crash-recovery workflow {}", id);
+      }
+
+      WorkflowInstanceStatus status = workflowClient.waitForInstanceCompletion(
+          id, Duration.ofSeconds(CRASH_WAIT_SECONDS), true);
+      return ResponseEntity.ok(new CrashRunResponse(id, status.readOutputAs(String.class), null));
+    } catch (TimeoutException e) {
+      // Not a failure: the run is still going. Re-issue the same request with the same ID to
+      // attach and collect the result.
+      return ResponseEntity.accepted().body(new CrashRunResponse(id, null,
+          "still running as " + id + ", re-issue POST /crash/run with the same id to attach"));
+    } catch (Exception e) {
+      logger.error("Error running the crash-recovery workflow {}. Exception: {}", id, e.getMessage());
+      return ResponseEntity.status(500).body(new CrashRunResponse(id, null, e.getMessage()));
+    }
+  }
+
+  /**
+   * Simulate a crash: halt the JVM abruptly, like SIGKILL. Demo only.
+   * POST /crash/kill
+   * Returns: nothing. The process is gone before a response can be written, so the caller sees a
+   * connection reset.
+   */
+  @PostMapping("/crash/kill")
+  public void crashKill() {
+    logger.warn(">>> /crash/kill: halting the JVM to simulate a worker crash");
+    // halt, not System.exit: halt skips the JVM shutdown hooks, so this is an abrupt crash rather
+    // than a controlled one, and it avoids deadlocking on Spring Boot's graceful shutdown, which
+    // would wait on this very request thread.
+    Runtime.getRuntime().halt(137);
   }
 
   public static void main(String[] args) {

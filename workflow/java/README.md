@@ -195,7 +195,131 @@ The response is the serialized Dapr `WorkflowInstanceStatus` for the instance, i
 
 Open the [Workflow viewer](https://catalyst.diagrid.io/workflows/executions) in the Catalyst Cloud web console and select the workflow instance you just started to see a visual execution trace. The viewer displays each activity in sequence, its completion status, and the total workflow duration — useful for debugging long-running or failed executions.
 
-## 7. Clean Up
+## 7. Recover from a crash
+
+Durable execution earns its name when a process dies mid-run. This quickstart ships a second workflow for exactly that: `CrashRecoveryWorkflow` runs a fast activity, then a slow one that takes about 30 seconds. You kill the app during the slow activity, restart it, and watch the run finish without redoing the work it had already recorded.
+
+Two things make the demo legible. You choose the instance ID, so you can find the same run again. And the confirmation code is derived from the booking reference, so the answer after the restart is visibly the same answer.
+
+```mermaid
+---
+title: Crash recovery workflow
+---
+flowchart TD
+  START((Start)):::startNode
+  ACT1(Notify: Reservation Received)
+  ACT2(Commit Reservation
+  ~30s)
+  ACT3(Notify: Reservation Completed)
+  END((End)):::endNode
+
+  START-->ACT1
+  ACT1-->ACT2
+  ACT2-->ACT3
+  ACT3-->END
+
+  classDef startNode stroke:#22613f,stroke-width:3px
+  classDef endNode stroke:#8b1a1a,stroke-width:3px
+```
+
+Leave the application from step 5 running.
+
+### 7.1 Start a run under an ID you own
+
+Open a new terminal. This request blocks for about 30 seconds while the slow activity commits.
+
+**macOS/Linux (curl):**
+
+```bash
+curl -i -X POST http://localhost:5001/crash/run -H "Content-Type: application/json" -d '{"id":"trip-42", "reference":"ABC123"}'
+```
+
+**Windows (PowerShell):**
+
+```powershell
+Invoke-RestMethod -Method Post -Uri "http://localhost:5001/crash/run" -ContentType "application/json" -Body '{"id":"trip-42", "reference":"ABC123"}'
+```
+
+**Any OS (VS Code REST Client):** open [`test.rest`](./test.rest) and click *Send Request* above the *Crash Recovery: run under an ID you own* request. Requires the [REST Client](https://marketplace.visualstudio.com/items?itemName=humao.rest-client) extension.
+
+In the terminal running `diagrid dev run`, the fast activity completes and the slow one announces its window:
+
+```text
+Notification: Reservation trip-42 received for ABC123
+Committing reservation ABC123 over ~30s. KILL THE APP NOW to test crash recovery (POST /crash/kill, or kill -9). It resumes on restart.
+```
+
+### 7.2 Crash the app mid-run
+
+From a third terminal, while the slow activity is still running:
+
+**macOS/Linux (curl):**
+
+```bash
+curl -i -X POST http://localhost:5001/crash/kill
+```
+
+**Windows (PowerShell):**
+
+```powershell
+Invoke-RestMethod -Method Post -Uri "http://localhost:5001/crash/kill"
+```
+
+**Any OS (VS Code REST Client):** open [`test.rest`](./test.rest) and click *Send Request* above the *Crash Recovery: kill the app* request.
+
+The endpoint calls `Runtime.getRuntime().halt(137)`, which skips the JVM shutdown hooks, so the process is gone before it can answer and this request itself reports a connection reset rather than a status code. That is expected: a process that answers politely has not crashed. The blocked request from step 7.1 sees a reset too, and `diagrid dev run` reports the app exited and ends the session.
+
+The workflow instance `trip-42` is unaffected. It lives in Catalyst, not in the process you just killed.
+
+### 7.3 Restart and re-issue
+
+Start the application again with the same command as step 5:
+
+```bash
+diagrid dev run --project workflow-quickstart --app-id order-workflow --approve -- mvn spring-boot:run
+```
+
+Then send the **identical** request from step 7.1 again:
+
+**macOS/Linux (curl):**
+
+```bash
+curl -i -X POST http://localhost:5001/crash/run -H "Content-Type: application/json" -d '{"id":"trip-42", "reference":"ABC123"}'
+```
+
+**Windows (PowerShell):**
+
+```powershell
+Invoke-RestMethod -Method Post -Uri "http://localhost:5001/crash/run" -ContentType "application/json" -Body '{"id":"trip-42", "reference":"ABC123"}'
+```
+
+Because the instance already exists, this call **attaches** to it instead of reserving a second time. The response carries the same confirmation code the first run would have produced:
+
+```text
+{"id":"trip-42","result":"Reservation ABC123 confirmed. Confirmation code: BK-E0BEBD22","message":null}
+```
+
+**Read the app log carefully, because this is the whole proof:**
+
+```text
+Committing reservation ABC123 over ~30s. KILL THE APP NOW to test crash recovery (POST /crash/kill, or kill -9). It resumes on restart.
+Committed reservation ABC123. Confirmation code: BK-E0BEBD22
+Notification: Reservation trip-42 has completed! Reservation ABC123 confirmed. Confirmation code: BK-E0BEBD22
+```
+
+`Notification: Reservation trip-42 received for ABC123` does **not** appear again. That activity had already completed and Catalyst had recorded its result, so the replay took the recorded value instead of re-running it. Only the activity that was interrupted runs a second time.
+
+If the wait budget elapses before the run finishes, the response is a `202` carrying the instance ID. That is not a failure: re-issue the same request to attach again.
+
+### 7.4 View in the Catalyst web console
+
+Open the [Workflow viewer](https://catalyst.diagrid.io/workflows/executions) and select the instance named `trip-42`. The trace shows one execution, not two, with the interrupted activity attempted twice and every other activity once.
+
+> **The instance ID is a handle you own.** A durable activity is *at-least-once*, so make side-effecting work idempotent by keying off a business value, as `CommitReservationActivity` keys its confirmation code off the booking reference. To run the demo again under the same ID, purge the instance first or pick a new ID.
+
+The slow activity's length is configurable through the `CRASH_DELAY_SECONDS` environment variable, which defaults to 30. Set it lower to shorten the window, or higher if you need more time to aim.
+
+## 8. Clean Up
 
 Press CTRL+C in the terminal that runs `diagrid dev run` to stop the application and disconnect from Catalyst Cloud.
 
