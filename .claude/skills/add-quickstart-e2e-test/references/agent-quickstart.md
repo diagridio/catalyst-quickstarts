@@ -36,21 +36,32 @@ A new agent-family suite gets its own module,
 attributes, `_REQUIRED_MODULE_ATTRS`:
 
 ```
-DOCUMENTED_PROJECT, SETUP, INSTALL, RUN, TEARDOWN, READY_MARKERS, REQUESTS, UNCOVERED
+DOCUMENTED_PROJECT, SETUP, INSTALL, RUN, TEARDOWN, READY_MARKERS, REQUESTS,
+UNCOVERED, CONNECTED_APPS, HEALTH_PROBES
 ```
 
-Note what is **not** in that list: `HEALTH_PROBES`, `CONNECTED_APPS`, `SECRETS`,
-and `get_quickstart`. If your module is missing one of the eight listed names,
-`check_agent` returns it as a problem string (`"... is missing required
-attribute(s): ..."`) — a normal doc-sync failure, not a crash, so one bad module
-costs its own row and not the other suites `--all` also checks in the same run.
-But a missing `HEALTH_PROBES`, `CONNECTED_APPS`, `SECRETS`, or `get_quickstart`
-is not caught here at all: the suite will fail at Robot runtime instead (a `Wait
-Until Apps Healthy` FOR loop with nothing to iterate, a `KeyError` on
-`${qs}[connected_apps]` inside `Start Quickstart`, or a keyword error), which is
-a slower and noisier way to find the same mistake. Do not skip these four just
-because doc-sync will not complain about their absence. Nothing static can
-check that a probe *path* is real either — that one is on you, see below.
+If your module is missing one of those ten names, `check_agent` returns it as a
+problem string (`"... is missing required attribute(s): ..."`) — a normal
+doc-sync failure, not a crash, so one bad module costs its own row and not the
+other suites `--all` also checks in the same run. The list is checked for
+agent-family suites only: `check_agent` runs from `--all` over
+`suites.agent_suites()`, and the canonical suites are checked against
+`variables/quickstarts.py` instead.
+
+The last two are there for a different reason than the first eight. `check_agent`
+does not read `CONNECTED_APPS` or `HEALTH_PROBES` at all — `get_quickstart()`
+does, and the `.resource` files then index `${qs}[connected_apps]` (both `Start
+Quickstart` and `Stop Quickstart`) and `${qs}[health_probes]` (`Wait Until Apps
+Healthy`). Omit either and nothing static complains unless doc-sync requires it;
+the failure surfaces as a `KeyError` inside a live credentialed run, after
+`diagrid project create` has already spent a project. Empty is legal for both
+(`agents/spring-ai/event-planner` has `HEALTH_PROBES = ()`); absent is not.
+
+Note what is still **not** in the list: `SECRETS` and `get_quickstart`. A module
+missing either fails at Robot runtime instead (the `Require Env Var` loop has
+nothing to iterate, or `Get Quickstart` is not a keyword), so do not skip them
+just because doc-sync will not complain. Nothing static can check that a probe
+*path* is real either — that one is on you, see below.
 
 Beyond presence, `check_agent` cross-checks values against the README:
 
@@ -410,15 +421,28 @@ all.
 Agent responses embed live model output, so an exact body comparison
 (`Should Be Equal` against a fixed dict, the way `POST And Expect` checks the
 canonical quickstarts) cannot work here — the wording changes between runs even
-when nothing is broken. What is assertable: the documented status code always,
-and — only where a README or the app's own framework tells you the response has
-a named field — that the field is present and non-empty, plus a log marker
-proving the expected tool or step actually ran. Where no README documents a
-response shape at all (as for `/agent/run` in `agents/langgraph`), assert the
-status code only and leave `field: None` with a comment saying why. Do not guess
-a field name to make the suite look more thorough than it is: a guessed field
-either matches by luck (telling you nothing) or fails immediately on first
-live run for a reason that has nothing to do with the quickstart being broken.
+when nothing is broken. What is assertable: a status code, and — only where a
+README or the app's own framework tells you the response has a named field —
+that the field is present and non-empty, plus a log marker proving the expected
+tool or step actually ran. Where no README documents a response shape
+at all (as for `/agent/run` in `agents/langgraph`), assert the status code only
+and leave `field: None` with a comment saying why. Do not guess a field name to
+make the suite look more thorough than it is: a guessed field either matches by
+luck (telling you nothing) or fails immediately on first live run for a reason
+that has nothing to do with the quickstart being broken.
+
+**The status code is the one value you will almost certainly have to assume.**
+Transcribe it when the README states it — but none of the three agent READMEs
+shipped today states one anywhere, so `status: 200` in all three data modules is
+an assumption, not a transcription. If the README you are working from is the
+same, say so in a comment next to the value and add it to the harness README's
+Limitations, the way `variables/agents_langgraph.py` and
+`tools/qs-tester/README.md` do; do not present an assumed code as documented.
+Be especially careful where the README says the app exits mid-request (as
+`agents/microsoft-dotnet` and `agents/spring-ai/event-planner` both do for their
+crash step): there the live run will most likely see a connection error rather
+than any status code at all, and the assumed value is a placeholder that exists
+so the first live run fails on a line you already flagged.
 
 ## Cleanup: empty vs documented
 

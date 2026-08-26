@@ -18,12 +18,20 @@ on:
         default: 'all'
         options: [all, workflow, state, pubsub, invocation]
   pull_request:
+    # The `lint` job's two doc-sync checkers only run when this workflow does,
+    # so every input they read has to appear here: the harness, the suites, the
+    # quickstart READMEs at both depths (`agents/spring-ai/event-planner` is
+    # three levels deep) and the skill whose prose `check_skill_docs.py` guards
+    # -- a PR that edits only `.claude/skills/add-quickstart-e2e-test` is the
+    # exact drift that checker exists to catch.
     paths:
       - 'tools/qs-tester/**'
+      - '.claude/skills/add-quickstart-e2e-test/**'
       - '*/tests/quickstart.robot'
       - '*/*/tests/quickstart.robot'
       - '*/*/*/tests/quickstart.robot'
       - '*/*/README.md'
+      - '*/*/*/README.md'
       - '.github/workflows/e2e-quickstarts.yml'
 
 # Do not cancel in progress: a cancelled leg never runs teardown and leaks its
@@ -282,12 +290,16 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
+      # 21, not the 17 the canonical `e2e` job uses: every agents/spring-ai pom
+      # sets <java.version>21</java.version> and their READMEs require JDK 21+,
+      # so `mvn package` under 17 fails with an invalid-release error before the
+      # suite runs anything.
       - name: Set up Java
         if: matrix.runtime == 'java'
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: '21'
 
       - name: Set up Node
         if: matrix.runtime == 'javascript'

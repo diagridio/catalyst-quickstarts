@@ -26,18 +26,27 @@ automatically.
   covers the readiness gate against `flaky_server.py`, and `teardown.robot`
   covers the two Stop Quickstart paths that release nothing. None need
   credentials, they run in seconds, and CI's `lint` job runs the whole
-  directory on every PR — run them locally too when you touch
-  `process.resource`, `catalyst.resource` or the gate.
+  directory on every PR that trips the workflow's `paths` filter — run them
+  locally too when you touch `process.resource`, `catalyst.resource` or the
+  gate.
 - `variables/quickstarts.py` — the per-(API, language) table. **Everything in it is
   transcribed from a README.** Change a README, change this file.
 - `docsync/check_readme_sync.py` — asserts the two stay in agreement.
 - `docsync/check_skill_docs.py` — the same discipline applied to the
-  `add-quickstart-e2e-test` skill: every `diagrid` command the skill's own
-  SKILL.md and `references/` show has to be traceable to a quickstart README,
-  by whole command and by flag. It exists because the skill's examples went
-  stale the moment the provisioning flags changed and nobody noticed — prose
-  that nobody checks is prose that drifts. Needs no credentials, and CI's
-  `lint` job runs it on every PR.
+  `add-quickstart-e2e-test` skill: `diagrid` commands the skill's own SKILL.md
+  and `references/` show have to be traceable to a quickstart README. Two rules,
+  each with its own reach, not one rule applied twice: a candidate that names at
+  least one flag and holds no `<...>`/`{...}` placeholder must match a documented
+  command verbatim, and separately every `--flag` any candidate names must appear
+  in a documented command for the same CLI object. A *flagless* mention
+  (`diagrid login`, a bare `diagrid dev run`) is covered by neither — it names
+  nothing that could go stale — and a block tagged `illustrative` is exempt from
+  both. The module docstring spells out the exemptions and the one known hole.
+  It exists because the skill's examples went stale the moment the provisioning
+  flags changed and nobody noticed — prose that nobody checks is prose that
+  drifts. Needs no credentials, and CI's `lint` job runs it on every PR that
+  touches the skill directory, a quickstart README or the harness — all three
+  are in the workflow's `paths` filter, so a skill-only PR does trigger a run.
 - `ci/` — Catalyst project lifecycle scripts.
 - `variables/suites.py` — the registry of every suite. The lint dryrun, the CI
   agents matrix and doc-sync all read it, so registering a suite is one row here
@@ -99,16 +108,23 @@ Delete it when you are done — these are not free:
 bash tools/qs-tester/ci/teardown-project.sh "$PROJECT"
 ```
 
-The only thing the harness ever rewrites in a documented run command is
-`--project`: every quickstart README says `--project <api>-quickstart`, and
-`Start Quickstart` substitutes the ephemeral project name for it. Everything
-else in the command — the file, the flags, `mvn spring-boot:run`, the `uv run`
-prefix — runs exactly as the README shows it.
+The only thing the harness ever rewrites in a documented command is the project
+name. Every canonical quickstart README spells `--project <api>-quickstart` in
+its `dev run`, and `Start Quickstart` substitutes the ephemeral name for it. The
+three agent READMEs are the exception: their `dev run` is bare, because a
+documented `project create ... --use` already selected the project, and the
+suites reproduce that bareness on purpose — see "The `dev run` command can be
+bare" below. For those, the substitution lands in the documented `project
+create` (and `project delete`, where the README documents one — `agents/langgraph`
+does not) commands instead. Everything else — the file, the
+flags, `mvn spring-boot:run`, the `uv run` prefix — runs exactly as the README
+shows it.
 
 ### Selecting languages and APIs
 
-Each suite has four tests tagged by language. Filter with `--include` / `--exclude`
-(repeatable, `--include` ORs):
+Each canonical suite has four tests tagged by language; each agent-family suite
+has one, tagged with its language, its own name and `agents`. Filter with
+`--include` / `--exclude` (repeatable, `--include` ORs):
 
 ```bash
 # one language, one API
@@ -513,9 +529,10 @@ config, not a typo.
   `POST /workflow/terminate/{id}` exist in every implementation but are documented
   in no README, so they are untested. Documenting them brings them under test.
 - **Model nondeterminism.** Agent-family suites assert structure, not content: a
-  documented status code, a non-empty named field where a shape is known, and a
-  tool-call log marker. A model refusal, a rate limit or an unusually slow
-  completion can fail a leg without anything being wrong in the quickstart.
+  status code (assumed, not documented — see the bullets above), a non-empty
+  named field where a shape is known, and a tool-call log marker. A model
+  refusal, a rate limit or an unusually slow completion can fail a leg without
+  anything being wrong in the quickstart.
   There is no retry; if this proves noisy, one retry on the trigger request is
   the first thing to try.
 - **One mutation check per suite** proves one assertion. The others are unproven

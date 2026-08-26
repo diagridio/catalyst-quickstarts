@@ -161,11 +161,24 @@ def normalise_project(command, documented_project):
     return command.replace(documented_project, "{project}").strip()
 
 
-# The attributes check_agent reads off a data module. Data modules are
+# Every attribute an agent-family data module must define. Data modules are
 # hand-authored (Task 5+), so a forgotten field is a realistic mistake; reporting
 # it as a scoped problem here — rather than letting the attribute access raise —
 # means one bad module costs its own row's check, not the other sixteen READMEs
-# `--all` also checks in the same run.
+# `--all` also checks in the same run. Only agent-family modules are checked:
+# `check_agent` is called from `--all` for `suites.agent_suites()` only, and the
+# canonical suites read `variables/quickstarts.py`, a table with a different
+# shape entirely.
+#
+# The first eight are what check_agent itself reads. CONNECTED_APPS and
+# HEALTH_PROBES are not — they are read by the module's own `get_quickstart()`
+# and then indexed as `${qs}[connected_apps]` (`catalyst.resource`, by both
+# `Start Quickstart` and `Stop Quickstart`) and `${qs}[health_probes]`
+# (`quickstart.resource`, by `Wait Until Apps Healthy`). Empty is legal for
+# both; absent is not, and absent otherwise surfaces only as a KeyError inside a
+# live credentialed run, after `diagrid project create` has already spent a
+# project. Doc-sync is the only credential-free check that sees these modules at
+# all, so requiring them here is what makes them required.
 _REQUIRED_MODULE_ATTRS = (
     "DOCUMENTED_PROJECT",
     "SETUP",
@@ -175,6 +188,8 @@ _REQUIRED_MODULE_ATTRS = (
     "READY_MARKERS",
     "REQUESTS",
     "UNCOVERED",
+    "CONNECTED_APPS",
+    "HEALTH_PROBES",
 )
 
 

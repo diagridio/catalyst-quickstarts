@@ -106,6 +106,11 @@ def data_module(**overrides):
             ("uv run diagrid dev run -f dev-crash-test.yaml --approve",
              "crash-recovery flow needs a source edit; out of scope"),
         ),
+        # Not read by check_agent, but read by get_quickstart() and then by
+        # `${qs}[connected_apps]` / `${qs}[health_probes]` in the .resource
+        # files, so a module without them cannot survive a live run.
+        CONNECTED_APPS=(("schedule-planner", 8005),),
+        HEALTH_PROBES=((8005, "/dapr/subscribe"),),
     )
     for key, value in overrides.items():
         setattr(module, key, value)
@@ -228,6 +233,30 @@ def test_check_agent_reports_a_missing_required_attribute_instead_of_raising(tmp
     del module.REQUESTS
     problems = check_agent(row, root, module=module)
     assert any("REQUESTS" in p for p in problems)
+
+
+def test_check_agent_reports_a_missing_connected_apps(tmp_path):
+    # CONNECTED_APPS is not read by check_agent, but `Start Quickstart` and
+    # `Stop Quickstart` both index `${qs}[connected_apps]`, so a module that
+    # omits it raises KeyError only inside a live credentialed run — after
+    # `diagrid project create` has already spent a project. Doc-sync is the only
+    # credential-free place that can catch it.
+    row, root = _fixture(tmp_path)
+    module = data_module()
+    del module.CONNECTED_APPS
+    problems = check_agent(row, root, module=module)
+    assert any("CONNECTED_APPS" in p for p in problems)
+
+
+def test_check_agent_reports_a_missing_health_probes(tmp_path):
+    # Same contract, same failure mode: `Wait Until Apps Healthy` iterates
+    # `${qs}[health_probes]`. Empty is legal (`agents/microsoft-dotnet` and
+    # `agents/spring-ai/event-planner` both serve no GET route); absent is not.
+    row, root = _fixture(tmp_path)
+    module = data_module()
+    del module.HEALTH_PROBES
+    problems = check_agent(row, root, module=module)
+    assert any("HEALTH_PROBES" in p for p in problems)
 
 
 def _fixture(tmp_path):

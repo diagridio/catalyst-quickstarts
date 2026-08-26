@@ -22,8 +22,10 @@ run "doc-sync"  uv run python docsync/check_readme_sync.py --all
 run "skill doc-sync"  uv run python docsync/check_skill_docs.py
 run "unit tests" uv run pytest -q
 echo "== keyword smoke tests"
-uv run robot --outputdir results/smoke \
-  resources/tests/smoke.robot resources/tests/keywords.robot || failed+=("smoke")
+# The whole directory, matching CI's "Test the harness keywords" step: naming
+# files individually here means a new one (readiness.robot, teardown.robot)
+# silently never runs locally while CI runs it.
+uv run robot --outputdir results/smoke resources/tests || failed+=("smoke")
 
 if [ ${#failed[@]} -gt 0 ]; then
   echo

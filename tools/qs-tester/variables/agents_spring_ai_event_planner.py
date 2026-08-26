@@ -80,14 +80,17 @@ REQUESTS = (
 )
 
 # Documented commands this suite deliberately does not run, each with its reason.
-UNCOVERED = (
-    (
-        "diagrid dev run -f dev-spring-ai-event-planner.yaml --approve",
-        "the crash-recovery flow's resume step ('## Crash Recovery'); it requires "
-        "commenting out the crash line in EventPlannerTools.java, a source edit "
-        "that is out of scope",
-    ),
-)
+#
+# Empty here, and that is not an oversight. The one documented step this suite
+# skips is the '## Crash Recovery' resume (README:115), which needs the crash
+# line in EventPlannerTools.java commented out first — a source edit that is out
+# of scope. But the command that step documents is byte-identical to the one at
+# README:59, which is RUN. doc-sync excuses a documented line if it is in the
+# harness commands *or* in UNCOVERED, and RUN already matches this string, so an
+# entry here would be inert data claiming the suite does not run a command it in
+# fact runs. Contrast agents_microsoft_dotnet.py, whose UNCOVERED entry is a
+# genuinely distinct string and is load-bearing.
+UNCOVERED = ()
 
 
 def get_quickstart():
