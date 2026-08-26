@@ -1,12 +1,13 @@
 # Microsoft Agent Framework (.NET) Quickstart - Event Planner
 
-This quickstart demonstrates how to run a Microsoft Agent Framework agent as a durable Dapr Workflow using the `Diagrid.AI.Microsoft.AgentFramework` .NET package. The agent acts as an **Event Planner** with three tools that it calls in sequence — tool 2 deliberately crashes the process to demonstrate automatic recovery.
+This quickstart demonstrates how to run a Microsoft Agent Framework agent as a durable Dapr Workflow using the `Diagrid.AI.Microsoft.AgentFramework` .NET package. The agent acts as an **Event Planner** with three tools that it calls in sequence, the second of which deliberately takes about 30 seconds. That is the window in which you kill the app to prove the run survives it.
 
 ## What This Quickstart Demonstrates
 
 - **Microsoft Agent Framework + Dapr Workflows**: Run a .NET agent with durable execution
 - **OpenAI via Microsoft.Extensions.AI**: Calls OpenAI directly through the `Microsoft.Extensions.AI.OpenAI` IChatClient
-- **Crash Recovery**: Tool 2 crashes the process; on restart, Catalyst resumes the workflow automatically
+- **Caller-owned instance ID**: Schedule the agent run under an ID you choose, so you can find the same execution again
+- **Crash Recovery**: Kill the app mid-tool with a request; on restart, Catalyst resumes the run without redoing the tools that had already completed
 - **REST API**: Trigger the agent via an HTTP endpoint
 
 ## Prerequisites
@@ -91,47 +92,79 @@ Invoke-RestMethod -Method Post -Uri 'http://localhost:5050/run' -ContentType 'ap
 **VS Code REST Client (any OS):** Open [`test.http`](./test.http) and click *Send Request* above the request. Requires the [REST Client](https://marketplace.visualstudio.com/items?itemName=humao.rest-client) extension.
 
 The agent will:
-1. Call `step_one_search` — finds venues (completes)
-2. Call `step_two_compare` — crashes before completing (process exits)
+1. Call `step_one_search` — finds venues. Instant
+2. Call `step_two_compare` — compares them over about 30 seconds
+3. Call `step_three_confirm` — confirms the booking. Instant
 
-You'll see:
-
-```text
-== APP == >>> TOOL 1: Searching venues in 'Austin'...
-== APP == >>> TOOL 1 COMPLETE: Found 3 venues
-== APP == >>> TOOL 2: Comparing venues...
-```
-
-The process exits — this is expected.
-
-### 3. Crash Recovery with Catalyst
-
-Open `Program.cs` and comment out the crash line:
-
-```csharp
-// Environment.Exit(1); // 💥 Comment out this line before the second run
-```
-
-Restart:
-
-```bash
-diagrid dev run -f dev-dotnet-agent.yaml
-```
-
-You do **not** need to send a request again — the existing workflow resumes automatically:
+So this request takes about half a minute. You'll see:
 
 ```text
 == APP == >>> TOOL 1: Searching venues in 'Austin'...
 == APP == >>> TOOL 1 COMPLETE: Found 3 venues
-== APP == >>> TOOL 2: Comparing venues...
+== APP == >>> TOOL 2: Comparing venues over ~30s. KILL THE APP NOW to test crash recovery (POST /crash/kill, or kill -9). It resumes on restart.
 == APP == >>> TOOL 2 COMPLETE: Grand Ballroom is the best option
 == APP == >>> TOOL 3: Confirming booking...
 == APP == >>> TOOL 3 COMPLETE: Booking confirmed for Grand Ballroom
 ```
 
+### 3. Crash Recovery with Catalyst
+
+Every LLM call and every tool call is a separate Dapr workflow activity, so an activity that has already completed is not re-run after a crash. To see that, kill the app while tool 2 is comparing venues.
+
+Two things make the demo legible. You choose the workflow instance ID, so you can find the same execution again. And killing during tool 2, rather than tool 1, means the crash lands *after* a completion Catalyst has already recorded. If tool 1's lines reappeared after the restart, the run would have started over and there would be nothing to see.
+
+Leave the application from step 1 running.
+
+**Start a run under an ID you own.** From another terminal. This request blocks while tool 2 runs:
+
+**macOS/Linux (curl):**
+
+```bash
+curl -X POST http://localhost:5050/crash/run \
+  -H "Content-Type: application/json" \
+  -d '{"id": "gala-42", "prompt": "Find a venue in Austin for a company gala"}'
+```
+
+**Windows (PowerShell):**
+
+```powershell
+Invoke-RestMethod -Method Post -Uri 'http://localhost:5050/crash/run' -ContentType 'application/json' -Body '{"id": "gala-42", "prompt": "Find a venue in Austin for a company gala"}'
+```
+
+**VS Code REST Client (any OS):** Open [`test.http`](./test.http) and click *Send Request* above the *Crash Recovery: run under an ID you own* request.
+
+**Crash the app.** From a third terminal, while tool 2 is still comparing:
+
+```bash
+curl -X POST http://localhost:5050/crash/kill
+```
+
+The endpoint calls `Process.GetCurrentProcess().Kill()`, which is `SIGKILL` on macOS and Linux and `TerminateProcess` on Windows, so the process is gone before it can answer and this request itself reports a connection reset rather than a status code. That is expected: a process that answers politely has not crashed. The blocked request sees a reset too.
+
+The workflow instance `gala-42` is unaffected. It lives in Catalyst, not in the process you just killed.
+
+**Restart and re-issue.** Start the application again with the same command as step 1, then send the **identical** `/crash/run` request. Because the instance already exists, it attaches to the run you started before the crash instead of starting a second one:
+
+```text
+== APP == >>> TOOL 2: Comparing venues over ~30s. KILL THE APP NOW to test crash recovery (POST /crash/kill, or kill -9). It resumes on restart.
+== APP == >>> TOOL 2 COMPLETE: Grand Ballroom is the best option
+== APP == >>> TOOL 3: Confirming booking...
+== APP == >>> TOOL 3 COMPLETE: Booking confirmed for Grand Ballroom
+```
+
+`>>> TOOL 1: Searching venues in 'Austin'...` does **not** appear again, and neither does the LLM call that chose it. Those activities had completed and Catalyst had recorded their results, so the replay took the recorded values. Only the activity that was interrupted runs a second time.
+
+If the wait budget elapses before the run finishes, the response is a `202` carrying the instance ID. That is not a failure: re-issue the same request to attach again.
+
+> The final sentence the agent writes is composed by the model, so it can differ word for word between the two calls even though the tool results are identical. The proof to read is the app log and the execution trace in the console, not the prose. The two Java and Python workflow crash demos have a deterministic answer instead, because they run no model at all.
+
+The length of tool 2 is configurable through the `CRASH_DELAY_SECONDS` environment variable, which defaults to 30. Set it lower to shorten the window, or higher if you need more time to aim.
+
 ### 4. Inspecting the Results in Catalyst
 
 Open the [Catalyst dashboard](https://catalyst.diagrid.io/agents) in your browser and navigate to Agents > event-planner. Then select the most recent agent workflow run to view output.
+
+For a crash-recovery run you do not have to guess which one is yours: it is the execution named `gala-42`, or whatever ID you passed. The trace shows one execution, not two, with the interrupted tool attempted twice and every earlier activity once.
 
 ## Clean Up
 

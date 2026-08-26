@@ -5,3 +5,17 @@ Content-Type: application/json
 {
     "prompt": "Find a venue in Austin for a company gala"
 }
+
+### Crash Recovery: run under an ID you own
+### Blocks while tool 2 compares venues for ~30s. Kill the app during that window
+### with the request below, restart, then send this exact request again.
+POST http://localhost:5050/crash/run
+Content-Type: application/json
+
+{
+    "id": "gala-42",
+    "prompt": "Find a venue in Austin for a company gala"
+}
+
+### Crash Recovery: kill the app while the run above is in flight
+POST http://localhost:5050/crash/kill
