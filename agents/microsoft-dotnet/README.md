@@ -135,15 +135,53 @@ Invoke-RestMethod -Method Post -Uri 'http://localhost:5050/crash/run' -ContentTy
 
 **Crash the app.** From a third terminal, while tool 2 is still comparing:
 
+> **`POST /crash/kill` is demo scaffolding. Do not copy it into a real service.**
+> It is an unauthenticated endpoint that lets any caller that can reach the port
+> terminate the process, and it exists here only to make a crash reproducible on
+> demand.
+
+
+**macOS/Linux (curl):**
+
 ```bash
 curl -X POST http://localhost:5050/crash/kill
 ```
+
+**Windows (PowerShell):**
+
+```powershell
+Invoke-RestMethod -Method Post -Uri 'http://localhost:5050/crash/kill'
+```
+
+**VS Code REST Client (any OS):** Open [`test.http`](./test.http) and click *Send Request* above the *Crash Recovery: kill the app while the run above is in flight* request.
 
 The endpoint calls `Process.GetCurrentProcess().Kill()`, which is `SIGKILL` on macOS and Linux and `TerminateProcess` on Windows, so the process is gone before it can answer and this request itself reports a connection reset rather than a status code. That is expected: a process that answers politely has not crashed. The blocked request sees a reset too.
 
 The workflow instance `gala-42` is unaffected. It lives in Catalyst, not in the process you just killed.
 
-**Restart and re-issue.** Start the application again with the same command as step 1, then send the **identical** `/crash/run` request. Because the instance already exists, it attaches to the run you started before the crash instead of starting a second one:
+**Restart and re-issue.** Start the application again with the same `diagrid dev run` command you used in step 1. The project and the agent already exist, so this is the only command you need:
+
+```bash
+diagrid dev run -f dev-dotnet-agent.yaml --approve
+```
+
+Then send the **identical** `/crash/run` request again. Because the instance already exists, it attaches to the run you started before the crash instead of starting a second one:
+
+**macOS/Linux (curl):**
+
+```bash
+curl -X POST http://localhost:5050/crash/run \
+  -H "Content-Type: application/json" \
+  -d '{"id": "gala-42", "prompt": "Find a venue in Austin for a company gala"}'
+```
+
+**Windows (PowerShell):**
+
+```powershell
+Invoke-RestMethod -Method Post -Uri 'http://localhost:5050/crash/run' -ContentType 'application/json' -Body '{"id": "gala-42", "prompt": "Find a venue in Austin for a company gala"}'
+```
+
+The run resumes the moment the restarted app's worker reconnects, so the log below may already be scrolling before you send anything. The re-issued request attaches to that run and returns its recorded answer in `result`:
 
 ```text
 == APP == >>> TOOL 2: Comparing venues over ~30s. KILL THE APP NOW to test crash recovery (POST /crash/kill, or kill -9). It resumes on restart.
@@ -154,9 +192,9 @@ The workflow instance `gala-42` is unaffected. It lives in Catalyst, not in the 
 
 `>>> TOOL 1: Searching venues in 'Austin'...` does **not** appear again, and neither does the LLM call that chose it. Those activities had completed and Catalyst had recorded their results, so the replay took the recorded values. Only the activity that was interrupted runs a second time.
 
-If the wait budget elapses before the run finishes, the response is a `202` carrying the instance ID. That is not a failure: re-issue the same request to attach again.
+`/crash/run` always answers in the same JSON shape, `{"id", "result", "message"}`: a `200` carries the agent's answer in `result`, while a `202` (the wait budget elapsed before the run finished) carries the attach instruction in `message` instead. The `202` is not a failure: re-issue the same request to attach again. A request with a missing or blank `id` is a `400` whose `message` is `id is required`.
 
-> The final sentence the agent writes is composed by the model, so it can differ word for word between the two calls even though the tool results are identical. The proof to read is the app log and the execution trace in the console, not the prose. The crash demos in the [workflow quickstarts](../../workflow) return a deterministic answer instead, because they run no model at all.
+> The final sentence the agent writes is composed by the model, so running the demo again under a **new** ID can produce different prose from identical tool results. Re-using `gala-42` cannot: the killed call never returned a body, and the re-issued call replays that instance's recorded output. Either way, the proof to read is the app log and the execution trace in the console, not the prose. The crash demos in the [workflow quickstarts](../../workflow) return a deterministic answer instead, because they run no model at all.
 
 The length of tool 2 is configurable through the `CRASH_DELAY_SECONDS` environment variable, which defaults to 30. Set it lower to shorten the window, or higher if you need more time to aim.
 

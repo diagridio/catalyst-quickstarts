@@ -5,6 +5,7 @@ In this quickstart, you'll run an order processing workflow on [Catalyst Cloud](
 - Provision a Catalyst project with a managed workflow engine using the Diagrid CLI.
 - Run a stateful, multi-step order workflow that chains inventory checking, payment processing, and notification activities.
 - Start, monitor, and inspect workflow executions using both the API and the Catalyst web console.
+- Recover a workflow after the process is killed mid-run, resuming the same instance under an ID you choose.
 
 ```mermaid
 ---
@@ -227,6 +228,8 @@ Leave the application from step 5 running.
 
 Open a new terminal. This request blocks for about 30 seconds while the slow activity commits.
 
+> **Pick an ID you have not used before.** Re-issuing an ID attaches to the run it already names instead of starting a new one, so an ID left over from a finished run answers instantly with a correct-looking confirmation and you never see a crash at all. Every language quickstart here shares the same project (`workflow-quickstart`) and the same documented ID (`trip-42`), so if you have already walked through another language, substitute a distinct ID such as `trip-42-csharp` wherever the rest of this section writes `trip-42`.
+
 **macOS/Linux (curl):**
 
 ```bash
@@ -244,11 +247,16 @@ Invoke-RestMethod -Method Post -Uri "http://localhost:5001/crash/run" -ContentTy
 In the terminal running `diagrid dev run`, the fast activity completes and the slow one announces its window:
 
 ```text
-Reservation trip-42 received for ABC123
-Committing reservation ABC123 over ~30s. KILL THE APP NOW to test crash recovery (POST /crash/kill, or kill -9). It resumes on restart.
+== APP == Reservation trip-42 received for ABC123
+== APP == Committing reservation ABC123 over ~30s. KILL THE APP NOW to test crash recovery (POST /crash/kill, or kill -9). It resumes on restart.
 ```
 
 ### 7.2 Crash the app mid-run
+
+> **`POST /crash/kill` is demo scaffolding. Do not copy it into a real service.**
+> It is an unauthenticated endpoint that lets any caller that can reach the port
+> terminate the process, and it exists here only to make a crash reproducible on
+> demand. Nothing else in this quickstart depends on it.
 
 From a third terminal, while the slow activity is still running:
 
@@ -301,9 +309,9 @@ Because the instance already exists, this call **attaches** to it instead of res
 **Read the app log carefully, because this is the whole proof:**
 
 ```text
-Committing reservation ABC123 over ~30s. KILL THE APP NOW to test crash recovery (POST /crash/kill, or kill -9). It resumes on restart.
-Committed reservation ABC123. Confirmation code: BK-E0BEBD22
-Reservation trip-42 has completed! Reservation ABC123 confirmed. Confirmation code: BK-E0BEBD22
+== APP == Committing reservation ABC123 over ~30s. KILL THE APP NOW to test crash recovery (POST /crash/kill, or kill -9). It resumes on restart.
+== APP == Committed reservation ABC123. Confirmation code: BK-E0BEBD22
+== APP == Reservation trip-42 has completed! Reservation ABC123 confirmed. Confirmation code: BK-E0BEBD22
 ```
 
 `Reservation trip-42 received for ABC123` does **not** appear again. That activity had already completed and Catalyst had recorded its result, so the replay took the recorded value instead of re-running it. Only the activity that was interrupted runs a second time.
@@ -314,9 +322,9 @@ If the wait budget elapses before the run finishes, the response is a `202` carr
 
 Open the [Workflow viewer](https://catalyst.diagrid.io/workflows/executions) and select the instance named `trip-42`. The trace shows one execution, not two, with the interrupted activity attempted twice and every other activity once.
 
-> **The instance ID is a handle you own.** A durable activity is *at-least-once*, so make side-effecting work idempotent by keying off a business value, as `CommitReservationActivity` keys its confirmation code off the booking reference. To run the demo again under the same ID, purge the instance first or pick a new ID.
+> **The instance ID is a handle you own.** A durable activity is *at-least-once*, so make side-effecting work idempotent by keying off a business value, as `CommitReservationActivity` keys its confirmation code off the booking reference. To run the demo again, pick a new ID: this one now names a finished run, and re-issuing it would only attach to that.
 
-The slow activity's length is configurable through the `CRASH_DELAY_SECONDS` environment variable, which defaults to 30. Set it lower to shorten the window, or higher if you need more time to aim.
+The slow activity's length is configurable through the `CRASH_DELAY_SECONDS` environment variable, which defaults to 30. Set it lower to shorten the window, or higher if you need more time to aim, but stay under the wait budget `/crash/run` allows: a delay above that makes the first call return a `202` instead of the blocking `200` step 7.1 describes. That budget is `CRASH_WAIT_SECONDS`, which defaults to 120, so raise it too if you want a longer delay than that.
 
 ## 8. Clean Up
 
@@ -335,6 +343,7 @@ In this quickstart you:
 - Logged in to Catalyst and provisioned a managed workflow project with a single CLI command (`diagrid dev run`).
 - Ran an order processing workflow that's using task chaining.
 - Inspected workflow execution state using the `status` endpoint and the Catalyst web console.
+- Recovered a workflow after killing the app mid-run, resuming the same instance under an ID you chose.
 
 Catalyst handled workflow state durability, activity orchestration, and retries automatically — no infrastructure to manage.
 

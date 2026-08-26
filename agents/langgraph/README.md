@@ -150,21 +150,23 @@ The `crash_test.py` file demonstrates durable crash recovery, a capability not o
 2. **compare_options**: compares options over ~30 seconds. Kill the app during this
 3. **confirm_booking**: confirms the booking. Instant
 
-The node order is the point. Step 1 completes and Catalyst records its result before step 2 starts, so the crash lands between two known points and the restart can show that only the interrupted node ran again.
+The node order is the point. `check_venues` completes and Catalyst records its result before `compare_options` starts, so the crash lands between two known points and the restart can show that only the interrupted node ran again. Each node logs itself as `STEP 1`, `STEP 2` and `STEP 3`, which is how you follow it in the app log.
 
 You also choose the workflow instance ID, so you can find the same run again from a second request or in the Catalyst console.
 
-### 1. Start the app
+### 4. Start the app
+
+This is a second app (`crash_test.py`, not `main.py`), so stop the run from step 1 if it is still going: both dev-run files use the same `schedule-planner` app ID.
 
 ```bash
 uv run diagrid dev run -f dev-crash-test.yaml --approve
 ```
 
-Wait for `Uvicorn running on <localhost:port>`.
+Wait for `Uvicorn running on http://0.0.0.0:8001`. The port is pinned in `dev-crash-test.yaml`, so the `localhost:8001` requests below always work as written.
 
-### 2. Run under an ID you own
+### 5. Run under an ID you own
 
-From another terminal. This request blocks for about 30 seconds while step 2 runs.
+From another terminal. This request blocks for about 30 seconds while `compare_options` runs.
 
 Choose one of the following to trigger the endpoint:
 
@@ -184,7 +186,7 @@ Invoke-RestMethod -Method Post -Uri 'http://localhost:8001/crash/run' -ContentTy
 
 **VS Code REST Client (any OS):** Open [`test.http`](./test.http) and click *Send Request* above the *Crash Recovery: run the graph under an ID you own* request. Requires the [REST Client](https://marketplace.visualstudio.com/items?itemName=humao.rest-client) extension.
 
-Go to the terminal where you started `uv run diagrid dev run`. Step 1 completes and step 2 announces its window:
+Go to the terminal where you started `uv run diagrid dev run`. `check_venues` completes and `compare_options` announces its window:
 
 ```text
 == APP - schedule-planner == >>> STEP 1: Checking venue availability for 'company gala on March 15'...
@@ -192,9 +194,15 @@ Go to the terminal where you started `uv run diagrid dev run`. Step 1 completes 
 == APP - schedule-planner == >>> STEP 2: Comparing venue options over ~30s. KILL THE APP NOW to test crash recovery (POST /crash/kill, or kill -9). It resumes on restart.
 ```
 
-### 3. Crash the app
+### 6. Crash the app
 
-From a third terminal, while step 2 is still running:
+From a third terminal, while `compare_options` is still running:
+
+> **`POST /crash/kill` is demo scaffolding. Do not copy it into a real service.**
+> It is an unauthenticated endpoint that lets any caller that can reach the port
+> terminate the process, and it exists here only to make a crash reproducible on
+> demand.
+
 
 **macOS/Linux (curl):**
 
@@ -210,7 +218,7 @@ Invoke-RestMethod -Method Post -Uri 'http://localhost:8001/crash/kill'
 
 **VS Code REST Client (any OS):** Open [`test.http`](./test.http) and click *Send Request* above the *Crash Recovery: kill the app* request.
 
-The endpoint calls `os._exit(1)`, so the process is gone before it can answer and this request itself reports a connection reset rather than a status code. That is expected: a process that answers politely has not crashed. The blocked request from step 2 sees a reset too.
+The endpoint calls `os._exit(1)`, so the process is gone before it can answer and this request itself reports a connection reset rather than a status code. That is expected: a process that answers politely has not crashed. The blocked request from step 5 sees a reset too.
 
 ```text
 == APP - schedule-planner == >>> /crash/kill: killing this process to simulate a worker crash
@@ -219,15 +227,28 @@ The endpoint calls `os._exit(1)`, so the process is gone before it can answer an
 
 The workflow instance `gala-42` is unaffected. It lives in Catalyst, not in the process you just killed.
 
-### 4. Restart and re-issue
+### 7. Restart and re-issue
 
-Restart with the same command as step 1:
+Restart with the same command as step 4:
 
 ```bash
 uv run diagrid dev run -f dev-crash-test.yaml --approve
 ```
 
-Then send the **identical** request from step 2 again. Because the instance already exists, it attaches to the run you started before the crash instead of starting a second one:
+The run resumes by itself. No HTTP request is involved: as soon as the restarted app's worker reconnects, Catalyst hands `gala-42` back to it, `compare_options` starts over from the beginning, and about 30 seconds later the graph finishes. Watch the app log, where all of this happens before you send anything:
+
+```text
+== APP - schedule-planner == >>> STEP 2: Comparing venue options over ~30s. KILL THE APP NOW to test crash recovery (POST /crash/kill, or kill -9). It resumes on restart.
+== APP - schedule-planner == >>> STEP 2 COMPLETE: Grand Ballroom (6PM-11PM) is the best option for 200 guests
+== APP - schedule-planner == >>> STEP 3: Confirming booking...
+== APP - schedule-planner == >>> STEP 3 COMPLETE: Booking confirmed: Grand Ballroom, March 15, 6PM-11PM
+```
+
+`check_venues` is **not** re-executed: its `STEP 1` lines do not appear a second time. That node had completed and Catalyst had recorded its result, so the Dapr workflow engine replayed the saved value instead of running the node again. Only the node that was interrupted runs twice.
+
+The crash also killed the request that was waiting for the answer, so once those lines have appeared, send the **identical** request from step 5 again to collect the recorded answer. Because the instance already exists, this call attaches to it rather than starting a second one, and the handler says so:
+
+**macOS/Linux (curl):**
 
 ```bash
 curl -X POST http://localhost:8001/crash/run \
@@ -235,19 +256,21 @@ curl -X POST http://localhost:8001/crash/run \
   -d '{"id": "gala-42", "topic": "company gala on March 15"}'
 ```
 
-The workflow **resumes from step 2**: step 1 is not re-executed. The Dapr workflow engine replays the saved result from Catalyst instead of re-running the node, which is why step 1's lines do not appear a second time.
+**Windows (PowerShell):**
+
+```powershell
+Invoke-RestMethod -Method Post -Uri 'http://localhost:8001/crash/run' -ContentType 'application/json' -Body '{"id": "gala-42", "topic": "company gala on March 15"}'
+```
 
 ```text
 == APP - schedule-planner == >>> Attaching to the existing run gala-42 instead of starting a second one
-== APP - schedule-planner == >>> STEP 2: Comparing venue options over ~30s. KILL THE APP NOW to test crash recovery (POST /crash/kill, or kill -9). It resumes on restart.
-== APP - schedule-planner == >>> STEP 2 COMPLETE: Grand Ballroom (6PM-11PM) is the best option for 200 guests
-== APP - schedule-planner == >>> STEP 3: Confirming booking...
-== APP - schedule-planner == >>> STEP 3 COMPLETE: Booking confirmed: Grand Ballroom, March 15, 6PM-11PM
 ```
 
-If the wait budget elapses before the run finishes, the response is a `202` carrying the instance ID. That is not a failure: re-issue the same request to attach again.
+That is the last line of the demo. If you send the request earlier, while `compare_options` is still re-running, the attach line lands in the middle of the log instead and the call blocks until the graph finishes.
 
-The length of step 2 is configurable through the `CRASH_DELAY_SECONDS` environment variable, which defaults to 30. Set it lower to shorten the window, or higher if you need more time to aim.
+The reply uses the one JSON shape every crash demo in this repo returns, `{"id", "result", "message"}`. If the run has already finished, the recorded final output of the graph comes back in `result` with `message` null. If the wait budget elapses first, the same shape comes back as a `202` with `result` null and the attach instruction in `message`. That is not a failure: re-issue the same request to attach again.
+
+The length of `compare_options` is configurable through the `CRASH_DELAY_SECONDS` environment variable, which defaults to 30. Set it lower to shorten the window, or higher if you need more time to aim.
 
 ## Part of the Event Planning Team
 
