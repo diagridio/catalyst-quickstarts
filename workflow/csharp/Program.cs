@@ -88,8 +88,10 @@ app.MapGet("/workflow/status/{id}", async (
 {
     try
     {
+        // GetWorkflowStateAsync always hands back a WorkflowState, never null: a missing
+        // instance comes back as a wrapper whose Exists is false. Test Exists, not null.
         var state = await workflowClient.GetWorkflowStateAsync(instanceId: id);
-        if (state != null)
+        if (state.Exists)
         {
             app.Logger.LogInformation("Retrieved workflow status for {id}.", id);
             var result = state.ReadOutputAs<OrderResult>();
@@ -117,9 +119,10 @@ app.MapPost("/workflow/terminate/{id}", async (
 {
     try
     {
-        // Check current state first to provide accurate messaging
+        // Check current state first to provide accurate messaging. A missing instance is
+        // a WorkflowState with Exists false, not a null, so test Exists.
         var currentState = await workflowClient.GetWorkflowStateAsync(instanceId: id);
-        if (currentState == null)
+        if (!currentState.Exists)
         {
             app.Logger.LogInformation("Workflow with id {id} does not exist", id);
             return Results.NoContent();
@@ -157,7 +160,12 @@ app.MapPost("/workflow/terminate/{id}", async (
 // ── Crash-recovery demo ──────────────────────────────────────────────────────
 // The wait budget for the blocking /crash/run. Kept comfortably above the slow
 // activity's default 30s so the first call is still blocked when you kill the app.
-var crashWait = TimeSpan.FromSeconds(120);
+// Overridable through CRASH_WAIT_SECONDS, which is how the e2e suite exercises the
+// 202 branch without waiting two minutes for it.
+var crashWait = TimeSpan.FromSeconds(
+    int.TryParse(Environment.GetEnvironmentVariable("CRASH_WAIT_SECONDS"), out var waitSeconds)
+        ? waitSeconds
+        : 120);
 
 // Run the crash-recovery workflow under an instance ID the caller owns
 // POST /crash/run
@@ -171,9 +179,19 @@ app.MapPost("/crash/run", async (
     [FromServices] DaprWorkflowClient workflowClient) =>
 {
     var id = request.Id;
+    if (string.IsNullOrWhiteSpace(id))
+    {
+        return Results.Json(new CrashRunResponse(id, null, "id is required"), statusCode: 400);
+    }
+
     try
     {
-        if (await workflowClient.GetWorkflowStateAsync(instanceId: id) == null)
+        // Exists, not a null check. GetWorkflowStateAsync always returns a WorkflowState:
+        // for an instance that is not there it returns one whose Exists is false. Comparing
+        // the result to null is therefore always false, which would skip the schedule below
+        // and leave the wait asking about an instance nobody created.
+        var existing = await workflowClient.GetWorkflowStateAsync(instanceId: id);
+        if (!existing.Exists)
         {
             app.Logger.LogInformation(
                 "Starting crash-recovery workflow {id} for reservation {reference}", id, request.Reference);
@@ -193,6 +211,16 @@ app.MapPost("/crash/run", async (
         var state = await workflowClient.WaitForWorkflowCompletionAsync(
             instanceId: id, getInputsAndOutputs: true, cancellation: budget.Token);
 
+        // The wait returns on ANY terminal state, so a failed or terminated instance would
+        // otherwise be reported as a 200 carrying a null result.
+        if (state.RuntimeStatus != WorkflowRuntimeStatus.Completed)
+        {
+            app.Logger.LogError("Crash-recovery workflow {id} ended as {status}", id, state.RuntimeStatus);
+            return Results.Json(
+                new CrashRunResponse(id, null, $"workflow {id} ended as {state.RuntimeStatus}"),
+                statusCode: 500);
+        }
+
         return Results.Ok(new CrashRunResponse(id, state.ReadOutputAs<string>(), null));
     }
     catch (OperationCanceledException)
@@ -205,7 +233,7 @@ app.MapPost("/crash/run", async (
     catch (Exception ex)
     {
         app.Logger.LogError("Error running the crash-recovery workflow {id}: {error}", id, ex.Message);
-        return Results.Problem(detail: ex.Message, statusCode: 500);
+        return Results.Json(new CrashRunResponse(id, null, ex.Message), statusCode: 500);
     }
 });
 
@@ -215,7 +243,11 @@ app.MapPost("/crash/run", async (
 // sees a connection reset.
 app.MapPost("/crash/kill", () =>
 {
-    app.Logger.LogWarning(">>> /crash/kill: killing this process to simulate a worker crash");
+    // Console.WriteLine plus an explicit flush, not app.Logger: the default console logger
+    // hands the line to a background thread, and the kill below beats that thread to it, so
+    // the one line telling you the kill landed is the one line that never prints.
+    Console.WriteLine(">>> /crash/kill: killing this process to simulate a worker crash");
+    Console.Out.Flush();
     // Kill(), not Environment.Exit(): Exit runs the ProcessExit handlers, which makes it a
     // controlled shutdown wearing a crash's name. Kill() is TerminateProcess on Windows and
     // SIGKILL on Unix, which is the thing this demo is simulating.

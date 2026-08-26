@@ -40,8 +40,9 @@ namespace WorkflowApp.Models
         [property: JsonPropertyName("id")] string Id,
         [property: JsonPropertyName("reference")] string Reference = "ABC123");
 
-    // Response body of POST /crash/run. A 200 carries Result; a 202 carries Message, telling
-    // the caller to re-issue the same request to attach.
+    // Response body of POST /crash/run, and the one shape every crash demo in this repo
+    // returns. All three fields are always present: a 200 carries Result, while a 202, a 400
+    // and a 500 carry Message instead.
     public record CrashRunResponse(
         [property: JsonPropertyName("id")] string Id,
         [property: JsonPropertyName("result")] string? Result,
