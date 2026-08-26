@@ -12,13 +12,21 @@ So the discipline the harness applies to suites applies here too: a command that
 cannot be traced to a README does not survive CI.
 
 Scope is diagrid CLI usage, wherever the skill actually writes it: a line
-beginning `diagrid` inside a fenced block of any language (an untagged fence, or
-one of the ```python/```robotframework blocks that embed a command as a string
-literal), and an inline single-backtick code span in prose — which turns out to
-be how the skill actually shows most of its `diagrid` examples. `uv`, `robot` and
-`curl` mentions are harness usage no README documents and stay out of scope
-either way: they never start with `diagrid`, never start with a CLI object word
-the corpus actually documents, and are never made up entirely of `--flag` tokens.
+beginning `diagrid` inside a fenced block of any language, backtick or tilde,
+indented inside a list item or not, with or without an info string (an untagged
+fence, or one of the ```python/```robotframework blocks that embed a command as
+a quoted string literal — including one Python has wrapped across two adjacent
+literals rather than written on a single line); and an inline single-backtick
+code span in prose, which turns out to be how the skill actually shows most of
+its `diagrid` examples. `uv`, `robot` and `curl` mentions are harness usage no
+README documents and stay out of scope either way: they never start with
+`diagrid`, never start with a CLI object word the corpus actually documents, and
+are never made up entirely of `--flag` tokens.
+
+A fence with no matching close before end of file is reported as its own
+problem rather than silently treated as running to end of file: for a checker
+whose only value is failing on drift, quietly checking nothing for the rest of
+the document is worse than a false positive.
 
 Two candidates need two different rules, because most inline mentions are partial
 references rather than full invocations:
@@ -44,6 +52,16 @@ design names exactly two commands CI runs that no README will ever document (the
 other is the project name, already handled by `mask_project_name`), and neither
 is a documentation gap to report.
 
+A bare `--` stops flag collection: by shell convention everything after it
+belongs to a wrapped command (`diagrid dev run --approve -- mvn spring-boot:run`),
+not to diagrid, and must not be attributed to diagrid's flag vocabulary or
+checked against it.
+
+An `illustrative`-looking comment missing the required colon exempts nothing
+and is reported as its own problem naming the required form, rather than
+silently falling through to be reported as ordinary drift with no hint that an
+exemption was even attempted.
+
 Usage:
     python docsync/check_skill_docs.py
     python docsync/check_skill_docs.py --skill-dir path --repo-root path
@@ -67,9 +85,25 @@ from check_readme_sync import all_bash_lines  # noqa: E402
 # the three lines above the fence (unchanged); for an inline candidate the tag
 # exempts every candidate in the same paragraph, since a code span in prose has
 # no block boundary of its own and a paragraph is the natural unit a single
-# explanatory comment covers.
+# explanatory comment covers. Sharp edge worth naming: a tight bullet list has
+# no blank lines between items, so a tag placed above the list exempts every
+# bullet in it, not just the one it was meant for — and bullets are this
+# skill's dominant prose shape. Left as a known edge rather than fixed here.
 _ILLUSTRATIVE = re.compile(r"<!--\s*illustrative:(?P<reason>.*?)-->", re.IGNORECASE | re.DOTALL)
-_FENCE_OPEN = re.compile(r"^```(\w*)\s*$")
+# A comment that mentions `illustrative` but is missing the required colon
+# (`<!-- illustrative -->`, `<!-- illustrative reason -->`) matches neither the
+# well-formed tag above nor an exemption: it would otherwise exempt nothing and
+# raise no error either, leaving the candidate reported as ordinary drift with
+# no hint that an exemption was even attempted.
+_ILLUSTRATIVE_MALFORMED = re.compile(r"<!--\s*illustrative(?!\s*:)", re.IGNORECASE)
+# A fence marker: 3+ backticks or tildes, optionally indented (inside a list
+# item), with anything as an info string. The SAME pattern is reused to find
+# the matching close, which additionally requires the same fence character,
+# at least as many characters, and nothing but whitespace after the marker —
+# an info string on what would otherwise be a plain "```" close means it is
+# not a close at all, and treating it as one is what let a later, unrelated
+# fence get misread as belonging to this one.
+_FENCE_MARK = re.compile(r"^[ \t]*(`{3,}|~{3,})(.*)$")
 _INLINE_CODE = re.compile(r"`([^`]+)`", re.DOTALL)
 # A flag-only span is only trusted as a `diagrid` reference if its flag is a
 # hyphenated compound (`--enable-agent-infrastructure`, `--deploy-managed-kv`):
@@ -80,6 +114,12 @@ _INLINE_CODE = re.compile(r"`([^`]+)`", re.DOTALL)
 # `suites.validate()` — all of which this skill's prose mentions by a bare
 # flag the same way it mentions diagrid's.
 _COMPOUND_FLAG_TOKEN = re.compile(r"^--[A-Za-z]+(?:-[A-Za-z]+)+$")
+
+# A quoted string literal, single- or double-quoted, understanding a
+# backslash escape so it doesn't stop at an escaped quote character. Used to
+# find a `diagrid` command written as a data-module string, e.g. `python`'s
+# `COMMANDS = ("diagrid ...",)`.
+_QUOTED_STRING = re.compile(r'(["\'])((?:\\.|(?!\1).)*)\1')
 
 # Sanctioned exceptions: commands CI actually runs that no README will ever
 # document, because the design deliberately deviates from the README for a
@@ -145,6 +185,25 @@ def documented_commands(repo_root):
     return commands
 
 
+def _flags(tokens):
+    """`--flag` tokens in `tokens`, stopping at a bare `--`.
+
+    By shell convention everything after a lone `--` belongs to a wrapped
+    command (`diagrid dev run --approve -- mvn spring-boot:run`), not to
+    diagrid itself — a bare `--` is not a flag either, and without this stop
+    it was quietly entering `dev`'s vocabulary from exactly that documented
+    command, and a foreign flag after it (`-- uvicorn --port 8000`) was being
+    checked as if it were diagrid's own.
+    """
+    flags = []
+    for token in tokens:
+        if token == "--":
+            break
+        if token.startswith("--"):
+            flags.append(token.rstrip(",.;:"))
+    return flags
+
+
 def _flag_vocabulary(documented):
     """Every `--flag` documented for each CLI object (`project`, `agent`, ...),
     plus the global union, for the flag-level check.
@@ -164,7 +223,7 @@ def _flag_vocabulary(documented):
         if len(tokens) < 2 or tokens[0] != "diagrid":
             continue
         obj = tokens[1]
-        flags = {t for t in tokens if t.startswith("--")}
+        flags = set(_flags(tokens))
         flags_by_object.setdefault(obj, set()).update(flags)
         all_flags.update(flags)
     return flags_by_object, all_flags
@@ -226,7 +285,7 @@ def _check_candidate(path, line_no, text, documented, flags_by_object, all_flags
     # (which stores masked commands), just not for deciding which flags a
     # candidate names.
     tokens = text.split()
-    flags = [t.rstrip(",.;:") for t in tokens if t.startswith("--")]
+    flags = _flags(tokens)
     has_placeholder = ("<" in text and ">" in text) or ("{" in text and "}" in text)
 
     # Rule 1: restricted to candidates that literally start with `diagrid` and
@@ -273,39 +332,120 @@ def _no_reason_problem(path, line_no):
     )
 
 
+def _malformed_illustrative_problem(path, line_no, context):
+    """A problem string if `context` holds an `illustrative`-looking comment
+    missing the required colon, else `None`. Reported in addition to, not
+    instead of, whatever the candidate's own check finds: the malformed
+    comment exempts nothing (the safe direction), but silently — an author who
+    wrote it believing it was an exemption gets no signal that it did not
+    work, just an ordinary drift report with no mention of the attempt.
+    """
+    if _ILLUSTRATIVE.search(context) or not _ILLUSTRATIVE_MALFORMED.search(context):
+        return None
+    return (
+        f"{path.name}:{line_no}: a comment near here looks like an `illustrative` "
+        "tag but is missing the colon, so it exempts nothing. The required form is "
+        "exactly `<!-- illustrative: <reason> -->`."
+    )
+
+
 def _fence_spans(lines):
-    """Yield 0-based (open_index, close_index) inclusive for each fenced block,
-    of any language including untagged fences."""
+    """Yield 0-based (open_index, close_index, closed) for each fence marker
+    line: `(open, close, True)` for a properly closed fence, of any language,
+    backtick or tilde, indented or not; `(open, open, False)` for a marker
+    with no matching close before end of file.
+
+    An unterminated fence is NOT treated as running to end of file. The
+    caller reports it as its own problem via `_unterminated_fence_lines`, and
+    scanning continues past just that one marker line, so one broken fence
+    does not stop the rest of the document from being checked.
+    """
     index = 0
     while index < len(lines):
-        if _FENCE_OPEN.match(lines[index]):
-            start = index
-            end = start + 1
-            while end < len(lines) and not lines[end].startswith("```"):
-                end += 1
-            yield start, min(end, len(lines) - 1)
-            index = end + 1
+        opener = _FENCE_MARK.match(lines[index])
+        if not opener:
+            index += 1
+            continue
+        marker = opener.group(1)
+        fence_char, min_len = marker[0], len(marker)
+        end = index + 1
+        while end < len(lines):
+            closer = _FENCE_MARK.match(lines[end])
+            if (
+                closer
+                and closer.group(1)[0] == fence_char
+                and len(closer.group(1)) >= min_len
+                and not closer.group(2).strip()
+            ):
+                yield index, end, True
+                index = end + 1
+                break
+            end += 1
         else:
+            yield index, index, False
             index += 1
 
 
 def _blocks_with_context(markdown):
-    """Yield (line_number, body, preceding_text) for each fenced block."""
+    """Yield (line_number, body, preceding_text) for each properly closed
+    fenced block. An unterminated marker is skipped here; `check()` reports it
+    separately via `_unterminated_fence_lines`."""
     lines = markdown.splitlines()
-    for start, end in _fence_spans(lines):
+    for start, end, closed in _fence_spans(lines):
+        if not closed:
+            continue
         body = "\n".join(lines[start + 1 : end])
         preceding = "\n".join(lines[max(0, start - 3) : start])
         yield start + 1, body, preceding
 
 
+def _unterminated_fence_lines(markdown):
+    """1-based line numbers of fence markers with no matching close."""
+    lines = markdown.splitlines()
+    return [start + 1 for start, _end, closed in _fence_spans(lines) if not closed]
+
+
 def _blank_fenced_regions(lines):
     """`lines` with every fenced block's content replaced by blanks, so inline
-    code-span scanning only sees prose. Line numbers are preserved."""
+    code-span scanning only sees prose. Line numbers are preserved. An
+    unterminated marker blanks only its own line — nothing after it, since it
+    is not actually fencing anything."""
     blanked = list(lines)
-    for start, end in _fence_spans(lines):
+    for start, end, _closed in _fence_spans(lines):
         for i in range(start, end + 1):
             blanked[i] = ""
     return blanked
+
+
+def _quoted_command_candidates(body):
+    """Every run of adjacent quoted string literals in a fence body, joined
+    the way Python's implicit adjacent-literal concatenation would join them,
+    whose combined content starts with `diagrid`.
+
+    This is what lets a `diagrid` command embedded as a data-module string
+    literal count as a candidate — a `python` fence's `COMMANDS = ("diagrid
+    ...",)`, the shape of `references/agent-quickstart.md`'s
+    `REQUESTS[...]["commands"]` example — including one Python has wrapped
+    across two adjacent literals rather than written on a single line. A
+    naive per-line quote strip would see that as two truncated, unmatchable
+    fragments and misreport a command that, joined, is exactly what a README
+    documents.
+
+    Yields (0-based line offset within `body`, joined content).
+    """
+    tokens = list(_QUOTED_STRING.finditer(body))
+    i = 0
+    while i < len(tokens):
+        start = tokens[i].start()
+        content = tokens[i].group(2)
+        j = i + 1
+        while j < len(tokens) and not body[tokens[j - 1].end() : tokens[j].start()].strip():
+            content += tokens[j].group(2)
+            j += 1
+        normalised = " ".join(content.split())
+        if normalised.startswith("diagrid"):
+            yield body[:start].count("\n"), normalised
+        i = j
 
 
 def _inline_candidates(markdown, known_objects):
@@ -352,12 +492,11 @@ def _paragraph_bounds(lines, line_no):
     return start, end
 
 
-def _illustrative_tag_in_paragraph(lines, line_no):
-    """The `illustrative` tag match if the paragraph containing `line_no`
-    carries one, else `None`."""
+def _paragraph_text(lines, line_no):
+    """The text of the paragraph (run of non-blank lines) containing
+    1-based `line_no`."""
     start, end = _paragraph_bounds(lines, line_no)
-    paragraph = "\n".join(lines[start : end + 1])
-    return _ILLUSTRATIVE.search(paragraph)
+    return "\n".join(lines[start : end + 1])
 
 
 def check(skill_dir, repo_root):
@@ -375,29 +514,54 @@ def check(skill_dir, repo_root):
         markdown = path.read_text()
         lines = markdown.splitlines()
 
+        # A fence with no matching close is a problem in its own right —
+        # everything after it would otherwise go unchecked for this block.
+        for line_no in _unterminated_fence_lines(markdown):
+            problems.append(
+                f"{path.name}:{line_no}: fenced block opened here has no closing "
+                "```/~~~ before end of file (or a later ``` that was meant to close "
+                "it was mistaken for the opener of a new block, because it carried "
+                "extra text after the marker). Close the fence, or remove the extra "
+                "text from the line meant to close it."
+            )
+
         # Fenced blocks: unchanged scope (a line literally starting with
         # `diagrid`, in a fence of any language), now run through the same
-        # two-rule check as inline candidates.
+        # two-rule check as inline candidates, plus a second extraction for a
+        # `diagrid` command embedded as a quoted string literal.
         for line_no, body, preceding in _blocks_with_context(markdown):
             tag = _ILLUSTRATIVE.search(preceding)
             if tag:
                 if not tag.group("reason").strip():
                     problems.append(_no_reason_problem(path, line_no))
                 continue
+            malformed = _malformed_illustrative_problem(path, line_no, preceding)
+            if malformed:
+                problems.append(malformed)
             for line in all_bash_lines(f"```bash\n{body}\n```"):
                 if not line.startswith("diagrid"):
                     continue
                 problems.extend(
                     _check_candidate(path, line_no, line, documented, flags_by_object, all_flags)
                 )
+            for offset, content in _quoted_command_candidates(body):
+                problems.extend(
+                    _check_candidate(
+                        path, line_no + 1 + offset, content, documented, flags_by_object, all_flags
+                    )
+                )
 
         # Inline code spans: the skill mostly teaches by prose, not fences.
         for line_no, text in _inline_candidates(markdown, known_objects):
-            tag = _illustrative_tag_in_paragraph(lines, line_no)
+            paragraph = _paragraph_text(lines, line_no)
+            tag = _ILLUSTRATIVE.search(paragraph)
             if tag:
                 if not tag.group("reason").strip():
                     problems.append(_no_reason_problem(path, line_no))
                 continue
+            malformed = _malformed_illustrative_problem(path, line_no, paragraph)
+            if malformed:
+                problems.append(malformed)
             problems.extend(
                 _check_candidate(path, line_no, text, documented, flags_by_object, all_flags)
             )

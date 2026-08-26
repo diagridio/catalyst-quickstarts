@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from check_skill_docs import check, mask_project_name
+from check_skill_docs import _SANCTIONED_EXCEPTIONS, check, mask_project_name
 
 READMES = {
     "agents/langgraph/README.md": """\
@@ -12,6 +12,10 @@ diagrid project create langgraph-quickstart --enable-managed-workflow --deploy-m
 
 ```bash
 diagrid agent create schedule-planner --wait
+```
+
+```bash
+diagrid dev run --project langgraph-quickstart --approve -- mvn spring-boot:run
 ```
 """,
 }
@@ -213,3 +217,133 @@ diagrid login --debug
 ```
 """)
     assert check(skill, root) != []
+
+
+def test_the_sanctioned_exceptions_list_is_exactly_one_entry():
+    # Growing this list should require editing this test and stating why —
+    # it is closed by the design, not a place to park a documentation gap.
+    assert _SANCTIONED_EXCEPTIONS == (
+        'diagrid login --api-key "$DIAGRID_API_KEY"',
+    )
+
+
+# --- Fence robustness: unterminated fences, info strings, indentation ---------
+#
+# `_fence_spans` used to treat an unterminated fence as running to end of
+# file, and its opener regex didn't accept an info string beyond a single
+# word or any leading indentation — so a fence like ` ```bash title=x` was
+# never recognised as an opener, its own closing ``` was misread as the
+# opener of a NEW block, and that swallowed everything after it as "fenced"
+# content, silently dropping it from every check. For a checker whose only
+# value is failing on drift, quietly checking nothing is worse than a false
+# positive.
+
+
+def test_a_truly_unterminated_fence_is_reported_as_a_problem(tmp_path):
+    skill, root = _tree(tmp_path, """\
+```bash
+diagrid agent create schedule-planner --wait
+""")
+    problems = check(skill, root)
+    assert any("closing" in p.lower() for p in problems)
+
+
+def test_an_unrecognised_info_string_does_not_swallow_the_rest_of_the_file(tmp_path):
+    skill, root = _tree(tmp_path, """\
+```bash title=x
+diagrid agent create schedule-planner --wait
+```
+
+Also see `diagrid project create {project} --enable-agent-infrastructure --wait --use` here.
+""")
+    problems = check(skill, root)
+    assert any("enable-agent-infrastructure" in p for p in problems)
+
+
+def test_an_indented_fence_inside_a_list_item_is_recognised(tmp_path):
+    skill, root = _tree(tmp_path, """\
+- Example:
+  ```bash
+  diagrid project create {project} --enable-agent-infrastructure --wait --use
+  ```
+""")
+    problems = check(skill, root)
+    assert any("enable-agent-infrastructure" in p for p in problems)
+
+
+# --- Embedded string-literal commands (python/robotframework fences) ---------
+#
+# The docstring claimed this coverage before the extraction actually had it:
+# `all_bash_lines` keeps only lines starting with `diagrid`, and an embedded
+# Python string literal starts with a quote character instead. This is
+# exactly the shape of `references/agent-quickstart.md`'s
+# `REQUESTS[...]["commands"]` example, and the most natural place a future
+# author pastes a command when writing a new agent-family suite.
+
+
+def test_a_stale_flag_in_a_python_embedded_string_literal_fails(tmp_path):
+    skill, root = _tree(tmp_path, """\
+```python
+COMMANDS = (
+    "diagrid project create {project} --enable-agent-infrastructure --wait --use",
+)
+```
+""")
+    assert any("enable-agent-infrastructure" in p for p in check(skill, root))
+
+
+def test_a_command_split_across_two_adjacent_string_literals_is_joined(tmp_path):
+    # Python concatenates adjacent literals implicitly; a naive per-line quote
+    # strip would see two truncated, unmatchable fragments and misreport a
+    # command that is, joined, exactly what a README documents.
+    skill, root = _tree(tmp_path, """\
+```python
+COMMANDS = (
+    "diagrid agent create schedule-planner "
+    "--wait",
+)
+```
+""")
+    assert check(skill, root) == []
+
+
+def test_a_stale_flag_split_across_two_adjacent_string_literals_fails(tmp_path):
+    skill, root = _tree(tmp_path, """\
+```python
+COMMANDS = (
+    "diagrid project create {project} --enable-agent-infrastructure "
+    "--wait --use",
+)
+```
+""")
+    assert any("enable-agent-infrastructure" in p for p in check(skill, root))
+
+
+# --- Minor: a bare `--` stops flag collection ---------------------------------
+
+
+def test_flags_after_a_bare_double_dash_are_not_checked_as_diagrid_flags(tmp_path):
+    # Everything after a bare `--` belongs to the wrapped command, not to
+    # diagrid, and must not be checked as though it were a diagrid flag.
+    skill, root = _tree(tmp_path, """\
+```bash
+diagrid dev run --project {project} --approve -- uvicorn --port 8000
+```
+""")
+    problems = check(skill, root)
+    assert not any("--port" in p for p in problems)
+
+
+# --- Minor: a malformed illustrative tag must not fail silently --------------
+
+
+def test_a_malformed_illustrative_tag_without_a_colon_is_reported(tmp_path):
+    skill, root = _tree(tmp_path, """\
+<!-- illustrative no colon here -->
+
+```bash
+diagrid mcp grant --caller x --tool add
+```
+""")
+    problems = check(skill, root)
+    assert any("colon" in p for p in problems)
