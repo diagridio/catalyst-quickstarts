@@ -26,9 +26,23 @@ Suite Log File
     ...
     ...    ${suffix} exists for the same reason one step down: a test that launches
     ...    the quickstart twice (the crash-recovery case) must not let the second
-    ...    launch truncate the first launch's evidence away.
+    ...    launch truncate the first launch's evidence away. Pass it WITHOUT a
+    ...    separator (`crash-first`, not `-crash-first`): this keyword owns every
+    ...    separator in the filename, so a caller cannot run two of them together.
     [Arguments]    ${api}    ${language}    ${suffix}=${EMPTY}
-    RETURN    ${OUTPUT DIR}/${api}-${language}${suffix}-dev-run.log
+    ${tail}=    Set Variable If    '${suffix}' == '${EMPTY}'    ${EMPTY}    -${suffix}
+    RETURN    ${OUTPUT DIR}/${api}-${language}${tail}-dev-run.log
+
+App Port Is Closed
+    [Documentation]    Fail while ${port} still answers. The inverse of Health Check
+    ...    Returns 200, and the only proof that a kill actually landed rather than
+    ...    merely being requested. Also the gate that the port is free before a
+    ...    relaunch, since Wait Until Apps Healthy is satisfied by a survivor.
+    [Arguments]    ${port}
+    ${status}    ${response}=    Run Keyword And Ignore Error
+    ...    GET    http://localhost:${port}/    timeout=3
+    Should Be Equal    ${status}    FAIL
+    ...    msg=Port ${port} is still serving, so the app did not die
 
 Wait Until Apps Healthy
     [Documentation]    Poll every `(port, path)` probe in ${qs}[health_probes] until

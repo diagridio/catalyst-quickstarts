@@ -84,10 +84,27 @@ def extract_json_blocks(markdown: str, section: str) -> list[dict]:
     return parsed
 
 
-def extract_curl_calls(markdown: str) -> list[dict]:
+def extract_json_bodies(markdown: str, section: str) -> list[dict]:
+    """Documented response bodies in a section, from ```json AND ```text blocks.
+
+    Section 7 quotes its response bodies in ```text blocks rather than ```json, so
+    looking only at ```json would silently check nothing there.
+    """
+    bodies = list(extract_json_blocks(markdown, section))
+    for block in _blocks(markdown, section, "text"):
+        if not block.startswith("{"):
+            continue
+        try:
+            bodies.append(json.loads(block))
+        except json.JSONDecodeError:
+            continue
+    return bodies
+
+
+def extract_curl_calls(markdown: str, section: str = "6") -> list[dict]:
     """Method, URL and JSON payload of each documented curl invocation."""
     calls = []
-    for block in extract_bash_blocks(markdown, "6"):
+    for block in extract_bash_blocks(markdown, section):
         if not block.startswith("curl"):
             continue
         tokens = shlex.split(block)
@@ -421,6 +438,87 @@ def check(api: str, language: str, repo_root: Path) -> list[str]:
                 f"{where}: README expected body not asserted by the harness:\n"
                 f"  {body!r}\n  harness asserts: {harness_bodies!r}"
             )
+
+    problems.extend(_check_crash_section(api, language, markdown, where))
+
+    return problems
+
+
+# The response shape every crash demo returns. Named here so a README that drops a
+# field, or renames `result`, fails this check instead of being quietly accepted.
+_CRASH_BODY_KEYS = {"id", "result", "message"}
+_CRASH_PAYLOAD_KEYS = {"id", "reference"}
+
+
+def _check_crash_section(api: str, language: str, markdown: str, where: str) -> list[str]:
+    """Check README section 7, the crash-recovery demo, against the harness.
+
+    Section 7 was outside this checker when it was written, which is how three
+    READMEs came to document three different response bodies for one endpoint.
+    """
+    if api != "workflow":
+        return []
+
+    problems = []
+    start, end = _section_span(markdown, "7")
+    documented = markdown[start:end]
+    has_section = bool(documented.strip()) and "/crash/run" in documented
+
+    if language not in qs.CRASH_LANGUAGES:
+        # javascript ships no crash demo. If one appears, the harness needs a case for
+        # it, so say so rather than passing silently.
+        if has_section:
+            problems.append(
+                f"{where}: README documents a crash demo but {language} is not in "
+                f"CRASH_LANGUAGES, so no suite case drives it"
+            )
+        return problems
+
+    if not has_section:
+        return [f"{where}: no crash-recovery section 7 found, but the harness drives one"]
+
+    # The documented request body. `id` is a sanctioned divergence: the README documents
+    # a memorable `trip-42` while the suite mints a unique id per run, precisely so the
+    # test can be run twice. `reference` is not: the confirmation code is derived from
+    # it, so a README documenting a different one documents a different answer.
+    for call in extract_curl_calls(markdown, "7"):
+        payload = call["payload"]
+        if payload is None:
+            continue
+        if set(payload) != _CRASH_PAYLOAD_KEYS:
+            problems.append(
+                f"{where}: documented /crash/run payload has keys {sorted(payload)}, "
+                f"expected {sorted(_CRASH_PAYLOAD_KEYS)}"
+            )
+        if payload.get("reference") != qs.CRASH_REFERENCE:
+            problems.append(
+                f"{where}: documented reference {payload.get('reference')!r} is not the "
+                f"harness reference {qs.CRASH_REFERENCE!r}"
+            )
+
+    # The documented response body, which is where the three-way drift lived.
+    for body in extract_json_bodies(markdown, "7"):
+        if "result" not in body and "message" not in body:
+            continue
+        if set(body) != _CRASH_BODY_KEYS:
+            problems.append(
+                f"{where}: documented /crash/run body has keys {sorted(body)}, expected "
+                f"{sorted(_CRASH_BODY_KEYS)}: every crash demo returns all three"
+            )
+        if body.get("result") is not None and body["result"] != qs.CRASH_CONFIRMATION:
+            problems.append(
+                f"{where}: documented result {body['result']!r} is not the confirmation "
+                f"the harness asserts, {qs.CRASH_CONFIRMATION!r}"
+            )
+
+    # The proof line the README tells the reader to look for has to be the one the
+    # suite waits on. CRASH_COMMITTING_MARKER is deliberately excluded: it carries the
+    # delay, and the README documents the 30s default while the suite injects 20s.
+    if qs.CRASH_COMMITTED_MARKER not in documented:
+        problems.append(
+            f"{where}: section 7 never quotes the committed marker the harness waits "
+            f"for: {qs.CRASH_COMMITTED_MARKER!r}"
+        )
 
     return problems
 
