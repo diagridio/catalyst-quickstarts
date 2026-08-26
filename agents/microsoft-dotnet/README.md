@@ -99,12 +99,12 @@ The agent will:
 So this request takes about half a minute. You'll see:
 
 ```text
-== APP == >>> TOOL 1: Searching venues in 'Austin'...
-== APP == >>> TOOL 1 COMPLETE: Found 3 venues
-== APP == >>> TOOL 2: Comparing venues over ~30s. KILL THE APP NOW to test crash recovery (POST /crash/kill, or kill -9). It resumes on restart.
-== APP == >>> TOOL 2 COMPLETE: Grand Ballroom is the best option
-== APP == >>> TOOL 3: Confirming booking...
-== APP == >>> TOOL 3 COMPLETE: Booking confirmed for Grand Ballroom
+== APP - event-planner == >>> TOOL 1: Searching venues in 'Austin'...
+== APP - event-planner == >>> TOOL 1 COMPLETE: Found 3 venues
+== APP - event-planner == >>> TOOL 2: Comparing venues over ~30s. KILL THE APP NOW to test crash recovery (POST /crash/kill, or kill -9). It resumes on restart.
+== APP - event-planner == >>> TOOL 2 COMPLETE: Grand Ballroom is the best option
+== APP - event-planner == >>> TOOL 3: Confirming booking...
+== APP - event-planner == >>> TOOL 3 COMPLETE: Booking confirmed for Grand Ballroom
 ```
 
 ### 3. Crash Recovery with Catalyst
@@ -184,10 +184,10 @@ Invoke-RestMethod -Method Post -Uri 'http://localhost:5050/crash/run' -ContentTy
 The run resumes the moment the restarted app's worker reconnects, so the log below may already be scrolling before you send anything. The re-issued request attaches to that run and returns its recorded answer in `result`:
 
 ```text
-== APP == >>> TOOL 2: Comparing venues over ~30s. KILL THE APP NOW to test crash recovery (POST /crash/kill, or kill -9). It resumes on restart.
-== APP == >>> TOOL 2 COMPLETE: Grand Ballroom is the best option
-== APP == >>> TOOL 3: Confirming booking...
-== APP == >>> TOOL 3 COMPLETE: Booking confirmed for Grand Ballroom
+== APP - event-planner == >>> TOOL 2: Comparing venues over ~30s. KILL THE APP NOW to test crash recovery (POST /crash/kill, or kill -9). It resumes on restart.
+== APP - event-planner == >>> TOOL 2 COMPLETE: Grand Ballroom is the best option
+== APP - event-planner == >>> TOOL 3: Confirming booking...
+== APP - event-planner == >>> TOOL 3 COMPLETE: Booking confirmed for Grand Ballroom
 ```
 
 `>>> TOOL 1: Searching venues in 'Austin'...` does **not** appear again, and neither does the LLM call that chose it. Those activities had completed and Catalyst had recorded their results, so the replay took the recorded values. Only the activity that was interrupted runs a second time.

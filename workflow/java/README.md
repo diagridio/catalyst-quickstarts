@@ -248,8 +248,8 @@ Invoke-RestMethod -Method Post -Uri "http://localhost:5001/crash/run" -ContentTy
 In the terminal running `diagrid dev run`, the fast activity completes and the slow one announces its window:
 
 ```text
-== APP == Notification: Reservation trip-42 received for ABC123
-== APP == Committing reservation ABC123 over ~30s. KILL THE APP NOW to test crash recovery (POST /crash/kill, or kill -9). It resumes on restart.
+== APP - order-workflow == Notification: Reservation trip-42 received for ABC123
+== APP - order-workflow == Committing reservation ABC123 over ~30s. KILL THE APP NOW to test crash recovery (POST /crash/kill, or kill -9). It resumes on restart.
 ```
 
 ### 7.2 Crash the app mid-run
@@ -310,9 +310,9 @@ Because the instance already exists, this call **attaches** to it instead of res
 **Read the app log carefully, because this is the whole proof:**
 
 ```text
-== APP == Committing reservation ABC123 over ~30s. KILL THE APP NOW to test crash recovery (POST /crash/kill, or kill -9). It resumes on restart.
-== APP == Committed reservation ABC123. Confirmation code: BK-E0BEBD22
-== APP == Notification: Reservation trip-42 has completed! Reservation ABC123 confirmed. Confirmation code: BK-E0BEBD22
+== APP - order-workflow == Committing reservation ABC123 over ~30s. KILL THE APP NOW to test crash recovery (POST /crash/kill, or kill -9). It resumes on restart.
+== APP - order-workflow == Committed reservation ABC123. Confirmation code: BK-E0BEBD22
+== APP - order-workflow == Notification: Reservation trip-42 has completed! Reservation ABC123 confirmed. Confirmation code: BK-E0BEBD22
 ```
 
 `Notification: Reservation trip-42 received for ABC123` does **not** appear again. That activity had already completed and Catalyst had recorded its result, so the replay took the recorded value instead of re-running it. Only the activity that was interrupted runs a second time.
