@@ -77,13 +77,15 @@ and endpoints no README documents, belong in `UNCOVERED`.
 ### When the README documents no project creation
 
 Some quickstarts need a project but never say how to make one.
-`agents/dapr-agents/orchestrator` is the clearest case: its prerequisites list
-only the CLI, Python, uv and three model API keys, and the whole documented
-flow is `diagrid login` then `uv run diagrid dev run -f
-dev-multi-agent-orchestration.yaml` — no `project create` anywhere, and no
-`--project` flag on `dev run` either. Under the guiding principle, provisioning
-is then infrastructure, and `ci/setup-project.sh` owns it, exactly as for the
-canonical APIs.
+`agents/dapr-agents/orchestrator` is the clearest case: its seven prerequisites
+are the CLI, Python, uv, three model API keys and "all 8 specialist agents
+running" — no Catalyst project among them — and its documented flow is `cd
+dapr-agents/orchestrator` and `uv sync`, then `diagrid login` and `uv run
+diagrid dev run -f dev-multi-agent-orchestration.yaml`. No `project create`
+anywhere, and no `--project` flag on `dev run` either. Transcribe the install
+steps like any other documented command; it is the provisioning that is absent.
+Under the guiding principle, provisioning is then infrastructure, and
+`ci/setup-project.sh` owns it, exactly as for the canonical APIs.
 
 That script's flags were chosen for the canonical APIs, though
 (`--deploy-managed-kv --deploy-managed-pubsub --enable-managed-workflow`), and

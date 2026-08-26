@@ -102,6 +102,9 @@ SUITES = (
         "data": "agents_spring_ai_event_planner",
         "language": "java",
         "runtime": "java",
+        # False for the same reason as the two rows above: never run live, and
+        # this one's `status: 200` is expected to fail when it is. See the
+        # harness README's Limitations.
         "nightly": False,
         "secrets": ("OPENAI_API_KEY",),
     },

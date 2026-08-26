@@ -90,10 +90,13 @@ Run Documented Commands
     [Documentation]    Run an ordered list of documented commands, substituting the
     ...    ephemeral project name, and stop at the first non-zero exit.
     ...
-    ...    Agent-family READMEs document their own provisioning (`project create
-    ...    --enable-agent-infrastructure --wait --use`, `agent create`, `app
-    ...    create`, `apply -f`), so the suite runs those commands verbatim instead
-    ...    of an invented equivalent. Stopping at the first failure keeps the real
+    ...    Agent-family READMEs document their own provisioning (`project create`
+    ...    with per-quickstart managed-service flags such as
+    ...    `--enable-managed-workflow --deploy-managed-kv --deploy-managed-pubsub`,
+    ...    plus `--wait --use`, then `agent create`, and sometimes `app create` and
+    ...    `apply -f`), so the suite runs those commands verbatim instead of an
+    ...    invented equivalent. The flags are per-quickstart data — see the
+    ...    harness README's "Two kinds of quickstart". Stopping at the first failure keeps the real
     ...    cause visible: an `agent create` that runs after a failed `project
     ...    create` fails for a second, more confusing reason.
     ...

@@ -1,7 +1,9 @@
 # qs-tester
 
-End-to-end tests for the `workflow`, `state`, `pubsub`, and `invocation` quickstarts,
-built on [Robot Framework](https://robotframework.org/). The tests run the *actual*
+End-to-end tests for the `workflow`, `state`, `pubsub` and `invocation`
+quickstarts, and for three agent-family ones (`agents/langgraph`,
+`agents/microsoft-dotnet`, `agents/spring-ai/event-planner`), built on
+[Robot Framework](https://robotframework.org/). The tests run the *actual*
 commands each quickstart's README documents and assert the responses and log output
 that README promises, so drift between the docs, the code, and Catalyst is caught
 automatically.
@@ -19,20 +21,32 @@ automatically.
 - `resources/catalyst.resource` — `diagrid dev run` launch, stop, readiness markers.
 - `resources/quickstart.resource` — build, health polling, HTTP assertions.
 - `resources/tests/` — the harness's own tests. `smoke.robot` covers the
-  process-teardown keywords, `readiness.robot` covers the readiness gate against
-  `flaky_server.py`, `teardown.robot` covers the two Stop Quickstart paths that
-  release nothing. None need credentials, they run in seconds, and CI's `lint` job
-  runs the whole directory on every PR — run them locally too when you touch
+  process-teardown keywords, `keywords.robot` covers the keywords the
+  agent-family suites depend on against `echo_server.py`, `readiness.robot`
+  covers the readiness gate against `flaky_server.py`, and `teardown.robot`
+  covers the two Stop Quickstart paths that release nothing. None need
+  credentials, they run in seconds, and CI's `lint` job runs the whole
+  directory on every PR — run them locally too when you touch
   `process.resource`, `catalyst.resource` or the gate.
 - `variables/quickstarts.py` — the per-(API, language) table. **Everything in it is
   transcribed from a README.** Change a README, change this file.
 - `docsync/check_readme_sync.py` — asserts the two stay in agreement.
+- `docsync/check_skill_docs.py` — the same discipline applied to the
+  `add-quickstart-e2e-test` skill: every `diagrid` command the skill's own
+  SKILL.md and `references/` show has to be traceable to a quickstart README,
+  by whole command and by flag. It exists because the skill's examples went
+  stale the moment the provisioning flags changed and nobody noticed — prose
+  that nobody checks is prose that drifts. Needs no credentials, and CI's
+  `lint` job runs it on every PR.
 - `ci/` — Catalyst project lifecycle scripts.
 - `variables/suites.py` — the registry of every suite. The lint dryrun, the CI
   agents matrix and doc-sync all read it, so registering a suite is one row here
   rather than three edits in the workflow.
 - `variables/agents_<name>.py` — one per agent-family quickstart, holding that
-  quickstart's documented command sequence verbatim.
+  quickstart's documented command sequence verbatim. The file name is the
+  manifest row's `data` key: the quickstart's path below `agents/` with every
+  `/` and `-` replaced by `_`, so `agents/spring-ai/event-planner` is
+  `variables/agents_spring_ai_event_planner.py`.
 - `ci/list-suites.py` — reads the manifest for CI (`--paths`, `--matrix agent`,
   `--validate`, `--row <suite>`).
 - `ci/check_mutation.py` — the mutation check's verdict: did the mutated run fail
@@ -43,7 +57,11 @@ automatically.
 Each suite lives next to the quickstarts it tests: `state/tests/quickstart.robot`,
 `pubsub/tests/quickstart.robot`, and so on. Each canonical suite has four tests
 tagged `csharp`, `java`, `javascript`, `python`. Agent-family suites (see "Two
-kinds of quickstart" below) have exactly one test each, at `<family>/<name>/tests/quickstart.robot`.
+kinds of quickstart" below) have exactly one test each, at
+`<quickstart-dir>/tests/quickstart.robot` — wherever the quickstart itself
+lives. That is not a fixed depth: `agents/langgraph/tests/quickstart.robot` is
+two segments below the repository root and
+`agents/spring-ai/event-planner/tests/quickstart.robot` is three.
 
 ## Running locally
 
@@ -118,28 +136,71 @@ The canonical APIs (`workflow`, `state`, `pubsub`, `invocation`) are an
 (api × language) matrix: one suite per API, four language-tagged tests, all data
 in `variables/quickstarts.py`.
 
-Agent-family quickstarts (`agents/*`, `dapr-agents/*`, `mcp-auth/*`) are a flat
-list. Each has exactly one language, its own suite at
-`<family>/<name>/tests/quickstart.robot`, and its own data module. Three things
+Agent-family quickstarts (`agents/*`, `dapr-agents/*`, `mcp-auth/*`) are not a
+matrix. Each has exactly one language, its own suite beside it at
+`<quickstart-dir>/tests/quickstart.robot`, and its own data module. They are not
+a flat two-level list either: `agents/spring-ai/event-planner` sits three
+segments deep, so nothing here may assume a `<family>/<name>` shape. Five things
 differ and are worth knowing before you touch one:
 
-1. **They provision themselves.** Their READMEs document `diagrid project create`
-   (with `--enable-agent-infrastructure` for `agents/*`), `agent create` and
-   sometimes `app create` and `apply -f`, so the suite runs those documented
-   commands through `Run Documented Commands`. `ci/setup-project.sh` is for the
-   canonical suites, whose READMEs document no provisioning at all.
-2. **The `dev run` command can be bare.** `agents/*` documents
-   `project create ... --use` followed by a `dev run` with no `--project`. The
-   suite reproduces that exactly, so a regression in `--use` fails here.
+1. **They provision themselves.** Most of their READMEs document `diagrid
+   project create` with per-quickstart managed-service flags, then `agent
+   create`, and sometimes `app create` and `apply -f`, so the suite runs those
+   documented commands through `Run Documented Commands`. The flags are transcribed data,
+   not a constant: `agents/langgraph` and `agents/microsoft-dotnet` both
+   document `--enable-managed-workflow --deploy-managed-kv
+   --deploy-managed-pubsub --wait --use`, while `agents/spring-ai/event-planner`
+   documents the same set without `--deploy-managed-pubsub`. (The older
+   `--enable-agent-infrastructure` was replaced by these flags and appears in no
+   README any more — a document that still states it as current is stale.)
+   Not every one of them provisions, though: `agents/dapr-agents/orchestrator`
+   documents no `project create` at all, and `mcp-auth/python` documents one
+   with no managed-service flags — read the README you are testing rather than
+   the family (the skill's `references/agent-quickstart.md` catalogues the
+   three shapes). `ci/setup-project.sh` is for the canonical suites, whose
+   READMEs document no provisioning at all, and for an agent quickstart whose
+   README documents none either.
+2. **The `dev run` command can be bare.** The three suites here all follow a
+   documented `project create ... --use` with a `dev run` carrying no
+   `--project`. The suite reproduces that exactly, so a regression in `--use`
+   fails here. (`mcp-auth/python` documents the opposite — an explicit
+   `--project` — which is why this is per-quickstart data too.)
 3. **Assertions are structural.** Responses contain model output, so the suites
-   assert the documented status code, a named field being present and non-empty
-   where a response shape is known, and a log marker showing the expected tool
-   ran.
+   assert a status code, a named field being present and non-empty where a
+   response shape is known, and a log marker showing the expected tool ran. Be
+   careful with the status code: **none of the three READMEs behind these
+   suites documents one**, so the `status: 200` in all three data modules is an
+   assumption rather than a transcription, and for two of the three it is
+   probably wrong — see "Limitations".
+4. **The manifest row's `name` is a path, and it has a 26-character budget.** An
+   agent row's `name` is the quickstart's path below `agents/` with slashes
+   replaced by dashes (`agents/spring-ai/event-planner` →
+   `spring-ai-event-planner`), which makes it unique by construction. It is also
+   the leg CI hands `ci/project-name.sh`, so the ephemeral project is
+   `qs-ci-agents-<name>-<run-id>`. Catalyst caps that at 55 characters, and the
+   binding run id is the *local* fallback (`local` plus a 10-digit epoch, 15
+   characters — longer than a GitHub run id), which leaves exactly 26 for
+   `name`. `suites.validate()` enforces it, so `ci/list-suites.py --validate`
+   fails the lint job in seconds instead of failing at `diagrid project create`
+   inside a nightly leg and leaking a half-made project. A row that needs more
+   room may carry an explicit, shorter `leg`, which `suites.leg_id` prefers over
+   `name`; `spring-ai-event-planner` at 23 characters is the tightest real case
+   so far and needs no such escape hatch.
+5. **`connected_apps` is part of every agent data module.** Its
+   `get_quickstart()` returns `connected_apps`, the `(appID, appPort)` pairs
+   read out of the quickstart's dev config. `Start Quickstart` records those app
+   IDs into `@{CONNECTED_APP_IDS}` so `Stop Quickstart` can call `Release App
+   Connection` for each, which is what keeps a finished run from leaving a
+   `trust.diagrid.io` endpoint pointing at a dead tunnel; `Wait Until Apps
+   Connected` waits for the matching `Connected App ID "<id>" to
+   http://localhost:<port>` line. That an agent app emits that line at all is
+   **inferred** from the appPort rule ("Readiness markers are not uniform per
+   API" below) and has not been observed — see "Limitations".
 
 Nightly membership is per suite (`nightly` in the manifest), and CI reads it
 only for agent-family rows — canonical scheduling stays the business of the
 `e2e` job's own hand-written language matrix. Each agent leg costs a project
-with agent infrastructure plus real model tokens, so suites left at
+with managed services plus real model tokens, so suites left at
 `nightly: False` run only on `workflow_dispatch`.
 
 ### Running an agent-family suite locally
@@ -240,7 +301,11 @@ uv run python ci/list-suites.py --validate
 # assert the READMEs and the harness still agree, canonical and agent-family alike
 uv run python docsync/check_readme_sync.py --all
 
-# unit-test the doc-sync checker and the manifest itself
+# assert the add-quickstart-e2e-test skill's own `diagrid` examples are still
+# commands some quickstart README documents
+uv run python docsync/check_skill_docs.py
+
+# unit-test the doc-sync checkers and the manifest itself
 uv run pytest -q
 
 # the harness's own keyword tests, no Catalyst project or credentials needed
@@ -253,8 +318,9 @@ under this check — no separate edit here. Filtering to only the four canonical
 suites, for a quicker local loop, means falling back to the glob
 (`../../*/tests/quickstart.robot`): the single `*` matches one path segment, so
 it resolves to exactly `workflow`, `state`, `pubsub`, `invocation` and does not
-reach agent-family suites, which live two segments deep
-(`agents/langgraph/tests/quickstart.robot`).
+reach agent-family suites, which live at least two segments deep
+(`agents/langgraph/tests/quickstart.robot`, and three for
+`agents/spring-ai/event-planner/tests/quickstart.robot`).
 
 ### CLI version
 
@@ -333,7 +399,7 @@ config, not a typo.
   gate. The teardown fix was verified the same way: the `server` app ID's app
   endpoint is cleared after the suite, where it used to keep a dead
   `trust.diagrid.io` tunnel.
-  The other three suites have been verified only with `robot --dryrun` (syntax,
+  The other three canonical suites have been verified only with `robot --dryrun` (syntax,
   keywords, variables resolve) and the doc-sync checker (the READMEs and the harness
   agree on what commands exist), so their assertions have not been seen to pass —
   or to fail correctly — against the real thing.
@@ -346,9 +412,12 @@ config, not a typo.
   mapping was verified. Note that `dev stop` also kills the local `diagrid dev run`
   process, which is harmless in teardown (the process tree is already stopped by
   then) but will end a session you are still using.
-- **The new `agents/langgraph` suite has never run against real Catalyst
-  either.** No model provider key was available while it was written:
-  `DIAGRID_API_KEY` is set in the dev environment, but `OPENAI_API_KEY`,
+- **None of the three agent-family suites has ever run against real
+  Catalyst.** `agents/langgraph`, `agents/microsoft-dotnet` and
+  `agents/spring-ai/event-planner` are all registered `nightly: False` for that
+  reason. The bullets that follow are what that costs.
+- **`agents/langgraph` has never run against real Catalyst.** No model provider
+  key was available while it was written: `DIAGRID_API_KEY` is set in the dev environment, but `OPENAI_API_KEY`,
   `GEMINI_API_KEY` and `ANTHROPIC_API_KEY` are all unset, and this quickstart
   calls OpenAI. Consequently no assertion in it has been seen to fail when the
   thing it checks is broken — no mutation check has run — and
@@ -362,7 +431,7 @@ config, not a typo.
   registered `nightly: False` for exactly that reason; flipping that flag needs a
   green live run plus a mutation check, with the flag flip landing in the same
   commit as the evidence (see "Running an agent-family suite locally" above).
-- **Its health probe is reasoned, not observed.** `HEALTH_PROBES` polls
+- **`agents/langgraph`'s health probe is reasoned, not observed.** `HEALTH_PROBES` polls
   `GET /dapr/subscribe` on 8005 rather than `GET /`, because the app serves no
   `/`: `main.py` calls `DaprWorkflowGraphRunner.serve()`, which builds a bare
   `FastAPI()` and registers four routes, none of them `/`. That was checked by
@@ -373,6 +442,53 @@ config, not a typo.
   moment the suite starts polling. A live run is what settles that; if this
   probe is wrong, the symptom is a readiness timeout on an otherwise healthy
   quickstart.
+- **`agents/microsoft-dotnet` and `agents/spring-ai/event-planner` have never
+  run either**, for the same missing model key, and each carries two weaknesses
+  `agents/langgraph` does not:
+  - **`HEALTH_PROBES` is empty for both, on purpose.** Neither app serves a GET
+    route — `microsoft-dotnet`'s `Program.cs` registers only
+    `app.MapPost("/run")`, and `event-planner`'s `EventPlannerController` only
+    `@PostMapping("/run")`, with no `spring-boot-starter-actuator` on the
+    classpath — so `Wait Until Apps Healthy` does nothing for them and readiness
+    rests on the connection gate. `agents/microsoft-dotnet` still has its
+    documented `Established gRPC bidirectional stream with Dapr sidecar` marker;
+    `agents/spring-ai/event-planner`'s README documents no readiness wording at
+    all, so `READY_MARKERS` is empty too and the connection line is the *only*
+    readiness signal that suite has.
+  - **Their trigger request asserts `status: 200`, and this is expected to fail
+    on the first credentialed run.** Neither app is expected to answer the call
+    at all: tool 2 crashes the process mid-request by design.
+    `agents/spring-ai/event-planner`'s `EventPlannerTools.java` calls
+    `Runtime.getRuntime().halt(1)` before the controller returns, and
+    `agents/microsoft-dotnet`'s README says of the same step "The process exits
+    — this is expected." A live run will most likely see a connection error
+    rather than any matchable status code. The assertion is left exactly as it
+    stands, deliberately: what replaces it has to come from an observed
+    response, and putting a plausible-looking value there instead is the
+    guessing that `field = None` in `variables/agents_langgraph.py` exists to
+    refuse. Recorded here so the first live run fails on a documented line
+    rather than a mysterious one.
+- **None of the three agent READMEs documents a status code**, so
+  `REQUESTS[...]["status"] = 200` in `variables/agents_langgraph.py`,
+  `variables/agents_microsoft_dotnet.py` and
+  `variables/agents_spring_ai_event_planner.py` is an assumption in every case,
+  not something transcribed. For `agents/langgraph` a 200 is at least plausible
+  — the endpoint returns normally — but it is still unverified. For the other
+  two it is worse than unverified; see the bullet above.
+- **The connection line for an agent app is inferred, not observed.**
+  `CONNECTED_APPS` in all three agent data modules comes from reading the
+  quickstart's dev config and applying the appPort rule ("Readiness markers are
+  not uniform per API" above); no agent suite has yet seen `diagrid dev run`
+  print that line. This matters most for `agents/spring-ai/event-planner`, whose
+  entire readiness gate it is: if the inference is wrong there, the symptom is a
+  readiness timeout on a perfectly healthy quickstart.
+- **Eleven of the fourteen `agents/*` quickstarts have no suite at all** (adk,
+  claude-agents, crewai, dapr-agents/durable-agent, dapr-agents/orchestrator,
+  deepagents, openai-agents, pydantic-ai, spring-ai/crash-recovery,
+  spring-ai/durable-memory, strands), and neither do `dapr-agents/*` or
+  `mcp-auth/*`. Nothing detects drift in them beyond
+  `docsync/check_skill_docs.py`, which only sees the commands the skill itself
+  quotes. Adding a suite is what the `add-quickstart-e2e-test` skill is for.
 - **The CI workflow itself has never been executed.** Everything wired for
   agent-family suites is static analysis (YAML parse, `actionlint`, the
   credential-free harness commands above). Someone has to push the branch and

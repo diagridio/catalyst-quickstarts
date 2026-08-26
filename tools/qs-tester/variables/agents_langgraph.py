@@ -114,7 +114,10 @@ SECRETS = ("OPENAI_API_KEY",)
 # `field` is None because no README documents a response body for /agent/run, and
 # the endpoint is served by DaprWorkflowGraphRunner.serve() from an external
 # package, so the field name cannot be read out of this repo. The suite asserts
-# the documented status code only. Fill this in from an observed live response,
+# the status code and nothing else — and note that this README documents no
+# status code either, so the 200 below is an assumption too, merely a plausible
+# one (unlike the two crash-on-purpose quickstarts, this endpoint is expected to
+# return normally). Fill this in from an observed live response,
 # with a comment naming that response as the source; guessing a field name
 # produces an assertion that looks like coverage and fails for the wrong reason.
 # This is the same weak-assertion tradeoff the harness already accepts for the

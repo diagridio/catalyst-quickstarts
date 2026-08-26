@@ -28,7 +28,7 @@ A new agent-family suite gets its own module,
 | `SECRETS` | `tuple[str, ...]` | Environment variable names the suite's `Require Env Var` loop checks before doing anything else — the model provider keys. |
 | `REQUESTS` | `tuple[dict, ...]` | The documented trigger calls, in documented order. Keys below. |
 | `UNCOVERED` | `tuple[tuple[str, str], ...]` | `(documented command, reason)` pairs for commands the suite deliberately does not run. |
-| `get_quickstart()` | function | Returns one flat dict: `family`, `name`, `language`, `dir`, `setup`, `install`, `run`, `teardown`, `health_probes`, `connected_apps`, `secrets`. Not identical to what `quickstarts.get_quickstart(api, language)` returns (that one has `api` instead of `family`/`name`/`setup`/`teardown`/`secrets`, and no `language` in the shared sense either) — the two dicts share exactly the five keys the *shared* keywords actually read (`dir`, `install`, `run`, `health_probes`, `connected_apps`), which is what lets `Build Quickstart`, `Start Quickstart` and `Wait Until Apps Healthy` work unchanged against either shape. |
+| `get_quickstart()` | function | Returns one flat dict: `family`, `name`, `language`, `dir`, `setup`, `install`, `run`, `teardown`, `health_probes`, `connected_apps`, `secrets`. Not identical to what `quickstarts.get_quickstart(api, language)` returns (that one has `api` instead of `family`/`name`/`setup`/`teardown`/`secrets`) — the two dicts share exactly the five keys the *shared* keywords actually read (`dir`, `install`, `run`, `health_probes`, `connected_apps`), which is what lets `Build Quickstart`, `Start Quickstart` and `Wait Until Apps Healthy` work unchanged against either shape. Both dicts do carry a `language` key of their own (this module's `LANGUAGE` constant; the canonical dict's `language` argument), but no shared keyword reads either one, which is why `language` is not in the shared five — see `agents_langgraph.get_quickstart`'s docstring. |
 
 ### What doc-sync actually enforces — and what it does not
 
@@ -270,8 +270,9 @@ fails.
 
 ## Documented provisioning differs by family — do not assume a shared pattern
 
-Three real quickstarts show three different documented flows. Follow whichever
-one the README you are working from actually shows; do not average them.
+Three documented flows, spread across more quickstarts than three. Follow
+whichever one the README you are working from actually shows; do not average
+them.
 
 - **`agents/*`** (`agents/langgraph`, `agents/microsoft-dotnet`,
   `agents/dapr-agents/durable-agent`): `diagrid project create <name>
@@ -286,8 +287,8 @@ one the README you are working from actually shows; do not average them.
   `--deploy-managed-pubsub` — a reminder that these flags are per-quickstart
   data transcribed from each README, not a constant this skill can assume.
 - **`agents/dapr-agents/orchestrator`**: no `project create` anywhere in the
-  README, and no `--project` flag on `dev run` either — the whole documented
-  flow is `diagrid login` then `uv run diagrid dev run -f
+  README, and no `--project` flag on `dev run` either — past `cd` and `uv sync`
+  the documented flow is `diagrid login` then `uv run diagrid dev run -f
   dev-multi-agent-orchestration.yaml`. This is the "documents no project
   creation" case; see below.
 - **`mcp-auth/python`**: `diagrid project create mcp-auth --use`, then `diagrid

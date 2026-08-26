@@ -53,6 +53,14 @@ SECRETS = ("OPENAI_API_KEY",)
 #
 # `field` is None because the README documents no response body. Fill it in from
 # an observed live response with a comment naming that response as the source.
+#
+# `status` is NOT a transcription either. This README documents no status code,
+# and of this very call it says "The process exits — this is expected": tool 2
+# crashes the process mid-request by design, so a live run is more likely to see
+# a connection error than any status code. The 200 below is an assumption
+# expected to fail on the first credentialed run, left standing on purpose for
+# the same reason `field` is None — the replacement has to come from an observed
+# response, not from a guess. See the harness README's Limitations.
 REQUESTS = (
     {
         "method": "POST",

@@ -57,7 +57,17 @@ SECRETS = ("OPENAI_API_KEY",)
 #
 # `field` is None because the README documents no response body: tool 2
 # deliberately crashes the process mid-request, so the curl call never returns a
-# result. The suite asserts the documented status code only.
+# result.
+#
+# `status` is NOT a transcription. This README documents no status code at all,
+# and `EventPlannerTools.stepTwoCompare` calls `Runtime.getRuntime().halt(1)`
+# before the controller returns, so a live run is more likely to see a connection
+# error than any status code. The 200 below is therefore an assumption that is
+# expected to fail on the first credentialed run, and it is left standing on
+# purpose: the value that replaces it has to come from an observed response.
+# Substituting a plausible-looking one is the guessing `field = None` in
+# agents_langgraph.py exists to refuse. Recorded in the harness README's
+# Limitations so that failure lands on a documented line.
 REQUESTS = (
     {
         "method": "POST",

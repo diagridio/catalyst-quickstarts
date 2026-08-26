@@ -32,15 +32,28 @@ the document is worse than a false positive.
 Fence pairing is not, and deliberately is not, parsed perfectly — chasing
 CommonMark edge cases one shape at a time does not converge, and each widening
 of the pairing so far has opened a new shape it silently dropped. What holds
-instead is an invariant that does not depend on getting the pairing right:
-EVERY line of every checked file whose command text begins with `diagrid`
-reaches the two rules below, by one path or another. Each structured path (a
-fenced body, a command embedded as a string literal, an inline code span)
-records the candidate text it accounted for — whether it checked it or exempted
-it — and `_uncovered_command_lines` then sweeps the file's raw lines and checks
-anything beginning `diagrid` that nobody looked at. So a mispaired fence of any
-shape costs at most a confusing location or a lost `illustrative` exemption,
-never a lost finding.
+instead is a weaker invariant that does not depend on getting the pairing
+right: a line whose command text begins with `diagrid` is either checked by a
+structured path (a fenced body, a command embedded as a string literal, an
+inline code span), or exempted by an `illustrative` tag that path read, or
+swept up by `_uncovered_command_lines`, which looks at the file's raw lines and
+reports anything beginning `diagrid` that no structured path accounted for. So
+a mispaired fence normally costs a confusing location, not a finding.
+
+There is one hole in that, and it is real. `accounted_for` is keyed by command
+text rather than by position, and it holds the texts a structured path
+*exempted* as well as the ones it checked. So an `illustrative` tag granted to
+one occurrence of a command launders every other occurrence of that exact text
+in the same file that only the net would have found — a bare prose line, in no
+recognised fence and no code span. It needs no broken fence, it is
+order-independent (the net runs after every block and span in the file), and it
+produces no diagnostic: the checker simply exits 0. What is *not* laundered is
+any candidate a structured path reaches on its own — a well-formed fence or an
+inline code span is checked on its own merits however many `illustrative` tags
+sit elsewhere in the file, so nothing that was previously caught in those
+shapes is lost. Closing the hole means keying coverage by position instead of
+by text; until then, a green run is not proof that every `diagrid` line in the
+skill was examined.
 
 Two candidates need two different rules, because most inline mentions are partial
 references rather than full invocations:
@@ -536,10 +549,15 @@ def _uncovered_command_lines(markdown, accounted_for):
     in, so no pairing mistake can hide it. `accounted_for` holds the normalised
     texts the structured paths already handled — including the ones they
     deliberately exempted — so a line is reported only if nobody looked at it.
-    Deduplication is by text rather than by position: a command appearing both
-    in a well-formed fence and again in a gap is reported once, at the
-    well-formed site. That drops a second location, never a finding — the two
-    texts being equal is exactly what makes the first report say the same thing.
+
+    Deduplication is by text rather than by position, and that cuts two ways.
+    Where the earlier site was *checked*, it costs only a location: a command
+    appearing both in a well-formed fence and again in a gap is reported once,
+    at the well-formed site, and the two texts being equal is what makes that
+    one report say the same thing. Where the earlier site was *exempted* by an
+    `illustrative` tag, it costs the finding outright — there is no first report
+    to stand in for it, and the gap line is skipped in silence. See "There is
+    one hole" in the module docstring.
     """
     for start, text in _joined_command_lines(markdown.splitlines()):
         if not text.startswith("diagrid") or text in accounted_for:
