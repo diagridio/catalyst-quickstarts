@@ -40,8 +40,16 @@ var tools = new List<AITool>
 
     AIFunctionFactory.Create(async (string data) =>
     {
-        Console.WriteLine($">>> TOOL 2: Comparing venues over ~{delaySeconds}s. KILL THE APP NOW to"
-            + " test crash recovery (POST /crash/kill, or kill -9). It resumes on restart.");
+        // Two messages, because the reader's next move differs. Un-armed, the window is theirs
+        // to aim at and they have to crash the app themselves. Armed, the app does that for them
+        // at a known point, so the instruction would be wrong and the ~delay would be read as
+        // the wait.
+        var armed = SelfKill.Seconds;
+        Console.WriteLine(armed > 0
+            ? $">>> TOOL 2: Comparing venues over ~{delaySeconds}s, but this process kills itself"
+                + $" {armed}s into the run, as asked by kill_after_seconds. It resumes on restart."
+            : $">>> TOOL 2: Comparing venues over ~{delaySeconds}s. KILL THE APP NOW to"
+                + " test crash recovery (POST /crash/kill, or kill -9). It resumes on restart.");
         await Task.Delay(TimeSpan.FromSeconds(delaySeconds));
         Console.WriteLine(">>> TOOL 2 COMPLETE: Grand Ballroom is the best option");
         return "Grand Ballroom is the best option. Now call step_three_confirm.";
@@ -103,11 +111,15 @@ var crashWait = TimeSpan.FromSeconds(180);
 
 // Run the agent under a workflow instance ID you choose, and block until it finishes
 // POST /crash/run
-// Body: { "id": "gala-42", "prompt": "Find a venue in Austin for a company gala" }
+// Body: { "id": "gala-42", "prompt": "Find a venue in Austin for a company gala", "kill_after_seconds": 8 }
 // Returns: 200 with the agent's answer, or 202 with the ID if the wait budget elapses
 //
 // Re-issuing this with the same ID attaches to the existing run rather than starting a
 // second one. That is what the caller-owned ID buys, and it is the point of the demo.
+//
+// kill_after_seconds is optional. Send it and the app crashes itself that many seconds in,
+// so the whole demo runs in two terminals with no window to aim at; leave it out and nothing
+// changes, and you crash the app yourself from a second terminal with POST /crash/kill.
 app.MapPost("/crash/run", async (CrashRunRequest req, DaprWorkflowClient workflowClient) =>
 {
     var id = req.Id;
@@ -190,6 +202,11 @@ app.MapPost("/crash/run", async (CrashRunRequest req, DaprWorkflowClient workflo
 // lands at a known point inside the window rather than wherever the reader's reflexes put it.
 static void ArmSelfKill(int delaySeconds)
 {
+    // Tell tool 2, so the line it prints names this delay rather than the delay it was going to
+    // wait out. That second number is the one the reader used to see, and it is not the one they
+    // wait: the app dies partway through it.
+    SelfKill.Note(delaySeconds);
+
     // Discarded on purpose: this task is a fuse, not something to await. Nothing can observe
     // its completion, because its last act is to end the process.
     _ = Task.Run(async () =>
@@ -231,6 +248,40 @@ record CrashRunRequest(
     string Id,
     string Prompt = "Find a venue in Austin for a company gala",
     [property: JsonPropertyName("kill_after_seconds")] int? KillAfterSeconds = null);
+
+/// <summary>
+/// Whether POST /crash/run has armed the app to kill itself, and how far into the run.
+///
+/// Read only to compose tool 2's log line, which has to name the wait the reader actually gets:
+/// with a self-kill armed the tool never reaches the end of its delay, so announcing that delay
+/// on its own puts a number in the log that nothing honours.
+///
+/// A type rather than a captured local, because ArmSelfKill is a static local function and
+/// cannot capture. One armed kill takes the whole process down, so there is nothing to key by
+/// run, and the fresh process after the restart starts at 0 again, which is right: nothing is
+/// armed on the replay.
+///
+/// volatile, and an int rather than an int?: the write happens on a request thread and the read
+/// on a workflow worker thread, and a single int cannot be read half-written the way a nullable
+/// struct's two fields can. 0 is unambiguous as "not armed" because the arm site already rejects
+/// a non-positive value.
+/// </summary>
+static class SelfKill
+{
+    static volatile int seconds;
+
+    /// <summary>Seconds into the run at which the app kills itself, or 0 when nothing is armed.</summary>
+    public static int Seconds => seconds;
+
+    /// <summary>
+    /// Record that this process will kill itself, so tool 2 can say so.
+    ///
+    /// Called just after the schedule, and tool 2 cannot normally log before that: the worker has
+    /// to be handed the work item and run tool 1 first. If it ever did win the race the line would
+    /// read as though nothing were armed, which is a stale message rather than a broken demo.
+    /// </summary>
+    public static void Note(int delaySeconds) => seconds = delaySeconds;
+}
 
 /// <summary>
 /// Runs the event-planner agent inside a workflow the caller names.

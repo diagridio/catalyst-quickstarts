@@ -24,7 +24,7 @@ import time
 import uvicorn
 import uuid
 from dapr.ext.workflow import WorkflowRuntime, DaprWorkflowClient
-from workflow import order_processing_workflow, notify_activity, reserve_inventory_activity, process_payment_activity, update_inventory_activity, crash_recovery_workflow, commit_reservation_activity
+from workflow import order_processing_workflow, notify_activity, reserve_inventory_activity, process_payment_activity, update_inventory_activity, crash_recovery_workflow, commit_reservation_activity, note_self_kill
 from model import OrderPayload, CrashRunRequest
 
 app = FastAPI()
@@ -153,6 +153,11 @@ def arm_self_kill(delay_seconds: int):
     daemon=True so the timer can never hold the process open: a Ctrl+C during the countdown
     should still end the app rather than wait for a kill nobody wants any more.
     """
+    # Tell the slow activity, so the line it prints names this delay rather than the sleep it
+    # was going to take. That sleep is the number the reader used to see, and it is not the
+    # one they wait: the app dies partway through it.
+    note_self_kill(delay_seconds)
+
     def _kill():
         time.sleep(delay_seconds)
         logger.warning(

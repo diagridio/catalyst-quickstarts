@@ -29,17 +29,57 @@ public class SlowBookingTools {
 
   private static final Logger LOG = LoggerFactory.getLogger(SlowBookingTools.class);
 
+  /**
+   * Seconds into the run at which {@code POST /crash/run} has armed the app to kill itself, or 0
+   * when nothing is armed. Set by {@link #noteSelfKill(int)} and read only to compose the log line
+   * below, which has to name the wait the reader actually gets: with a self-kill armed this tool
+   * never reaches the end of its sleep, so announcing that sleep on its own puts a number in the
+   * log that nothing honours.
+   *
+   * <p>Static because the writer is {@link CrashRecoveryController} and the reader is this tool,
+   * and one armed kill takes the whole JVM down, so there is nothing to key by run. The fresh
+   * process after the restart starts at 0 again, which is right: nothing is armed on the replay.
+   *
+   * <p>volatile, and an int rather than an Integer: the write happens on a request thread and the
+   * read on a workflow worker thread. 0 is unambiguous as "not armed" because the arm site already
+   * rejects a non-positive value.
+   */
+  private static volatile int selfKillSeconds;
+
   private final int delaySeconds;
 
   public SlowBookingTools(@Value("${crash-recovery.delay-seconds:30}") int delaySeconds) {
     this.delaySeconds = delaySeconds;
   }
 
+  /**
+   * Record that this process will kill itself, so {@code commitReservation} can say so.
+   *
+   * <p>Armed before the blocking agent call, so it is always set before the tool runs. Unlike the
+   * workflow quickstarts this sample cannot tell a scheduling call from an attaching one, so a
+   * reader who sends the field on a re-issue gets this line on the replay too, which is the same
+   * caveat the field itself carries.
+   */
+  public static void noteSelfKill(int delaySeconds) {
+    selfKillSeconds = delaySeconds;
+  }
+
   @Tool(name = "commitReservation",
       description = "Commit a travel reservation with the provider and return a confirmation code")
   public String commitReservation(@ToolParam(description = "the booking reference") String reference) {
-    LOG.warn(">>> commitReservation({}): committing over ~{}s. KILL THE APP NOW to test crash"
-        + " recovery (POST /crash/kill, or kill -9). It resumes on restart.", reference, delaySeconds);
+    // Two messages, because the reader's next move differs. Un-armed, the window is theirs to aim
+    // at and they have to crash the app themselves. Armed, the app does that for them at a known
+    // point, so the instruction would be wrong and the ~delay would be read as the wait.
+    int armed = selfKillSeconds;
+    if (armed > 0) {
+      LOG.warn(">>> commitReservation({}): committing over ~{}s, but this process kills itself {}s"
+          + " into the run, as asked by kill_after_seconds. It resumes on restart.",
+          reference, delaySeconds, armed);
+    } else {
+      LOG.warn(">>> commitReservation({}): committing over ~{}s. KILL THE APP NOW to test crash"
+          + " recovery (POST /crash/kill, or kill -9). It resumes on restart.",
+          reference, delaySeconds);
+    }
     try {
       Thread.sleep(delaySeconds * 1000L);
     } catch (InterruptedException e) {

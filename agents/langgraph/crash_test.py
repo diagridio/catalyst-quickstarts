@@ -36,12 +36,32 @@ def check_venues(state: PlannerState) -> dict:
     return {"results": state["results"] + [result]}
 
 
+# Seconds into the run at which POST /crash/run has armed the app to kill itself, or None
+# when nothing is armed. Set by arm_self_kill below and read only to compose step 2's line,
+# which has to name the wait the reader actually gets: with a self-kill armed the node never
+# reaches the end of its sleep, so announcing that sleep on its own puts a number in the log
+# that nothing honours.
+#
+# A plain module-level value is enough. One armed kill takes the whole process down, so there
+# is nothing to key by run, and the fresh process after the restart starts at None again,
+# which is right: nothing is armed on the replay.
+_self_kill_seconds: Optional[int] = None
+
+
 def compare_options(state: PlannerState) -> dict:
     # The delay is what makes the crash aimable. Without it all three nodes finish in
     # single-digit milliseconds and there is no window for POST /crash/kill to land in.
     delay = int(os.environ.get("CRASH_DELAY_SECONDS", "30"))
-    print(f">>> STEP 2: Comparing venue options over ~{delay}s. KILL THE APP NOW to test "
-          "crash recovery (POST /crash/kill, or kill -9). It resumes on restart.", flush=True)
+    # Two messages, because the reader's next move differs. Un-armed, the window is theirs to
+    # aim at and they have to crash the app themselves. Armed, the app does that for them at a
+    # known point, so the instruction would be wrong and the ~delay would be read as the wait.
+    if _self_kill_seconds:
+        print(f">>> STEP 2: Comparing venue options over ~{delay}s, but this process kills "
+              f"itself {_self_kill_seconds}s into the run, as asked by kill_after_seconds. "
+              "It resumes on restart.", flush=True)
+    else:
+        print(f">>> STEP 2: Comparing venue options over ~{delay}s. KILL THE APP NOW to test "
+              "crash recovery (POST /crash/kill, or kill -9). It resumes on restart.", flush=True)
     time.sleep(delay)
     result = "Grand Ballroom (6PM-11PM) is the best option for 200 guests"
     print(f">>> STEP 2 COMPLETE: {result}", flush=True)
@@ -134,6 +154,15 @@ def arm_self_kill(delay_seconds: int) -> None:
     A plain daemon thread rather than an asyncio task: os._exit needs no event loop, and a
     daemon thread can never hold the process open if the reader Ctrl+Cs during the countdown.
     """
+    # Tell step 2, so the line it prints names this delay rather than the sleep it was going
+    # to take. That sleep is the number the reader used to see, and it is not the one they
+    # wait: the app dies partway through it.
+    #
+    # Armed just after the schedule, and step 2 cannot normally log before that: the worker
+    # has to be handed the work item and run step 1 first. If it ever did win the race the
+    # line would read as though nothing were armed, which is a stale message, not a break.
+    global _self_kill_seconds
+    _self_kill_seconds = delay_seconds
 
     def _kill() -> None:
         time.sleep(delay_seconds)

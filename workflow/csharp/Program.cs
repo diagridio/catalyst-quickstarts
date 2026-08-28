@@ -169,11 +169,15 @@ var crashWait = TimeSpan.FromSeconds(
 
 // Run the crash-recovery workflow under an instance ID the caller owns
 // POST /crash/run
-// Body: { "id": "trip-42", "reference": "ABC123" }
+// Body: { "id": "trip-42", "reference": "ABC123", "kill_after_seconds": 8 }
 // Returns: 200 with the confirmation, or 202 with the ID if the wait budget elapses
 //
 // Re-issuing this with the same ID attaches to the existing run rather than reserving
 // a second time. That is what the caller-owned ID buys, and it is the point of the demo.
+//
+// kill_after_seconds is optional. Send it and the app crashes itself that many seconds in,
+// so the whole demo runs in two terminals with no window to aim at; leave it out and nothing
+// changes, and you crash the app yourself from a second terminal with POST /crash/kill.
 app.MapPost("/crash/run", async (
     [FromBody] CrashRunRequest request,
     [FromServices] DaprWorkflowClient workflowClient) =>
@@ -258,6 +262,11 @@ app.MapPost("/crash/run", async (
 // beside the /crash/kill it mirrors.
 static void ArmSelfKill(int delaySeconds)
 {
+    // Tell the slow activity, so the line it prints names this delay rather than the delay it
+    // was going to wait out. That second number is the one the reader used to see, and it is
+    // not the one they wait: the app dies partway through it.
+    CommitReservationActivity.NoteSelfKill(delaySeconds);
+
     // Discarded on purpose: this task is a fuse, not something to await. Nothing can observe
     // its completion, because its last act is to end the process.
     _ = Task.Run(async () =>

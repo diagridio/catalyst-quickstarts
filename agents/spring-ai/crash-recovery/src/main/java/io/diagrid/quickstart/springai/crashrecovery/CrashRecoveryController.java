@@ -125,6 +125,11 @@ public class CrashRecoveryController {
    * name.
    */
   private void armSelfKill(int delaySeconds) {
+    // Tell the slow tool, so the line it prints names this delay rather than the sleep it was
+    // going to take. That sleep is the number the reader used to see, and it is not the one they
+    // wait: the app dies partway through it.
+    SlowBookingTools.noteSelfKill(delaySeconds);
+
     Thread timer = new Thread(() -> {
       try {
         Thread.sleep(delaySeconds * 1000L);
