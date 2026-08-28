@@ -109,10 +109,47 @@ Run Documented Commands
     ...    --wait` blocks until managed services are ready.
     [Arguments]    ${commands}    ${project}    ${cwd}=${EMPTY}    ${timeout}=600s
     FOR    ${template}    IN    @{commands}
-        ${command}=    Resolve Project In Command    ${template}    ${project}
+        ${resolved}=    Resolve Project In Command    ${template}    ${project}
+        ${command}=     Make Command Non Interactive    ${resolved}
         Log    Documented command: ${command}    console=True
         Run And Expect RC Zero    ${command}    cwd=${cwd}    timeout=${timeout}
     END
+
+Make Command Non Interactive
+    [Documentation]    Add the approval flag to a documented `diagrid project
+    ...    delete`, which otherwise prompts and waits forever for an answer
+    ...    nothing sends.
+    ...
+    ...    This is the second sanctioned deviation from running documented
+    ...    commands verbatim, and it exists for the same reason as the first:
+    ...    `diagrid login` blocks on a browser prompt, so `ci/login.sh` passes
+    ...    `--api-key`. Neither README is wrong — a human running the quickstart
+    ...    answers the prompt — but a suite cannot.
+    ...
+    ...    Observed 2026-08-28 on agents/microsoft-dotnet: the documented
+    ...    teardown printed `WARNING: Deleting the following projects will delete
+    ...    all associated resources` and then sat until Robot SIGTERMed it at the
+    ...    600s timeout (`rc=-15`), in BOTH the green and mutated runs — twenty
+    ...    minutes of a verify-live run spent waiting on a prompt. It failed
+    ...    silently because `Clean Up Quickstart` wraps teardown in
+    ...    `Run Keyword And Ignore Error`, and the project survived only because
+    ...    `ci/teardown-project.sh` passes `--yes` itself. Applies to
+    ...    `agents/spring-ai/event-planner` too, which documents the same command;
+    ...    `agents/langgraph` documents no cleanup and never hit it.
+    ...
+    ...    Deliberately narrow. Only `project delete` is rewritten, and only when
+    ...    neither approval flag is already present, so a README that documents
+    ...    the non-interactive form is left exactly as written. Every other
+    ...    documented command runs verbatim, which is the harness's premise.
+    ...    doc-sync still compares the data module's untouched string against the
+    ...    README, so this deviation cannot hide drift.
+    [Arguments]    ${command}
+    ${is_delete}=    Evaluate    $command.startswith('diagrid project delete')
+    ${approved}=     Evaluate    '--yes' in $command.split() or '--approve' in $command.split()
+    IF    ${is_delete} and not ${approved}
+        RETURN    ${command} --yes
+    END
+    RETURN    ${command}
 
 Wait Until Ready Marker
     [Documentation]    Wait for a per-quickstart readiness string in the captured

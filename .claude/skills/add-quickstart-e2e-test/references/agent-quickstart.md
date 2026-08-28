@@ -147,9 +147,19 @@ are tuples.
 
 Each entry is a dict:
 
-Required: `method`, `port`, `path`, `payload`, `status`.
+Required: `method`, `port`, `path`, `payload`, and `status` — unless the request
+carries `expect`, which replaces it.
 Optional: `field` (default `None`), `commands` (default `()`), `log_marker`
-(default `None`).
+(default `None`), `expect` (default `None`).
+
+`expect` is for a documented request that is not supposed to complete. Its only
+value today is `"connection-dropped"`, used by `agents/microsoft-dotnet`, whose
+README documents the app killing its own process mid-request ("Call
+`step_two_compare` — crashes before completing (process exits)"). The suite then
+calls `POST And Expect The App To Exit` instead of `POST And Expect Field`, and
+carries no `status`, because there is no status code the app can return. Do not
+pair `expect` with a `status`: a status the app cannot produce is exactly the
+invented assertion this skill forbids.
 
 `log_marker` must appear **inside a fenced block** in the README, and doc-sync
 enforces that. A prose mention is not evidence the app prints anything: this

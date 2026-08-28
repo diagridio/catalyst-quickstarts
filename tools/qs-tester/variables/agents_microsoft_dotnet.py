@@ -35,56 +35,97 @@ TEARDOWN = ("diagrid project delete {project}",)
 
 # README: "Wait until the output shows `Established gRPC bidirectional stream with
 # Dapr sidecar`." Not a Uvicorn line: the marker is a property of the framework,
-# and this is a .NET app.
+# and this is a .NET app. OBSERVED in the 2026-08-28 live run, logged by
+# Dapr.Workflow.Worker.Grpc.GrpcProtocolHandler just before "Now listening on".
 READY_MARKERS = ("Established gRPC bidirectional stream with Dapr sidecar",)
 
 # EMPTY ON PURPOSE. Program.cs registers exactly one route, `app.MapPost("/run")`,
 # so there is no GET path to probe and `GET /` would 404 for the whole readiness
-# timeout on a perfectly healthy app. Readiness rests on the connection gate below
-# plus the documented marker above. If a health endpoint is ever added, probe it.
+# timeout on a perfectly healthy app. Confirmed by the 2026-08-28 run, where
+# Catalyst's own `GET /` probes answer 404 ("Request reached the end of the
+# middleware pipeline without being handled by application code"). Readiness rests
+# on the connection gate below, the documented marker above and the attach gate.
+# If a health endpoint is ever added, probe it.
 HEALTH_PROBES = ()
 
-# appID and appPort from dev-dotnet-agent.yaml.
+# appID and appPort from dev-dotnet-agent.yaml. OBSERVED 2026-08-28: `diagrid dev
+# run` prints `Connected App ID "event-planner" to http://localhost:5050`.
 CONNECTED_APPS = (("event-planner", 5050),)
 
-# EMPTY, NOT VERIFIED. `Wait Until Catalyst Attached` waits for the first inbound
-# request Catalyst makes back through the dev tunnel, which is the point at which
-# workflow calls stop hanging. Measured on agents/langgraph 2026-08-27: a call
-# made before that hangs forever and twelve retries over 181s never recovered it,
-# while the same call gated on the marker answered in ~1s three runs running.
-# Nothing about that race is Python-specific, so this suite is very likely exposed
-# to it too.
+# OBSERVED against a real project, 2026-08-28. `Wait Until Catalyst Attached`
+# waits for the first inbound request Catalyst makes back through the dev tunnel,
+# which is the point at which workflow calls stop hanging (measured on
+# agents/langgraph 2026-08-27: a call made before that hangs forever and twelve
+# retries over 181s never recovered it).
 #
-# It is empty rather than guessed because the marker is whatever THIS app's
-# logging makes visible for an inbound request, and this ASP.NET app's request logging has not been
-# checked. A marker that never appears makes the gate time out (loud, and the
-# suite fails); a marker matched from the wrong line would let the suite through
-# early (silent, and the run hangs). Fill this in by running the quickstart once
-# and reading what the app logs when Catalyst probes it.
-CATALYST_PROBE_MARKERS = ()
+# This app could not have had a marker at all until 2026-08-28: both appsettings
+# files set `"Microsoft.AspNetCore": "Warning"`, which suppresses ASP.NET Core's
+# request logging entirely, so no inbound request was ever visible. Both are now
+# `"Information"`. Both, not just one: `dotnet run` here uses the Production
+# environment (there is no launchSettings.json), but a developer who sets
+# ASPNETCORE_ENVIRONMENT=Development must see the same, and the Development file
+# overrides the base one.
+#
+# What the live run actually logs, via Microsoft.AspNetCore.Hosting.Diagnostics,
+# right after "Application started":
+#
+#   Request starting HTTP/1.1 GET http://tunnels-proxy.cloud.r1.diagrid.io:443/ - - -
+#   Request starting HTTP/1.1 GET http://tunnels-proxy.cloud.r1.diagrid.io:443/dapr/config - application/json -
+#
+# TRUNCATED BEFORE THE DOMAIN on purpose. The predicted marker for this suite was
+# `...GET http://localhost:5050/`, and it is WRONG: ASP.NET logs the request's
+# own Host header, and Catalyst probes through its tunnel proxy, so the host is
+# Catalyst's rather than the app's listen address. Had that guess been committed
+# it would have timed out against a perfectly healthy quickstart and cost a
+# project to discover. `cloud.r1` is region-specific and is dropped for the same
+# reason — a project in another region would not match it.
+#
+# Matching only `http://tunnels-proxy` also keeps the marker inbound-only, which
+# is what makes it a gate: it cannot match anything the harness itself sends
+# (HEALTH_PROBES is empty here and the documented trigger is a POST to
+# localhost), so it cannot go green before Catalyst has attached. It matches both
+# the `/` and `/dapr/config` probes, so it does not depend on which arrives
+# first.
+#
+# Note the format differs from agents/langgraph's `GET /dapr/config`: uvicorn
+# logs the path alone, ASP.NET logs the full URL. That is precisely why this is
+# per-quickstart data rather than a shared constant.
+CATALYST_PROBE_MARKERS = ("Request starting HTTP/1.1 GET http://tunnels-proxy",)
 
 SECRETS = ("OPENAI_API_KEY",)
 
 # README "### 2. Trigger the Agent".
 #
-# `field` is None because the README documents no response body. Fill it in from
-# an observed live response with a comment naming that response as the source.
+# No `status`, and that is a transcription rather than a gap. This README
+# documents no status code, and of this very call it says "The process exits —
+# this is expected": `step_two_compare` calls `Environment.Exit(1)` (Program.cs)
+# while the request is in flight, so the app never reaches
+# `Results.Ok(new { response = ... })` and the client sees the connection drop.
+# A status code here would be an assertion the app cannot satisfy.
 #
-# `status` is NOT a transcription either. This README documents no status code,
-# and of this very call it says "The process exits — this is expected": tool 2
-# crashes the process mid-request by design, so a live run is more likely to see
-# a connection error than any status code. The 200 below is an assumption
-# expected to fail on the first credentialed run, left standing on purpose for
-# the same reason `field` is None — the replacement has to come from an observed
-# response, not from a guess. See the harness README's Limitations.
+# `expect` says so explicitly. `POST And Expect The App To Exit` passes only when
+# the connection drops; it FAILS on any status code — that is the crash having
+# silently stopped happening, which is exactly the bug found on 2026-08-28, when
+# Program.cs sat committed with the crash line commented out — and it FAILS
+# distinctly on a timeout, because a hang is Catalyst's attach window and not
+# this crash. CATALYST_PROBE_MARKERS above is empty, so a hang is a live
+# possibility for this suite and must not read as a pass.
+#
+# `field` is absent for the same reason: there is no response body to name a
+# field in.
+#
+# The log marker is the last line the README documents before the process dies
+# (the "You'll see:" block, a `text` fence). `>>> TOOL 1 COMPLETE` would prove
+# less — it is `step_two_compare` that carries the crash, so this marker is what
+# shows the agent got as far as the tool the quickstart is about.
 REQUESTS = (
     {
         "method": "POST",
         "port": 5050,
         "path": "/run",
         "payload": {"prompt": "Find a venue in Austin for a company gala"},
-        "status": 200,
-        "field": None,
+        "expect": "connection-dropped",
+        "log_marker": ">>> TOOL 2: Comparing venues...",
     },
 )
 

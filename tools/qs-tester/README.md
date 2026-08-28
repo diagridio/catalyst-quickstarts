@@ -23,7 +23,9 @@ automatically.
 - `resources/tests/` — the harness's own tests. `smoke.robot` covers the
   process-teardown keywords, `keywords.robot` covers the keywords the
   agent-family suites depend on against `echo_server.py`, `readiness.robot`
-  covers the invocation readiness gate against `flaky_server.py`, and
+  covers the invocation readiness gate against `flaky_server.py`,
+  `crash_assertion.robot` covers the crash assertion against `crashing_server.py`
+  (a quickstart whose documented trigger kills its own process), and
   `teardown.robot` covers the two Stop Quickstart paths that release nothing.
   `keywords.robot` also covers the Catalyst-attach gate. None need credentials, they run in seconds, and
   CI's `lint` job runs the whole directory on every PR that trips the
@@ -108,17 +110,29 @@ Delete it when you are done — these are not free:
 bash tools/qs-tester/ci/teardown-project.sh "$PROJECT"
 ```
 
-The only thing the harness ever rewrites in a documented command is the project
-name. Every canonical quickstart README spells `--project <api>-quickstart` in
+The harness rewrites two things in a documented command, and nothing else. The
+first is the project name. Every canonical quickstart README spells `--project <api>-quickstart` in
 its `dev run`, and `Start Quickstart` substitutes the ephemeral name for it. The
 three agent READMEs are the exception: their `dev run` is bare, because a
 documented `project create ... --use` already selected the project, and the
 suites reproduce that bareness on purpose — see "The `dev run` command can be
 bare" below. For those, the substitution lands in the documented `project
 create` (and `project delete`, where the README documents one — `agents/langgraph`
-does not) commands instead. Everything else — the file, the
-flags, `mvn spring-boot:run`, the `uv run` prefix — runs exactly as the README
-shows it.
+does not) commands instead.
+
+The second is `--yes` on a documented `diagrid project delete`, added by
+`Make Command Non Interactive`. The documented form prompts for confirmation and
+waits forever for an answer nothing sends: measured on `agents/microsoft-dotnet`,
+2026-08-28, it printed its WARNING and then sat until Robot SIGTERMed it at the
+600s timeout, in both the green and the mutated run — twenty minutes of a
+verify-live run spent on a prompt, and silent, because `Clean Up Quickstart`
+wraps teardown in `Run Keyword And Ignore Error`. The project survived only
+because `ci/teardown-project.sh` passes `--yes` itself. Same class as the
+`diagrid login` exception, and handled the same way: at execution time, leaving
+the data module's documented string for doc-sync to check.
+
+Everything else — the file, the flags, `mvn spring-boot:run`, the `uv run`
+prefix — runs exactly as the README shows it.
 
 ### Selecting languages and APIs
 
@@ -455,11 +469,17 @@ config, not a typo.
   mapping was verified. Note that `dev stop` also kills the local `diagrid dev run`
   process, which is harmless in teardown (the process tree is already stopped by
   then) but will end a session you are still using.
-- **`agents/langgraph` is `nightly: True`; the other two are not.** The bar for
-  that flag is a green live run *plus* a mutation check the verdict tool accepts,
-  and only langgraph has cleared it (2026-08-28). `agents/microsoft-dotnet` and
-  `agents/spring-ai/event-planner` have had neither half. The bullets that follow
-  are what that costs.
+- **`agents/langgraph` and `agents/microsoft-dotnet` are `nightly: True`;
+  `agents/spring-ai/event-planner` is not.** The bar for that flag is a green
+  live run *plus* a mutation check the verdict tool accepts, and both cleared it
+  on 2026-08-28. `spring-ai` has had neither half. The bullets that follow are
+  what that costs.
+
+  For both nightly suites the mutation targeted `READY_MARKERS` only, so no other
+  assertion in either has been shown to fail when what it checks breaks. That is
+  a real gap behind a green flag, and the assertions written for
+  `agents/microsoft-dotnet` — the attach marker, the crash assertion and the
+  `>>> TOOL 2` log marker — are the ones most worth mutating next.
 - **`agents/langgraph` has run against real Catalyst three times and not yet
   passed**, but each run has failed further along than the last. 2026-08-27:
   - Runs 1 and 2 died 120s into the documented POST, which hung and never created
@@ -523,9 +543,15 @@ config, not a typo.
     marker must appear inside a fenced block, so a prose mention no longer counts
     as documentation that the app prints it. `READY_MARKERS` is exempt on
     purpose — `Uvicorn running on` is documented as inline code in a sentence.
-- **`agents/microsoft-dotnet` and `agents/spring-ai/event-planner` have never
-  run either**, for the same missing model key, and each carries two weaknesses
-  `agents/langgraph` does not:
+- **`agents/microsoft-dotnet` ran green on 2026-08-28**, and the run replaced
+  three guesses with observations: `CATALYST_PROBE_MARKERS` (the predicted
+  `localhost:5050` marker was WRONG — ASP.NET logs the request's own Host header,
+  so Catalyst's probes arrive as `tunnels-proxy...`), `READY_MARKERS`, and the
+  trigger, which now carries `expect: "connection-dropped"` instead of a status
+  code the crashing app can never return. It also exposed the teardown prompt
+  bug fixed by `Make Command Non Interactive`.
+  **`agents/spring-ai/event-planner` has still never run**, and carries two
+  weaknesses the other two no longer do:
   - **`HEALTH_PROBES` is empty for both, on purpose.** Neither app serves a GET
     route — `microsoft-dotnet`'s `Program.cs` registers only
     `app.MapPost("/run")`, and `event-planner`'s `EventPlannerController` only
@@ -536,32 +562,33 @@ config, not a typo.
     `agents/spring-ai/event-planner`'s README documents no readiness wording at
     all, so `READY_MARKERS` is empty too and the connection line is the *only*
     readiness signal that suite has.
-  - **Their trigger request asserts `status: 200`, and this is expected to fail
-    on the first credentialed run.** Neither app is expected to answer the call
-    at all: tool 2 crashes the process mid-request by design.
-    `agents/spring-ai/event-planner`'s `EventPlannerTools.java` calls
-    `Runtime.getRuntime().halt(1)` before the controller returns, and
-    `agents/microsoft-dotnet`'s README says of the same step "The process exits
-    — this is expected." A live run will most likely see a connection error
-    rather than any matchable status code. The assertion is left exactly as it
-    stands, deliberately: what replaces it has to come from an observed
-    response, and putting a plausible-looking value there instead is the
-    guessing that `field = None` in `variables/agents_langgraph.py` exists to
-    refuse. Recorded here so the first live run fails on a documented line
-    rather than a mysterious one.
-- **None of the three agent READMEs documents a status code**, so
-  `REQUESTS[...]["status"] = 200` in `variables/agents_langgraph.py`,
-  `variables/agents_microsoft_dotnet.py` and
-  `variables/agents_spring_ai_event_planner.py` is an assumption in every case,
-  not something transcribed. For `agents/langgraph` a 200 is at least plausible
-  — the endpoint returns normally — but it is still unverified. For the other
-  two it is worse than unverified; see the bullet above.
-- **The connection line for an agent app is inferred, not observed.**
-  `CONNECTED_APPS` in all three agent data modules comes from reading the
-  quickstart's dev config and applying the appPort rule ("Readiness markers are
-  not uniform per API" above); no agent suite has yet seen `diagrid dev run`
-  print that line. This matters most for `agents/spring-ai/event-planner`, whose
-  entire readiness gate it is: if the inference is wrong there, the symptom is a
+  - **Its trigger request asserts `status: 200`, and this is expected to fail on
+    the first credentialed run.** The app is not expected to answer the call at
+    all: `EventPlannerTools.java` calls `Runtime.getRuntime().halt(1)` before the
+    controller returns, so a live run will most likely see a connection error
+    rather than any matchable status code. `agents/microsoft-dotnet` was in
+    exactly this position until its live run, and the fix that came out of it
+    applies here unchanged: drop the invented status and use
+    `expect: "connection-dropped"`, which `POST And Expect The App To Exit`
+    turns into an assertion that fails on a status code *and* fails distinctly on
+    a hang. Not done pre-emptively only because nobody has watched this app die
+    yet — `halt(1)` is read from the source, not observed.
+- **None of the three agent READMEs documents a status code.** For
+  `agents/langgraph` the 200 is an assumption rather than a transcription, though
+  a plausible one — the endpoint returns normally, and a live run has seen it do
+  so. `agents/microsoft-dotnet` no longer carries a status at all: its documented
+  trigger cannot return one, so `expect: "connection-dropped"` replaced the
+  guess. `agents/spring-ai/event-planner` still carries `status: 200` and is the
+  remaining case; see the bullet above.
+- **The connection line is observed for two of the three agent suites.**
+  `diagrid dev run` prints `Connected App ID "<id>" to http://localhost:<port>`
+  for both `agents/langgraph` (2026-08-27) and `agents/microsoft-dotnet`
+  (2026-08-28), so the appPort rule ("Readiness markers are not uniform per API"
+  above) holds for a Python and a .NET agent app.
+  `agents/spring-ai/event-planner`'s entry is still inferred from its dev config,
+  and it matters more there than anywhere else: the connection line is that
+  suite's *entire* readiness gate, since both `READY_MARKERS` and
+  `HEALTH_PROBES` are empty. If the inference is wrong, the symptom is a
   readiness timeout on a perfectly healthy quickstart.
 - **Eleven of the fourteen `agents/*` quickstarts have no suite at all** (adk,
   claude-agents, crewai, dapr-agents/durable-agent, dapr-agents/orchestrator,
