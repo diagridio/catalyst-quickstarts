@@ -66,6 +66,12 @@ curl -i -X POST http://localhost:8005/agent/run \\
 Invoke-RestMethod -Method Post -Uri 'http://localhost:8005/agent/run' -ContentType 'application/json' -Body '{"task": "Check if the Grand Ballroom is available on March 15th"}'
 ```
 
+The agent will use the check_availability tool to check venue availability.
+
+```text
+  [ACTIVITY] Executing node 'tools' as Dapr activity
+```
+
 ## Crash Recovery Test With Catalyst
 
 ```bash
@@ -234,6 +240,38 @@ def test_check_agent_reports_a_missing_required_attribute_instead_of_raising(tmp
     del module.REQUESTS
     problems = check_agent(row, root, module=module)
     assert any("REQUESTS" in p for p in problems)
+
+
+def test_check_agent_rejects_a_log_marker_that_only_appears_in_prose(tmp_path):
+    # The bug this closes: `check_availability` is named in the README's prose and
+    # main.py really defines that tool, but NOTHING PRINTS IT, so the marker could
+    # never match a live run. The old check asked only whether the string appeared
+    # somewhere in the markdown, and the prose satisfied it — the suite went green
+    # on a marker that was guaranteed to time out against real Catalyst.
+    row, root = _fixture(tmp_path)
+    module = data_module(
+        REQUESTS=({"method": "POST", "port": 8005, "path": "/agent/run",
+                   "payload": {"task": "Check if the Grand Ballroom is available on March 15th"},
+                   "status": 200, "field": None,
+                   "log_marker": "check_availability"},)
+    )
+    problems = check_agent(row, root, module=module)
+    assert any("check_availability" in p and "fenced" in p for p in problems)
+
+
+def test_check_agent_accepts_a_log_marker_documented_in_a_fenced_block(tmp_path):
+    # A marker the app really prints belongs in a block of that app's output, and
+    # that is what the checker now requires. Any fence language counts: READMEs
+    # write output blocks as ```text, ```console or untagged, and which one they
+    # pick says nothing about whether the marker is real.
+    row, root = _fixture(tmp_path)
+    module = data_module(
+        REQUESTS=({"method": "POST", "port": 8005, "path": "/agent/run",
+                   "payload": {"task": "Check if the Grand Ballroom is available on March 15th"},
+                   "status": 200, "field": None,
+                   "log_marker": "[ACTIVITY] Executing node 'tools' as Dapr activity"},)
+    )
+    assert check_agent(row, root, module=module) == []
 
 
 def test_check_agent_reports_a_missing_connected_apps(tmp_path):

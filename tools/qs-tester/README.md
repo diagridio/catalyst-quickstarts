@@ -519,10 +519,10 @@ config, not a typo.
     they check breaks. Given this suite already shipped one gate that passed in
     76ms while doing nothing and one marker that could never match, those are the
     two least worth taking on trust.
-  - The doc-sync gap is not closed: a log marker mentioned only in a README's
-    prose still passes the checker, which is how `check_availability` — a string
-    nothing prints — survived review. Requiring markers to appear inside a fenced
-    block would close it.
+  - The doc-sync gap that let `check_availability` through is now closed: a log
+    marker must appear inside a fenced block, so a prose mention no longer counts
+    as documentation that the app prints it. `READY_MARKERS` is exempt on
+    purpose — `Uvicorn running on` is documented as inline code in a sentence.
 - **`agents/microsoft-dotnet` and `agents/spring-ai/event-planner` have never
   run either**, for the same missing model key, and each carries two weaknesses
   `agents/langgraph` does not:
@@ -589,7 +589,9 @@ config, not a typo.
      shape check).
 - doc-sync is a string presence and equality check, not a proof of execution. It
   catches a README edit the suites have not followed; it does not guarantee every
-  documented command is executed and asserted.
+  documented command is executed and asserted. One exception, added after it let a
+  broken marker through: a `log_marker` must be found inside a fenced block, not
+  merely somewhere in the file.
 - The suites test only the documented flow. `DELETE /order/{id}` and
   `POST /workflow/terminate/{id}` exist in every implementation but are documented
   in no README, so they are untested. Documenting them brings them under test.

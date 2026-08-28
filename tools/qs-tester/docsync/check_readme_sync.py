@@ -156,6 +156,17 @@ def all_bash_lines(markdown):
     return lines
 
 
+def fenced_block_bodies(markdown):
+    """The body of every fenced block, whatever its language.
+
+    A log marker is a line the app PRINTS, so it has to be documented as output —
+    inside a block — and not merely named in a sentence. Any fence language
+    counts: READMEs write output blocks as ```text, ```console or untagged, and
+    which one they pick says nothing about whether the marker is real.
+    """
+    return [m.group(2) for m in _FENCE.finditer(markdown)]
+
+
 def normalise_project(command, documented_project):
     """Map a documented command onto the harness's `{project}` placeholder."""
     return command.replace(documented_project, "{project}").strip()
@@ -282,9 +293,33 @@ def check_agent(row, repo_root, module=None):
                 f"  README documents: {payloads!r}"
             )
 
+    # Log markers must appear inside a fenced block, not merely somewhere in the
+    # file. A prose mention is not evidence the app prints anything:
+    # `agents/langgraph` shipped `check_availability` as its log marker because
+    # the README says "Use the `check_availability` tool" and main.py defines that
+    # tool — but `call_tools` invokes it without logging, so the marker could never
+    # match. The suite passed this check and then timed out against real Catalyst.
+    # Requiring a fenced block ties the marker to documented OUTPUT.
+    #
+    # READY_MARKERS deliberately does NOT get this rule: `agents/langgraph`
+    # documents `Uvicorn running on` as inline code in a sentence ("Wait until the
+    # output shows ..."), which is a perfectly good way to document a readiness
+    # marker and would fail here.
+    fenced = fenced_block_bodies(markdown)
     for marker in [r["log_marker"] for r in module.REQUESTS if r.get("log_marker")]:
-        if marker not in markdown:
-            problems.append(f"{where}: log marker {marker!r} does not appear in the README")
+        if not any(marker in body for body in fenced):
+            if marker in markdown:
+                problems.append(
+                    f"{where}: log marker {marker!r} appears in the README but not "
+                    "inside a fenced block. A log marker is a line the app prints, "
+                    "so it must be documented as output; a prose mention is not "
+                    "evidence anything prints it."
+                )
+            else:
+                problems.append(
+                    f"{where}: log marker {marker!r} does not appear in any fenced "
+                    "block in the README"
+                )
 
     return problems
 

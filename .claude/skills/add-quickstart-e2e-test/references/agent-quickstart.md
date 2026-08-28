@@ -151,6 +151,17 @@ Required: `method`, `port`, `path`, `payload`, `status`.
 Optional: `field` (default `None`), `commands` (default `()`), `log_marker`
 (default `None`).
 
+`log_marker` must appear **inside a fenced block** in the README, and doc-sync
+enforces that. A prose mention is not evidence the app prints anything: this
+suite shipped `check_availability` as its marker because the README says "Use the
+`check_availability` tool" and `main.py` defines that tool — but `call_tools`
+invokes it without logging, so the marker could never match and the suite timed
+out against real Catalyst. Pick a string the app really prints, and document it
+in a block of that app's output (any fence language: `text`, `console` or
+untagged). `READY_MARKERS` is deliberately exempt — `agents/langgraph` documents
+`Uvicorn running on` as inline code in a sentence, which is a fine way to
+document a readiness marker.
+
 The suite reads optional keys with `Get From Dictionary ... default=...` (or, for
 `commands`, `Evaluate    $request.get('commands', ())` — the default has to be an
 empty *sequence*; a `${EMPTY}` default is an empty *string*, and `Run Documented
