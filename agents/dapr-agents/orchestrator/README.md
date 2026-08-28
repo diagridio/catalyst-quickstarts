@@ -25,7 +25,7 @@ This quickstart demonstrates how to build an **orchestrator agent** using [Dapr 
 Install [uv](https://docs.astral.sh/uv/getting-started/installation/) if you don't have it already, then install the dependencies:
 
 ```bash
-cd dapr-agents/orchestrator
+cd agents/dapr-agents/orchestrator
 
 # uv creates and manages the virtual environment for you
 uv sync
@@ -64,7 +64,7 @@ $env:ANTHROPIC_API_KEY = ""
 The orchestrator requires the specialist agents to be running and registered. Use the combined dev file to start all 9 services at once:
 
 ```bash
-cd dapr-agents/orchestrator
+cd agents/dapr-agents/orchestrator
 diagrid login
 uv run diagrid dev run -f dev-multi-agent-orchestration.yaml
 ```
