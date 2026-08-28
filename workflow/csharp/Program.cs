@@ -199,6 +199,14 @@ app.MapPost("/crash/run", async (
                 name: nameof(CrashRecoveryWorkflow),
                 input: request.Reference,
                 instanceId: id);
+
+            // Armed here and nowhere else: only on the branch that actually scheduled a run,
+            // and only after the schedule call returned. In the else branch below it would kill
+            // the app every time the reader tried to read the answer.
+            if (request.KillAfterSeconds is int killAfter and > 0)
+            {
+                ArmSelfKill(killAfter);
+            }
         }
         else
         {
@@ -236,6 +244,35 @@ app.MapPost("/crash/run", async (
         return Results.Json(new CrashRunResponse(id, null, ex.Message), statusCode: 500);
     }
 });
+
+// Kill this process `delaySeconds` from now, on a background task.
+//
+// What lets the demo run in two terminals instead of three. /crash/run blocks for the length
+// of the slow activity, so the shell that starts a run cannot also stop the app, and the kill
+// has always needed a terminal of its own. Arming it here removes that terminal AND the race:
+// the crash lands at a known point inside the window rather than wherever the reader's
+// reflexes put it.
+//
+// A local function declared before its call sites would be tidier, but top-level statements
+// run in order and MapPost's lambda only runs later, so declaring it here is fine and keeps it
+// beside the /crash/kill it mirrors.
+static void ArmSelfKill(int delaySeconds)
+{
+    // Discarded on purpose: this task is a fuse, not something to await. Nothing can observe
+    // its completion, because its last act is to end the process.
+    _ = Task.Run(async () =>
+    {
+        await Task.Delay(TimeSpan.FromSeconds(delaySeconds));
+        // Console.WriteLine plus an explicit flush, for the reason /crash/kill gives below:
+        // the default console logger hands the line to a background thread and the kill beats
+        // it, so the one line explaining the death is the one line that never prints.
+        Console.WriteLine($">>> crash: killing this process {delaySeconds}s into the run, as asked by kill_after_seconds");
+        Console.Out.Flush();
+        // Kill(), matching /crash/kill: Environment.Exit runs the ProcessExit handlers, which
+        // makes it a controlled shutdown wearing a crash's name.
+        Process.GetCurrentProcess().Kill();
+    });
+}
 
 // Simulate a crash: kill this process outright, like SIGKILL. Demo only.
 // POST /crash/kill

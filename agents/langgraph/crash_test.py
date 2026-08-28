@@ -1,6 +1,7 @@
 import os
 import asyncio
 import json
+import threading
 import time
 from typing import List, Optional, TypedDict
 from contextlib import asynccontextmanager
@@ -109,6 +110,40 @@ class CrashRunRequest(BaseModel):
     # 422 in a different shape instead.
     id: Optional[str] = None
     topic: str = "company gala on March 15"
+    # Seconds after scheduling at which the app kills ITSELF, so the crash needs neither a
+    # second caller nor a human racing step 2's window.
+    #
+    # Optional, and absent means today's behaviour exactly: nothing is armed and you crash
+    # the app yourself with POST /crash/kill from another terminal. Ignored on the attach
+    # branch, because a re-issue is how you collect the result of a run that survived.
+    kill_after_seconds: Optional[int] = None
+
+
+def arm_self_kill(delay_seconds: int) -> None:
+    """Kill this process `delay_seconds` from now, on a background thread.
+
+    What lets the demo run in two terminals instead of three. POST /crash/run blocks for the
+    length of step 2, so the shell that starts a run cannot also stop the app, and the kill
+    has always needed a terminal of its own. Arming it here removes that terminal AND the
+    race: the crash lands at a known point inside the window rather than wherever the
+    reader's reflexes put it.
+
+    The same os._exit(1) that /crash/kill uses, deliberately. A gentler exit would make this
+    a controlled shutdown wearing a crash's name.
+
+    A plain daemon thread rather than an asyncio task: os._exit needs no event loop, and a
+    daemon thread can never hold the process open if the reader Ctrl+Cs during the countdown.
+    """
+
+    def _kill() -> None:
+        time.sleep(delay_seconds)
+        print(
+            f">>> crash: killing this process {delay_seconds}s into the run, as asked by kill_after_seconds",
+            flush=True,
+        )
+        os._exit(1)
+
+    threading.Thread(target=_kill, daemon=True).start()
 
 
 def crash_response(instance_id: str, result=None, message=None, status_code: int = 200):
@@ -122,8 +157,12 @@ def crash_response(instance_id: str, result=None, message=None, status_code: int
 
 # Run the graph under a workflow instance ID you choose, and block until it finishes
 # POST /crash/run
-# Body: { "id": "gala-42", "topic": "company gala on March 15" }
+# Body: { "id": "gala-42", "topic": "company gala on March 15", "kill_after_seconds": 8 }
 # Returns: 200 with the graph output, or 202 with the ID if the wait budget elapses
+#
+# `kill_after_seconds` is optional. Send it and the app crashes itself that many seconds in,
+# so the whole demo runs in two terminals with no window to aim at; leave it out and nothing
+# changes, and you crash the app yourself from a second terminal with POST /crash/kill.
 @app.post("/crash/run")
 async def crash_run(req: CrashRunRequest):
     if not req.id or not req.id.strip():
@@ -142,6 +181,11 @@ async def crash_run(req: CrashRunRequest):
             )
             await anext(stream)
             await stream.aclose()
+            # Armed here and nowhere else: only on the branch that actually scheduled a run.
+            # On the attach branch below it would kill the app every time the reader tried to
+            # read the answer.
+            if req.kill_after_seconds and req.kill_after_seconds > 0:
+                arm_self_kill(req.kill_after_seconds)
         else:
             print(f">>> Attaching to the existing run {req.id} instead of starting a second one",
                   flush=True)

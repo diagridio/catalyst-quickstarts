@@ -1,4 +1,8 @@
 using System.Diagnostics;
+// For JsonPropertyName on CrashRunRequest: `id` and `prompt` bind by the default
+// case-insensitive match, but `kill_after_seconds` does not, so that one field is named
+// explicitly rather than renamed on the wire to suit C#.
+using System.Text.Json.Serialization;
 using Dapr.Workflow;
 using Diagrid.AI.Microsoft.AgentFramework.Abstractions;
 using Diagrid.AI.Microsoft.AgentFramework.Hosting;
@@ -126,6 +130,14 @@ app.MapPost("/crash/run", async (CrashRunRequest req, DaprWorkflowClient workflo
                 name: nameof(CrashRecoveryWorkflow),
                 input: req.Prompt,
                 instanceId: id);
+
+            // Armed here and nowhere else: only on the branch that actually scheduled a run,
+            // and only after the schedule call returned. In the else branch below it would kill
+            // the app every time the reader tried to read the answer.
+            if (req.KillAfterSeconds is int killAfter and > 0)
+            {
+                ArmSelfKill(killAfter);
+            }
         }
         else
         {
@@ -170,6 +182,26 @@ app.MapPost("/crash/run", async (CrashRunRequest req, DaprWorkflowClient workflo
     }
 });
 
+// Kill this process `delaySeconds` from now, on a background task.
+//
+// What lets the demo run in two terminals instead of three. /crash/run blocks for the length
+// of tool 2, so the shell that starts a run cannot also stop the app, and the kill has always
+// needed a terminal of its own. Arming it here removes that terminal AND the race: the crash
+// lands at a known point inside the window rather than wherever the reader's reflexes put it.
+static void ArmSelfKill(int delaySeconds)
+{
+    // Discarded on purpose: this task is a fuse, not something to await. Nothing can observe
+    // its completion, because its last act is to end the process.
+    _ = Task.Run(async () =>
+    {
+        await Task.Delay(TimeSpan.FromSeconds(delaySeconds));
+        // Console.WriteLine plus an explicit flush, for the reason /crash/kill gives below.
+        Console.WriteLine($">>> crash: killing this process {delaySeconds}s into the run, as asked by kill_after_seconds");
+        Console.Out.Flush();
+        Process.GetCurrentProcess().Kill();
+    });
+}
+
 // Simulate a crash: kill this process outright, like SIGKILL. Demo only.
 // POST /crash/kill
 // Returns: nothing. The process is gone before a response can be written, so the caller
@@ -191,7 +223,14 @@ await app.RunAsync();
 
 record RunRequest(string Prompt);
 
-record CrashRunRequest(string Id, string Prompt = "Find a venue in Austin for a company gala");
+// KillAfterSeconds is optional: send it and the app crashes itself that many seconds into the
+// run, so the whole demo needs two terminals and no window to aim at. Leave it out and nothing
+// changes, and you crash the app yourself from a second terminal with POST /crash/kill.
+// Nullable rather than defaulted to 0, so "absent" and "zero" stay distinguishable.
+record CrashRunRequest(
+    string Id,
+    string Prompt = "Find a venue in Austin for a company gala",
+    [property: JsonPropertyName("kill_after_seconds")] int? KillAfterSeconds = null);
 
 /// <summary>
 /// Runs the event-planner agent inside a workflow the caller names.

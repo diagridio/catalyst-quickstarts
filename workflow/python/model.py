@@ -71,4 +71,13 @@ class CrashRunRequest(BaseModel):
 
     id: Optional[str] = None
     reference: str = "ABC123"
+    # Seconds after scheduling at which the app kills ITSELF, so the crash needs neither a
+    # second caller nor a human racing the slow activity's window.
+    #
+    # Optional, and absent means today's behaviour exactly: nothing is armed and you crash
+    # the app yourself with POST /crash/kill from another terminal. Ignored when this call
+    # attaches to an existing instance rather than scheduling one, because a re-issue is how
+    # you collect the result of a run that survived, and killing the app again would put that
+    # result permanently out of reach.
+    kill_after_seconds: Optional[int] = None
 

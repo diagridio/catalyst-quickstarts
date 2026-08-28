@@ -1,5 +1,6 @@
 package io.diagrid.quickstart.springai.crashrecovery;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import io.diagrid.springai.durable.boot.DurableAdvisor;
 import io.diagrid.springai.durable.client.DurableCallTimeoutException;
 import org.slf4j.Logger;
@@ -58,6 +59,12 @@ public class CrashRecoveryController {
     }
 
     String reference = request.reference() == null ? "ABC123" : request.reference();
+    // Armed before the blocking call below, because that call does not return until the run
+    // finishes: arming after it would arm a timer for a run that is already over.
+    Integer killAfter = request.killAfterSeconds();
+    if (killAfter != null && killAfter > 0) {
+      armSelfKill(killAfter);
+    }
     try {
       String answer = agent.prompt()
           .user("Confirm the booking with reference " + reference + ".")
@@ -76,8 +83,24 @@ public class CrashRecoveryController {
     }
   }
 
-  /** Request body of {@code POST /crash/run}. A null reference falls back to ABC123. */
-  public record CrashRunRequest(String id, String reference) {
+  /**
+   * Request body of {@code POST /crash/run}. A null reference falls back to ABC123.
+   *
+   * <p>{@code kill_after_seconds} is optional. Send it and the app crashes itself that many
+   * seconds in, so the whole demo runs in two terminals with no window to aim at; leave it out
+   * and nothing changes, and you crash the app yourself from a second terminal with
+   * {@code POST /crash/kill}.
+   *
+   * <p>Unlike the workflow quickstarts, this sample cannot tell a scheduling call from an
+   * attaching one: the instance id goes to {@link DurableAdvisor} and the agent call blocks,
+   * so there is no state lookup to branch on. Send the field on the call that STARTS the run
+   * and not on a re-issue, or the re-issue will crash the app again before it can hand back
+   * the answer you asked for.
+   */
+  public record CrashRunRequest(
+      String id,
+      String reference,
+      @JsonProperty("kill_after_seconds") Integer killAfterSeconds) {
   }
 
   /**
@@ -86,6 +109,35 @@ public class CrashRecoveryController {
    * and a 500 carry {@code message} instead.
    */
   public record CrashRunResponse(String id, String result, String message) {
+  }
+
+  /**
+   * Halt the JVM {@code delaySeconds} from now, on a daemon thread.
+   *
+   * <p>What lets the demo run in two terminals instead of three. {@code /crash/run} blocks for
+   * the length of the slow tool, so the shell that starts a run cannot also stop the app, and
+   * the kill has always needed a terminal of its own. Arming it here removes that terminal AND
+   * the race: the crash lands at a known point inside the window rather than wherever the
+   * reader's reflexes put it.
+   *
+   * <p>The same {@code halt(137)} that {@code /crash/kill} uses, deliberately: halt skips the
+   * shutdown hooks, so this is an abrupt crash rather than a controlled one wearing a crash's
+   * name.
+   */
+  private void armSelfKill(int delaySeconds) {
+    Thread timer = new Thread(() -> {
+      try {
+        Thread.sleep(delaySeconds * 1000L);
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        return;
+      }
+      LOG.warn(">>> crash: halting the JVM {}s into the run, as asked by kill_after_seconds",
+          delaySeconds);
+      Runtime.getRuntime().halt(137);
+    }, "crash-self-kill");
+    timer.setDaemon(true);
+    timer.start();
   }
 
   /** Simulate a crash: halt the JVM abruptly (skips shutdown hooks), like SIGKILL. Demo only. */
