@@ -137,6 +137,11 @@ Make Command Non Interactive
     ...    `agents/spring-ai/event-planner` too, which documents the same command;
     ...    `agents/langgraph` documents no cleanup and never hit it.
     ...
+    ...    Confirmed live the same day: with the flag added, the same teardown
+    ...    takes 1.37s and the documented `project delete` really deletes the
+    ...    project — checked with `diagrid project list` after a run with no
+    ...    safety-net script. The whole MAF suite went from ~11 minutes to 53s.
+    ...
     ...    Deliberately narrow. Only `project delete` is rewritten, and only when
     ...    neither approval flag is already present, so a README that documents
     ...    the non-interactive form is left exactly as written. Every other

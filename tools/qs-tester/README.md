@@ -131,6 +131,16 @@ because `ci/teardown-project.sh` passes `--yes` itself. Same class as the
 `diagrid login` exception, and handled the same way: at execution time, leaving
 the data module's documented string for doc-sync to check.
 
+With the flag, that teardown takes 1.37s and the documented `project delete`
+really deletes the project — checked with `diagrid project list` after a run with
+no safety-net script. The MAF suite went from ~11 minutes to 53s, 32 of which are
+`Wait Until Apps Connected`. That also makes a single `robot` command a complete
+local run for a suite whose README documents its own cleanup: the suite creates
+the project in `SETUP` and deletes it in `Clean Up Quickstart`, which runs as
+`Test Teardown` on failure as well as success. `agents/langgraph` documents no
+cleanup, so it still needs `ci/teardown-project.sh` — and any suite can still die
+before its teardown, which is what that script and `ci/reap-orphans.sh` are for.
+
 Everything else — the file, the flags, `mvn spring-boot:run`, the `uv run`
 prefix — runs exactly as the README shows it.
 

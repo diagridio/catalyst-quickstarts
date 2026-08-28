@@ -110,9 +110,12 @@ SUITES = (
         # when a 200 comes back, which is exactly what a re-commented
         # `Environment.Exit(1)` would produce.
         #
-        # Note the validated run predates the `--yes` teardown fix, so it spent
-        # 600s per leg waiting on the delete prompt. Nightly legs will be about
-        # ten minutes shorter than that run.
+        # The run that validated the flag predates the `--yes` teardown fix and
+        # spent 600s per leg on the delete prompt. Re-run after it, 2026-08-28:
+        # the whole test takes 53s, of which `Wait Until Apps Connected` is 32s.
+        # Teardown is 1.37s, and the suite's own documented `project delete` now
+        # really deletes the project — verified by `diagrid project list` after
+        # a run with no safety-net script.
         "nightly": True,
         "secrets": ("OPENAI_API_KEY",),
     },
