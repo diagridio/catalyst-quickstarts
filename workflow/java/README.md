@@ -86,7 +86,7 @@ mvn clean install
 The `diagrid dev run` command creates your Catalyst project, provisions resources (apps, workflow engine, managed state store), configures environment variables, and launches your application connected to Catalyst Cloud.
 
 ```bash
-diagrid dev run --project workflow-quickstart --app-id order-workflow --approve -- mvn spring-boot:run
+diagrid dev run --project workflow-quickstart --id order-workflow --approve -- mvn spring-boot:run
 ```
 
 > **Tip:** Wait a few seconds until you see application logs in the terminal to ensure the application is up and running and connected to Catalyst.

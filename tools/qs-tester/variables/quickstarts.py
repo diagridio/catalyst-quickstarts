@@ -60,7 +60,7 @@ _UV_DEV_RUN = "uv run " + _DEV_RUN
 RUN = {
     ("workflow", "csharp"): _DEV_RUN.format(file="workflow-quickstart.yaml", project="{project}"),
     ("workflow", "java"): (
-        "diagrid dev run --project {project} --app-id order-workflow --approve -- mvn spring-boot:run"
+        "diagrid dev run --project {project} --id order-workflow --approve -- mvn spring-boot:run"
     ),
     ("workflow", "javascript"): _DEV_RUN.format(file="workflow-quickstart.yaml", project="{project}"),
     ("workflow", "python"): _UV_DEV_RUN.format(file="workflow-quickstart.yaml", project="{project}"),

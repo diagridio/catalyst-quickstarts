@@ -451,7 +451,7 @@ config, not a typo.
   `res.status(500)`), which is the signal the gate polls, so the gate is sound for
   all four. The way to confirm a client's failure mapping without waiting for the
   race is to disconnect the target app mid-session
-  (`diagrid dev stop --app-id server`) and POST to the client: that is how csharp's
+  (`diagrid dev stop --id server`) and POST to the client: that is how csharp's
   mapping was verified. Note that `dev stop` also kills the local `diagrid dev run`
   process, which is harmless in teardown (the process tree is already stopped by
   then) but will end a session you are still using.
