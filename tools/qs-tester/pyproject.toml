@@ -12,5 +12,5 @@ dependencies = [
 dev = ["pytest>=8"]
 
 [tool.pytest.ini_options]
-pythonpath = ["docsync", "variables"]
-testpaths = ["docsync/tests"]
+pythonpath = ["docsync", "variables", "ci"]
+testpaths = ["docsync/tests", "tests"]

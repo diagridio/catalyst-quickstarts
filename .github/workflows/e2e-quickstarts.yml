@@ -18,10 +18,20 @@ on:
         default: 'all'
         options: [all, workflow, state, pubsub, invocation]
   pull_request:
+    # The `lint` job's two doc-sync checkers only run when this workflow does,
+    # so every input they read has to appear here: the harness, the suites, the
+    # quickstart READMEs at both depths (`agents/spring-ai/event-planner` is
+    # three levels deep) and the skill whose prose `check_skill_docs.py` guards
+    # -- a PR that edits only `.claude/skills/add-quickstart-e2e-test` is the
+    # exact drift that checker exists to catch.
     paths:
       - 'tools/qs-tester/**'
+      - '.claude/skills/add-quickstart-e2e-test/**'
       - '*/tests/quickstart.robot'
+      - '*/*/tests/quickstart.robot'
+      - '*/*/*/tests/quickstart.robot'
       - '*/*/README.md'
+      - '*/*/*/README.md'
       - '.github/workflows/e2e-quickstarts.yml'
 
 # Do not cancel in progress: a cancelled leg never runs teardown and leaks its
@@ -47,18 +57,20 @@ jobs:
       - uses: astral-sh/setup-uv@v5
       - name: Sync harness
         run: (cd tools/qs-tester && uv sync)
+      - name: Validate the suite manifest
+        run: (cd tools/qs-tester && uv run python ci/list-suites.py --validate)
       - name: Resolve suites without executing
         run: |
           cd tools/qs-tester
+          # shellcheck disable=SC2046  # word splitting is the point: one path per suite
           uv run robot --dryrun --variable PROJECT:dryrun --outputdir results/dryrun \
-            ../../workflow/tests/quickstart.robot \
-            ../../state/tests/quickstart.robot \
-            ../../pubsub/tests/quickstart.robot \
-            ../../invocation/tests/quickstart.robot
+            $(uv run python ci/list-suites.py --paths)
       - name: Check READMEs match the harness
         run: (cd tools/qs-tester && uv run python docsync/check_readme_sync.py --all)
-      - name: Unit-test the doc-sync checker
-        run: (cd tools/qs-tester && uv run pytest docsync/tests -q)
+      - name: Check the skill's examples against the READMEs
+        run: (cd tools/qs-tester && uv run python docsync/check_skill_docs.py)
+      - name: Unit-test the harness
+        run: (cd tools/qs-tester && uv run pytest -q)
       # The whole directory, not smoke.robot alone: these are the harness's own
       # credential-free tests (process teardown, the readiness gate) and a new
       # file here must not need a workflow edit to start running.
@@ -79,6 +91,34 @@ jobs:
           sudo mv ./diagrid /usr/local/bin
       - name: Delete qs-ci-* projects older than 6h
         run: bash tools/qs-tester/ci/reap-orphans.sh
+
+  # The agents matrix comes from the suite manifest rather than being written out
+  # here, so registering a suite is one row in variables/suites.py and no YAML
+  # edit at all.
+  discover:
+    if: github.event_name != 'pull_request' && github.repository_owner == 'diagridio'
+    runs-on: ubuntu-latest
+    outputs:
+      agents: ${{ steps.list.outputs.agents }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - name: Sync harness
+        run: (cd tools/qs-tester && uv sync)
+      - id: list
+        name: List agent suites
+        run: |
+          cd tools/qs-tester
+          # A scheduled run takes only the suites opted into `nightly`, because
+          # each one costs a project with agent infrastructure plus real model
+          # tokens. A manual dispatch runs every registered agent suite.
+          nightly=""
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            nightly="--nightly"
+          fi
+          agents="$(uv run python ci/list-suites.py --matrix agent $nightly)"
+          echo "agents=$agents" >> "$GITHUB_OUTPUT"
+          echo "Agent suites for this run: $agents"
 
   e2e:
     if: github.event_name != 'pull_request' && github.repository_owner == 'diagridio'
@@ -210,8 +250,111 @@ jobs:
         if: always()
         run: bash tools/qs-tester/ci/teardown-project.sh
 
+  # Runs AFTER e2e, not alongside it. `max-parallel` is per-job, so two jobs at
+  # 2 would allow four concurrent Catalyst projects and break the two-project
+  # cap this workflow's concurrency comment relies on. `always()` is what still
+  # runs these suites when a language leg failed: a nightly run should report
+  # every broken quickstart, not stop at the first.
+  e2e-agents:
+    needs: [e2e, discover]
+    if: >-
+      always()
+      && github.event_name != 'pull_request'
+      && github.repository_owner == 'diagridio'
+      && needs.discover.result == 'success'
+      && needs.discover.outputs.agents != '[]'
+    runs-on: ubuntu-latest
+    environment: shared-production
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        include: ${{ fromJSON(needs.discover.outputs.agents) }}
+    env:
+      DIAGRID_API_KEY: ${{ secrets.DIAGRID_API_KEY }}
+      # Declared literally rather than indexed from the matrix so the set of
+      # providers this workflow can reach is greppable. A suite only needs the
+      # one in its manifest row, and `Require Env Var` fails loudly if it is
+      # missing or empty.
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+
+      - name: Set up .NET
+        if: matrix.runtime == 'dotnet'
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      # 21, not the 17 the canonical `e2e` job uses: every agents/spring-ai pom
+      # sets <java.version>21</java.version> and their READMEs require JDK 21+,
+      # so `mvn package` under 17 fails with an invalid-release error before the
+      # suite runs anything.
+      - name: Set up Java
+        if: matrix.runtime == 'java'
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Set up Node
+        if: matrix.runtime == 'javascript'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 'lts/*'
+
+      - name: Install diagrid CLI
+        run: |
+          curl -sL https://downloads.diagrid.io/cli/install.sh | RELEASE_VERSION="$DIAGRID_CLI_VERSION" bash
+          sudo mv ./diagrid /usr/local/bin
+          diagrid version
+
+      - name: Sync harness
+        run: (cd tools/qs-tester && uv sync)
+
+      # The suite provisions itself from its README's documented commands, but the
+      # project name must be known before that can fail, so teardown always has
+      # something to delete.
+      #
+      # `matrix.leg` (not `matrix.name`) is what feeds the project name: a row
+      # can set an explicit `leg` shorter than `name` to stay under the
+      # 55-character ceiling `variables/suites.py` enforces, and rebuilding
+      # `agents-${{ matrix.name }}` here would silently ignore that override
+      # and overflow at `diagrid project create` regardless of what
+      # `--validate` said.
+      - name: Compute the ephemeral project name
+        run: bash tools/qs-tester/ci/project-name.sh agents-${{ matrix.leg }}
+
+      - name: Log in to Catalyst
+        run: bash tools/qs-tester/ci/login.sh
+
+      - name: Run the suite
+        run: |
+          cd tools/qs-tester
+          if ! uv run robot --outputdir "results/agents-${{ matrix.name }}" \
+               --variable "PROJECT:$PROJECT" \
+               "../../${{ matrix.suite }}"; then
+            echo "agents/${{ matrix.name }}" > "results/failed-agents-${{ matrix.name }}.txt"
+            echo "::error::Agent suite failed: agents/${{ matrix.name }}"
+            exit 1
+          fi
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: robot-agents-${{ matrix.name }}
+          path: tools/qs-tester/results/
+
+      - name: Delete the ephemeral Catalyst project
+        if: always()
+        run: bash tools/qs-tester/ci/teardown-project.sh
+
   report:
-    needs: [lint, e2e]
+    needs: [lint, e2e, e2e-agents]
     if: failure() && github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     steps:
@@ -225,8 +368,11 @@ jobs:
           script: |
             const fs = require('fs');
             const path = require('path');
-            // Each failing leg wrote failed-<lang>.txt (e.g. "python: pubsub")
-            // into its artifact; gather them so the issue names exact failures.
+            // Each failing leg wrote a failed-*.txt into its artifact; gather
+            // them so the issue names exact failures. Two shapes, because the
+            // two jobs differ: a canonical leg writes "python: pubsub state"
+            // (language, then the APIs that failed), an agent leg writes
+            // "agents/langgraph" (the suite, which has one language and one test).
             const lines = [];
             const walk = (dir) => {
               for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -244,20 +390,27 @@ jobs:
               ? lines.map(l => `  - \`${l}\``).join('\n')
               : '  - (no per-API detail captured — check the failing job logs)';
             const legs = [...new Set(lines.map(l => l.split(':')[0].trim()))].filter(Boolean);
+            // The artifact name is robot-<lang> for a canonical leg and
+            // robot-agents-<name> for an agent one (upload-artifact steps above).
+            // An agent leg's failure line is "agents/<name>", and a slash in the
+            // name is not what was uploaded -- so slugify it the same way the
+            // upload does, or the issue's copy-paste command 404s.
+            const artifact = (leg) => `robot-${leg.replace(/\//g, '-')}`;
             const downloads = (legs.length ? legs : ['<lang>'])
-              .map(l => `gh run download ${context.runId} -n robot-${l} -D ./report-${l}`)
+              .map(l => `gh run download ${context.runId} -n ${artifact(l)} -D ./report-${l.replace(/\//g, '-')}`)
               .join('\n');
             const title = 'Quickstart e2e tests failing';
             const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
             const body = [
               `The quickstart end-to-end tests **failed**.`,
               ``,
-              `**Failing legs (\`language: api …\`):**`,
+              `**Failing legs:** (\`language: api …\` for a canonical leg, \`agents/<name>\` for an agent suite)`,
               details,
               ``,
               `- Run: ${runUrl}`,
-              `- For a per-language index, download the \`robot-<lang>\` artifact and open`,
-              `  \`report.html\` (every API listed, failures in red) or \`log.html\`.`,
+              `- For a per-leg index, download the leg's artifact (\`robot-<lang>\`, or`,
+              `  \`robot-agents-<name>\` for an agent suite) and open \`report.html\``,
+              `  (every test listed, failures in red) or \`log.html\`.`,
               ``,
               `Download the report(s) for the failing leg(s):`,
               '```bash',

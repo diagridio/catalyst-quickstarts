@@ -83,6 +83,14 @@ RUN = {
 # Keyed by api only: the apps listen on 5001/5002 regardless of appPort
 # (appPort only tells Catalyst to open an inbound connection), so this stays
 # uniform across languages even where CONNECTED_APPS below does not.
+#
+# `GET /` is right *here* because all four canonical implementations really do
+# route it: state/python/main.py `@app.get('/')`, state/csharp/Program.cs
+# `app.MapGet("/")`, state/javascript/index.js `app.get("/")`, state/java
+# Controller.java `@GetMapping(path = "/")`, and the same in the other three APIs.
+# get_quickstart pairs each port with "/" for `Wait Until Apps Healthy`; do not
+# assume that pairing carries over to a quickstart outside this table — see
+# HEALTH_PROBES in variables/agents_langgraph.py.
 HEALTH_PORTS = {
     "workflow": (5001,),
     "state": (5001,),
@@ -169,7 +177,12 @@ WORKFLOW_INSTANCE_KEY = {
 # --- Log markers ------------------------------------------------------------
 # Substrings expected in the captured `diagrid dev run` output. Shared
 # constants are language-invariant; per-language dicts hold genuine divergence.
-# Truncation points are deliberate: see the design spec's assertion matrix.
+# Every truncation point below is deliberate. Where the reason is recoverable
+# it is recorded next to the marker (see INVOCATION_CLIENT_MARKER's csharp
+# entry for a concrete example: truncated before a status value because that
+# language renders an enum where the others render a number). Where no such
+# reason is recorded, the truncation is still deliberate — it just has no
+# documented rationale beyond "this is the substring that matches."
 
 STATE_SAVE_MARKER = "Save state item successful."
 STATE_RETRIEVE_MARKER = "Get state item successful. Order retrieved"
@@ -211,6 +224,11 @@ def get_quickstart(api, language):
         "dir": quickstart_dir(api, language),
         "install": INSTALL[(api, language)],
         "run": RUN[(api, language)],
-        "health_ports": list(HEALTH_PORTS[api]),
+        # (port, path) pairs, because `Wait Until Apps Healthy` probes a path the
+        # app really serves rather than assuming `/`. Every canonical
+        # implementation routes `/` (checked in all sixteen; see the HEALTH_PORTS
+        # comment above), so the path is "/" for all of them and this preserves
+        # exactly the behaviour the keyword had when it hardcoded `/`.
+        "health_probes": [[port, "/"] for port in HEALTH_PORTS[api]],
         "connected_apps": [list(pair) for pair in CONNECTED_APPS[(api, language)]],
     }
