@@ -76,17 +76,18 @@ Release App Connection
     [Documentation]    `diagrid dev stop` for one app ID, asserting it actually
     ...    disconnected.
     ...
-    ...    Two CLI behaviours (v1.36.0) force both the flag choice and the
+    ...    Two CLI behaviours (first seen v1.36.0, still present v1.66.0) force
+    ...    both the flag choice and the
     ...    assertion. `--project` on its own — what this used to run — prints
     ...    "Dev config file or App ID is required" and does nothing. `-f
     ...    <dev-config>` cannot parse the quickstarts' own dev config files at all:
     ...    their `command:` is a YAML list, `dev stop` expects a string, and it
     ...    fails with "Json: cannot unmarshal number into Go struct field
-    ...    App.Apps.RunConfig.Command of type string". `--app-id` is the one form
+    ...    App.Apps.RunConfig.Command of type string". Naming the id is the one form
     ...    that works. Every one of those failures exits 0, so an rc check proves
     ...    nothing and the success line has to be asserted instead.
     [Arguments]    ${app_id}    ${project}
-    ${result}=    Run Process    diagrid dev stop --app-id ${app_id} --project ${project}
+    ${result}=    Run Process    diagrid dev stop --id ${app_id} --project ${project}
     ...    shell=True    stderr=STDOUT    timeout=120s
     Should Contain    ${result.stdout}    disconnected
     ...    msg=Could not release the app connection for '${app_id}' in ${project} (rc=${result.rc}): ${result.stdout}
