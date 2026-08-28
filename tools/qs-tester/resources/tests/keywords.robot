@@ -213,6 +213,35 @@ Wait Until Catalyst Attached Fails When Catalyst Never Probes
     Run Keyword And Expect Error    *Catalyst never probed the app*
     ...    Wait Until Catalyst Attached    ${TEMPDIR}/unattached.log    GET /dapr/config
 
+Wait Until Apps Connected Is Bounded By CONNECT_TIMEOUT Not READINESS_TIMEOUT
+    [Documentation]    The connection gate needs its own budget. It legitimately
+    ...    takes 32-36s against real Catalyst, while the two waits that follow it
+    ...    take about five seconds each — so a mutation run that shortens
+    ...    ${READINESS_TIMEOUT} to make a mutated assertion give up quickly used to
+    ...    starve this gate instead, and the run died here having never reached the
+    ...    mutation. `check_mutation.py` correctly rejected the result (the target
+    ...    keyword was NOT RUN), but only after a Catalyst project had been spent.
+    ...
+    ...    So: shortening READINESS_TIMEOUT must NOT shorten this keyword.
+    Set Test Variable    ${READINESS_TIMEOUT}    2s
+    Set Test Variable    ${CONNECT_TIMEOUT}    20s
+    # The line is written by Robot into a file and catted by the background
+    # process, rather than echoed inline: the connection line contains double
+    # quotes, and getting them through Robot escaping AND shell quoting intact
+    # is its own bug — one that would make this test fail for a reason having
+    # nothing to do with the timeout it is testing.
+    Create File    ${TEMPDIR}/connect-line.txt
+    ...    Connected App ID "probe-app" to http://localhost:8099
+    Create File    ${TEMPDIR}/connect.log    ${EMPTY}
+    Start Background Process
+    ...    bash -c 'sleep 6; cat ${TEMPDIR}/connect-line.txt'
+    ...    ${TEMPDIR}/connect.log    connecttest
+    ${qs}=    Create Dictionary    connected_apps=${{ [['probe-app', 8099]] }}
+    # Six seconds is well past READINESS_TIMEOUT and well inside CONNECT_TIMEOUT,
+    # so this passes only if the keyword reads the latter.
+    Wait Until Apps Connected    ${qs}    ${TEMPDIR}/connect.log
+    [Teardown]    Run Keyword And Ignore Error    Stop Process Tree    connecttest
+
 Start Quickstart Records The Connected App IDs For Teardown
     # Regression test for a merge hazard: Start Quickstart reads
     # ${qs}[connected_apps] to remember which app connections Stop Quickstart must

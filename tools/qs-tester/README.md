@@ -238,12 +238,22 @@ with managed services plus real model tokens, so suites left at
 
 ### Running an agent-family suite locally
 
-Every suite's log-marker and readiness waits read from two variables defined in
-`resources/process.resource`: `${MARKER_TIMEOUT}` (default `60s`) and
-`${READINESS_TIMEOUT}` (default `180s`) — the values these waits used before
-they were parameterised. Both are overridable with `robot --variable`, which is
-what lets the mutation check below give up in seconds instead of waiting out a
-three-minute readiness timeout.
+Every suite's log-marker and readiness waits read from three variables defined
+in `resources/process.resource`: `${MARKER_TIMEOUT}` (default `60s`),
+`${READINESS_TIMEOUT}` (default `180s`) and `${CONNECT_TIMEOUT}` (default
+`180s`). All are overridable with `robot --variable`, which is what lets the
+mutation check below give up in seconds instead of waiting out a three-minute
+readiness timeout.
+
+**Do not shorten `${CONNECT_TIMEOUT}`.** It bounds `Wait Until Apps Connected`
+alone, which waits on Catalyst establishing the dev tunnel — measured at 32-36s
+against a real project, where every other wait finishes in about five seconds.
+It is a separate variable precisely so the mutation check can shorten the others
+without starving it. When the two were one variable, the documented
+`--variable READINESS_TIMEOUT:20s` killed the connection gate at 20s and the run
+died before reaching the mutation; `check_mutation.py` rejected the result (the
+target keyword came back `NOT RUN`), but only after a Catalyst project had been
+spent on a run that proved nothing.
 
 ```bash
 export DIAGRID_API_KEY=...
@@ -445,10 +455,11 @@ config, not a typo.
   mapping was verified. Note that `dev stop` also kills the local `diagrid dev run`
   process, which is harmless in teardown (the process tree is already stopped by
   then) but will end a session you are still using.
-- **All three agent-family suites are still `nightly: False`.** None of them has
-  had a green live run plus a mutation check, which is the bar for flipping that
-  flag. `agents/langgraph` has now been run against real Catalyst; the other two
-  have not. The bullets that follow are what that costs.
+- **`agents/langgraph` is `nightly: True`; the other two are not.** The bar for
+  that flag is a green live run *plus* a mutation check the verdict tool accepts,
+  and only langgraph has cleared it (2026-08-28). `agents/microsoft-dotnet` and
+  `agents/spring-ai/event-planner` have had neither half. The bullets that follow
+  are what that costs.
 - **`agents/langgraph` has run against real Catalyst three times and not yet
   passed**, but each run has failed further along than the last. 2026-08-27:
   - Runs 1 and 2 died 120s into the documented POST, which hung and never created
@@ -491,13 +502,27 @@ config, not a typo.
     only on the completed path.
   - Run 4, with all of the above in place, **passed end to end** against a real
     Catalyst project (2026-08-28).
-  Still open: **no mutation check has run**, so no assertion in this suite has
-  been seen to fail when the thing it checks is broken. That is the remaining
-  half of the bar for flipping `nightly`, which stays `False` until it is done.
-  Note also that the doc-sync gap run 4's predecessor exposed is not closed: a
-  log marker mentioned only in a README's prose still passes the checker, which
-  is how `check_availability` — a string nothing prints — survived review.
-  Requiring markers to appear inside a fenced block would close it.
+  - The mutation check then passed on 2026-08-28, but only on the second attempt,
+    and the first attempt is the more useful record. It failed with
+    `Wait Until Apps Connected` timing out at 20.07s, because the documented
+    recipe's `--variable READINESS_TIMEOUT:20s` starved a gate that legitimately
+    takes 32-36s — so the run died before reaching the mutation.
+    `ci/check_mutation.py` rejected it (`statuses seen: NOT RUN`), which is
+    exactly what that tool exists for: robot exited non-zero both times, and only
+    one of the two runs proved anything. `${CONNECT_TIMEOUT}` now bounds the
+    connection gate separately. On the retry the gate took its honest 36.10s and
+    the mutated `Wait Until Ready Marker` failed at 20.08s naming the sentinel.
+  Still open, and worth knowing before trusting the green:
+  - The mutation targeted `READY_MARKERS` only. The two assertions added while
+    getting this suite green — the `[ACTIVITY] Executing node 'tools'` log marker
+    and `Wait Until Catalyst Attached` — have **not** been shown to fail when what
+    they check breaks. Given this suite already shipped one gate that passed in
+    76ms while doing nothing and one marker that could never match, those are the
+    two least worth taking on trust.
+  - The doc-sync gap is not closed: a log marker mentioned only in a README's
+    prose still passes the checker, which is how `check_availability` — a string
+    nothing prints — survived review. Requiring markers to appear inside a fenced
+    block would close it.
 - **`agents/microsoft-dotnet` and `agents/spring-ai/event-planner` have never
   run either**, for the same missing model key, and each carries two weaknesses
   `agents/langgraph` does not:

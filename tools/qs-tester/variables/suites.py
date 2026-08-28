@@ -74,13 +74,19 @@ SUITES = (
         "data": "agents_langgraph",
         "language": "python",
         "runtime": "python",
-        # False until this suite has had a green live run and a mutation check
-        # proving its assertions can fail. A suite that has never run against real
-        # Catalyst would fail the nightly build every night for everyone, and a
-        # nightly failure also leaks its project until reap-orphans.sh collects it.
-        # Flip to True in the same commit that records the live-run evidence; the
-        # dispatch-triggered path runs it before then.
-        "nightly": False,
+        # True as of 2026-08-28: this suite has had a green live run against a real
+        # Catalyst project AND a mutation check that `ci/check_mutation.py`
+        # accepted — READY_MARKERS overridden to "__mutation_check__" made
+        # `Wait Until Ready Marker` FAIL, naming the sentinel, with the enclosing
+        # test failing too. That is the bar; the two other agent suites have met
+        # neither half and stay False.
+        #
+        # What this does NOT cover: the mutation targeted READY_MARKERS only, so
+        # the two assertions added while getting this suite green — the
+        # `[ACTIVITY] Executing node 'tools'` log marker and
+        # `Wait Until Catalyst Attached` — have not been shown to fail when what
+        # they check breaks. Both are worth their own mutation run.
+        "nightly": True,
         "secrets": ("OPENAI_API_KEY",),
     },
     {

@@ -43,12 +43,17 @@ Wait Until Apps Connected
     ...    ${qs}[connected_apps] is empty for those and this keyword does nothing.
     ...    The `http://` scheme is part of the line the CLI prints — matching on the
     ...    schemeless `to localhost:<port>` silently waits out the full timeout.
+    ...
+    ...    Bounded by ${CONNECT_TIMEOUT}, not ${READINESS_TIMEOUT}: this gate takes
+    ...    32-36s against real Catalyst while the waits after it take about five
+    ...    seconds, so a mutation run that shortens ${READINESS_TIMEOUT} must not
+    ...    shorten this one. See the variable's comment in process.resource.
     [Arguments]    ${qs}    ${logfile}
     FOR    ${app}    IN    @{qs}[connected_apps]
         ${app_id}=    Set Variable    ${app}[0]
         ${port}=    Set Variable    ${app}[1]
         Wait Until Log Contains    ${logfile}
-        ...    Connected App ID "${app_id}" to http://localhost:${port}    timeout=${READINESS_TIMEOUT}
+        ...    Connected App ID "${app_id}" to http://localhost:${port}    timeout=${CONNECT_TIMEOUT}
     END
 
 Stop Quickstart
