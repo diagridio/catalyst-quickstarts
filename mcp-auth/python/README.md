@@ -468,7 +468,7 @@ Endpoints:
 ### 4. Open the tunnel for mcp-server — Terminal 1
 
 ```bash
-diagrid dev run --app-id mcp-server --app-port 8000 --project mcp-auth --skip-managed-kv --skip-managed-pubsub --skip-default-resiliency
+diagrid dev run --id mcp-server --app-port 8000 --project mcp-auth --skip-managed-kv --skip-managed-pubsub --skip-default-resiliency
 ```
 
 With no trailing command, `diagrid dev run` does exactly one thing here: open a secure tunnel
