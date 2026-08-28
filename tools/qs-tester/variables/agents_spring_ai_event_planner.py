@@ -51,6 +51,22 @@ HEALTH_PROBES = ()
 # appID and appPort from dev-spring-ai-event-planner.yaml.
 CONNECTED_APPS = (("spring-ai-event-planner", 8080),)
 
+# EMPTY, NOT VERIFIED. `Wait Until Catalyst Attached` waits for the first inbound
+# request Catalyst makes back through the dev tunnel, which is the point at which
+# workflow calls stop hanging. Measured on agents/langgraph 2026-08-27: a call
+# made before that hangs forever and twelve retries over 181s never recovered it,
+# while the same call gated on the marker answered in ~1s three runs running.
+# Nothing about that race is Python-specific, so this suite is very likely exposed
+# to it too.
+#
+# It is empty rather than guessed because the marker is whatever THIS app's
+# logging makes visible for an inbound request, and this Spring Boot app's request logging has not been
+# checked. A marker that never appears makes the gate time out (loud, and the
+# suite fails); a marker matched from the wrong line would let the suite through
+# early (silent, and the run hangs). Fill this in by running the quickstart once
+# and reading what the app logs when Catalyst probes it.
+CATALYST_PROBE_MARKERS = ()
+
 SECRETS = ("OPENAI_API_KEY",)
 
 # README "### 2. Trigger the Agent".
@@ -105,6 +121,7 @@ def get_quickstart():
         "run": RUN,
         "teardown": list(TEARDOWN),
         "health_probes": [list(probe) for probe in HEALTH_PROBES],
+        "catalyst_probe_markers": list(CATALYST_PROBE_MARKERS),
         "connected_apps": [list(pair) for pair in CONNECTED_APPS],
         "secrets": list(SECRETS),
     }

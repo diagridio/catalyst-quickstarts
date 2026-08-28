@@ -92,6 +92,15 @@ POST And Expect
     [Documentation]    POST ${payload} as JSON and assert the status code and, if
     ...    given, the exact parsed response body.
     [Arguments]    ${port}    ${path}    ${payload}    ${status}    ${expected_body}=${NONE}
+    # `${status}` is converted to a string before it reaches RequestsLibrary.
+    # RequestsLibrary raises InvalidExpectedStatus for any non-string
+    # expected_status (SessionKeywords._check_status: `if not
+    # is_string_type(expected_status): raise`), and an agent suite reads its status
+    # from `${request}[status]` in a Python data module, where 200 is a number.
+    # The canonical suites pass a Robot literal, which is already a string, which
+    # is why this only ever broke the agent suites — and why every test in
+    # resources/tests/keywords.robot passed while they could not.
+    ${status}=      Convert To String    ${status}
     ${response}=    POST    http://localhost:${port}${path}    json=${payload}
     ...    expected_status=${status}    timeout=30
     ${body}=    Set Variable    ${response.json()}
@@ -103,6 +112,8 @@ POST And Expect
 
 GET And Expect
     [Arguments]    ${port}    ${path}    ${status}    ${expected_body}=${NONE}
+    # See POST And Expect for why this conversion is here.
+    ${status}=      Convert To String    ${status}
     ${response}=    GET    http://localhost:${port}${path}
     ...    expected_status=${status}    timeout=30
     ${body}=    Set Variable    ${response.json()}
@@ -134,6 +145,10 @@ POST And Expect Field
     ...    The timeout is 120s rather than the 30s used elsewhere because a model
     ...    call sits inside this request.
     [Arguments]    ${port}    ${path}    ${payload}    ${status}    ${field}=${NONE}
+    # See POST And Expect for why this conversion is here. This is the keyword the
+    # agent suites actually call, so this is where the missing conversion showed up
+    # as `InvalidExpectedStatus: 200` on a live run.
+    ${status}=      Convert To String    ${status}
     ${response}=    POST    http://localhost:${port}${path}    json=${payload}
     ...    expected_status=${status}    timeout=120
     ${body}=    Set Variable    ${response.json()}

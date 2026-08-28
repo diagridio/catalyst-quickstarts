@@ -69,6 +69,17 @@ Csharp Microsoft-Dotnet Quickstart
     # signals for this suite. Do not "fix" this by adding a `/` probe.
     Wait Until Apps Healthy     ${qs}
 
+    # CATALYST_PROBE_MARKERS is empty for this suite, so this loop is a no-op. It
+    # stays because the gap it guards is real here too: every gate above is
+    # satisfied by the local process, and a workflow call made before Catalyst has
+    # attached hangs unrecoverably (measured on agents/langgraph, 2026-08-27).
+    # Giving this suite the gate is a data change in its variables module, not a
+    # change here — see CATALYST_PROBE_MARKERS there for what has to be observed
+    # first.
+    FOR    ${marker}    IN    @{qs}[catalyst_probe_markers]
+        Wait Until Catalyst Attached    ${log}    ${marker}
+    END
+
     # The documented calls, in documented order. README "### 2. Trigger the Agent".
     # `commands` and `log_marker` are optional per request: a flow that interleaves
     # CLI and HTTP (mcp-auth grants a tool between two calls) expresses that here

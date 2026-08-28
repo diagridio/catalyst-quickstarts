@@ -9,8 +9,9 @@ Routes:
     POST /full           -> 200 {"result": "some text", "blank": ""}
     POST /empty          -> 200 {"result": ""}
     POST /none           -> 200 {"other": "value"}
-    GET  /               -> 200 (what the canonical quickstart apps serve)
-    GET  /dapr/subscribe -> 200 (what agents/langgraph's app serves instead)
+    GET  /               -> 200 "ok" (what the canonical quickstart apps serve)
+    GET  /dapr/subscribe -> 200 "ok" (what agents/langgraph's app serves instead)
+    GET  /order/1        -> 200 {"orderId": 1} (a documented GET with a JSON body)
     GET  anything else   -> 404
 
 Usage:
@@ -35,6 +36,13 @@ BODIES = {
 # fails on one.
 GET_OK = ("/", "/dapr/subscribe")
 
+# GET paths that answer 200 with a JSON body. The two paths in GET_OK answer
+# plain "ok", which is all a readiness probe needs — but `GET And Expect` parses
+# the response as JSON unconditionally, so it cannot be tested against those at
+# all. This is the fixture for it, shaped like the canonical `GET /order/1` that
+# the state suite really asserts on.
+GET_JSON = {"/order/1": {"orderId": 1}}
+
 
 class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
@@ -52,6 +60,15 @@ class Handler(BaseHTTPRequestHandler):
         # The readiness probe the test suite polls before sending any POST — but
         # only on a path in GET_OK, so an unserved path fails the probe here the
         # same way it would against a real app.
+        if self.path in GET_JSON:
+            payload = json.dumps(GET_JSON[self.path]).encode()
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(payload)))
+            self.end_headers()
+            self.wfile.write(payload)
+            return
+
         served = self.path in GET_OK
         payload = b"ok" if served else b"not found"
         self.send_response(200 if served else 404)

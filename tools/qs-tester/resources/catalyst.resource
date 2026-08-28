@@ -117,3 +117,44 @@ Wait Until Ready Marker
     ...    on`, and the marker is a property of the framework, not the language.
     [Arguments]    ${logfile}    ${marker}
     Wait Until Log Contains    ${logfile}    ${marker}    timeout=${READINESS_TIMEOUT}
+
+Wait Until Catalyst Attached
+    [Documentation]    Wait for the first sign that Catalyst has attached to the
+    ...    app and is probing it back through the dev tunnel — an INBOUND request
+    ...    in the app's own captured output. This is the last readiness gate an
+    ...    agent suite passes, and the only one that says anything about Catalyst.
+    ...
+    ...    Why it exists. `Connected App ID "<id>" to http://localhost:<port>`,
+    ...    `Uvicorn running on ...` and a 200 from the health probe are all
+    ...    satisfied by the LOCAL process. For a second or three afterwards,
+    ...    Catalyst has not attached, and a workflow call made in that window does
+    ...    not fail — it hangs, and it never recovers. Measured 2026-08-27 on
+    ...    agents/langgraph: a POST at readiness+0s hung for the full client
+    ...    timeout with no workflow instance ever created, and TWELVE retries over
+    ...    181s never got it back. The first call into the window poisons the app's
+    ...    workflow client permanently, which is why this gate has to run BEFORE
+    ...    the first request rather than wrap it in a retry. Gated on this marker,
+    ...    the same request answered 200 in ~1s on three consecutive runs.
+    ...
+    ...    Why an inbound request is the signal: Catalyst fetches `/dapr/config`
+    ...    (and probes `/`) through the tunnel once it attaches, and the app logs
+    ...    those the same way it logs any request. Verified against the alternative
+    ...    that looked more obvious and is VACUOUS: probing the app's own
+    ...    `GET /agent/run/{workflow_id}` answers 404 in 71ms at readiness+0 while
+    ...    the POST beside it hangs, because the two issue different RPCs
+    ...    (`GetInstance` vs `StartInstance`) and only the write path is late.
+    ...    Catalyst's own workflow HTTP API answers 202 in that window too, and its
+    ...    worker executes work items one second in — so neither of those is a
+    ...    usable signal either. Do not "improve" this into an active probe.
+    ...
+    ...    The marker is per quickstart, like READY_MARKERS: it is whatever that
+    ...    app's logging makes visible for an inbound request, a property of the
+    ...    framework rather than of Catalyst. An app that logs no inbound request
+    ...    has no marker here, and its suite runs unguarded — see
+    ...    CATALYST_PROBE_MARKERS in the agent data modules.
+    [Arguments]    ${logfile}    ${marker}
+    ${status}    ${error}=    Run Keyword And Ignore Error
+    ...    Wait Until Log Contains    ${logfile}    ${marker}    timeout=${READINESS_TIMEOUT}
+    IF    '${status}' == 'FAIL'
+        Fail    Catalyst never probed the app: "${marker}" did not appear in ${logfile} within ${READINESS_TIMEOUT}. The app is up locally but Catalyst has not attached, and triggering now would hang forever. (${error})
+    END

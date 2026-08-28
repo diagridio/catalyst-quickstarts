@@ -170,12 +170,14 @@ def normalise_project(command, documented_project):
 # canonical suites read `variables/quickstarts.py`, a table with a different
 # shape entirely.
 #
-# The first eight are what check_agent itself reads. CONNECTED_APPS and
-# HEALTH_PROBES are not — they are read by the module's own `get_quickstart()`
-# and then indexed as `${qs}[connected_apps]` (`catalyst.resource`, by
-# `Wait Until Apps Connected`) and `${qs}[health_probes]`
-# (`quickstart.resource`, by `Wait Until Apps Healthy`). Empty is legal for
-# both; absent is not, and an absent attribute surfaces only as a NameError
+# The first eight are what check_agent itself reads. CONNECTED_APPS,
+# HEALTH_PROBES and CATALYST_PROBE_MARKERS are not — they are read by the
+# module's own `get_quickstart()` and then indexed as `${qs}[connected_apps]`
+# (`catalyst.resource`, by `Wait Until Apps Connected`), `${qs}[health_probes]`
+# (`quickstart.resource`, by `Wait Until Apps Healthy`) and
+# `${qs}[catalyst_probe_markers]` (`catalyst.resource`, by
+# `Wait Until Catalyst Attached`). Empty is legal for all three; absent is
+# not, and an absent attribute surfaces only as a NameError
 # inside `get_quickstart()` itself — the test's first keyword, before
 # `diagrid project create` runs, so no cloud project is spent. (The genuine
 # KeyError shape — the attribute exists but `get_quickstart()` drops it from
@@ -193,6 +195,7 @@ _REQUIRED_MODULE_ATTRS = (
     "UNCOVERED",
     "CONNECTED_APPS",
     "HEALTH_PROBES",
+    "CATALYST_PROBE_MARKERS",
 )
 
 

@@ -74,11 +74,14 @@ READY_MARKERS = ("Uvicorn running on",)
 # There is no root route and no /health, so `GET /` returns 404 and a `/` probe
 # would wait out the full readiness timeout on a perfectly healthy app.
 # `GET /dapr/subscribe` is used instead: it is a route this app really registers
-# (runner.serve() adds it because main.py passes pubsub_name="agent-pubsub" and
+# (runner.serve() adds it because main.py passes pubsub_name="pubsub" and
 # subscribe_topic="schedule.requests"), it needs no request body, and it answers
 # 200 with the subscription list. Verified by rebuilding that exact route set on
 # fastapi==0.136.1 (the version this quickstart's uv.lock pins) and requesting
 # each path: `/` -> 404, `/dapr/subscribe` -> 200.
+#
+# It proves the app's own server is up and NOTHING about Catalyst — see
+# CATALYST_PROBE_MARKERS below, which is the gate that closes that gap.
 #
 # Applies to every entry: one path per port, so an agent quickstart whose apps
 # serve different probe paths states them per app here rather than needing a new
@@ -95,12 +98,40 @@ HEALTH_PROBES = ((8005, "/dapr/subscribe"),)
 # trust.diagrid.io endpoint pointing at a dead tunnel, which makes the next run's
 # 500s ambiguous.
 #
-# INFERRED, NOT OBSERVED: the harness README's rule is that the CLI prints the
-# connection line for an app with a non-zero appPort, and this app's is 8005. No
-# live run has confirmed the line appears for an agent app. If it does not,
-# `Wait Until Apps Connected` waits out READINESS_TIMEOUT and the fix is to drop
-# the gate rather than to widen the timeout.
+# OBSERVED, as of the 2026-08-27 live run: `diagrid dev run` really does print
+# `Connected App ID "schedule-planner" to http://localhost:8005` for an agent app,
+# confirming the harness README's appPort rule holds here. `Wait Until Apps
+# Connected` passed on it in 36s. Note what that does NOT prove: the line means
+# the local dev tunnel is up, not that Catalyst can route the app's workflow
+# calls. See CATALYST_PROBE_MARKERS.
 CONNECTED_APPS = (("schedule-planner", 8005),)
+
+# Strings that appear in the captured `diagrid dev run` output once Catalyst has
+# attached to the app and started probing it back through the dev tunnel. This is
+# the last gate `Wait Until Catalyst Attached` waits on, and the only readiness
+# signal in this module that says anything about Catalyst rather than about the
+# local process.
+#
+# Why it exists, measured 2026-08-27 against a real project: the documented POST
+# fired 25ms after the health probe went green hung for the full 120s client
+# timeout and never created a workflow instance (ERR_INSTANCE_ID_NOT_FOUND when
+# queried afterwards). It does not recover — twelve retries over 181s all hung —
+# so the first request into the window poisons the app's workflow client for good.
+# Gated on this marker, the same request answered 200 in ~1s on three consecutive
+# runs, with the marker arriving at t+1s, t+3s and t+3s.
+#
+# `GET /dapr/config` is Catalyst fetching the app's Dapr configuration through the
+# tunnel. The app has no such route and answers 404 — irrelevant, because the
+# REQUEST ARRIVING is the signal, not the response. uvicorn's access log is what
+# makes it visible, which is why this is per-quickstart data and not a constant.
+#
+# Do NOT replace this with an active probe. Two obvious ones were tried and are
+# VACUOUS: the app's own `GET /agent/run/{workflow_id}` answers 404 in 71ms at
+# readiness+0 while the POST beside it hangs (different RPCs — `GetInstance` is
+# live, `StartInstance` is not), and Catalyst's workflow HTTP API answers 202 in
+# the same window while its worker executes work items one second in. Neither
+# distinguishes the window at all.
+CATALYST_PROBE_MARKERS = ("GET /dapr/config",)
 
 SECRETS = ("OPENAI_API_KEY",)
 
@@ -129,11 +160,31 @@ REQUESTS = (
         "path": "/agent/run",
         "payload": {"task": "Check if the Grand Ballroom is available on March 15th"},
         "status": 200,
-        "field": None,
-        # The README describes the agent using the `check_availability` tool, and
-        # main.py defines it. Model output varies; the tool call is what the
-        # quickstart actually promises, so that is what this asserts.
-        "log_marker": "check_availability",
+        # OBSERVED, 2026-08-28: the response envelope is built by
+        # DaprWorkflowGraphRunner (`_run_and_collect` plus langgraph's
+        # `_parse_output`) and carries instance_id, type, workflow_id, output,
+        # steps and status. `status` is the one worth asserting: it exists ONLY on
+        # the completed path — a failed run yields {"type": "workflow_failed",
+        # "error": ...} with no `status` key at all, so the presence check
+        # `POST And Expect Field` performs is exactly the success/failure
+        # discriminator. It is framework-generated, so unlike anything under
+        # `output.messages` it does not vary with the model.
+        "field": "status",
+        # NOT `check_availability`. That string appears in the README's prose and
+        # main.py defines the tool, but NOTHING PRINTS IT: `call_tools` invokes the
+        # tool without logging, so the old marker could never match a real run —
+        # it timed out on the 2026-08-28 run that otherwise succeeded end to end.
+        # doc-sync did not catch it because it only requires the marker to appear
+        # somewhere in the README, and a prose mention satisfied that.
+        #
+        # The tools NODE is printed, by the SDK itself:
+        # `print(f"  [ACTIVITY] Executing node '{node_name}' as Dapr activity")`
+        # in diagrid/agent/langgraph/workflow.py (diagrid 0.4.2, pinned in this
+        # quickstart's uv.lock). It is the right assertion for what the README
+        # promises: `should_use_tools` routes to `tools` only when the LLM returned
+        # a tool call, so an agent that answered without checking availability
+        # never reaches this node and the marker never appears.
+        "log_marker": "[ACTIVITY] Executing node 'tools' as Dapr activity",
     },
 )
 
@@ -169,7 +220,14 @@ def get_quickstart():
     of their own (this module's `LANGUAGE` constant; the canonical dict's
     `language` parameter): no shared keyword reads either one. Beyond the
     shared five, this dict adds `family`, `name`, `language`, `setup`,
-    `teardown` and `secrets`; the canonical one adds `api` and `language`.
+    `teardown`, `secrets` and `catalyst_probe_markers`; the canonical one adds `api`
+    and `language`.
+
+    `catalyst_probe_markers` is agent-only despite being read by a keyword in
+    the shared `catalyst.resource`: `Wait Until Catalyst Attached` guards a
+    window only the agent suites enter, because only they start Catalyst
+    workflows. The canonical dict does not carry the key and the canonical
+    suites never call the keyword, so nothing there breaks.
     """
     return {
         "family": FAMILY,
@@ -181,6 +239,7 @@ def get_quickstart():
         "run": RUN,
         "teardown": list(TEARDOWN),
         "health_probes": [list(probe) for probe in HEALTH_PROBES],
+        "catalyst_probe_markers": list(CATALYST_PROBE_MARKERS),
         "connected_apps": [list(pair) for pair in CONNECTED_APPS],
         "secrets": list(SECRETS),
     }

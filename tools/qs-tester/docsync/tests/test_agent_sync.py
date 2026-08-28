@@ -111,6 +111,7 @@ def data_module(**overrides):
         # files, so a module without them cannot survive a live run.
         CONNECTED_APPS=(("schedule-planner", 8005),),
         HEALTH_PROBES=((8005, "/dapr/subscribe"),),
+        CATALYST_PROBE_MARKERS=("GET /dapr/config",),
     )
     for key, value in overrides.items():
         setattr(module, key, value)
@@ -257,6 +258,20 @@ def test_check_agent_reports_a_missing_health_probes(tmp_path):
     del module.HEALTH_PROBES
     problems = check_agent(row, root, module=module)
     assert any("HEALTH_PROBES" in p for p in problems)
+
+
+def test_check_agent_reports_a_missing_catalyst_probe_markers(tmp_path):
+    # Same contract again: `Wait Until Catalyst Attached` reads
+    # `${qs}[catalyst_probe_markers]`. Empty is legal and means "this app's
+    # inbound-request marker has not been identified" — a decision each module
+    # has to state, which is the point of requiring the attribute. Absent is not
+    # legal: it would silently drop the gate that keeps a suite from triggering
+    # inside Catalyst's attach window, where the first call hangs unrecoverably.
+    row, root = _fixture(tmp_path)
+    module = data_module()
+    del module.CATALYST_PROBE_MARKERS
+    problems = check_agent(row, root, module=module)
+    assert any("CATALYST_PROBE_MARKERS" in p for p in problems)
 
 
 def _fixture(tmp_path):

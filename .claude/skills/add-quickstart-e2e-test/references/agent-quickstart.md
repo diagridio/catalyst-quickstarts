@@ -24,11 +24,12 @@ A new agent-family suite gets its own module,
 | `TEARDOWN` | `tuple[str, ...]` | The README's own cleanup commands. Empty if the README documents none. |
 | `READY_MARKERS` | `tuple[str, ...]` | One string per app that announces itself in the `diagrid dev run` output. |
 | `HEALTH_PROBES` | `tuple[tuple[int, str], ...]` | `(port, path)` pairs `Wait Until Apps Healthy` polls for a 200 before any assertion runs. The path is per app and must be a route the app actually serves — see "Probe a path the app really serves" below. |
-| `CONNECTED_APPS` | `tuple[tuple[str, int], ...]` | `(appID, port)` pairs `diagrid dev run` reports as `Connected App ID "<id>" to http://localhost:<port>`. Required: `Start Quickstart` records these so `Stop Quickstart` can release each local app connection, and a run that skips this leaves a `trust.diagrid.io` endpoint pointing at a dead tunnel, which makes the next run's 500s ambiguous. See `variables/agents_langgraph.py`'s `CONNECTED_APPS` for the worked example, including the caveat that it is inferred from the dev config, not yet observed against a live run. |
+| `CATALYST_PROBE_MARKERS` | `tuple[str, ...]` | Strings that appear in the captured `diagrid dev run` output once Catalyst has attached to the app and probes it back through the tunnel — `Wait Until Catalyst Attached` waits for each before any documented request runs. Guards the window in which a workflow call **hangs unrecoverably**. Like `READY_MARKERS`, this is whatever the app's own logging makes visible for an *inbound* request, so it is a property of the framework, not of Catalyst. Empty is legal and means "not observed for this quickstart"; see "The Catalyst-attach gate" below. |
+| `CONNECTED_APPS` | `tuple[tuple[str, int], ...]` | `(appID, port)` pairs `diagrid dev run` reports as `Connected App ID "<id>" to http://localhost:<port>`. Required: `Start Quickstart` records these so `Stop Quickstart` can release each local app connection, and a run that skips this leaves a `trust.diagrid.io` endpoint pointing at a dead tunnel, which makes the next run's 500s ambiguous. See `variables/agents_langgraph.py`'s `CONNECTED_APPS` for the worked example, read from the dev config and confirmed against the 2026-08-27 live run — `diagrid dev run` does print the line for an agent app. Note what it does not prove: the line means the local dev tunnel is up, not that Catalyst can route the app's workflow calls, which is what `CATALYST_PROBE_MARKERS` is for. |
 | `SECRETS` | `tuple[str, ...]` | Environment variable names the suite's `Require Env Var` loop checks before doing anything else — the model provider keys. |
 | `REQUESTS` | `tuple[dict, ...]` | The documented trigger calls, in documented order. Keys below. |
 | `UNCOVERED` | `tuple[tuple[str, str], ...]` | `(documented command, reason)` pairs for commands the suite deliberately does not run. |
-| `get_quickstart()` | function | Returns one flat dict: `family`, `name`, `language`, `dir`, `setup`, `install`, `run`, `teardown`, `health_probes`, `connected_apps`, `secrets`. Not identical to what `quickstarts.get_quickstart(api, language)` returns (that one has `api` instead of `family`/`name`/`setup`/`teardown`/`secrets`) — the two dicts share exactly the five keys the *shared* keywords actually read (`dir`, `install`, `run`, `health_probes`, `connected_apps`), which is what lets `Build Quickstart`, `Start Quickstart` and `Wait Until Apps Healthy` work unchanged against either shape. Both dicts do carry a `language` key of their own (this module's `LANGUAGE` constant; the canonical dict's `language` argument), but no shared keyword reads either one, which is why `language` is not in the shared five — see `agents_langgraph.get_quickstart`'s docstring. |
+| `get_quickstart()` | function | Returns one flat dict: `family`, `name`, `language`, `dir`, `setup`, `install`, `run`, `teardown`, `health_probes`, `connected_apps`, `catalyst_probe_markers`, `secrets`. Not identical to what `quickstarts.get_quickstart(api, language)` returns (that one has `api` instead of `family`/`name`/`setup`/`teardown`/`secrets`) — the two dicts share exactly the five keys the *shared* keywords actually read (`dir`, `install`, `run`, `health_probes`, `connected_apps`), which is what lets `Build Quickstart`, `Start Quickstart` and `Wait Until Apps Healthy` work unchanged against either shape. Both dicts do carry a `language` key of their own (this module's `LANGUAGE` constant; the canonical dict's `language` argument), but no shared keyword reads either one, which is why `language` is not in the shared five — see `agents_langgraph.get_quickstart`'s docstring. |
 
 ### What doc-sync actually enforces — and what it does not
 
@@ -37,10 +38,10 @@ attributes, `_REQUIRED_MODULE_ATTRS`:
 
 ```
 DOCUMENTED_PROJECT, SETUP, INSTALL, RUN, TEARDOWN, READY_MARKERS, REQUESTS,
-UNCOVERED, CONNECTED_APPS, HEALTH_PROBES
+UNCOVERED, CONNECTED_APPS, HEALTH_PROBES, CATALYST_PROBE_MARKERS
 ```
 
-If your module is missing one of those ten names, `check_agent` returns it as a
+If your module is missing one of those eleven names, `check_agent` returns it as a
 problem string (`"... is missing required attribute(s): ..."`) — a normal
 doc-sync failure, not a crash, so one bad module costs its own row and not the
 other suites `--all` also checks in the same run. The list is checked for
@@ -48,17 +49,19 @@ agent-family suites only: `check_agent` runs from `--all` over
 `suites.agent_suites()`, and the canonical suites are checked against
 `variables/quickstarts.py` instead.
 
-The last two are there for a different reason than the first eight. `check_agent`
-does not read `CONNECTED_APPS` or `HEALTH_PROBES` at all — `get_quickstart()`
-does, and the `.resource` files then index `${qs}[connected_apps]` (`Wait Until
-Apps Connected`) and `${qs}[health_probes]` (`Wait Until Apps
-Healthy`). Omit either and nothing static complains unless doc-sync requires it;
+The last three are there for a different reason than the first eight.
+`check_agent` does not read `CONNECTED_APPS`, `HEALTH_PROBES` or
+`CATALYST_PROBE_MARKERS` at all — `get_quickstart()` does, and the `.resource`
+files then index `${qs}[connected_apps]` (`Wait Until Apps Connected`),
+`${qs}[health_probes]` (`Wait Until Apps Healthy`) and
+`${qs}[catalyst_probe_markers]` (`Wait Until Catalyst Attached`). Omit any of them and nothing static complains unless doc-sync requires it;
 the failure surfaces as a `NameError` inside `get_quickstart()` itself — the
 test's first keyword, before `diagrid project create` runs, so no cloud project
 is spent. (The genuine `KeyError` shape — the attribute exists but
 `get_quickstart()` drops it from the returned dict — is a different failure
-this guard still does not catch.) Empty is legal for both
-(`agents/spring-ai/event-planner` has `HEALTH_PROBES = ()`); absent is not.
+this guard still does not catch.) Empty is legal for all three
+(`agents/spring-ai/event-planner` has `HEALTH_PROBES = ()` and
+`CATALYST_PROBE_MARKERS = ()`); absent is not.
 
 Note what is still **not** in the list: `SECRETS` and `get_quickstart`. A module
 missing either fails at Robot runtime instead (the `Require Env Var` loop has
@@ -154,6 +157,15 @@ empty *sequence*; a `${EMPTY}` default is an empty *string*, and `Run Documented
 Commands` fails iterating a string with "not list or list-like"). This is why a
 request that needs none of the optional keys stays a plain five-key dict instead
 of carrying explicit nulls.
+
+Write `status` as a number (`200`), matching every existing module. It reaches
+RequestsLibrary through `POST And Expect Field`, which converts it to a string
+first — RequestsLibrary raises `InvalidExpectedStatus` for a non-string
+`expected_status`, and a Python data module naturally holds an int where the
+canonical suites pass a Robot literal (already a string). That conversion lives
+in the keyword, not in your module, so there is nothing to remember here; it is
+called out only because the missing conversion took a live run to surface —
+`resources/tests/keywords.robot` now covers the int path explicitly.
 
 `POST And Expect Field` (see `references/harness-keywords.md`) is what consumes a
 request: it asserts the status code always, and — only when `field` is not
@@ -378,6 +390,71 @@ route `/` (`state/python/main.py`, `state/csharp/Program.cs`,
 `state/javascript/index.js`, `state/java` `Controller.java`, and the same in
 `workflow`, `pubsub` and `invocation`), so
 `quickstarts.get_quickstart` pairs every port with `/`.
+
+## The Catalyst-attach gate
+
+Every readiness signal above is satisfied by the **local process**. The
+`Connected App ID` line means the dev tunnel is up. `Uvicorn running on` means
+the app's own server is listening. A 200 from `HEALTH_PROBES` means the app
+routes that path. None of them means Catalyst has attached to the app — and
+until it has, a workflow call does not fail, it **hangs and never recovers**.
+
+Measured on `agents/langgraph` against a real project, 2026-08-27:
+
+| What was done | Result |
+|---|---|
+| documented POST at readiness + 25 ms (the suite, twice) | hung the full 120 s; no workflow instance created (`ERR_INSTANCE_ID_NOT_FOUND` afterwards) |
+| POST at readiness + 0 s, then 12 retries over 181 s | every attempt hung — **retrying does not recover it** |
+| idle 20 s, then one POST | 200 in 1.1 s |
+| gated on `GET /dapr/config`, then POST (3 runs) | 200 in ~1 s; marker arrived at t+1 s, t+3 s, t+3 s |
+
+All of it reproduced with an OpenAI-free clone of `main.py`, so the LLM is not
+the variable.
+
+Two consequences for the design, both learned the hard way:
+
+**The gate must run before the first request, not around it.** The first call
+into the window poisons the app's workflow client permanently, so
+`Wait Until Not Server Error`'s shape — poll the real call until it answers —
+cannot work here. There is nothing to poll: the first poll is the damage.
+
+**The signal has to be passive.** Two active probes were tried and are
+**vacuous**; do not reinvent either:
+
+| Probe | Behaviour at readiness+0 | Why it fails |
+|---|---|---|
+| app's own `GET /agent/run/{workflow_id}` | 404 in 71 ms, while the POST beside it hung | same gRPC channel, but a different RPC — `GetInstance` (read) is live long before `StartInstance` (write) |
+| Catalyst's workflow HTTP API `POST .../start` | 202 in ~100 ms, and the worker executed the instance at t+1 s | the backend's create path and work-item dispatch are both live in the window; neither distinguishes it |
+
+The first of these actually shipped, and the next suite run caught it: the gate
+passed in 76 ms and the POST hung anyway. That is what a vacuous gate looks like
+in practice — green, fast, and worthless.
+
+What does work is watching for an **inbound** request from Catalyst in the app's
+own captured output. Catalyst fetches `/dapr/config` (and probes `/`) through the
+tunnel once it attaches, and the app logs those like any other request. That is
+`CATALYST_PROBE_MARKERS`, and like `READY_MARKERS` it is per quickstart: it
+depends on what that app's request logging prints, not on Catalyst.
+
+Choosing one for a new quickstart:
+
+1. Run the quickstart by hand and watch the `diagrid dev run` output after the
+   readiness marker. Look for a request the app did not make itself.
+2. Pick a substring stable across runs. `GET /dapr/config` is good: it is a fixed
+   path Catalyst always fetches. A client IP or port is not — those vary.
+3. Confirm it lands *after* local readiness and *before* the trigger works. If
+   the marker is already present when the readiness marker arrives, it is not
+   gating anything.
+4. Leave it `()` rather than guess. A marker that never appears makes the gate
+   time out — loud, and the suite fails honestly. A marker matched from the wrong
+   line lets the suite through early — silent, and the run hangs for the full
+   client timeout. `agents/microsoft-dotnet` and `agents/spring-ai/event-planner`
+   are both `()` because nobody has watched their logs yet; their suites already
+   carry the (no-op) loop, so adding the gate later is a data change only.
+
+`resources/tests/keywords.robot` tests the gate credential-free: that it waits
+for a marker that arrives late, and that it fails — naming the gate — when
+Catalyst never probes.
 
 ## Readiness markers are a framework property, not a language property
 

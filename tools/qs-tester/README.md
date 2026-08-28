@@ -23,12 +23,12 @@ automatically.
 - `resources/tests/` — the harness's own tests. `smoke.robot` covers the
   process-teardown keywords, `keywords.robot` covers the keywords the
   agent-family suites depend on against `echo_server.py`, `readiness.robot`
-  covers the readiness gate against `flaky_server.py`, and `teardown.robot`
-  covers the two Stop Quickstart paths that release nothing. None need
-  credentials, they run in seconds, and CI's `lint` job runs the whole
-  directory on every PR that trips the workflow's `paths` filter — run them
-  locally too when you touch `process.resource`, `catalyst.resource` or the
-  gate.
+  covers the invocation readiness gate against `flaky_server.py`, and
+  `teardown.robot` covers the two Stop Quickstart paths that release nothing.
+  `keywords.robot` also covers the Catalyst-attach gate. None need credentials, they run in seconds, and
+  CI's `lint` job runs the whole directory on every PR that trips the
+  workflow's `paths` filter — run them locally too when you touch
+  `process.resource`, `catalyst.resource` or either gate.
 - `variables/quickstarts.py` — the per-(API, language) table. **Everything in it is
   transcribed from a README.** Change a README, change this file.
 - `docsync/check_readme_sync.py` — asserts the two stay in agreement.
@@ -156,7 +156,7 @@ Agent-family quickstarts (`agents/*`, `dapr-agents/*`, `mcp-auth/*`) are not a
 matrix. Each has exactly one language, its own suite beside it at
 `<quickstart-dir>/tests/quickstart.robot`, and its own data module. They are not
 a flat two-level list either: `agents/spring-ai/event-planner` sits three
-segments deep, so nothing here may assume a `<family>/<name>` shape. Five things
+segments deep, so nothing here may assume a `<family>/<name>` shape. Six things
 differ and are worth knowing before you touch one:
 
 1. **They provision themselves.** Most of their READMEs document `diagrid
@@ -209,9 +209,26 @@ differ and are worth knowing before you touch one:
    Connection` for each, which is what keeps a finished run from leaving a
    `trust.diagrid.io` endpoint pointing at a dead tunnel; `Wait Until Apps
    Connected` waits for the matching `Connected App ID "<id>" to
-   http://localhost:<port>` line. That an agent app emits that line at all is
-   **inferred** from the appPort rule ("Readiness markers are not uniform per
-   API" below) and has not been observed — see "Limitations".
+   http://localhost:<port>` line. That an agent app emits that line at all was
+   **confirmed** by the 2026-08-27 live run, so the appPort rule ("Readiness
+   markers are not uniform per API" below) holds here too.
+6. **They need a Catalyst-attach gate that the canonical suites do not.** Every
+   readiness signal above — the connection line, the readiness marker, the
+   health probe — is satisfied by the *local* process. None of them means
+   Catalyst has attached to the app, and a workflow call made before it has does
+   not fail: it hangs, and it never recovers. Measured on `agents/langgraph`,
+   2026-08-27: the documented POST fired 25 ms after the health probe went green
+   hung for the full 120 s client timeout and never created a workflow instance,
+   and **twelve retries over 181 s never got it back** — the first call into the
+   window poisons the app's workflow client for good. That is why the gate runs
+   *before* the first request instead of wrapping it in a retry. Gated on
+   `${qs}[catalyst_probe_markers]`, the same request answered 200 in ~1 s on
+   three consecutive runs. The marker is an *inbound* request from Catalyst in
+   the app's own captured output (`GET /dapr/config` for langgraph), so it is
+   per-quickstart data like `READY_MARKERS`. Only `agents/langgraph` has a
+   verified marker; the other two carry `CATALYST_PROBE_MARKERS = ()` and a note.
+   Two active probes were tried first and are **vacuous** — see "The
+   Catalyst-attach gate" in the skill's `references/agent-quickstart.md`.
 
 Nightly membership is per suite (`nightly` in the manifest), and CI reads it
 only for agent-family rows — canonical scheduling stays the business of the
@@ -428,36 +445,59 @@ config, not a typo.
   mapping was verified. Note that `dev stop` also kills the local `diagrid dev run`
   process, which is harmless in teardown (the process tree is already stopped by
   then) but will end a session you are still using.
-- **None of the three agent-family suites has ever run against real
-  Catalyst.** `agents/langgraph`, `agents/microsoft-dotnet` and
-  `agents/spring-ai/event-planner` are all registered `nightly: False` for that
-  reason. The bullets that follow are what that costs.
-- **`agents/langgraph` has never run against real Catalyst.** No model provider
-  key was available while it was written: `DIAGRID_API_KEY` is set in the dev environment, but `OPENAI_API_KEY`,
-  `GEMINI_API_KEY` and `ANTHROPIC_API_KEY` are all unset, and this quickstart
-  calls OpenAI. Consequently no assertion in it has been seen to fail when the
-  thing it checks is broken — no mutation check has run — and
-  `REQUESTS[0]["field"]` in `variables/agents_langgraph.py` is still `None`,
-  because the response shape can only come from an observed live response. What
-  *is* verified: the lint dryrun resolves the suite, the doc-sync checker holds
-  it to `agents/langgraph/README.md` in both directions, and it fails fast on a
-  missing model key — `Require Env Var` fails before `Build Quickstart`,
-  `Run Documented Commands` and `Start Quickstart` ever run (all three are
-  recorded `NOT RUN`), so a missing secret cannot leak a Catalyst project. It is
-  registered `nightly: False` for exactly that reason; flipping that flag needs a
-  green live run plus a mutation check, with the flag flip landing in the same
-  commit as the evidence (see "Running an agent-family suite locally" above).
-- **`agents/langgraph`'s health probe is reasoned, not observed.** `HEALTH_PROBES` polls
-  `GET /dapr/subscribe` on 8005 rather than `GET /`, because the app serves no
-  `/`: `main.py` calls `DaprWorkflowGraphRunner.serve()`, which builds a bare
-  `FastAPI()` and registers four routes, none of them `/`. That was checked by
-  reading the installed SDK (`diagrid` 0.4.2, the version this quickstart pins)
-  and by rebuilding the same route set on `fastapi==0.136.1`, where `GET /`
-  answers 404 and `GET /dapr/subscribe` answers 200. What that does **not**
-  prove is that the real app, behind `diagrid dev run`, answers 200 there at the
-  moment the suite starts polling. A live run is what settles that; if this
-  probe is wrong, the symptom is a readiness timeout on an otherwise healthy
-  quickstart.
+- **All three agent-family suites are still `nightly: False`.** None of them has
+  had a green live run plus a mutation check, which is the bar for flipping that
+  flag. `agents/langgraph` has now been run against real Catalyst; the other two
+  have not. The bullets that follow are what that costs.
+- **`agents/langgraph` has run against real Catalyst three times and not yet
+  passed**, but each run has failed further along than the last. 2026-08-27:
+  - Runs 1 and 2 died 120s into the documented POST, which hung and never created
+    a workflow instance — the suite was firing inside Catalyst's attach window
+    (the sixth bullet of "Two kinds of quickstart"). Run 2 also proved the *first*
+    gate written for this, an active probe of the app's own
+    `GET /agent/run/{workflow_id}`, was **vacuous**: it passed in 76ms and the
+    POST hung anyway. It was removed, not patched.
+  - Run 3, with `Wait Until Catalyst Attached` in place, got past the window —
+    the gate waited 6.0s and the POST was answered in 5.4s. It then failed on
+    `InvalidExpectedStatus: 200`: RequestsLibrary rejects a non-string
+    `expected_status`, and an agent suite reads its status from a Python data
+    module, where `200` is an int. Latent in all three agent modules from the
+    start and invisible until now, because the hang always raised first. Fixed by
+    converting in `POST And Expect`/`GET And Expect`/`POST And Expect Field`, with
+    the int path now covered in `resources/tests/keywords.robot` — every test
+    there had been passing a Robot literal, which is already a string, which is
+    exactly why the harness's own tests could not catch it.
+  Between them these runs settled a lot that was previously only reasoned:
+  `SETUP`'s documented `project create` and `agent create` both succeed (7-11s
+  together); `diagrid dev run` does print `Connected App ID "schedule-planner" to
+  http://localhost:8005` for an agent app, so `CONNECTED_APPS` is right and
+  `Wait Until Apps Connected` is not vacuous (32-36s); the `Uvicorn running on`
+  marker arrives; `HEALTH_PROBES`' `GET /dapr/subscribe` really answers 200
+  against the live app; and teardown releases the app connection.
+  The gate was additionally verified out-of-suite against a real project with an
+  OpenAI-free clone of `main.py`, so the LLM could not be the variable: 4/4
+  ungated runs hung permanently at readiness+0, 3/3 gated runs answered 200 in
+  ~1s, marker arriving at t+1s, t+3s and t+3s.
+  - A hand-run of the same quickstart on 2026-08-28 then completed the whole
+    documented flow (LLM call, `tools` node, `COMPLETED`) and showed the suite's
+    remaining assertion could never have passed: `REQUESTS[0]["log_marker"]` was
+    `check_availability`, and **nothing prints that string** — `call_tools` in
+    `main.py` invokes the tool without logging it. doc-sync did not catch it
+    because it only requires a marker to appear *somewhere* in the README, and
+    the prose "Use the `check_availability` tool" satisfied that. The marker is
+    now `[ACTIVITY] Executing node 'tools' as Dapr activity`, which the SDK really
+    prints and which the README now documents in a `text` block, and
+    `REQUESTS[0]["field"]` is `"status"` — a key the response envelope carries
+    only on the completed path.
+  - Run 4, with all of the above in place, **passed end to end** against a real
+    Catalyst project (2026-08-28).
+  Still open: **no mutation check has run**, so no assertion in this suite has
+  been seen to fail when the thing it checks is broken. That is the remaining
+  half of the bar for flipping `nightly`, which stays `False` until it is done.
+  Note also that the doc-sync gap run 4's predecessor exposed is not closed: a
+  log marker mentioned only in a README's prose still passes the checker, which
+  is how `check_availability` — a string nothing prints — survived review.
+  Requiring markers to appear inside a fenced block would close it.
 - **`agents/microsoft-dotnet` and `agents/spring-ai/event-planner` have never
   run either**, for the same missing model key, and each carries two weaknesses
   `agents/langgraph` does not:

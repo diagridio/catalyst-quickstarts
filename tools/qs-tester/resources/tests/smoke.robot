@@ -17,9 +17,13 @@ Stale Log Content Is Truncated On Start
     Stop Process Tree    sleeper
 
 Run And Expect RC Zero Fails On Non-Zero Exit
-    ${status}=    Run Keyword And Return Status
+    # Asserts the failure MESSAGE, not a status flag: `Run Keyword And Return
+    # Status` returns False for a keyword that does not exist either, so the
+    # status-only version of this test passed against a renamed or deleted
+    # `Run And Expect RC Zero`. rc=3 in the pattern pins it to this command's
+    # real exit code rather than to "something went wrong".
+    Run Keyword And Expect Error    *Command failed (rc=3)*
     ...    Run And Expect RC Zero    bash -c 'exit 3'
-    Should Be Equal    ${status}    ${False}
 
 Nested Children Are Killed When SIGINT Is Ignored
     # A parent that traps SIGINT, with a grandchild in its OWN process group
@@ -60,11 +64,14 @@ Marker Timeout Variable Bounds The Wait
     Set Test Variable    ${MARKER_TIMEOUT}    3s
     Create File    ${TEMPDIR}/timeout.log    nothing useful here
     ${start}=    Get Time    epoch
-    ${status}=    Run Keyword And Return Status
+    # Asserts the failure MESSAGE, not a status flag: `Run Keyword And Return
+    # Status` returns False for a keyword that does not exist either, so the
+    # status-only version of this test passed against a renamed or deleted
+    # `Wait Until Log Contains` — and the elapsed assertion below would have
+    # passed too, since a missing keyword also "gives up" instantly.
+    Run Keyword And Expect Error    *does not contain "absent-marker"*
     ...    Wait Until Log Contains    ${TEMPDIR}/timeout.log    absent-marker
     ${end}=    Get Time    epoch
-    Should Be Equal    ${status}    ${False}
-    ...    msg=Waiting for a marker that is not in the log must fail
     ${elapsed}=    Evaluate    ${end} - ${start}
     Should Be True    ${elapsed} < 30
     ...    msg=Gave up after ${elapsed}s; MARKER_TIMEOUT was not honoured

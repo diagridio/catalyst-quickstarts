@@ -101,6 +101,39 @@ The agent will:
 3. Use the `check_availability` tool to check venue availability
 4. Return available time slots for the requested date
 
+In the terminal running `diagrid dev run`, each graph node is executed as a
+durable Dapr activity, one per step. The `tools` step is the `check_availability`
+call: the graph only reaches it when the LLM decides to call the tool, so its
+absence means the agent answered without checking availability.
+
+```text
+== APP - schedule-planner ==   [WORKFLOW] Step 0, pending_nodes=['agent']
+== APP - schedule-planner ==   [ACTIVITY] Executing node 'agent' as Dapr activity
+== APP - schedule-planner ==   [WORKFLOW] Step 1, pending_nodes=['tools']
+== APP - schedule-planner ==   [ACTIVITY] Executing node 'tools' as Dapr activity
+== APP - schedule-planner ==   [WORKFLOW] Step 2, pending_nodes=['agent']
+== APP - schedule-planner ==   [ACTIVITY] Executing node 'agent' as Dapr activity
+== APP - schedule-planner ==   [WORKFLOW] Step 3, pending_nodes=['__end__']
+== APP - schedule-planner == durabletask-worker INFO: graph-...: Orchestration completed with status: COMPLETED
+```
+
+The request blocks until the workflow finishes and returns the run's outcome.
+`status` is `completed` only when the workflow ran to completion — a failed run
+returns `"type": "workflow_failed"` with an `error` instead, and no `status`.
+The `messages` array carries the conversation, including the tool's reply, and
+its exact contents vary with the model:
+
+```text
+{
+  "instance_id": "graph-e356c042-9f2d068b",
+  "type": "workflow_completed",
+  "workflow_id": "graph-e356c042-9f2d068b",
+  "output": { "messages": [ ... ] },
+  "steps": 3,
+  "status": "completed"
+}
+```
+
 ### 3. Inspecting the Results in Catalyst
 
 Open the [Catalyst dashboard](https://catalyst.diagrid.io/agents) in your browser and navigate to Agents > schedule-planner. Then select the most recent agent workflow run to view output.

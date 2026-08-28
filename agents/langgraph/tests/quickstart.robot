@@ -65,6 +65,19 @@ Python Langgraph Quickstart
     END
     Wait Until Apps Healthy     ${qs}
 
+    # The three gates above are all satisfied by the local process: the tunnel is
+    # up, uvicorn is serving, and the app answers its own health route. None of
+    # them means Catalyst has attached, and a workflow call made before it has
+    # HANGS — permanently, not transiently: the 2026-08-27 run died 120s into a
+    # documented POST that never created an instance, and twelve retries over 181s
+    # never recovered it. Gated on this marker the same POST answered in ~1s.
+    # Read from ${qs}, not from an imported name, because unlike @{READY_MARKERS}
+    # this is infrastructure and not an assertion: there is nothing here for a
+    # mutation check to break.
+    FOR    ${marker}    IN    @{qs}[catalyst_probe_markers]
+        Wait Until Catalyst Attached    ${log}    ${marker}
+    END
+
     # The documented calls, in documented order. README "### 2. Trigger a Workflow".
     # `commands` and `log_marker` are optional per request: a flow that interleaves
     # CLI and HTTP (mcp-auth grants a tool between two calls) expresses that here
