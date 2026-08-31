@@ -35,9 +35,11 @@ POST http://localhost:5001/workflow/terminate/{{instanceId}}
 
 ### Crash Recovery: run under an ID you own
 # Blocks for ~30s while the slow activity commits, up to a 120s wait budget. Kill
-# the app during that window with the request below, restart, then send this exact
-# request again. Use an id you have not used before: an id that already names a
-# finished run just attaches to it and answers instantly, with no crash to see.
+# the app during that window with the request below. Restarting the app is what
+# recovers the run; send this exact request again only to read back its answer,
+# because the crash killed the connection that was waiting for one. Use an id you
+# have not used before: an id that already names a finished run just attaches to it
+# and answers instantly, with no crash to see.
 POST http://localhost:5001/crash/run
 Content-Type: application/json
 

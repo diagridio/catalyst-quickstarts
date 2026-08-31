@@ -279,7 +279,7 @@ The endpoint calls `Runtime.getRuntime().halt(137)`, which skips the JVM shutdow
 
 The workflow instance `trip-42` is unaffected. It lives in Catalyst, not in the process you just killed.
 
-### 7.3 Restart and re-issue
+### 7.3 Restart the app
 
 Start the application again with the same command as step 5:
 
@@ -287,7 +287,21 @@ Start the application again with the same command as step 5:
 diagrid dev run --project workflow-quickstart --app-id order-workflow --approve -- mvn spring-boot:run
 ```
 
-Then send the **identical** request from step 7.1 again:
+**That is the whole recovery. You do not have to send anything.** The run is not waiting on you: Catalyst has been retrying the interrupted activity the entire time the app was down, and it hands the pending work back the moment the restarted app's worker reconnects. That happens before Spring Boot has even finished starting Tomcat, so the log below is usually scrolling before you can type.
+
+**Read the app log carefully, because this is the whole proof:**
+
+```text
+== APP - order-workflow == Committing reservation ABC123 over ~30s. KILL THE APP NOW to test crash recovery (POST /crash/kill, or kill -9). It resumes on restart.
+== APP - order-workflow == Committed reservation ABC123. Confirmation code: BK-E0BEBD22
+== APP - order-workflow == Notification: Reservation trip-42 has completed! Reservation ABC123 confirmed. Confirmation code: BK-E0BEBD22
+```
+
+`Notification: Reservation trip-42 received for ABC123` does **not** appear again. That activity had already completed and Catalyst had recorded its result, so the replay took the recorded value instead of re-running it. Only the activity that was interrupted runs a second time.
+
+### 7.4 Collect the answer
+
+The run recovered on its own, but the crash took the connection that was waiting for its result: the blocked request from step 7.1 died with the process, and its answer had nowhere to go. Send the **identical** request from step 7.1 once more to open a new connection to the run that already finished:
 
 **macOS/Linux (curl):**
 
@@ -301,25 +315,15 @@ curl -i -X POST http://localhost:5001/crash/run -H "Content-Type: application/js
 Invoke-RestMethod -Method Post -Uri "http://localhost:5001/crash/run" -ContentType "application/json" -Body '{"id":"trip-42", "reference":"ABC123"}'
 ```
 
-Because the instance already exists, this call **attaches** to it instead of reserving a second time. The response carries the same confirmation code the first run would have produced:
+Because the instance already exists, this call **attaches** to it instead of reserving a second time, and the app logs `Attaching to existing crash-recovery workflow trip-42` to say so. It resumes nothing, because nothing was waiting: it reads back the confirmation code the recovered run recorded in step 7.3.
 
 ```text
 {"id":"trip-42","result":"Reservation ABC123 confirmed. Confirmation code: BK-E0BEBD22","message":null}
 ```
 
-**Read the app log carefully, because this is the whole proof:**
+Send it while the slow activity is still re-running and it simply blocks until the run finishes. If the wait budget elapses first, the response is a `202` carrying the instance ID. That is not a failure either: send the same request again to attach again.
 
-```text
-== APP - order-workflow == Committing reservation ABC123 over ~30s. KILL THE APP NOW to test crash recovery (POST /crash/kill, or kill -9). It resumes on restart.
-== APP - order-workflow == Committed reservation ABC123. Confirmation code: BK-E0BEBD22
-== APP - order-workflow == Notification: Reservation trip-42 has completed! Reservation ABC123 confirmed. Confirmation code: BK-E0BEBD22
-```
-
-`Notification: Reservation trip-42 received for ABC123` does **not** appear again. That activity had already completed and Catalyst had recorded its result, so the replay took the recorded value instead of re-running it. Only the activity that was interrupted runs a second time.
-
-If the wait budget elapses before the run finishes, the response is a `202` carrying the instance ID. That is not a failure: re-issue the same request to attach again.
-
-### 7.4 View in the Catalyst web console
+### 7.5 View in the Catalyst web console
 
 Open the [Workflow viewer](https://catalyst.diagrid.io/workflows/executions) and select the instance named `trip-42`. The trace shows one execution, not two, with the interrupted activity attempted twice and every other activity once.
 

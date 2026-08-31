@@ -2,8 +2,9 @@
 
 This quickstart demonstrates how to recover a durable [Spring AI](https://docs.spring.io/spring-ai/reference/)
 agent from a hard crash using the `io.diagrid:diagrid-spring-ai-starter` package. A booking agent
-schedules its work under an **instance id you own**, so if the app is killed mid-call you can re-issue
-the same request and **attach** to the still-running workflow instead of starting a second booking.
+schedules its work under an **instance id you own**. Restarting the app is what recovers the run. The id
+is what lets a later call **attach** to that same workflow to read its answer, instead of starting a
+second booking.
 
 Where the sibling [`event-planner`](../event-planner) quickstart uses side-effect-free tools (so a
 replay is harmless), this one confronts **idempotency** head-on: the tool has a real side effect (a
@@ -12,7 +13,8 @@ booking), and a caller-owned instance id is what makes a retry safe.
 ## What This Quickstart Demonstrates
 
 - **Caller-owned instance id**: schedule a `ChatClient.call()` under an id you choose via `DurableAdvisor.INSTANCE_ID_KEY`
-- **Re-attach on recovery**: re-issuing the same id attaches to the resumed workflow, with no duplicate work
+- **Automatic recovery**: restarting the app resumes the run, with no request needed to nudge it
+- **Re-attach to read the answer**: a later call with the same id attaches to the recovered workflow, with no duplicate work
 - **Idempotency**: the confirmation code is derived from the booking reference, so a re-attached call returns the *same* code: visible proof the booking was not redone
 - **Crash-safe tools**: a global `@Tool` bean is rediscovered on the restarted worker, so the resumed activity can run it
 
@@ -88,7 +90,7 @@ curl -X POST "http://localhost:8080/crash/kill"
 
 The app process dies (Terminal A's `curl` sees a reset). The workflow `trip-42` keeps living in Catalyst.
 
-## Recovery: re-attach by instance id
+## Recovery: restart the app
 
 Restart the app (the project and agent already exist, so just run):
 
@@ -96,8 +98,17 @@ Restart the app (the project and agent already exist, so just run):
 diagrid dev run -f dev-spring-ai-crash-recovery.yaml --approve
 ```
 
-The durable runtime resumes instance `trip-42`; the pre-crash LLM turn is not re-executed. Now re-issue
-the **same** call with the **same** id from **Terminal A**:
+**That is the whole recovery. You do not have to send anything.** The run is not waiting on you:
+Catalyst has been retrying the interrupted tool call the entire time the app was down, and it hands the
+pending work back the moment the restarted app's worker reconnects. The durable runtime resumes instance
+`trip-42` on its own, and the pre-crash LLM turn is not re-executed. Watch the app log: it is usually
+scrolling before Spring Boot has finished starting Tomcat, and always before you could send anything.
+
+## Collect the answer
+
+The run recovered on its own, but the crash took the connection that was waiting for its result:
+Terminal A's call died with the process, and its answer had nowhere to go. Send the **same** call with
+the **same** id from **Terminal A** once more to open a new connection to the run that already finished:
 
 ```bash
 curl -X POST "http://localhost:8080/crash/run" \
@@ -105,10 +116,10 @@ curl -X POST "http://localhost:8080/crash/run" \
   -d '{"id":"trip-42","reference":"ABC123"}'
 ```
 
-It **attaches** to the resumed run (waiting if it is still committing, or returning the recorded answer
-if it finished) and returns the **same confirmation code**, with no second booking. The response is the
-one JSON shape every crash demo in this repo returns, `{"id", "result", "message"}`, with the agent's
-answer in `result`:
+It **attaches** to the recovered run (waiting if it is still committing, or returning the recorded answer
+if it finished) and returns the **same confirmation code**, with no second booking. It resumes nothing,
+because nothing was waiting. The response is the one JSON shape every crash demo in this repo returns,
+`{"id", "result", "message"}`, with the agent's answer in `result`:
 
 ```json
 {
@@ -122,7 +133,7 @@ The model chooses the wording around it, but the code after `BK-` is derived fro
 is the same code the killed call would have returned.
 
 If the call's wait budget elapses first, the same shape comes back as a `202` with `result` null and the
-attach instruction in `message`. That is not a failure: re-issue the same request with the same id to
+attach instruction in `message`. That is not a failure: send the same request with the same id again to
 attach again. A request with a missing or blank `id` is a `400` whose `message` is `id is required`.
 
 ## How It Works

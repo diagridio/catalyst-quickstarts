@@ -159,13 +159,24 @@ The endpoint calls `Process.GetCurrentProcess().Kill()`, which is `SIGKILL` on m
 
 The workflow instance `gala-42` is unaffected. It lives in Catalyst, not in the process you just killed.
 
-**Restart and re-issue.** Start the application again with the same `diagrid dev run` command you used in step 1. The project and the agent already exist, so this is the only command you need:
+**Restart the app.** Start the application again with the same `diagrid dev run` command you used in step 1. The project and the agent already exist, so this is the only command you need:
 
 ```bash
 diagrid dev run -f dev-dotnet-agent.yaml --approve
 ```
 
-Then send the **identical** `/crash/run` request again. Because the instance already exists, it attaches to the run you started before the crash instead of starting a second one:
+**That is the whole recovery. You do not have to send anything.** The run is not waiting on you: Catalyst has been retrying the interrupted tool call the entire time the app was down, and it hands the pending work back within a second of the restarted app's worker reconnecting. The log below is usually scrolling before you can type:
+
+```text
+== APP - event-planner == >>> TOOL 2: Comparing venues over ~30s. KILL THE APP NOW to test crash recovery (POST /crash/kill, or kill -9). It resumes on restart.
+== APP - event-planner == >>> TOOL 2 COMPLETE: Grand Ballroom is the best option
+== APP - event-planner == >>> TOOL 3: Confirming booking...
+== APP - event-planner == >>> TOOL 3 COMPLETE: Booking confirmed for Grand Ballroom
+```
+
+`>>> TOOL 1: Searching venues in 'Austin'...` does **not** appear again, and neither does the LLM call that chose it. Those activities had completed and Catalyst had recorded their results, so the replay took the recorded values. Only the activity that was interrupted runs a second time.
+
+**Collect the answer.** The run recovered on its own, but the crash took the connection that was waiting for its result: the `/crash/run` request you sent before the kill died with the process, and its answer had nowhere to go. Send the **identical** request once more to open a new connection to the run that already finished:
 
 **macOS/Linux (curl):**
 
@@ -181,18 +192,9 @@ curl -X POST http://localhost:5050/crash/run \
 Invoke-RestMethod -Method Post -Uri 'http://localhost:5050/crash/run' -ContentType 'application/json' -Body '{"id": "gala-42", "prompt": "Find a venue in Austin for a company gala"}'
 ```
 
-The run resumes the moment the restarted app's worker reconnects, so the log below may already be scrolling before you send anything. The re-issued request attaches to that run and returns its recorded answer in `result`:
+Because the instance already exists, this call attaches to the run you started before the crash instead of starting a second one, and the app logs `Attaching to the existing run gala-42` to say so. It resumes nothing, because nothing was waiting: it reads back the answer that run recorded, in `result`.
 
-```text
-== APP - event-planner == >>> TOOL 2: Comparing venues over ~30s. KILL THE APP NOW to test crash recovery (POST /crash/kill, or kill -9). It resumes on restart.
-== APP - event-planner == >>> TOOL 2 COMPLETE: Grand Ballroom is the best option
-== APP - event-planner == >>> TOOL 3: Confirming booking...
-== APP - event-planner == >>> TOOL 3 COMPLETE: Booking confirmed for Grand Ballroom
-```
-
-`>>> TOOL 1: Searching venues in 'Austin'...` does **not** appear again, and neither does the LLM call that chose it. Those activities had completed and Catalyst had recorded their results, so the replay took the recorded values. Only the activity that was interrupted runs a second time.
-
-`/crash/run` always answers in the same JSON shape, `{"id", "result", "message"}`: a `200` carries the agent's answer in `result`, while a `202` (the wait budget elapsed before the run finished) carries the attach instruction in `message` instead. The `202` is not a failure: re-issue the same request to attach again. A request with a missing or blank `id` is a `400` whose `message` is `id is required`.
+`/crash/run` always answers in the same JSON shape, `{"id", "result", "message"}`: a `200` carries the agent's answer in `result`, while a `202` (the wait budget elapsed before the run finished) carries the attach instruction in `message` instead. The `202` is not a failure: send the same request again to attach again. A request with a missing or blank `id` is a `400` whose `message` is `id is required`.
 
 > The final sentence the agent writes is composed by the model, so running the demo again under a **new** ID can produce different prose from identical tool results. Re-using `gala-42` cannot: the killed call never returned a body, and the re-issued call replays that instance's recorded output. Either way, the proof to read is the app log and the execution trace in the console, not the prose. The crash demos in the [workflow quickstarts](../../workflow) return a deterministic answer instead, because they run no model at all.
 

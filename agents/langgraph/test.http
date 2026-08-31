@@ -8,7 +8,9 @@ Content-Type: application/json
 
 ### Crash Recovery: run the graph under an ID you own
 ### Blocks for ~30s while step 2 runs. Kill the app during that window with the
-### request below, restart, then send this exact request again.
+### request below. Restarting the app is what recovers the run; send this exact
+### request again only to read back its answer, because the crash killed the
+### connection that was waiting for one.
 POST http://localhost:8001/crash/run
 Content-Type: application/json
 

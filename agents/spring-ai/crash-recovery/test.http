@@ -1,5 +1,7 @@
 ### 1. Book under an id you own. Blocks ~30s while the slow tool "commits".
-###    Kill the app during this window (request below), then restart and re-send this exact request.
+###    Kill the app during this window (request below). Restarting the app is what recovers the run;
+###    re-send this exact request only to read back its answer, because the crash killed the
+###    connection that was waiting for one.
 POST http://localhost:8080/crash/run
 Content-Type: application/json
 

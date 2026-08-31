@@ -89,8 +89,11 @@ curl "http://localhost:8080/history?conversationId=alice"
 # ["USER: Book a flight to Oslo, reference OSLO-1"]
 ```
 
-Now **re-issue the same call with the same instance id**. It attaches to the resumed workflow, the
-call returns successfully, and *only now* does the memory advisor's `after` phase record the answer:
+The workflow itself already recovered when you restarted the app: it needed no request to resume, and
+it is the *memory write* that is still missing. That write only happens when a call returns, so it needs
+a live caller. Send **the same call with the same instance id** again. It attaches to the recovered
+workflow, the call returns successfully, and *only now* does the memory advisor's `after` phase record
+the answer:
 
 ```bash
 curl -X POST "http://localhost:8080/chat?id=trip-1&conversationId=alice&message=Book%20a%20flight%20to%20Oslo,%20reference%20OSLO-1"

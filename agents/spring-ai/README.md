@@ -14,7 +14,7 @@ starting over. On Catalyst the workflow state store is managed for you — no co
 | Quickstart | What it shows |
 |------------|---------------|
 | [event-planner](event-planner/) | The drop-in basics: a 3-tool Event Planner agent. Tool 2 crashes the process; on restart the workflow **auto-resumes** from the checkpoint — completed steps are replayed, not re-run. Mirrors the [Microsoft Agent Framework](../microsoft-dotnet/) quickstart. |
-| [crash-recovery](crash-recovery/) | The idempotency story: schedules under a **caller-owned instance id**. Kill the app mid-booking, restart, and re-issue the same id — the call **attaches** to the resumed run and returns the same confirmation code instead of booking twice. |
+| [crash-recovery](crash-recovery/) | The idempotency story: schedules under a **caller-owned instance id**. Kill the app mid-booking and restart it, and the run recovers on its own. Calling again with the same id then **attaches** to that run and returns the same confirmation code instead of booking twice. |
 | [durable-memory](durable-memory/) | Where the durability boundary sits: durable chat with a `MessageChatMemoryAdvisor`. Spring AI runs advisors **synchronously**, so the memory advisor's response phase (saving the answer) runs only **after a successful call** — a crash keeps the workflow but not the answer, until you re-attach. |
 
 Start with **event-planner** for the "add the starter, get durability" experience, then

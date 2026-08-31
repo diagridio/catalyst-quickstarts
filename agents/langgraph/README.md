@@ -227,7 +227,7 @@ The endpoint calls `os._exit(1)`, so the process is gone before it can answer an
 
 The workflow instance `gala-42` is unaffected. It lives in Catalyst, not in the process you just killed.
 
-### 7. Restart and re-issue
+### 7. Restart the app
 
 Restart with the same command as step 4:
 
@@ -235,7 +235,7 @@ Restart with the same command as step 4:
 uv run diagrid dev run -f dev-crash-test.yaml --approve
 ```
 
-The run resumes by itself. No HTTP request is involved: as soon as the restarted app's worker reconnects, Catalyst hands `gala-42` back to it, `compare_options` starts over from the beginning, and about 30 seconds later the graph finishes. Watch the app log, where all of this happens before you send anything:
+**That is the whole recovery. You do not have to send anything.** The run resumes by itself, and no HTTP request is involved: as soon as the restarted app's worker reconnects, Catalyst hands `gala-42` back to it, `compare_options` starts over from the beginning, and about 30 seconds later the graph finishes. Watch the app log, where all of this happens before you send anything:
 
 ```text
 == APP - schedule-planner == >>> STEP 2: Comparing venue options over ~30s. KILL THE APP NOW to test crash recovery (POST /crash/kill, or kill -9). It resumes on restart.
@@ -246,7 +246,9 @@ The run resumes by itself. No HTTP request is involved: as soon as the restarted
 
 `check_venues` is **not** re-executed: its `STEP 1` lines do not appear a second time. That node had completed and Catalyst had recorded its result, so the Dapr workflow engine replayed the saved value instead of running the node again. Only the node that was interrupted runs twice.
 
-The crash also killed the request that was waiting for the answer, so once those lines have appeared, send the **identical** request from step 5 again to collect the recorded answer. Because the instance already exists, this call attaches to it rather than starting a second one, and the handler says so:
+### 8. Collect the answer
+
+The run recovered on its own, but the crash also killed the request that was waiting for its answer, and that answer had nowhere to go. Once the lines above have appeared, send the **identical** request from step 5 once more to open a new connection to the run that already finished. Because the instance already exists, this call attaches to it rather than starting a second one, and the handler says so:
 
 **macOS/Linux (curl):**
 
@@ -268,7 +270,7 @@ Invoke-RestMethod -Method Post -Uri 'http://localhost:8001/crash/run' -ContentTy
 
 That is the last line of the demo. If you send the request earlier, while `compare_options` is still re-running, the attach line lands in the middle of the log instead and the call blocks until the graph finishes.
 
-The reply uses the one JSON shape every crash demo in this repo returns, `{"id", "result", "message"}`. If the run has already finished, the recorded final output of the graph comes back in `result` with `message` null. If the wait budget elapses first, the same shape comes back as a `202` with `result` null and the attach instruction in `message`. That is not a failure: re-issue the same request to attach again.
+The reply uses the one JSON shape every crash demo in this repo returns, `{"id", "result", "message"}`. If the run has already finished, the recorded final output of the graph comes back in `result` with `message` null. If the wait budget elapses first, the same shape comes back as a `202` with `result` null and the attach instruction in `message`. That is not a failure: send the same request again to attach again.
 
 The length of `compare_options` is configurable through the `CRASH_DELAY_SECONDS` environment variable, which defaults to 30. Set it lower to shorten the window, or higher if you need more time to aim.
 

@@ -8,7 +8,9 @@ Content-Type: application/json
 
 ### Crash Recovery: run under an ID you own
 ### Blocks while tool 2 compares venues for ~30s. Kill the app during that window
-### with the request below, restart, then send this exact request again.
+### with the request below. Restarting the app is what recovers the run; send this
+### exact request again only to read back its answer, because the crash killed the
+### connection that was waiting for one.
 POST http://localhost:5050/crash/run
 Content-Type: application/json
 
