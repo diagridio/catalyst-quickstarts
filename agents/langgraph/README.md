@@ -194,9 +194,21 @@ Go to the terminal where you started `uv run diagrid dev run`. `check_venues` co
 == APP - schedule-planner == >>> STEP 2: Comparing venue options over ~30s. KILL THE APP NOW to test crash recovery (POST /crash/kill, or kill -9). It resumes on restart.
 ```
 
+**Two terminals instead of three.** The request takes an optional `kill_after_seconds`. Send it and the app halts *itself* that many seconds into the run, at a known point inside `compare_options`' window, so you never have to aim a kill at a moving target:
+
+```bash
+curl -X POST http://localhost:8001/crash/run \
+  -H "Content-Type: application/json" \
+  -d '{"id": "gala-42", "topic": "company gala on March 15", "kill_after_seconds": 8}'
+```
+
+In PowerShell, add the same `"kill_after_seconds": 8` to the body. Send this instead of the request above and skip step 6: the app crashes on its own. Leave the field out and nothing changes, and you crash the app yourself. Either way the rest of the walkthrough is identical.
+
+Keep the value below `CRASH_DELAY_SECONDS` (30 by default) so the crash lands inside `compare_options` rather than after the graph has finished. The clock starts when `compare_options` starts, not when the request arrives, so the budget is measured against that node's own sleep and does not have to cover the model turn and `check_venues` ahead of it. That is also why the field is safe to send on the re-issue in step 8: the timer only starts when the node actually runs, and a call that attaches to an existing run replays the recorded result instead of re-invoking it.
+
 ### 6. Crash the app
 
-From a third terminal, while `compare_options` is still running:
+Skip this step if you sent `kill_after_seconds` in step 5. Otherwise, from a third terminal, while `compare_options` is still running:
 
 > **`POST /crash/kill` is demo scaffolding. Do not copy it into a real service.**
 > It is an unauthenticated endpoint that lets any caller that can reach the port

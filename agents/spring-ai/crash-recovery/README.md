@@ -74,9 +74,31 @@ curl -X POST "http://localhost:8080/crash/run" \
 Watch the app log for the `>>> commitReservation(ABC123)` line, which announces the ~30s window and
 tells you to kill the app now.
 
+**Two terminals instead of three.** The request takes an optional `kill_after_seconds`. Send it and the
+app halts *itself* that many seconds into the booking, at a known point inside the window, so you never
+have to aim a kill at a moving target:
+
+```bash
+curl -X POST "http://localhost:8080/crash/run" \
+  -H "Content-Type: application/json" \
+  -d '{"id":"trip-42","reference":"ABC123","kill_after_seconds":8}'
+```
+
+Send this instead of the request above and skip step 3: the app crashes on its own. Leave the field out
+and nothing changes, and you crash the app yourself from Terminal B. Either way the rest of the
+walkthrough is identical.
+
+Keep the value below `crash-recovery.delay-seconds` (30 by default) so the crash lands inside the
+booking rather than after it has finished. The clock starts when `commitReservation` starts, not when
+the request arrives, so the budget is measured against that tool's own sleep and does not have to cover
+the LLM turn ahead of it. That is also why the field is safe to send on the re-issue in *Collect the
+answer*: the timer only starts when the tool actually runs, and a call that attaches to an existing run
+replays the recorded result instead of re-invoking it.
+
 ### 3. Crash the app mid-call
 
-From **Terminal B**, during that window:
+Skip this step if you sent `kill_after_seconds` in step 2. Otherwise, from **Terminal B**, during that
+window:
 
 > **`POST /crash/kill` is demo scaffolding. Do not copy it into a real service.**
 > It is an unauthenticated endpoint that lets any caller that can reach the port

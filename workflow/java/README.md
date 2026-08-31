@@ -252,7 +252,19 @@ In the terminal running `diagrid dev run`, the fast activity completes and the s
 == APP - order-workflow == Committing reservation ABC123 over ~30s. KILL THE APP NOW to test crash recovery (POST /crash/kill, or kill -9). It resumes on restart.
 ```
 
+**Two terminals instead of three.** The request takes an optional `kill_after_seconds`. Send it and the app halts *itself* that many seconds into the run, at a known point inside the window, so you never have to aim a kill at a moving target:
+
+```bash
+curl -i -X POST http://localhost:5001/crash/run -H "Content-Type: application/json" -d '{"id":"trip-42", "reference":"ABC123", "kill_after_seconds": 8}'
+```
+
+In PowerShell, add the same `"kill_after_seconds": 8` to the body. Send this instead of the request above and skip 7.2 entirely: the app crashes on its own. Leave the field out and nothing changes, and you crash the app yourself in 7.2. Either way the rest of the walkthrough is identical.
+
+The value has to land inside the slow activity's window, so keep it below `CRASH_DELAY_SECONDS` (30 by default). It is also safe to send on the re-issue in 7.4: a call that attaches to an existing run never arms a second kill.
+
 ### 7.2 Crash the app mid-run
+
+**Skip this step if you sent `kill_after_seconds` in 7.1.** The app crashes itself, and there is nothing to do here.
 
 > **`POST /crash/kill` is demo scaffolding. Do not copy it into a real service.**
 > It is an unauthenticated endpoint that lets any caller that can reach the port

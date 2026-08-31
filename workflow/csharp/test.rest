@@ -40,6 +40,8 @@ POST http://localhost:5001/workflow/terminate/{{instanceId}}
 # because the crash killed the connection that was waiting for one. Use an id you
 # have not used before: an id that already names a finished run just attaches to it
 # and answers instantly, with no crash to see.
+# Add "kill_after_seconds": 8 to the body and the app halts itself 8s in, so you
+# can skip the kill request below and run the demo in two terminals.
 POST http://localhost:5001/crash/run
 Content-Type: application/json
 

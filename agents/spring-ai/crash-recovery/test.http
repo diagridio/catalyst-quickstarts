@@ -2,6 +2,8 @@
 ###    Kill the app during this window (request below). Restarting the app is what recovers the run;
 ###    re-send this exact request only to read back its answer, because the crash killed the
 ###    connection that was waiting for one.
+###    Add "kill_after_seconds": 8 to the body and the app halts itself 8s in, so you
+###    can skip the kill request below and run the demo in two terminals.
 POST http://localhost:8080/crash/run
 Content-Type: application/json
 

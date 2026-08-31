@@ -448,6 +448,11 @@ def check(api: str, language: str, repo_root: Path) -> list[str]:
 # field, or renames `result`, fails this check instead of being quietly accepted.
 _CRASH_BODY_KEYS = {"id", "result", "message"}
 _CRASH_PAYLOAD_KEYS = {"id", "reference"}
+# Optional on the wire, so optional here: `kill_after_seconds` arms the app to crash
+# itself instead of the reader aiming POST /crash/kill at a 30-second window. The suite
+# drives the manual kill, not this field, so it is allowed rather than required. A
+# required-key check alone would reject the READMEs that document it.
+_CRASH_PAYLOAD_OPTIONAL_KEYS = {"kill_after_seconds"}
 
 
 def _check_crash_section(api: str, language: str, markdown: str, where: str) -> list[str]:
@@ -485,16 +490,35 @@ def _check_crash_section(api: str, language: str, markdown: str, where: str) -> 
         payload = call["payload"]
         if payload is None:
             continue
-        if set(payload) != _CRASH_PAYLOAD_KEYS:
+        missing = _CRASH_PAYLOAD_KEYS - set(payload)
+        unknown = set(payload) - _CRASH_PAYLOAD_KEYS - _CRASH_PAYLOAD_OPTIONAL_KEYS
+        if missing or unknown:
             problems.append(
                 f"{where}: documented /crash/run payload has keys {sorted(payload)}, "
-                f"expected {sorted(_CRASH_PAYLOAD_KEYS)}"
+                f"expected {sorted(_CRASH_PAYLOAD_KEYS)} plus optionally "
+                f"{sorted(_CRASH_PAYLOAD_OPTIONAL_KEYS)}"
             )
         if payload.get("reference") != qs.CRASH_REFERENCE:
             problems.append(
                 f"{where}: documented reference {payload.get('reference')!r} is not the "
                 f"harness reference {qs.CRASH_REFERENCE!r}"
             )
+        # A self-kill that lands after the slow activity has already finished shows the
+        # reader a completed run and no crash at all, so the documented value has to fall
+        # inside the window it is aimed at.
+        kill_after = payload.get("kill_after_seconds")
+        if kill_after is not None:
+            if not isinstance(kill_after, int) or kill_after <= 0:
+                problems.append(
+                    f"{where}: documented kill_after_seconds {kill_after!r} is not a "
+                    f"positive integer"
+                )
+            elif kill_after >= int(qs.CRASH_DELAY_SECONDS):
+                problems.append(
+                    f"{where}: documented kill_after_seconds {kill_after} is not inside "
+                    f"the slow activity's {qs.CRASH_DELAY_SECONDS}s window, so the crash "
+                    f"would land after the run had already finished"
+                )
 
     # The documented response body, which is where the three-way drift lived.
     for body in extract_json_bodies(markdown, "7"):

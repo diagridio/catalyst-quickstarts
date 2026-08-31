@@ -133,7 +133,19 @@ Invoke-RestMethod -Method Post -Uri 'http://localhost:5050/crash/run' -ContentTy
 
 **VS Code REST Client (any OS):** Open [`test.http`](./test.http) and click *Send Request* above the *Crash Recovery: run under an ID you own* request.
 
-**Crash the app.** From a third terminal, while tool 2 is still comparing:
+**Two terminals instead of three.** The request takes an optional `kill_after_seconds`. Send it and the app halts *itself* that many seconds into the run, at a known point inside tool 2's window, so you never have to aim a kill at a moving target:
+
+```bash
+curl -X POST http://localhost:5050/crash/run \
+  -H "Content-Type: application/json" \
+  -d '{"id": "gala-42", "prompt": "Find a venue in Austin for a company gala", "kill_after_seconds": 8}'
+```
+
+In PowerShell, add the same `"kill_after_seconds": 8` to the body. Send this instead of the request above and skip the kill step below: the app crashes on its own. Leave the field out and nothing changes, and you crash the app yourself. Either way the rest of the walkthrough is identical.
+
+Keep the value below `CRASH_DELAY_SECONDS` (30 by default) so the crash lands inside tool 2 rather than after the run has finished. The clock starts when tool 2 starts, not when the request arrives, so the budget is measured against tool 2's own delay and does not have to cover the LLM turn and tool 1 ahead of it. That is also why the field is safe to send on the re-issue below: the timer only starts when tool 2 actually runs, and a call that attaches to an existing run replays the recorded result instead of re-invoking it.
+
+**Crash the app.** Skip this if you sent `kill_after_seconds` above. Otherwise, from a third terminal, while tool 2 is still comparing:
 
 > **`POST /crash/kill` is demo scaffolding. Do not copy it into a real service.**
 > It is an unauthenticated endpoint that lets any caller that can reach the port
