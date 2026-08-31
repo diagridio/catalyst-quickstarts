@@ -44,12 +44,23 @@ var tools = new List<AITool>
         // to aim at and they have to crash the app themselves. Armed, the app does that for them
         // at a known point, so the instruction would be wrong and the ~delay would be read as
         // the wait.
-        var armed = SelfKill.Seconds;
+        //
+        // Read AND clear in one step, so one recorded request arms exactly one execution. A call
+        // that records the field but never gets here would otherwise leak the value into the next
+        // run in the same process and kill an app that had never asked for it.
+        var armed = SelfKill.Consume();
         Console.WriteLine(armed > 0
             ? $">>> TOOL 2: Comparing venues over ~{delaySeconds}s, but this process kills itself"
                 + $" {armed}s into the run, as asked by kill_after_seconds. It resumes on restart."
             : $">>> TOOL 2: Comparing venues over ~{delaySeconds}s. KILL THE APP NOW to"
                 + " test crash recovery (POST /crash/kill, or kill -9). It resumes on restart.");
+        if (armed > 0)
+        {
+            // Armed here, where tool 2 actually starts, and not at the request. This tool is a
+            // durable activity, so it runs on a genuine first execution and not on an attach, and
+            // the fresh process's 0 is what stops the resumed tool arming a second kill.
+            SelfKill.Arm(armed);
+        }
         await Task.Delay(TimeSpan.FromSeconds(delaySeconds));
         Console.WriteLine(">>> TOOL 2 COMPLETE: Grand Ballroom is the best option");
         return "Grand Ballroom is the best option. Now call step_three_confirm.";
@@ -143,13 +154,14 @@ app.MapPost("/crash/run", async (CrashRunRequest req, DaprWorkflowClient workflo
                 input: req.Prompt,
                 instanceId: id);
 
-            // Armed here and nowhere else: only on the branch that actually scheduled a run,
-            // and only after the schedule call returned. In the else branch below it would kill
-            // the app every time the reader tried to read the answer.
-            if (req.KillAfterSeconds is int killAfter and > 0)
-            {
-                ArmSelfKill(killAfter);
-            }
+            // Recorded here and nowhere else: only on the branch that actually scheduled a run,
+            // so an attaching call cannot even leave a note behind. Recording only, though. The
+            // timer starts inside tool 2, which is the one place that runs on a first execution
+            // and not on an attach. See SelfKill.Note.
+            // Recorded on every scheduling call, and one without the field records 0, which
+            // disarms. The clear matters because a value left set by an earlier call would be
+            // consumed by this run's tool 2 and kill an app that had never asked for it.
+            SelfKill.Note(req.KillAfterSeconds is int killAfter and > 0 ? killAfter : 0);
         }
         else
         {
@@ -194,31 +206,6 @@ app.MapPost("/crash/run", async (CrashRunRequest req, DaprWorkflowClient workflo
     }
 });
 
-// Kill this process `delaySeconds` from now, on a background task.
-//
-// What lets the demo run in two terminals instead of three. /crash/run blocks for the length
-// of tool 2, so the shell that starts a run cannot also stop the app, and the kill has always
-// needed a terminal of its own. Arming it here removes that terminal AND the race: the crash
-// lands at a known point inside the window rather than wherever the reader's reflexes put it.
-static void ArmSelfKill(int delaySeconds)
-{
-    // Tell tool 2, so the line it prints names this delay rather than the delay it was going to
-    // wait out. That second number is the one the reader used to see, and it is not the one they
-    // wait: the app dies partway through it.
-    SelfKill.Note(delaySeconds);
-
-    // Discarded on purpose: this task is a fuse, not something to await. Nothing can observe
-    // its completion, because its last act is to end the process.
-    _ = Task.Run(async () =>
-    {
-        await Task.Delay(TimeSpan.FromSeconds(delaySeconds));
-        // Console.WriteLine plus an explicit flush, for the reason /crash/kill gives below.
-        Console.WriteLine($">>> crash: killing this process {delaySeconds}s into the run, as asked by kill_after_seconds");
-        Console.Out.Flush();
-        Process.GetCurrentProcess().Kill();
-    });
-}
-
 // Simulate a crash: kill this process outright, like SIGKILL. Demo only.
 // POST /crash/kill
 // Returns: nothing. The process is gone before a response can be written, so the caller
@@ -250,16 +237,17 @@ record CrashRunRequest(
     [property: JsonPropertyName("kill_after_seconds")] int? KillAfterSeconds = null);
 
 /// <summary>
-/// Whether POST /crash/run has armed the app to kill itself, and how far into the run.
+/// Whether POST /crash/run asked the app to kill itself, and how far into tool 2.
 ///
-/// Read only to compose tool 2's log line, which has to name the wait the reader actually gets:
-/// with a self-kill armed the tool never reaches the end of its delay, so announcing that delay
-/// on its own puts a number in the log that nothing honours.
+/// Written by the endpoint through Note, then read by tool 2 both to compose its log line (which
+/// has to name the wait the reader actually gets, because with a self-kill armed the tool never
+/// reaches the end of its delay) and to start the timer through Arm.
 ///
-/// A type rather than a captured local, because ArmSelfKill is a static local function and
-/// cannot capture. One armed kill takes the whole process down, so there is nothing to key by
-/// run, and the fresh process after the restart starts at 0 again, which is right: nothing is
-/// armed on the replay.
+/// A type rather than a captured local, because the endpoint and the tool lambda are written in
+/// separate scopes and both need it. One armed kill takes the whole process down, so there is
+/// nothing to key by run, and the fresh process after the restart starts at 0 again. That reset
+/// is what makes the replay safe: the resumed tool 2 re-runs from the start, and it must not arm
+/// a second kill when it does.
 ///
 /// volatile, and an int rather than an int?: the write happens on a request thread and the read
 /// on a workflow worker thread, and a single int cannot be read half-written the way a nullable
@@ -268,19 +256,57 @@ record CrashRunRequest(
 /// </summary>
 static class SelfKill
 {
-    static volatile int seconds;
-
-    /// <summary>Seconds into the run at which the app kills itself, or 0 when nothing is armed.</summary>
-    public static int Seconds => seconds;
+    // Not volatile: Interlocked.Exchange cannot take a ref to a volatile field, and it already
+    // carries the full fence this needs on both the write and the consuming read.
+    static int seconds;
 
     /// <summary>
-    /// Record that this process will kill itself, so tool 2 can say so.
-    ///
-    /// Called just after the schedule, and tool 2 cannot normally log before that: the worker has
-    /// to be handed the work item and run tool 1 first. If it ever did win the race the line would
-    /// read as though nothing were armed, which is a stale message rather than a broken demo.
+    /// Read the recorded delay AND clear it, in one step, so one recorded request arms exactly one
+    /// execution. Leaving it set is a live bug: a call that records the field but never reaches
+    /// tool 2 would let the value survive to the next run in the same process and kill an app that
+    /// had never asked for it.
     /// </summary>
-    public static void Note(int delaySeconds) => seconds = delaySeconds;
+    public static int Consume() => Interlocked.Exchange(ref seconds, 0);
+
+    /// <summary>
+    /// Record that the caller asked this process to kill itself, for tool 2 to act on when it
+    /// actually runs. Recording only: no timer starts here.
+    ///
+    /// The timer starts inside the tool rather than at the request, for two reasons. Tool 2 is a
+    /// durable activity, so it is the one thing that runs on a genuine first execution and not on
+    /// an attach: an attach to a finished run replays the recorded result instead of re-invoking
+    /// it. And it starts the clock after the LLM turn and tool 1, so the budget is measured
+    /// against tool 2's own delay instead of having to cover everything that precedes it. A slow
+    /// model provider used to be able to kill the app before any activity had completed, which
+    /// leaves the replay with nothing to show.
+    /// </summary>
+    public static void Note(int delaySeconds) => Interlocked.Exchange(ref seconds, delaySeconds);
+
+    /// <summary>
+    /// Kill this process <paramref name="delaySeconds"/> from now, on a background task.
+    ///
+    /// What lets the demo run in two terminals instead of three. /crash/run blocks for the length
+    /// of tool 2, so the shell that starts a run cannot also stop the app, and the kill has always
+    /// needed a terminal of its own. Arming it removes that terminal AND the race: the crash lands
+    /// at a known point inside the window rather than wherever the reader's reflexes put it.
+    /// </summary>
+    public static void Arm(int delaySeconds)
+    {
+        // Discarded on purpose: this task is a fuse, not something to await. Nothing can observe
+        // its completion, because its last act is to end the process.
+        _ = Task.Run(async () =>
+        {
+            await Task.Delay(TimeSpan.FromSeconds(delaySeconds));
+            // Console.WriteLine plus an explicit flush, for the reason /crash/kill gives: the
+            // default console logger hands the line to a background thread, and the kill beats
+            // that thread to it, so the one line explaining the death never prints.
+            Console.WriteLine($">>> crash: killing this process {delaySeconds}s into the run, as asked by kill_after_seconds");
+            Console.Out.Flush();
+            // Kill(), not Environment.Exit(): Exit runs the ProcessExit handlers, which makes it
+            // a controlled shutdown wearing a crash's name.
+            Process.GetCurrentProcess().Kill();
+        });
+    }
 }
 
 /// <summary>

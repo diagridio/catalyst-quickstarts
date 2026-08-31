@@ -59,12 +59,19 @@ public class CrashRecoveryController {
     }
 
     String reference = request.reference() == null ? "ABC123" : request.reference();
-    // Armed before the blocking call below, because that call does not return until the run
-    // finishes: arming after it would arm a timer for a run that is already over.
+    // Recorded before the blocking call below, because that call does not return until the run
+    // finishes: recording after it would be recording for a run that is already over. Recording
+    // only, though. The timer starts inside the tool, which is the one place that runs on a first
+    // execution and not on an attach. See SlowBookingTools#noteSelfKill for why that matters:
+    // arming here fired on every call, including the re-issue the 202 below asks for.
+    //
+    // Recorded on EVERY call, and a call without the field records 0, which DISARMS. That clear is
+    // load-bearing, not tidiness. This sample cannot tell a scheduling call from an attaching one,
+    // so an attaching call records the field and then never runs the tool that would consume it.
+    // Without the clear the value survived to the next run and killed an app that had never asked
+    // for it, which a smoke test caught doing exactly that.
     Integer killAfter = request.killAfterSeconds();
-    if (killAfter != null && killAfter > 0) {
-      armSelfKill(killAfter);
-    }
+    SlowBookingTools.noteSelfKill(killAfter != null && killAfter > 0 ? killAfter : 0);
     try {
       String answer = agent.prompt()
           .user("Confirm the booking with reference " + reference + ".")
@@ -91,11 +98,12 @@ public class CrashRecoveryController {
    * and nothing changes, and you crash the app yourself from a second terminal with
    * {@code POST /crash/kill}.
    *
-   * <p>Unlike the workflow quickstarts, this sample cannot tell a scheduling call from an
-   * attaching one: the instance id goes to {@link DurableAdvisor} and the agent call blocks,
-   * so there is no state lookup to branch on. Send the field on the call that STARTS the run
-   * and not on a re-issue, or the re-issue will crash the app again before it can hand back
-   * the answer you asked for.
+   * <p>Safe to send on any call, including a re-issue. Unlike the workflow quickstarts, this sample
+   * cannot tell a scheduling call from an attaching one: the instance id goes to
+   * {@link DurableAdvisor} and the agent call blocks, so there is no state lookup to branch on.
+   * Rather than branch, the field is only recorded here and the timer starts inside the durable
+   * tool, which runs on a first execution and not on an attach. See
+   * {@link SlowBookingTools#noteSelfKill(int)}.
    */
   public record CrashRunRequest(
       String id,
@@ -109,40 +117,6 @@ public class CrashRecoveryController {
    * and a 500 carry {@code message} instead.
    */
   public record CrashRunResponse(String id, String result, String message) {
-  }
-
-  /**
-   * Halt the JVM {@code delaySeconds} from now, on a daemon thread.
-   *
-   * <p>What lets the demo run in two terminals instead of three. {@code /crash/run} blocks for
-   * the length of the slow tool, so the shell that starts a run cannot also stop the app, and
-   * the kill has always needed a terminal of its own. Arming it here removes that terminal AND
-   * the race: the crash lands at a known point inside the window rather than wherever the
-   * reader's reflexes put it.
-   *
-   * <p>The same {@code halt(137)} that {@code /crash/kill} uses, deliberately: halt skips the
-   * shutdown hooks, so this is an abrupt crash rather than a controlled one wearing a crash's
-   * name.
-   */
-  private void armSelfKill(int delaySeconds) {
-    // Tell the slow tool, so the line it prints names this delay rather than the sleep it was
-    // going to take. That sleep is the number the reader used to see, and it is not the one they
-    // wait: the app dies partway through it.
-    SlowBookingTools.noteSelfKill(delaySeconds);
-
-    Thread timer = new Thread(() -> {
-      try {
-        Thread.sleep(delaySeconds * 1000L);
-      } catch (InterruptedException e) {
-        Thread.currentThread().interrupt();
-        return;
-      }
-      LOG.warn(">>> crash: halting the JVM {}s into the run, as asked by kill_after_seconds",
-          delaySeconds);
-      Runtime.getRuntime().halt(137);
-    }, "crash-self-kill");
-    timer.setDaemon(true);
-    timer.start();
   }
 
   /** Simulate a crash: halt the JVM abruptly (skips shutdown hooks), like SIGKILL. Demo only. */

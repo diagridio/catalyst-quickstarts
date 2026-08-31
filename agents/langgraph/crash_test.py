@@ -36,15 +36,14 @@ def check_venues(state: PlannerState) -> dict:
     return {"results": state["results"] + [result]}
 
 
-# Seconds into the run at which POST /crash/run has armed the app to kill itself, or None
-# when nothing is armed. Set by arm_self_kill below and read only to compose step 2's line,
-# which has to name the wait the reader actually gets: with a self-kill armed the node never
-# reaches the end of its sleep, so announcing that sleep on its own puts a number in the log
-# that nothing honours.
+# Seconds into STEP 2's own run at which the app should kill itself, or None when nothing is
+# asked for. Set by note_self_kill below, then read by compare_options both to compose its log
+# line (which has to name the wait the reader actually gets) and to start the timer.
 #
 # A plain module-level value is enough. One armed kill takes the whole process down, so there
-# is nothing to key by run, and the fresh process after the restart starts at None again,
-# which is right: nothing is armed on the replay.
+# is nothing to key by run, and the fresh process after the restart starts at None again. That
+# reset is what makes the replay safe: the resumed step 2 re-runs from the start, and it must
+# not arm a second kill when it does.
 _self_kill_seconds: Optional[int] = None
 
 
@@ -55,10 +54,22 @@ def compare_options(state: PlannerState) -> dict:
     # Two messages, because the reader's next move differs. Un-armed, the window is theirs to
     # aim at and they have to crash the app themselves. Armed, the app does that for them at a
     # known point, so the instruction would be wrong and the ~delay would be read as the wait.
-    if _self_kill_seconds:
+    #
+    # Read AND clear, so one recorded request arms exactly one execution. A call that records the
+    # field but never gets here would otherwise leak the value into the next run in the same
+    # process and kill an app that had never asked for it. The GIL makes this pair atomic enough.
+    global _self_kill_seconds
+    armed, _self_kill_seconds = _self_kill_seconds, None
+    if armed:
         print(f">>> STEP 2: Comparing venue options over ~{delay}s, but this process kills "
-              f"itself {_self_kill_seconds}s into the run, as asked by kill_after_seconds. "
+              f"itself {armed}s into the run, as asked by kill_after_seconds. "
               "It resumes on restart.", flush=True)
+        # Armed here, where step 2 actually starts, and not at the request. This node is a
+        # durable activity, so it runs on a genuine first execution and not on an attach, and
+        # the fresh process's None is what stops the resumed node arming a second kill. It also
+        # starts the clock after the model turn and step 1 rather than before them, so the
+        # budget is measured against this node's own sleep.
+        _arm_self_kill(armed)
     else:
         print(f">>> STEP 2: Comparing venue options over ~{delay}s. KILL THE APP NOW to test "
               "crash recovery (POST /crash/kill, or kill -9). It resumes on restart.", flush=True)
@@ -139,14 +150,30 @@ class CrashRunRequest(BaseModel):
     kill_after_seconds: Optional[int] = None
 
 
-def arm_self_kill(delay_seconds: int) -> None:
+def note_self_kill(delay_seconds: Optional[int]) -> None:
+    """Record how far into step 2 this process should kill itself, for step 2 to act on when it
+    actually runs. Recording only: no timer starts here. Pass None to disarm.
+
+    The timer starts inside the node rather than at the request, for two reasons. The node is a
+    durable activity, so it is the one thing that runs on a genuine first execution and not on
+    an attach: an attach to a finished run replays the recorded result instead of re-invoking
+    it. And it starts the clock after the model turn and step 1, so the budget is measured
+    against step 2's own sleep instead of having to cover everything that precedes it. A slow
+    model provider used to be able to kill the app before any node had completed, which leaves
+    the replay with nothing to show.
+    """
+    global _self_kill_seconds
+    _self_kill_seconds = delay_seconds
+
+
+def _arm_self_kill(delay_seconds: int) -> None:
     """Kill this process `delay_seconds` from now, on a background thread.
 
     What lets the demo run in two terminals instead of three. POST /crash/run blocks for the
     length of step 2, so the shell that starts a run cannot also stop the app, and the kill
-    has always needed a terminal of its own. Arming it here removes that terminal AND the
-    race: the crash lands at a known point inside the window rather than wherever the
-    reader's reflexes put it.
+    has always needed a terminal of its own. Arming it removes that terminal AND the race: the
+    crash lands at a known point inside the window rather than wherever the reader's reflexes
+    put it.
 
     The same os._exit(1) that /crash/kill uses, deliberately. A gentler exit would make this
     a controlled shutdown wearing a crash's name.
@@ -154,16 +181,6 @@ def arm_self_kill(delay_seconds: int) -> None:
     A plain daemon thread rather than an asyncio task: os._exit needs no event loop, and a
     daemon thread can never hold the process open if the reader Ctrl+Cs during the countdown.
     """
-    # Tell step 2, so the line it prints names this delay rather than the sleep it was going
-    # to take. That sleep is the number the reader used to see, and it is not the one they
-    # wait: the app dies partway through it.
-    #
-    # Armed just after the schedule, and step 2 cannot normally log before that: the worker
-    # has to be handed the work item and run step 1 first. If it ever did win the race the
-    # line would read as though nothing were armed, which is a stale message, not a break.
-    global _self_kill_seconds
-    _self_kill_seconds = delay_seconds
-
     def _kill() -> None:
         time.sleep(delay_seconds)
         print(
@@ -210,11 +227,18 @@ async def crash_run(req: CrashRunRequest):
             )
             await anext(stream)
             await stream.aclose()
-            # Armed here and nowhere else: only on the branch that actually scheduled a run.
-            # On the attach branch below it would kill the app every time the reader tried to
-            # read the answer.
-            if req.kill_after_seconds and req.kill_after_seconds > 0:
-                arm_self_kill(req.kill_after_seconds)
+            # Recorded here and nowhere else: only on the branch that actually scheduled a run,
+            # so an attaching call cannot even leave a note behind. Recording only, though. The
+            # timer starts inside step 2, which is the one place that runs on a first execution
+            # and not on an attach. See note_self_kill.
+            # Recorded on every scheduling call, and one without the field records None, which
+            # disarms. The clear matters because a value left set by an earlier call would be
+            # consumed by this run's step 2 and kill an app that had never asked for it.
+            note_self_kill(
+                req.kill_after_seconds
+                if req.kill_after_seconds and req.kill_after_seconds > 0
+                else None
+            )
         else:
             print(f">>> Attaching to the existing run {req.id} instead of starting a second one",
                   flush=True)
