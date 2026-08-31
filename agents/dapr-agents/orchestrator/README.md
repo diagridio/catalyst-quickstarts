@@ -16,16 +16,15 @@ This quickstart demonstrates how to build an **orchestrator agent** using [Dapr 
 2. [Python 3.11–3.13](https://www.python.org/downloads/)
 3. [uv](https://docs.astral.sh/uv/getting-started/installation/) installed
 4. An [OpenAI API key](https://platform.openai.com/api-keys)
-5. A [Google API key](https://aistudio.google.com/)
-6. An [Anthropic API key](https://console.anthropic.com/settings/keys)
-7. All 8 specialist agents running (see [Running the Full Team](#running-the-full-team) below)
+5. An [Anthropic API key](https://console.anthropic.com/settings/keys) — only for the Claude photography agent
+6. All 8 specialist agents running (see [Running the Full Team](#running-the-full-team) below)
 
 ## Setup
 
 Install [uv](https://docs.astral.sh/uv/getting-started/installation/) if you don't have it already, then install the dependencies:
 
 ```bash
-cd dapr-agents/orchestrator
+cd agents/dapr-agents/orchestrator
 
 # uv creates and manages the virtual environment for you
 uv sync
@@ -41,12 +40,11 @@ metadata:
     value: "YOUR_OPENAI_API_KEY"
 ```
 
-Export your `GOOGLE_API_KEY`, `OPENAI_API_KEY`, and `ANTHROPIC_API_KEY` for adk, the catering/other agents, and the Claude photography agent respectively:
+Export your `OPENAI_API_KEY` for adk and the catering/other agents, and `ANTHROPIC_API_KEY` for the Claude photography agent:
 
 **macOS/Linux (bash/zsh):**
 
 ```bash
-export GOOGLE_API_KEY=""
 export OPENAI_API_KEY=""
 export ANTHROPIC_API_KEY=""
 ```
@@ -54,7 +52,6 @@ export ANTHROPIC_API_KEY=""
 **Windows (PowerShell):**
 
 ```powershell
-$env:GOOGLE_API_KEY = ""
 $env:OPENAI_API_KEY = ""
 $env:ANTHROPIC_API_KEY = ""
 ```
@@ -64,7 +61,7 @@ $env:ANTHROPIC_API_KEY = ""
 The orchestrator requires the specialist agents to be running and registered. Use the combined dev file to start all 9 services at once:
 
 ```bash
-cd dapr-agents/orchestrator
+cd agents/dapr-agents/orchestrator
 diagrid login
 uv run diagrid dev run -f dev-multi-agent-orchestration.yaml
 ```
