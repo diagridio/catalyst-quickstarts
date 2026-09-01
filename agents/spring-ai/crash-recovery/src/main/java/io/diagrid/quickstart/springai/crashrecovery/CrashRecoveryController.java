@@ -1,5 +1,7 @@
 package io.diagrid.quickstart.springai.crashrecovery;
 
+import java.util.regex.Pattern;
+
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.diagrid.springai.durable.boot.DurableAdvisor;
 import io.diagrid.springai.durable.client.DurableCallTimeoutException;
@@ -39,6 +41,9 @@ public class CrashRecoveryController {
 
   private static final Logger LOG = LoggerFactory.getLogger(CrashRecoveryController.class);
 
+  /** What a booking reference may contain. Must stay in step with {@link CannedChatModel}. */
+  private static final Pattern REFERENCE = Pattern.compile("[A-Za-z0-9_-]{1,64}");
+
   private final ChatClient agent;
 
   public CrashRecoveryController(@Qualifier("crashRecoveryAgent") ChatClient agent) {
@@ -59,6 +64,16 @@ public class CrashRecoveryController {
     }
 
     String reference = request.reference() == null ? "ABC123" : request.reference();
+    // Rejected rather than sanitised, because the reference is the demo's subject: the confirmation
+    // code is derived from it, and the README sells that code as proof the booking was not redone.
+    // The offline model reads the reference back out of the user message below with a character
+    // class narrow enough that nothing can break the JSON tool arguments it builds, and anything
+    // outside that class would silently fall back to ABC123 — committing a different booking than
+    // the caller asked for and reporting success for it. Better to say so.
+    if (!REFERENCE.matcher(reference).matches()) {
+      return ResponseEntity.badRequest().body(new CrashRunResponse(id, null,
+          "reference must be 1-64 characters from A-Z a-z 0-9 _ -"));
+    }
     // Recorded before the blocking call below, because that call does not return until the run
     // finishes: recording after it would be recording for a run that is already over. Recording
     // only, though. The timer starts inside the tool, which is the one place that runs on a first
@@ -91,7 +106,8 @@ public class CrashRecoveryController {
   }
 
   /**
-   * Request body of {@code POST /crash/run}. A null reference falls back to ABC123.
+   * Request body of {@code POST /crash/run}. A null reference falls back to ABC123, and one outside
+   * {@code [A-Za-z0-9_-]{1,64}} is a 400.
    *
    * <p>{@code kill_after_seconds} is optional. Send it and the app crashes itself that many
    * seconds in, so the whole demo runs in two terminals with no window to aim at; leave it out

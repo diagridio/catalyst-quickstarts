@@ -25,7 +25,9 @@ the durability boundary sits — the workflow, not Spring AI's caller-side advis
 
 1. [Diagrid CLI](https://docs.diagrid.io/catalyst/references/cli-reference/overview) installed
 2. [JDK 21](https://adoptium.net/) or later, and [Maven 3.9+](https://maven.apache.org/download.cgi)
-3. An [OpenAI API key](https://platform.openai.com/api-keys)
+3. An [OpenAI API key](https://platform.openai.com/api-keys), for **event-planner** and
+   **durable-memory**. **crash-recovery** ships an offline model and needs no account; set
+   `DIAGRID_QUICKSTART_MODEL=openai` there to run it against a real provider instead.
 
 Each quickstart has its own README with the full run steps.
 

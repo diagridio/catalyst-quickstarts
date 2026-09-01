@@ -17,12 +17,14 @@ booking), and a caller-owned instance id is what makes a retry safe.
 - **Re-attach to read the answer**: a later call with the same id attaches to the recovered workflow, with no duplicate work
 - **Idempotency**: the confirmation code is derived from the booking reference, so a re-attached call returns the *same* code: visible proof the booking was not redone
 - **Crash-safe tools**: a global `@Tool` bean is rediscovered on the restarted worker, so the resumed activity can run it
+- **No model account needed**: the app ships an offline model, so the whole walkthrough runs without an API key
 
 ## Prerequisites
 
 1. [Diagrid CLI](https://docs.diagrid.io/catalyst/references/cli-reference/overview) installed
 2. [JDK 21](https://adoptium.net/) or later, and [Maven 3.9+](https://maven.apache.org/download.cgi)
-3. An [OpenAI API key](https://platform.openai.com/api-keys)
+3. *(Optional)* An [OpenAI API key](https://platform.openai.com/api-keys), only if you want to run
+   against a real model provider instead of the offline one
 
 ## Setup
 
@@ -33,19 +35,33 @@ cd agents/spring-ai/crash-recovery
 mvn package -DskipTests
 ```
 
-### Set your API key
+### Use a real model (optional)
+
+**This quickstart needs no API key.** It is about durable execution rather than model quality, so it
+ships an offline model (`CannedChatModel`) that always books the reference you send and reports the
+confirmation code the tool returns. That is what makes the crash and the recovery the only moving
+parts, and it is why every run gives the same answer.
+
+To run against OpenAI instead, set both variables. The offline model announces itself in the startup
+log, so no such line means the app is talking to a real provider.
 
 **macOS/Linux (bash/zsh):**
 
 ```bash
+export DIAGRID_QUICKSTART_MODEL="openai"
 export OPENAI_API_KEY="your-key-here"
 ```
 
 **Windows (PowerShell):**
 
 ```powershell
+$env:DIAGRID_QUICKSTART_MODEL = "openai"
 $env:OPENAI_API_KEY = "your-key-here"
 ```
+
+On that path a missing or wrong key no longer stops the app from starting. The provider rejects the
+first request instead, and because the model call is a durable activity that failure is retried a few
+times before it surfaces, as a `500` whose `message` carries the provider's error.
 
 ## Running the Quickstart
 
@@ -151,12 +167,14 @@ because nothing was waiting. The response is the one JSON shape every crash demo
 }
 ```
 
-The model chooses the wording around it, but the code after `BK-` is derived from the reference, so it
-is the same code the killed call would have returned.
+The code after `BK-` is derived from the reference, so it is the same code the killed call would have
+returned. With the offline model the wording is the tool's own, so `result` is exactly the line above;
+a real provider chooses its own wording around the same code.
 
 If the call's wait budget elapses first, the same shape comes back as a `202` with `result` null and the
 attach instruction in `message`. That is not a failure: send the same request with the same id again to
-attach again. A request with a missing or blank `id` is a `400` whose `message` is `id is required`.
+attach again. A request with a missing or blank `id` is a `400` whose `message` is `id is required`,
+and so is one whose `reference` is outside `A-Z a-z 0-9 _ -` or longer than 64 characters.
 
 ## How It Works
 
@@ -170,6 +188,11 @@ attach again. A request with a missing or blank `id` is a `400` whose `message` 
 - On a re-issue with the same id, the durable runtime attaches to the existing instance instead of
   scheduling a new one. If the call's wait budget elapses it throws `DurableCallTimeoutException` with
   the instance id, so re-issue the same id to collect the result.
+- The **model itself is a durable activity**, which is why this app ships one rather than skipping it:
+  the agent's tool choice is the only path to `commitReservation`, so there is no crash window without
+  a model. [`CannedChatModel`](./src/main/java/io/diagrid/quickstart/springai/crashrecovery/CannedChatModel.java)
+  supplies that offline. It reads the turn from the conversation rather than from a counter, so the
+  activity is safe to re-enter after the restart.
 
 > **The instance id is a bearer handle you own**, so guard it like a primary key. A durable activity is
 > *at-least-once*, so make side-effecting tools idempotent by keying off a business value (here, the
