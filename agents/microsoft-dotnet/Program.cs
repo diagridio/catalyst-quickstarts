@@ -13,9 +13,6 @@ using OpenAI;
 
 var builder = WebApplication.CreateBuilder(args);
 
-var apiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY")
-    ?? throw new InvalidOperationException("OPENAI_API_KEY environment variable is required.");
-
 // How long step_two_compare takes. This is the window you kill the app in, so it has to be
 // long enough for a human to aim a second terminal at: three instantaneous tools give you
 // nothing to interrupt.
@@ -83,9 +80,53 @@ builder.Services.AddDaprAgents(registrations: options =>
     })
     .WithAgent(sp =>
     {
-        IChatClient chatClient = new OpenAIClient(apiKey)
-            .GetChatClient("gpt-4.1-2025-04-14")
-            .AsIChatClient();
+        // Canned by default: this quickstart is about durable execution, not model quality, so it
+        // ships an offline model and needs no account. An if/else is total by construction, so a
+        // mistyped variable lands on the canned model rather than on an error, and the log line
+        // below is what tells the reader that happened.
+        //
+        // Case-insensitive, to match the Spring AI sibling. That one has no choice: it maps this
+        // variable onto a Spring property whose own condition compares case-insensitively, so
+        // comparing exactly there left DIAGRID_QUICKSTART_MODEL=OpenAI matching two conditions and
+        // the app refusing to start. Nothing forces it here, but a reader who writes OpenAI meant
+        // OpenAI, and the two quickstarts should not disagree about what they typed.
+        //
+        // The key check lives in this branch rather than before builder.Build(): it is the branch
+        // that needs one, and it still fails at STARTUP rather than on the first request, because
+        // .WithCatalyst(...) below registers a hosted service that materializes every agent factory
+        // when the app starts. Drop that call and this lambda would first run inside the LLM
+        // activity instead, turning a startup failure into a workflow failure.
+        IChatClient chatClient;
+        if (string.Equals(
+            Environment.GetEnvironmentVariable("DIAGRID_QUICKSTART_MODEL"),
+            "openai",
+            StringComparison.OrdinalIgnoreCase))
+        {
+            // IsNullOrWhiteSpace, not a null check: on Unix an exported-but-empty variable reads
+            // back as "", which would sail past `?? throw` and fail deeper in the OpenAI client
+            // with a message about an argument rather than about the key.
+            var apiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY");
+            if (string.IsNullOrWhiteSpace(apiKey))
+            {
+                throw new InvalidOperationException(
+                    "OPENAI_API_KEY is required when DIAGRID_QUICKSTART_MODEL=openai.");
+            }
+            Console.WriteLine(">>> Using OpenAI (gpt-4.1-2025-04-14), as asked by"
+                + " DIAGRID_QUICKSTART_MODEL=openai.");
+            chatClient = new OpenAIClient(apiKey)
+                .GetChatClient("gpt-4.1-2025-04-14")
+                .AsIChatClient();
+        }
+        else
+        {
+            Console.WriteLine(">>> Using the canned offline model: no API key needed and the answer"
+                + " is always the same. Set DIAGRID_QUICKSTART_MODEL=openai (and export"
+                + " OPENAI_API_KEY) for a real provider.");
+            chatClient = new CannedChatClient();
+        }
+
+        // The instructions stay, and the canned client ignores them: they are what the OpenAI
+        // branch runs on, and what a reader swapping in another provider needs.
         return chatClient.AsAIAgent(
             instructions: """
                 You are an event planner. Call all three tools in sequence:

@@ -5,7 +5,8 @@ This quickstart demonstrates how to run a Microsoft Agent Framework agent as a d
 ## What This Quickstart Demonstrates
 
 - **Microsoft Agent Framework + Dapr Workflows**: Run a .NET agent with durable execution
-- **OpenAI via Microsoft.Extensions.AI**: Calls OpenAI directly through the `Microsoft.Extensions.AI.OpenAI` IChatClient
+- **No model account needed**: the app ships an offline model, so the whole walkthrough runs without an API key
+- **A real provider one variable away**: set `DIAGRID_QUICKSTART_MODEL=openai` and it calls OpenAI directly through the `Microsoft.Extensions.AI.OpenAI` IChatClient
 - **Caller-owned instance ID**: Schedule the agent run under an ID you choose, so you can find the same execution again
 - **Crash Recovery**: Kill the app mid-tool with a request; on restart, Catalyst resumes the run without redoing the tools that had already completed
 - **REST API**: Trigger the agent via an HTTP endpoint
@@ -14,7 +15,8 @@ This quickstart demonstrates how to run a Microsoft Agent Framework agent as a d
 
 1. [Diagrid CLI](https://docs.diagrid.io/references/catalyst/catalyst-cli-intro/) installed
 2. [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
-3. An [OpenAI API key](https://platform.openai.com/api-keys)
+3. *(Optional)* An [OpenAI API key](https://platform.openai.com/api-keys), only if you want to run
+   against a real model provider instead of the offline one
 
 ## Setup
 
@@ -25,17 +27,34 @@ cd agents/microsoft-dotnet
 dotnet build
 ```
 
-### Set your API key
+The offline model has unit tests. They are not needed to run the quickstart, but they are the fastest
+check that a change to it still calls the three tools in order:
+
+```bash
+dotnet test unit-tests
+```
+
+### Use a real model (optional)
+
+**This quickstart needs no API key.** It is about durable execution rather than model quality, so it
+ships an offline model (`CannedChatClient`) that calls the three tools in the order the demo needs
+and reports what the last one returned. That is what makes the crash and the recovery the only
+moving parts, and it is why every run gives the same answer. The venue city in the tool logs is
+fixed at `Austin` on this path, whatever prompt you send.
+
+To run against OpenAI instead, set both variables. The app logs which model it is using at startup.
 
 **macOS/Linux (bash/zsh):**
 
 ```bash
+export DIAGRID_QUICKSTART_MODEL="openai"
 export OPENAI_API_KEY="your-key-here"
 ```
 
 **Windows (PowerShell):**
 
 ```powershell
+$env:DIAGRID_QUICKSTART_MODEL = "openai"
 $env:OPENAI_API_KEY = "your-key-here"
 ```
 
@@ -208,7 +227,7 @@ Because the instance already exists, this call attaches to the run you started b
 
 `/crash/run` always answers in the same JSON shape, `{"id", "result", "message"}`: a `200` carries the agent's answer in `result`, while a `202` (the wait budget elapsed before the run finished) carries the attach instruction in `message` instead. The `202` is not a failure: send the same request again to attach again. A request with a missing or blank `id` is a `400` whose `message` is `id is required`.
 
-> The final sentence the agent writes is composed by the model, so running the demo again under a **new** ID can produce different prose from identical tool results. Re-using `gala-42` cannot: the killed call never returned a body, and the re-issued call replays that instance's recorded output. Either way, the proof to read is the app log and the execution trace in the console, not the prose. The crash demos in the [workflow quickstarts](../../workflow) return a deterministic answer instead, because they run no model at all.
+> On the offline model the final sentence is tool 3's own return string, so it is identical on every run and under every ID. Set `DIAGRID_QUICKSTART_MODEL=openai` and the model composes that sentence instead, and running the demo again under a **new** ID can then produce different prose from identical tool results. Re-using `gala-42` cannot, on either path: the killed call never returned a body, and the re-issued call replays that instance's recorded output. Either way, the proof to read is the app log and the execution trace in the console, not the prose.
 
 The length of tool 2 is configurable through the `CRASH_DELAY_SECONDS` environment variable, which defaults to 30. Set it lower to shorten the window, or higher if you need more time to aim.
 

@@ -99,7 +99,10 @@ SUITES = (
         # False until a live run and a mutation check prove it. See the harness
         # README's Limitations.
         "nightly": False,
-        "secrets": ("OPENAI_API_KEY",),
+        # Empty: the quickstart ships a canned offline model and reaches a real
+        # provider only when DIAGRID_QUICKSTART_MODEL=openai, which this suite does
+        # not set. Keep in step with SECRETS in agents_microsoft_dotnet.py.
+        "secrets": (),
     },
     {
         "suite": "agents/spring-ai/event-planner/tests/quickstart.robot",
