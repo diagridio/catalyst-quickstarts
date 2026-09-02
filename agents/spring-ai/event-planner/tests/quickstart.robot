@@ -13,7 +13,7 @@ whose documented flow interleaves CLI commands with HTTP calls: a request may
 carry `commands` to run first and a `log_marker` to wait for afterwards.
 
 Run it:
-  export DIAGRID_API_KEY=... OPENAI_API_KEY=...
+  export DIAGRID_API_KEY=...
   eval "$(bash tools/qs-tester/ci/project-name.sh agents-spring-ai-event-planner | grep '^PROJECT=')"
   bash tools/qs-tester/ci/login.sh
   cd tools/qs-tester
@@ -46,8 +46,8 @@ Java Spring-Ai-Event-Planner Quickstart
     ${qs}=      Get Quickstart
     ${log}=     Suite Log File    agents-spring-ai-event-planner    java
 
-    # A missing model key must fail here, before a project is created, rather
-    # than as a 401 from OpenAI several minutes later.
+    # Empty for this quickstart (canned offline model), but kept so that adding a
+    # secret to the data module cannot silently skip the check.
     FOR    ${secret}    IN    @{qs}[secrets]
         Require Env Var    ${secret}    agents/spring-ai/event-planner
     END

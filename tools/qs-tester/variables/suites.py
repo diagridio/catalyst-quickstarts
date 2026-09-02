@@ -158,11 +158,24 @@ SUITES = (
         "data": "agents_spring_ai_event_planner",
         "language": "java",
         "runtime": "java",
-        # False for the same reason as the two rows above: never run live, and
-        # this one's `status: 200` is expected to fail when it is. See the
-        # harness README's Limitations.
+        # False, and this one CANNOT be made True by fixing the suite. Verified
+        # live 2026-09-02: the quickstart now runs with no API key, TOOL 1 and
+        # TOOL 2 both fire, and then `EventPlannerTools.stepTwoCompare`'s
+        # unconditional `Runtime.getRuntime().halt(1)` kills the JVM, so the
+        # documented POST /run never returns at all (curl exits 000, port
+        # closed). The `status: 200` below is unreachable by design, not by
+        # accident: the README's walkthrough is to comment that line out and
+        # restart, which is a source edit no suite should make. Covering this
+        # flow needs the crash requested at runtime — which is exactly what the
+        # crash-recovery sibling's `kill_after_seconds` does, and why that row
+        # is the one carrying the crash coverage. See the harness README's
+        # Limitations.
         "nightly": False,
-        "secrets": ("OPENAI_API_KEY",),
+        # Empty: the quickstart ships a canned offline model (CannedChatModel.java)
+        # and reaches a real provider only when DIAGRID_QUICKSTART_MODEL=openai,
+        # which this suite does not set. Keep in step with SECRETS in
+        # agents_spring_ai_event_planner.py.
+        "secrets": (),
     },
 )
 

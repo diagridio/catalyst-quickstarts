@@ -67,7 +67,11 @@ CONNECTED_APPS = (("spring-ai-event-planner", 8080),)
 # and reading what the app logs when Catalyst probes it.
 CATALYST_PROBE_MARKERS = ()
 
-SECRETS = ("OPENAI_API_KEY",)
+# Empty: the quickstart ships a canned offline model (CannedChatModel.java) and
+# reaches a real provider only when DIAGRID_QUICKSTART_MODEL=openai, which this
+# suite does not set. Keep in step with the `secrets` entry in suites.py — one
+# without the other is a declaration that lies.
+SECRETS = ()
 
 # README "### 2. Trigger the Agent".
 #
@@ -75,15 +79,21 @@ SECRETS = ("OPENAI_API_KEY",)
 # deliberately crashes the process mid-request, so the curl call never returns a
 # result.
 #
-# `status` is NOT a transcription. This README documents no status code at all,
-# and `EventPlannerTools.stepTwoCompare` calls `Runtime.getRuntime().halt(1)`
-# before the controller returns, so a live run is more likely to see a connection
-# error than any status code. The 200 below is therefore an assumption that is
-# expected to fail on the first credentialed run, and it is left standing on
-# purpose: the value that replaces it has to come from an observed response.
-# Substituting a plausible-looking one is the guessing `field = None` in
-# agents_langgraph.py exists to refuse. Recorded in the harness README's
-# Limitations so that failure lands on a documented line.
+# `status` is NOT a transcription, and it is now known to be UNREACHABLE. This
+# README documents no status code, and `EventPlannerTools.stepTwoCompare` calls
+# `Runtime.getRuntime().halt(1)` unconditionally before the controller returns.
+# Measured 2026-09-02, running offline against the canned model: TOOL 1 and TOOL
+# 2 both fire and the JVM then dies mid-request, so curl exits 000 with the port
+# closed and there is no status code to record.
+#
+# The 200 is left standing on purpose rather than replaced with a passing
+# assertion. There is no response to transcribe, and encoding "the connection
+# dies" here would assert the crash as the quickstart's documented outcome when
+# the README's outcome is the RECOVERY — reached only by commenting the halt out,
+# a source edit no suite should make. So this suite stays red and `nightly:
+# False` in suites.py, and the crash coverage lives in the crash-recovery
+# sibling, whose `kill_after_seconds` makes the same crash a runtime request.
+# Recorded in the harness README's Limitations.
 REQUESTS = (
     {
         "method": "POST",

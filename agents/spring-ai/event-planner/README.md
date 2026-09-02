@@ -13,7 +13,8 @@ There is no durability code anywhere in it: adding the starter to the classpath 
 ## What This Quickstart Demonstrates
 
 - **Spring AI + Dapr Workflows**: run a Spring AI agent with durable execution, added by dependency rather than by durability code
-- **OpenAI via Spring AI**: calls OpenAI directly through the `spring-ai-starter-model-openai` `ChatClient`
+- **No model account needed**: the app ships an offline model, so the whole walkthrough runs without an API key
+- **Spring AI model providers**: the same `ChatClient` talks to OpenAI through `spring-ai-starter-model-openai` when you ask it to
 - **Crash Recovery**: tool 2 crashes the process; on restart, Catalyst resumes the workflow automatically — completed steps are not re-run
 - **REST API**: trigger the agent via an HTTP endpoint
 
@@ -21,7 +22,8 @@ There is no durability code anywhere in it: adding the starter to the classpath 
 
 1. [Diagrid CLI](https://docs.diagrid.io/catalyst/references/cli-reference/overview) installed
 2. [JDK 21](https://adoptium.net/) or later, and [Maven 3.9+](https://maven.apache.org/download.cgi)
-3. An [OpenAI API key](https://platform.openai.com/api-keys)
+3. *(Optional)* An [OpenAI API key](https://platform.openai.com/api-keys), only if you want to run
+   against a real model provider instead of the offline one
 
 ## Setup
 
@@ -32,19 +34,33 @@ cd event-planner
 mvn package -DskipTests
 ```
 
-### Set your API key
+### Use a real model (optional)
+
+**This quickstart needs no API key.** It is about durable execution rather than model quality, so it
+ships an offline model (`CannedChatModel`) that always calls the three tools in order and reports what
+the last one returned. That is what makes the crash and the recovery the only moving parts, and it is
+why every run gives the same answer.
+
+To run against OpenAI instead, set both variables. The offline model announces itself in the startup
+log, so no such line means the app is talking to a real provider.
 
 **macOS/Linux (bash/zsh):**
 
 ```bash
+export DIAGRID_QUICKSTART_MODEL="openai"
 export OPENAI_API_KEY="your-key-here"
 ```
 
 **Windows (PowerShell):**
 
 ```powershell
+$env:DIAGRID_QUICKSTART_MODEL = "openai"
 $env:OPENAI_API_KEY = "your-key-here"
 ```
+
+On that path a missing or wrong key no longer stops the app from starting. The provider rejects the
+first request instead, and because the model call is a durable activity that failure is retried a few
+times before it surfaces.
 
 ## Running the Quickstart
 
@@ -141,6 +157,13 @@ and execution continues from `step_two_compare`:
 - The **starter** records the agent under the app id in `application.properties`, named after the
   bean (`spring-ai-event-planner`). It derives the workflow name it records from that same bean name,
   so the workflow on the agent record is the workflow that actually runs.
+- The **model itself is a durable activity**, which is why this app ships one rather than skipping it:
+  the agent's tool choice is the only path into the three tools, so there is no crash to demonstrate
+  without a model. [`CannedChatModel`](./src/main/java/io/diagrid/quickstart/springai/eventplanner/CannedChatModel.java)
+  supplies that offline. It decides which step to ask for by counting the tool results in the
+  conversation rather than from a counter, so the activity is safe to re-enter: after the restart it
+  asks for `step_two_compare` again — which is what lets the run finish — instead of starting over at
+  step one.
 
 > **A note on idempotency.** A durable activity is *at-least-once*: the tool that was in flight at
 > crash time re-runs on recovery. This quickstart's tools are side-effect-free, so re-running is
