@@ -455,11 +455,17 @@ config, not a typo.
   mapping was verified. Note that `dev stop` also kills the local `diagrid dev run`
   process, which is harmless in teardown (the process tree is already stopped by
   then) but will end a session you are still using.
-- **`agents/langgraph` is `nightly: True`; the other two are not.** The bar for
+- **`agents/langgraph` is `nightly: True`; the other three are not.** The bar for
   that flag is a green live run *plus* a mutation check the verdict tool accepts,
-  and only langgraph has cleared it (2026-08-28). `agents/microsoft-dotnet` and
-  `agents/spring-ai/event-planner` have had neither half. The bullets that follow
-  are what that costs.
+  and only langgraph has cleared both (2026-08-28). Where the others stand:
+  - `agents/microsoft-dotnet` has the first half. Its first green live run was
+    2026-09-02, with no model key, after the readiness fix recorded in its
+    `suites.py` row. No mutation check, so it stays `False`.
+  - `agents/spring-ai/crash-recovery` has the first half. Green live run
+    2026-09-02, offline, covering the crash and the recovery. No mutation check.
+  - `agents/spring-ai/event-planner` **cannot reach the first half**, and no
+    amount of suite work changes that; see its own bullet below.
+  The bullets that follow are what the missing halves cost.
 - **`agents/langgraph` has run against real Catalyst three times and not yet
   passed**, but each run has failed further along than the last. 2026-08-27:
   - Runs 1 and 2 died 120s into the documented POST, which hung and never created
@@ -523,9 +529,10 @@ config, not a typo.
     marker must appear inside a fenced block, so a prose mention no longer counts
     as documentation that the app prints it. `READY_MARKERS` is exempt on
     purpose — `Uvicorn running on` is documented as inline code in a sentence.
-- **`agents/microsoft-dotnet` and `agents/spring-ai/event-planner` have never
-  run either**, for the same missing model key, and each carries two weaknesses
-  `agents/langgraph` does not:
+- **`agents/microsoft-dotnet` and `agents/spring-ai/event-planner` have both now
+  run live** (2026-09-02), which settled the two weaknesses below in opposite
+  directions. Neither run needed a model key: both quickstarts ship a canned
+  offline model, `event-planner`'s added in the same change as this note.
   - **`HEALTH_PROBES` is empty for both, on purpose.** Neither app serves a GET
     route — `microsoft-dotnet`'s `Program.cs` registers only
     `app.MapPost("/run")`, and `event-planner`'s `EventPlannerController` only
@@ -536,19 +543,26 @@ config, not a typo.
     `agents/spring-ai/event-planner`'s README documents no readiness wording at
     all, so `READY_MARKERS` is empty too and the connection line is the *only*
     readiness signal that suite has.
-  - **Their trigger request asserts `status: 200`, and this is expected to fail
-    on the first credentialed run.** Neither app is expected to answer the call
-    at all: tool 2 crashes the process mid-request by design.
-    `agents/spring-ai/event-planner`'s `EventPlannerTools.java` calls
-    `Runtime.getRuntime().halt(1)` before the controller returns, and
-    `agents/microsoft-dotnet`'s README says of the same step "The process exits
-    — this is expected." A live run will most likely see a connection error
-    rather than any matchable status code. The assertion is left exactly as it
-    stands, deliberately: what replaces it has to come from an observed
-    response, and putting a plausible-looking value there instead is the
-    guessing that `field = None` in `variables/agents_langgraph.py` exists to
-    refuse. Recorded here so the first live run fails on a documented line
-    rather than a mysterious one.
+  - **Both assert `status: 200` on the trigger request, and the live runs split
+    on it.** The worry was that neither app would answer the call at all, tool 2
+    crashing the process mid-request by design.
+    - `agents/microsoft-dotnet` **does** answer 200. Its README's "The process
+      exits — this is expected" describes a later documented step, not the
+      trigger, so the assertion was right and the suite is green.
+    - `agents/spring-ai/event-planner` **never can**.
+      `EventPlannerTools.stepTwoCompare` calls `Runtime.getRuntime().halt(1)`
+      *unconditionally* — no flag, no property, no env var — so the JVM dies
+      before the controller returns. Measured 2026-09-02: TOOL 1 and TOOL 2 both
+      fire, then curl exits `000` with the port closed. The 200 is unreachable by
+      design rather than by accident, and the README's documented outcome is the
+      **recovery**, reached only by commenting that line out and restarting — a
+      source edit no suite should make. So the assertion stays as it is and the
+      suite stays red and `nightly: False`, which is the honest state rather than
+      a gap to be closed: the fix belongs in the quickstart (make the crash a
+      runtime request, as `crash-recovery`'s `kill_after_seconds` does) not in
+      the harness. Encoding "the connection dies" as the expectation would assert
+      the crash as the documented outcome and quietly retire the recovery from
+      coverage.
 - **None of the three agent READMEs documents a status code**, so
   `REQUESTS[...]["status"] = 200` in `variables/agents_langgraph.py`,
   `variables/agents_microsoft_dotnet.py` and
@@ -556,18 +570,18 @@ config, not a typo.
   not something transcribed. For `agents/langgraph` a 200 is at least plausible
   — the endpoint returns normally — but it is still unverified. For the other
   two it is worse than unverified; see the bullet above.
-- **The connection line for an agent app is inferred, not observed.**
-  `CONNECTED_APPS` in all three agent data modules comes from reading the
-  quickstart's dev config and applying the appPort rule ("Readiness markers are
-  not uniform per API" above); no agent suite has yet seen `diagrid dev run`
-  print that line. This matters most for `agents/spring-ai/event-planner`, whose
-  entire readiness gate it is: if the inference is wrong there, the symptom is a
-  readiness timeout on a perfectly healthy quickstart.
-- **Eleven of the fourteen `agents/*` quickstarts have no suite at all** (adk,
+- **The connection line for an agent app is now observed, not inferred.** It
+  began as an inference in every agent data module — read from the quickstart's
+  dev config via the appPort rule ("Readiness markers are not uniform per API"
+  above) — and `diagrid dev run` has since been seen to print it for all four:
+  `agents/langgraph` (2026-08-27), then `agents/microsoft-dotnet`,
+  `agents/spring-ai/crash-recovery` and `agents/spring-ai/event-planner`
+  (2026-09-02). That closes the risk this bullet used to carry for
+  `agents/spring-ai/event-planner`, whose entire readiness gate it is.
+- **Ten of the fourteen `agents/*` quickstarts have no suite at all** (adk,
   claude-agents, crewai, dapr-agents/durable-agent, dapr-agents/orchestrator,
-  deepagents, openai-agents, pydantic-ai, spring-ai/crash-recovery,
-  spring-ai/durable-memory, strands), and neither do `dapr-agents/*` or
-  `mcp-auth/*`. Nothing detects drift in them beyond
+  deepagents, openai-agents, pydantic-ai, spring-ai/durable-memory, strands),
+  and neither do `dapr-agents/*` or `mcp-auth/*`. Nothing detects drift in them beyond
   `docsync/check_skill_docs.py`, which only sees the commands the skill itself
   quotes. Adding a suite is what the `add-quickstart-e2e-test` skill is for.
 - **The CI workflow itself has never been executed.** Everything wired for
