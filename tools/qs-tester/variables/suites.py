@@ -106,8 +106,15 @@ SUITES = (
         "data": "agents_microsoft_dotnet",
         "language": "csharp",
         "runtime": "dotnet",
-        # False until a live run and a mutation check prove it. See the harness
-        # README's Limitations.
+        # Half the bar is met. First green live run on 2026-09-02, against a real
+        # Catalyst project with no model key, after a readiness fix: the suite was
+        # gating the documented POST on the Dapr-connectivity marker the README
+        # names, which Kestrel logs BEFORE it binds the HTTP port. The request hit
+        # a closed port, and the teardown's SIGTERM then cancelled BindAsync, which
+        # surfaced as "Hosting failed to start" and a gRPC cancellation — three
+        # symptoms, none of them the cause. SERVING_MARKER now gates it.
+        #
+        # The mutation check has NOT been run, so this stays False.
         "nightly": False,
         # Empty: the quickstart ships a canned offline model and reaches a real
         # provider only when DIAGRID_QUICKSTART_MODEL=openai, which this suite does

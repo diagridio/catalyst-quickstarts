@@ -45,7 +45,25 @@ READY_MARKERS = ("Established gRPC bidirectional stream with Dapr sidecar",)
 HEALTH_PROBES = ()
 
 # appID and appPort from dev-dotnet-agent.yaml.
-CONNECTED_APPS = (("event-planner", 5050),)
+APP_PORT = 5050
+
+CONNECTED_APPS = (("event-planner", APP_PORT),)
+
+# Kestrel's own line, read from the app's startup output. Load-bearing because of
+# the ORDER the host logs in:
+#
+#   Starting gRPC bidirectional stream with Dapr sidecar
+#   Established gRPC bidirectional stream with Dapr sidecar   <- READY_MARKERS
+#   Now listening on: http://localhost:5050                   <- only now serving
+#
+# READY_MARKERS is the marker the README tells a reader to wait for, and it is
+# correct as documentation of Dapr connectivity — but it fires while Kestrel is
+# still in BindAsync, so it is not a serving gate. Gating the documented POST on
+# it alone raced the bind: the request got ECONNREFUSED, the test failed, and the
+# teardown's SIGTERM then cancelled BindAsync mid-flight, which surfaced as
+# "Hosting failed to start" and a gRPC cancellation — three symptoms, none of
+# them the cause. Observed 2026-09-02.
+SERVING_MARKER = f"Now listening on: http://localhost:{APP_PORT}"
 
 # EMPTY, NOT VERIFIED. `Wait Until Catalyst Attached` waits for the first inbound
 # request Catalyst makes back through the dev tunnel, which is the point at which
@@ -89,7 +107,7 @@ SECRETS = ()
 REQUESTS = (
     {
         "method": "POST",
-        "port": 5050,
+        "port": APP_PORT,
         "path": "/run",
         "payload": {"prompt": "Find a venue in Austin for a company gala"},
         "status": 200,
