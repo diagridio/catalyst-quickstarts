@@ -15,8 +15,8 @@ def build_model():
     if os.environ.get("DIAGRID_QUICKSTART_MODEL") == "openai":
         from langchain_openai import ChatOpenAI
 
-        logging.info("Using OpenAI (gpt-4.1-2025-04-14).")
-        return ChatOpenAI(model="gpt-4.1-2025-04-14")
+        logging.info("Using OpenAI (gpt-4.1-mini).")
+        return ChatOpenAI(model="gpt-4.1-mini")
 
     logging.info(
         "Using the canned offline model: no API key needed and the answer is "
