@@ -114,7 +114,25 @@ SUITES = (
         # not set. Keep in step with SECRETS in agents_microsoft_dotnet.py.
         "secrets": (),
     },
-    {
+        {
+        "suite": "agents/spring-ai/crash-recovery/tests/quickstart.robot",
+        "family": "agent",
+        "name": "spring-ai-crash-recovery",
+        "data": "agents_spring_ai_crash_recovery",
+        "language": "java",
+        "runtime": "java",
+        # False until a live run and a mutation check prove it, the same bar the
+        # other two agent suites are held to. Written without DIAGRID_API_KEY
+        # available, so neither half has been done: verify-static.sh is green and
+        # that is all this entry currently claims.
+        "nightly": False,
+        # Empty: the quickstart ships a canned offline model (CannedChatModel.java)
+        # and reaches a real provider only when DIAGRID_QUICKSTART_MODEL=openai,
+        # which this suite does not set. Keep in step with SECRETS in
+        # agents_spring_ai_crash_recovery.py.
+        "secrets": (),
+    },
+{
         "suite": "agents/spring-ai/event-planner/tests/quickstart.robot",
         "family": "agent",
         "name": "spring-ai-event-planner",
