@@ -87,7 +87,17 @@ SUITES = (
         # `Wait Until Catalyst Attached` — have not been shown to fail when what
         # they check breaks. Both are worth their own mutation run.
         "nightly": True,
-        "secrets": ("OPENAI_API_KEY",),
+        # Empty since the quickstart gained a canned offline model: main.py reaches
+        # a real provider only when DIAGRID_QUICKSTART_MODEL=openai, which this
+        # suite does not set, and the guided activation flow depends on the
+        # quickstart running with no key at all. Keep in step with SECRETS in
+        # agents_langgraph.py — one without the other is a declaration that lies.
+        #
+        # This does not weaken the suite: its assertions are startup and request
+        # completion (READY_MARKERS is "Uvicorn running on", and the data file
+        # notes "REQUEST ARRIVING is the signal, not the response"), none of which
+        # depend on model output. The 2026-08-28 mutation evidence below stands.
+        "secrets": (),
     },
     {
         "suite": "agents/microsoft-dotnet/tests/quickstart.robot",

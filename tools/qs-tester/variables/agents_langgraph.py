@@ -133,7 +133,12 @@ CONNECTED_APPS = (("schedule-planner", 8005),)
 # distinguishes the window at all.
 CATALYST_PROBE_MARKERS = ("GET /dapr/config",)
 
-SECRETS = ("OPENAI_API_KEY",)
+# Empty: the quickstart ships a canned offline model and reaches a real provider
+# only when DIAGRID_QUICKSTART_MODEL=openai, which this suite does not set. Keep
+# it in step with the `secrets` entry in suites.py: the two together are the
+# declaration that this suite needs no credential, and one without the other is a
+# declaration that lies.
+SECRETS = ()
 
 # The documented calls, in documented order. README "### 2. Trigger a Workflow".
 #
