@@ -41,8 +41,11 @@ TEARDOWN = ("diagrid project delete {project}",)
 # documents no readiness wording. Readiness rests on the connection gate below.
 #
 # Note the README's own warning that the recovered run "is usually scrolling
-# before Spring Boot has finished starting Tomcat" — so a Tomcat-started marker
-# would be a *later* signal than the thing under test, not an earlier one.
+# before Spring Boot has finished starting Tomcat". That is why a Tomcat marker
+# is not a readiness assertion for the RECOVERY phase — there it lands after the
+# work it would be gating. It is still the right gate for the FIRST request,
+# which is what SERVING_MARKER below is for; the two are different phases, not a
+# contradiction.
 READY_MARKERS = ()
 
 # EMPTY ON PURPOSE. CrashRecoveryController exposes only POST mappings
@@ -50,9 +53,14 @@ READY_MARKERS = ()
 # GET path to probe.
 HEALTH_PROBES = ()
 
-# From dev-spring-ai-crash-recovery.yaml. The port also matches the README's
-# documented curl targets.
-CONNECTED_APPS = (("spring-ai-crash-recovery", 8080),)
+# From dev-spring-ai-crash-recovery.yaml's appPort, which also matches the
+# README's documented curl targets. Single-sourced because it appears in four
+# places (the connection gate, the request, the port-closed check and the
+# serving marker) and a run against a port one of them disagreed about fails in
+# a way that looks like a broken quickstart.
+APP_PORT = 8080
+
+CONNECTED_APPS = (("spring-ai-crash-recovery", APP_PORT),)
 
 CATALYST_PROBE_MARKERS = ()
 
@@ -81,7 +89,7 @@ CRASH_RESULT_PREFIX = f"Booking {CRASH_REFERENCE} confirmed. Confirmation code: 
 REQUESTS = (
     {
         "method": "POST",
-        "port": 8080,
+        "port": APP_PORT,
         "path": "/crash/run",
         "payload": {"id": CRASH_ID, "reference": CRASH_REFERENCE},
         "status": 200,
@@ -101,6 +109,19 @@ COMMITTING_SELF_KILL = ">>> commitReservation("
 SELF_KILL_MARKER = ">>> crash: halting the JVM"
 COMMITTED_MARKER = "): committed. Confirmation code: "
 OFFLINE_MODEL_MARKER = ">>> Using the canned offline model"
+
+# Read from the app's own startup output, not the README, which documents no
+# readiness wording. Load-bearing because of the ORDER Spring Boot logs in:
+#
+#   Tomcat initialized with port 8080
+#   >>> Using the canned offline model          <- fires here
+#   Tomcat started on port 8080 (http)          <- only now is the port serving
+#
+# Gating the first POST on the model marker alone raced the listener and failed
+# intermittently: the request arrived before Tomcat accepted connections, the
+# booking never started, and the run died on the committing marker three minutes
+# later with no sign of why.
+SERVING_MARKER = f"Tomcat started on port {APP_PORT}"
 
 # How many seconds into the booking the app halts itself. README "### 2." says to
 # keep this below `crash-recovery.delay-seconds` (30 by default) so the crash

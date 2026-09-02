@@ -75,6 +75,11 @@ Java Spring Ai Crash Recovery Quickstart
     # `secrets: ()` declaration would be untested.
     Wait Until Log Contains     ${log}    ${OFFLINE_MODEL_MARKER}    timeout=180s
 
+    # And the port is actually accepting connections. The model marker above is
+    # logged while Tomcat is still initialising, so it is not a serving gate —
+    # see SERVING_MARKER in the data module for the ordering this fixes.
+    Wait Until Log Contains     ${log}    ${SERVING_MARKER}          timeout=180s
+
     # README "### 2. Book under an id you own", the kill_after_seconds variant. The
     # process halts itself mid-booking, so this call never gets a response — the
     # connection dies with the JVM. Its own outcome proves nothing, which is why the
@@ -82,7 +87,7 @@ Java Spring Ai Crash Recovery Quickstart
     ${payload}=    Create Dictionary
     ...    id=${CRASH_ID}    reference=${CRASH_REFERENCE}    kill_after_seconds=${KILL_AFTER_SECONDS}
     Run Keyword And Ignore Error
-    ...    POST    http://localhost:8080/crash/run    json=${payload}    timeout=${KILL_AFTER_SECONDS + 20}
+    ...    POST    http://localhost:${APP_PORT}/crash/run    json=${payload}    timeout=30
 
     # The booking actually started. Without this the self-kill below could be a
     # crash before commitReservation ever ran, and the recovery would then have
@@ -94,9 +99,9 @@ Java Spring Ai Crash Recovery Quickstart
 
     # THIS is the assertion that the crash happened. Stop Process Tree below would
     # otherwise silently substitute for a kill that never fired, leaving every
-    # downstream assertion passing. It is also the gate that 8080 is free before the
+    # downstream assertion passing. It is also the gate that the port is free before the
     # relaunch: Wait Until Apps Healthy is perfectly satisfied by an app that never died.
-    Wait Until Keyword Succeeds    30s    2s    App Port Is Closed    8080
+    Wait Until Keyword Succeeds    30s    2s    App Port Is Closed    ${APP_PORT}
 
     # The CLI parent is still up; take the tree down so the alias can be rebound.
     Run Keyword And Ignore Error    Stop Process Tree    apps
@@ -132,10 +137,21 @@ Java Spring Ai Crash Recovery Quickstart
         ...    msg=A 200 must carry no attach instruction
     END
 
-    # The whole point of the demo. The booking committed exactly once: if the
-    # restarted app logged the committing line again, the crash landed outside the
-    # window and Catalyst replayed work it had already recorded.
-    Log Should Not Contain      ${log_again}    ${COMMITTING_SELF_KILL}
+    # NOT ASSERTED, and the reason is worth recording. The obvious analogue of the
+    # workflow suite's `Log Should Not Contain ... ${received}` does not hold here:
+    # that suite names an activity that COMPLETED before the crash, so a second
+    # occurrence would be a real replay bug. The interrupted tool here is the
+    # opposite case — README "## Recovery" says Catalyst "has been retrying the
+    # interrupted tool call the entire time the app was down", so it re-runs by
+    # design and does log commitReservation again on the restarted app. Asserting
+    # its absence fails against correct behaviour, as an earlier version of this
+    # suite did.
+    #
+    # What the README does claim is that "the pre-crash LLM turn is not
+    # re-executed". There is no documented marker for a model turn — the canned
+    # model announces itself once at startup, in both logs, so it cannot
+    # discriminate — and inventing one would be inventing an assertion. Left
+    # unasserted deliberately; a marker emitted per model call would close it.
 
 *** Keywords ***
 Clean Up Quickstart

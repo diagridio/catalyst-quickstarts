@@ -121,10 +121,22 @@ SUITES = (
         "data": "agents_spring_ai_crash_recovery",
         "language": "java",
         "runtime": "java",
-        # False until a live run and a mutation check prove it, the same bar the
-        # other two agent suites are held to. Written without DIAGRID_API_KEY
-        # available, so neither half has been done: verify-static.sh is green and
-        # that is all this entry currently claims.
+        # Half the bar is met. A live run against a real Catalyst project passed on
+        # 2026-09-02: the booking started, the app halted itself via
+        # kill_after_seconds, App Port Is Closed confirmed the crash landed, the
+        # restarted app resumed the interrupted tool call and committed, and the
+        # re-issued request returned the recorded confirmation.
+        #
+        # The mutation check has NOT been run, so this stays False — that is the
+        # other half, and without it none of the assertions above is known to fail
+        # when what it checks breaks. Two of them earned their keep during the live
+        # runs regardless: an assertion contradicting the documented retry
+        # behaviour, and a readiness race against Tomcat's listener, both of which
+        # verify-static.sh passed happily.
+        #
+        # One caveat on that run: local port 8080 was occupied, so it executed with
+        # APP_PORT overridden to 8081. The suite reads the port from one constant,
+        # so nothing but that value differed.
         "nightly": False,
         # Empty: the quickstart ships a canned offline model (CannedChatModel.java)
         # and reaches a real provider only when DIAGRID_QUICKSTART_MODEL=openai,
