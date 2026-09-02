@@ -158,18 +158,24 @@ SUITES = (
         "data": "agents_spring_ai_event_planner",
         "language": "java",
         "runtime": "java",
-        # False, and this one CANNOT be made True by fixing the suite. Verified
-        # live 2026-09-02: the quickstart now runs with no API key, TOOL 1 and
-        # TOOL 2 both fire, and then `EventPlannerTools.stepTwoCompare`'s
-        # unconditional `Runtime.getRuntime().halt(1)` kills the JVM, so the
-        # documented POST /run never returns at all (curl exits 000, port
-        # closed). The `status: 200` below is unreachable by design, not by
-        # accident: the README's walkthrough is to comment that line out and
-        # restart, which is a source edit no suite should make. Covering this
-        # flow needs the crash requested at runtime — which is exactly what the
-        # crash-recovery sibling's `kill_after_seconds` does, and why that row
-        # is the one carrying the crash coverage. See the harness README's
-        # Limitations.
+        # False, and this one CANNOT be made True by fixing the suite. Two live
+        # runs on 2026-09-02 settled why, and the first one was misleading:
+        # it failed with `Connection refused` having logged NO Spring Boot
+        # output, because `Wait Until Apps Connected` was this suite's only
+        # readiness gate and the CLI prints that line while Tomcat is still
+        # starting. That was a race, not the crash — the run never reached the
+        # quickstart at all. With SERVING_MARKER gating the request, the second
+        # run got the honest answer: the canned model drives TOOL 1 and TOOL 2,
+        # then `EventPlannerTools.stepTwoCompare`'s unconditional
+        # `Runtime.getRuntime().halt(1)` kills the JVM mid-request and the
+        # client sees `RemoteDisconnected`.
+        #
+        # So the `status: 200` below is unreachable by design, not by accident:
+        # the README's walkthrough is to comment that line out and restart,
+        # which is a source edit no suite should make. Covering this flow needs
+        # the crash requested at runtime — exactly what the crash-recovery
+        # sibling's `kill_after_seconds` does, and why that row is the one
+        # carrying the crash coverage. See the harness README's Limitations.
         "nightly": False,
         # Empty: the quickstart ships a canned offline model (CannedChatModel.java)
         # and reaches a real provider only when DIAGRID_QUICKSTART_MODEL=openai,

@@ -552,17 +552,28 @@ config, not a typo.
     - `agents/spring-ai/event-planner` **never can**.
       `EventPlannerTools.stepTwoCompare` calls `Runtime.getRuntime().halt(1)`
       *unconditionally* — no flag, no property, no env var — so the JVM dies
-      before the controller returns. Measured 2026-09-02: TOOL 1 and TOOL 2 both
-      fire, then curl exits `000` with the port closed. The 200 is unreachable by
-      design rather than by accident, and the README's documented outcome is the
-      **recovery**, reached only by commenting that line out and restarting — a
-      source edit no suite should make. So the assertion stays as it is and the
-      suite stays red and `nightly: False`, which is the honest state rather than
-      a gap to be closed: the fix belongs in the quickstart (make the crash a
-      runtime request, as `crash-recovery`'s `kill_after_seconds` does) not in
-      the harness. Encoding "the connection dies" as the expectation would assert
-      the crash as the documented outcome and quietly retire the recovery from
+      before the controller returns. The 200 is unreachable by design rather
+      than by accident, and the README's documented outcome is the **recovery**,
+      reached only by commenting that line out and restarting — a source edit no
+      suite should make. So the assertion stays as it is and the suite stays red
+      and `nightly: False`, which is the honest state rather than a gap to be
+      closed: the fix belongs in the quickstart (make the crash a runtime
+      request, as `crash-recovery`'s `kill_after_seconds` does) not in the
+      harness. Encoding "the connection dies" as the expectation would assert the
+      crash as the documented outcome and quietly retire the recovery from
       coverage.
+
+      **It took two runs to see that, and the first one lied.** Run 1 failed with
+      `Connection refused` having logged no Spring Boot output at all: this suite
+      had no readiness gate but `Wait Until Apps Connected`, which the CLI prints
+      while Tomcat is still starting, so the POST raced the listener and the run
+      never reached the quickstart. That is the same vacuous-gate failure the
+      `check_availability` marker and the 76ms langgraph probe already taught, on
+      its third suite. Gated on `SERVING_MARKER` (`Tomcat started on port 8080`,
+      read from the app's own output) run 2 got the real answer: TOOL 1 and TOOL 2
+      both fire and the client sees `RemoteDisconnected`. A red suite is only
+      worth keeping if it is red for the documented reason — otherwise it is a
+      race dressed up as a finding.
 - **None of the three agent READMEs documents a status code**, so
   `REQUESTS[...]["status"] = 200` in `variables/agents_langgraph.py`,
   `variables/agents_microsoft_dotnet.py` and

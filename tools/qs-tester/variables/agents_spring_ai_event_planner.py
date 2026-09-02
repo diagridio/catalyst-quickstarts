@@ -48,8 +48,33 @@ READY_MARKERS = ()
 # probe.
 HEALTH_PROBES = ()
 
-# appID and appPort from dev-spring-ai-event-planner.yaml.
-CONNECTED_APPS = (("spring-ai-event-planner", 8080),)
+# appID and appPort from dev-spring-ai-event-planner.yaml, which also matches the
+# README's documented curl target. Single-sourced because it appears in three
+# places (the connection gate, the serving marker and the request) and a run
+# against a port one of them disagreed about fails in a way that looks like a
+# broken quickstart.
+APP_PORT = 8080
+
+CONNECTED_APPS = (("spring-ai-event-planner", APP_PORT),)
+
+# Read from the app's own startup output, not the README, which documents no
+# readiness wording. Load-bearing because of the ORDER Spring Boot logs in:
+#
+#   Tomcat initialized with port 8080
+#   >>> Using the canned offline model          <- fires here
+#   Tomcat started on port 8080 (http)          <- only now is the port serving
+#
+# Without this the suite's only gate was `Wait Until Apps Connected`, which the
+# CLI prints while Spring Boot is still starting. Measured 2026-09-02: the POST
+# hit a closed port and died with `Connection refused` having logged NO Spring
+# Boot output at all, so the run never reached the crash it exists to show. Same
+# race, same fix, as the microsoft-dotnet and crash-recovery siblings.
+SERVING_MARKER = f"Tomcat started on port {APP_PORT}"
+
+# Proves the offline model is the one in play. Without it this suite could run
+# against a real provider on a machine that happens to export a key, and the
+# `SECRETS = ()` declaration below would be untested.
+OFFLINE_MODEL_MARKER = ">>> Using the canned offline model"
 
 # EMPTY, NOT VERIFIED. `Wait Until Catalyst Attached` waits for the first inbound
 # request Catalyst makes back through the dev tunnel, which is the point at which
@@ -97,7 +122,7 @@ SECRETS = ()
 REQUESTS = (
     {
         "method": "POST",
-        "port": 8080,
+        "port": APP_PORT,
         "path": "/run",
         "payload": {"prompt": "Find a venue in Austin for a company gala"},
         "status": 200,
