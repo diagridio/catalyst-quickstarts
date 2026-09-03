@@ -12,4 +12,18 @@
     <PackageReference Include="Microsoft.Extensions.AI.OpenAI" Version="10.4.1" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- unit-tests/ is its own project, and the SDK's default globs do NOT skip nested project
+         directories. Compile is the one that bites first: without it the app tries to compile the
+         test files and `dotnet build` fails on xunit types it has no reference to.
+         Content and None matter too, and they fail more quietly. Sdk.Web marks Content as
+         CopyToPublishDirectory, so once anyone has run the tests, `dotnet publish` copies
+         unit-tests/obj and unit-tests/bin into the published output, absolute developer paths and
+         all. The None glob also makes `dotnet watch run` restart whenever the tests are built. -->
+    <Compile Remove="unit-tests/**" />
+    <Content Remove="unit-tests/**" />
+    <None Remove="unit-tests/**" />
+    <EmbeddedResource Remove="unit-tests/**" />
+  </ItemGroup>
+
 </Project>

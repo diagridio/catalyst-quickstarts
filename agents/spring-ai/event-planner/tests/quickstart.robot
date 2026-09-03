@@ -13,7 +13,7 @@ whose documented flow interleaves CLI commands with HTTP calls: a request may
 carry `commands` to run first and a `log_marker` to wait for afterwards.
 
 Run it:
-  export DIAGRID_API_KEY=... OPENAI_API_KEY=...
+  export DIAGRID_API_KEY=...
   eval "$(bash tools/qs-tester/ci/project-name.sh agents-spring-ai-event-planner | grep '^PROJECT=')"
   bash tools/qs-tester/ci/login.sh
   cd tools/qs-tester
@@ -46,8 +46,8 @@ Java Spring-Ai-Event-Planner Quickstart
     ${qs}=      Get Quickstart
     ${log}=     Suite Log File    agents-spring-ai-event-planner    java
 
-    # A missing model key must fail here, before a project is created, rather
-    # than as a 401 from OpenAI several minutes later.
+    # Empty for this quickstart (canned offline model), but kept so that adding a
+    # secret to the data module cannot silently skip the check.
     FOR    ${secret}    IN    @{qs}[secrets]
         Require Env Var    ${secret}    agents/spring-ai/event-planner
     END
@@ -67,8 +67,9 @@ Java Spring-Ai-Event-Planner Quickstart
     # Both READY_MARKERS and HEALTH_PROBES are empty for this quickstart: the
     # README documents no readiness wording, and the app exposes no GET route to
     # probe. The two FOR loops below are therefore no-ops by design, not an
-    # oversight — `Wait Until Apps Connected` above is the ONLY readiness gate
-    # this suite has.
+    # oversight. Readiness rests on `Wait Until Apps Connected` above plus the
+    # SERVING_MARKER wait further down, which is the gate that actually proves the
+    # HTTP port is open.
     FOR    ${marker}    IN    @{READY_MARKERS}
         Wait Until Ready Marker    ${log}    ${marker}
     END
@@ -84,6 +85,17 @@ Java Spring-Ai-Event-Planner Quickstart
     FOR    ${marker}    IN    @{qs}[catalyst_probe_markers]
         Wait Until Catalyst Attached    ${log}    ${marker}
     END
+
+    # Proves the offline model is the one in play, so this suite cannot quietly
+    # pass through a real provider on a machine that exports a key.
+    Wait Until Log Contains     ${log}    ${OFFLINE_MODEL_MARKER}    timeout=180s
+
+    # AND that the port is actually accepting connections. `Wait Until Apps
+    # Connected` above is satisfied while Spring Boot is still starting, and the
+    # model marker is logged before Tomcat binds — see SERVING_MARKER in the data
+    # module for the ordering. Without this the POST below raced the listener and
+    # died with `Connection refused` before the quickstart had run anything at all.
+    Wait Until Log Contains     ${log}    ${SERVING_MARKER}          timeout=180s
 
     # The documented calls, in documented order. README "### 2. Trigger the Agent".
     # `commands` and `log_marker` are optional per request: a flow that interleaves

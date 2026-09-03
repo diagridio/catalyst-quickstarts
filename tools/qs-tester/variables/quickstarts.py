@@ -2,11 +2,17 @@
 
 Every value here is transcribed from `<api>/<language>/README.md`. The READMEs are
 the source of truth: sections 4 and 5 give INSTALL and RUN, section 6 gives the
-endpoints, payloads and EXPECTED_BODY values.
+endpoints, payloads and EXPECTED_BODY values, and section 7 gives the crash-recovery
+ids, payloads and log markers.
+
+The one exception is the crash demo's confirmation code, which is computed from the
+reference below rather than transcribed, so that changing the reference cannot leave
+the markers describing a different booking than the suite requests.
 
 Robot suites read this through `get_quickstart(api, language)`.
 """
 
+import hashlib
 from pathlib import Path
 
 LANGUAGES = ("csharp", "java", "javascript", "python")
@@ -211,6 +217,65 @@ INVOCATION_CLIENT_MARKER = {
 # the instance id returned by the start call.
 WORKFLOW_START_MARKER = "Received order {id} for 2 Car"
 WORKFLOW_DONE_MARKER = "Order {id} has completed!"
+
+# --- README section 7: the crash-recovery demo -------------------------------
+# csharp, java and python only. javascript has no crash demo, so there is nothing
+# for a javascript case to drive.
+CRASH_LANGUAGES = ("csharp", "java", "python")
+
+# The instance id is per-language on purpose: the languages can share one ephemeral
+# Catalyst project, and a single shared id would leave the second language attaching
+# to the first language's completed run and never crashing anything. The suite also
+# appends a per-run suffix, because a constant id is already COMPLETED the second time
+# this test runs against the same project.
+CRASH_INSTANCE_ID = "trip-42-{language}"
+CRASH_REFERENCE = "ABC123"
+
+# The delay driven into the app so the suite does not pay 30s per language. Long
+# enough that firing the request, seeing the start marker and firing the kill all
+# fit inside the window.
+CRASH_DELAY_SECONDS = "20"
+
+# The wait budget driven into the app, well BELOW the delay above so the blocking
+# /crash/run gives up while the slow activity is still committing and answers with the
+# documented 202. That is the branch every README describes and nothing else covers.
+# The reader's default is 120, which blocks instead; see the app sources.
+CRASH_WAIT_SECONDS = "5"
+
+# The confirmation code the three implementations derive from CRASH_REFERENCE: the
+# first four bytes of its SHA-256, uppercase hex, prefixed BK-. Computed rather than
+# transcribed so that changing CRASH_REFERENCE above cannot leave these markers
+# describing a different booking than the one the suite actually requests.
+CRASH_CODE = "BK-" + hashlib.sha256(CRASH_REFERENCE.encode("utf-8")).hexdigest()[:8].upper()
+
+# Log markers, identical in all three languages: the implementations log the same
+# sentences deliberately, so this needs no per-language dict. `{id}` is the
+# caller-chosen instance id.
+#
+# CRASH_RECEIVED_MARKER is the one that matters most, and it is asserted ABSENT
+# from the restarted app's log. It belongs to the fast activity, which completed and
+# was recorded before the crash, so a replay that re-ran it would mean the crash
+# landed before the first persisted completion and the demo proved nothing.
+CRASH_RECEIVED_MARKER = f"Reservation {{id}} received for {CRASH_REFERENCE}"
+# Carries the delay, not truncated before it. The suite injects CRASH_DELAY_SECONDS
+# through the environment, and without the number here a value that never reached the
+# app would go unnoticed until the kill landed outside a window that had already closed.
+CRASH_COMMITTING_MARKER = (
+    f"Committing reservation {CRASH_REFERENCE} over ~{CRASH_DELAY_SECONDS}s"
+)
+CRASH_COMMITTED_MARKER = (
+    f"Committed reservation {CRASH_REFERENCE}. Confirmation code: {CRASH_CODE}"
+)
+CRASH_DONE_MARKER = "Reservation {id} has completed!"
+
+# Logged only by the attach branch of /crash/run. The confirmation code alone cannot
+# prove an attach, since it is a pure function of the reference and therefore identical
+# for an attached run, a re-run and a brand new instance.
+CRASH_ATTACH_MARKER = "Attaching to existing crash-recovery workflow {id}"
+
+# The documented 200 body's `result` field. Derived from the reference alone, so it is
+# the same before and after the crash. That sameness is the point of the demo.
+CRASH_CONFIRMATION = f"Reservation {CRASH_REFERENCE} confirmed. Confirmation code: {CRASH_CODE}"
 
 
 def get_quickstart(api, language):

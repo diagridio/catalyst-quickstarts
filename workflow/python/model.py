@@ -59,3 +59,25 @@ class Notification:
     def __str__(self):
         return f"Notification(message={self.message})"
 
+class CrashRunRequest(BaseModel):
+    """Request body of POST /crash/run: the instance id the caller owns, and the reference
+    the confirmation code is derived from.
+
+    `id` is Optional here so that the handler can reject a missing one the same way the C#
+    and Java quickstarts do, with a 400 carrying the shared {id, result, message} body. A
+    required pydantic field would instead produce FastAPI's own 422 in a different shape,
+    which is the kind of gratuitous divergence these three quickstarts exist to avoid.
+    """
+
+    id: Optional[str] = None
+    reference: str = "ABC123"
+    # Seconds after scheduling at which the app kills ITSELF, so the crash needs neither a
+    # second caller nor a human racing the slow activity's window.
+    #
+    # Optional, and absent means today's behaviour exactly: nothing is armed and you crash
+    # the app yourself with POST /crash/kill from another terminal. Ignored when this call
+    # attaches to an existing instance rather than scheduling one, because a re-issue is how
+    # you collect the result of a run that survived, and killing the app again would put that
+    # result permanently out of reach.
+    kill_after_seconds: Optional[int] = None
+

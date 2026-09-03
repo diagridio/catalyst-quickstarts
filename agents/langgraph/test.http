@@ -6,10 +6,20 @@ Content-Type: application/json
     "task": "Check if the Grand Ballroom is available on March 15th"
 }
 
-### Trigger crash-test workflow
-POST http://localhost:8001/run
+### Crash Recovery: run the graph under an ID you own
+### Blocks for ~30s while step 2 runs. Kill the app during that window with the
+### request below. Restarting the app is what recovers the run; send this exact
+### request again only to read back its answer, because the crash killed the
+### connection that was waiting for one.
+### Add "kill_after_seconds": 8 to the body and the app halts itself 8s in, so you
+### can skip the kill request below and run the demo in two terminals.
+POST http://localhost:8001/crash/run
 Content-Type: application/json
 
 {
-    "topic": "plan a company gala on March 15"
+    "id": "gala-42",
+    "topic": "company gala on March 15"
 }
+
+### Crash Recovery: kill the app while the run above is in flight
+POST http://localhost:8001/crash/kill

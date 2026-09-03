@@ -87,7 +87,17 @@ SUITES = (
         # `Wait Until Catalyst Attached` — have not been shown to fail when what
         # they check breaks. Both are worth their own mutation run.
         "nightly": True,
-        "secrets": ("OPENAI_API_KEY",),
+        # Empty since the quickstart gained a canned offline model: main.py reaches
+        # a real provider only when DIAGRID_QUICKSTART_MODEL=openai, which this
+        # suite does not set, and the guided activation flow depends on the
+        # quickstart running with no key at all. Keep in step with SECRETS in
+        # agents_langgraph.py — one without the other is a declaration that lies.
+        #
+        # This does not weaken the suite: its assertions are startup and request
+        # completion (READY_MARKERS is "Uvicorn running on", and the data file
+        # notes "REQUEST ARRIVING is the signal, not the response"), none of which
+        # depend on model output. The 2026-08-28 mutation evidence below stands.
+        "secrets": (),
     },
     {
         "suite": "agents/microsoft-dotnet/tests/quickstart.robot",
@@ -96,23 +106,82 @@ SUITES = (
         "data": "agents_microsoft_dotnet",
         "language": "csharp",
         "runtime": "dotnet",
-        # False until a live run and a mutation check prove it. See the harness
-        # README's Limitations.
+        # Half the bar is met. First green live run on 2026-09-02, against a real
+        # Catalyst project with no model key, after a readiness fix: the suite was
+        # gating the documented POST on the Dapr-connectivity marker the README
+        # names, which Kestrel logs BEFORE it binds the HTTP port. The request hit
+        # a closed port, and the teardown's SIGTERM then cancelled BindAsync, which
+        # surfaced as "Hosting failed to start" and a gRPC cancellation — three
+        # symptoms, none of them the cause. SERVING_MARKER now gates it.
+        #
+        # The mutation check has NOT been run, so this stays False.
         "nightly": False,
-        "secrets": ("OPENAI_API_KEY",),
+        # Empty: the quickstart ships a canned offline model and reaches a real
+        # provider only when DIAGRID_QUICKSTART_MODEL=openai, which this suite does
+        # not set. Keep in step with SECRETS in agents_microsoft_dotnet.py.
+        "secrets": (),
     },
-    {
+        {
+        "suite": "agents/spring-ai/crash-recovery/tests/quickstart.robot",
+        "family": "agent",
+        "name": "spring-ai-crash-recovery",
+        "data": "agents_spring_ai_crash_recovery",
+        "language": "java",
+        "runtime": "java",
+        # Half the bar is met. A live run against a real Catalyst project passed on
+        # 2026-09-02: the booking started, the app halted itself via
+        # kill_after_seconds, App Port Is Closed confirmed the crash landed, the
+        # restarted app resumed the interrupted tool call and committed, and the
+        # re-issued request returned the recorded confirmation.
+        #
+        # The mutation check has NOT been run, so this stays False — that is the
+        # other half, and without it none of the assertions above is known to fail
+        # when what it checks breaks. Two of them earned their keep during the live
+        # runs regardless: an assertion contradicting the documented retry
+        # behaviour, and a readiness race against Tomcat's listener, both of which
+        # verify-static.sh passed happily.
+        #
+        # One caveat on that run: local port 8080 was occupied, so it executed with
+        # APP_PORT overridden to 8081. The suite reads the port from one constant,
+        # so nothing but that value differed.
+        "nightly": False,
+        # Empty: the quickstart ships a canned offline model (CannedChatModel.java)
+        # and reaches a real provider only when DIAGRID_QUICKSTART_MODEL=openai,
+        # which this suite does not set. Keep in step with SECRETS in
+        # agents_spring_ai_crash_recovery.py.
+        "secrets": (),
+    },
+{
         "suite": "agents/spring-ai/event-planner/tests/quickstart.robot",
         "family": "agent",
         "name": "spring-ai-event-planner",
         "data": "agents_spring_ai_event_planner",
         "language": "java",
         "runtime": "java",
-        # False for the same reason as the two rows above: never run live, and
-        # this one's `status: 200` is expected to fail when it is. See the
-        # harness README's Limitations.
+        # False, and this one CANNOT be made True by fixing the suite. Two live
+        # runs on 2026-09-02 settled why, and the first one was misleading:
+        # it failed with `Connection refused` having logged NO Spring Boot
+        # output, because `Wait Until Apps Connected` was this suite's only
+        # readiness gate and the CLI prints that line while Tomcat is still
+        # starting. That was a race, not the crash — the run never reached the
+        # quickstart at all. With SERVING_MARKER gating the request, the second
+        # run got the honest answer: the canned model drives TOOL 1 and TOOL 2,
+        # then `EventPlannerTools.stepTwoCompare`'s unconditional
+        # `Runtime.getRuntime().halt(1)` kills the JVM mid-request and the
+        # client sees `RemoteDisconnected`.
+        #
+        # So the `status: 200` below is unreachable by design, not by accident:
+        # the README's walkthrough is to comment that line out and restart,
+        # which is a source edit no suite should make. Covering this flow needs
+        # the crash requested at runtime — exactly what the crash-recovery
+        # sibling's `kill_after_seconds` does, and why that row is the one
+        # carrying the crash coverage. See the harness README's Limitations.
         "nightly": False,
-        "secrets": ("OPENAI_API_KEY",),
+        # Empty: the quickstart ships a canned offline model (CannedChatModel.java)
+        # and reaches a real provider only when DIAGRID_QUICKSTART_MODEL=openai,
+        # which this suite does not set. Keep in step with SECRETS in
+        # agents_spring_ai_event_planner.py.
+        "secrets": (),
     },
 )
 

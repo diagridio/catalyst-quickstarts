@@ -5,3 +5,21 @@ Content-Type: application/json
 {
     "prompt": "Find a venue in Austin for a company gala"
 }
+
+### Crash Recovery: run under an ID you own
+### Blocks while tool 2 compares venues for ~30s. Kill the app during that window
+### with the request below. Restarting the app is what recovers the run; send this
+### exact request again only to read back its answer, because the crash killed the
+### connection that was waiting for one.
+### Add "kill_after_seconds": 8 to the body and the app halts itself 8s in, so you
+### can skip the kill request below and run the demo in two terminals.
+POST http://localhost:5050/crash/run
+Content-Type: application/json
+
+{
+    "id": "gala-42",
+    "prompt": "Find a venue in Austin for a company gala"
+}
+
+### Crash Recovery: kill the app while the run above is in flight
+POST http://localhost:5050/crash/kill

@@ -5,3 +5,8 @@ apps:
   - appID: schedule-planner
     appDirPath: ./
     command: ["python", "crash_test.py"]
+    # Pinned in both places so the port the README documents is true by construction,
+    # rather than resting on crash_test.py's APP_PORT fallback.
+    appPort: 8001
+    env:
+      APP_PORT: "8001"

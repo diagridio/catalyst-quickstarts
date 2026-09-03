@@ -11,3 +11,9 @@ dependencies = [
 
 [tool.uv]
 package = false
+
+[tool.pytest.ini_options]
+# test_*.py only. crash_test.py matches pytest's other default glob, *_test.py, and
+# importing it builds a Dapr-connected runner and client at module level. Naming the
+# pattern here also means a new test_*.py file starts running without a CI edit.
+python_files = ["test_*.py"]

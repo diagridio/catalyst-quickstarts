@@ -69,6 +69,11 @@ Csharp Microsoft-Dotnet Quickstart
     # signals for this suite. Do not "fix" this by adding a `/` probe.
     Wait Until Apps Healthy     ${qs}
 
+    # The documented marker above proves Dapr connectivity, not that the HTTP
+    # port is open — Kestrel binds after it. See SERVING_MARKER in the data
+    # module for the ordering this closes.
+    Wait Until Log Contains     ${log}    ${SERVING_MARKER}    timeout=180s
+
     # CATALYST_PROBE_MARKERS is empty for this suite, so this loop is a no-op. It
     # stays because the gap it guards is real here too: every gate above is
     # satisfied by the local process, and a workflow call made before Catalyst has

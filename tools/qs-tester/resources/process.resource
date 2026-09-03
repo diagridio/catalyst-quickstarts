@@ -56,6 +56,15 @@ Log Should Contain
     Should Contain    ${content}    ${text}
     ...    msg=Log ${logfile} does not contain "${text}"
 
+Log Should Not Contain
+    [Documentation]    Assert ${text} is absent from ${logfile}. Deliberately a single
+    ...    read and not a wait: an absence cannot be polled for, and the caller is
+    ...    expected to have already waited for a later marker that orders the read.
+    [Arguments]    ${logfile}    ${text}
+    ${content}=    Get File    ${logfile}
+    Should Not Contain    ${content}    ${text}
+    ...    msg=Log ${logfile} unexpectedly contains "${text}"
+
 Run And Expect RC Zero
     [Documentation]    Run ${command} to completion and fail unless it exits 0.
     ...    Used for build commands, which are slow: default timeout 600s.

@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+    <RootNamespace>microsoft_dotnet.Tests</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- A project reference rather than a <Compile Include> of the one file under test. Pulling in
+         the whole web app costs nothing at test time and is what keeps the versions honest: the app
+         resolves Microsoft.Extensions.AI.Abstractions transitively through
+         Diagrid.AI.Microsoft.AgentFramework, so a separate pin here would let the tests compile
+         against a different version than the app runs, and agree right up until they did not. -->
+    <ProjectReference Include="../microsoft-dotnet.csproj" />
+  </ItemGroup>
+
+</Project>

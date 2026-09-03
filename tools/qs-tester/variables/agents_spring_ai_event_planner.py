@@ -48,8 +48,33 @@ READY_MARKERS = ()
 # probe.
 HEALTH_PROBES = ()
 
-# appID and appPort from dev-spring-ai-event-planner.yaml.
-CONNECTED_APPS = (("spring-ai-event-planner", 8080),)
+# appID and appPort from dev-spring-ai-event-planner.yaml, which also matches the
+# README's documented curl target. Single-sourced because it appears in three
+# places (the connection gate, the serving marker and the request) and a run
+# against a port one of them disagreed about fails in a way that looks like a
+# broken quickstart.
+APP_PORT = 8080
+
+CONNECTED_APPS = (("spring-ai-event-planner", APP_PORT),)
+
+# Read from the app's own startup output, not the README, which documents no
+# readiness wording. Load-bearing because of the ORDER Spring Boot logs in:
+#
+#   Tomcat initialized with port 8080
+#   >>> Using the canned offline model          <- fires here
+#   Tomcat started on port 8080 (http)          <- only now is the port serving
+#
+# Without this the suite's only gate was `Wait Until Apps Connected`, which the
+# CLI prints while Spring Boot is still starting. Measured 2026-09-02: the POST
+# hit a closed port and died with `Connection refused` having logged NO Spring
+# Boot output at all, so the run never reached the crash it exists to show. Same
+# race, same fix, as the microsoft-dotnet and crash-recovery siblings.
+SERVING_MARKER = f"Tomcat started on port {APP_PORT}"
+
+# Proves the offline model is the one in play. Without it this suite could run
+# against a real provider on a machine that happens to export a key, and the
+# `SECRETS = ()` declaration below would be untested.
+OFFLINE_MODEL_MARKER = ">>> Using the canned offline model"
 
 # EMPTY, NOT VERIFIED. `Wait Until Catalyst Attached` waits for the first inbound
 # request Catalyst makes back through the dev tunnel, which is the point at which
@@ -67,7 +92,11 @@ CONNECTED_APPS = (("spring-ai-event-planner", 8080),)
 # and reading what the app logs when Catalyst probes it.
 CATALYST_PROBE_MARKERS = ()
 
-SECRETS = ("OPENAI_API_KEY",)
+# Empty: the quickstart ships a canned offline model (CannedChatModel.java) and
+# reaches a real provider only when DIAGRID_QUICKSTART_MODEL=openai, which this
+# suite does not set. Keep in step with the `secrets` entry in suites.py — one
+# without the other is a declaration that lies.
+SECRETS = ()
 
 # README "### 2. Trigger the Agent".
 #
@@ -75,19 +104,25 @@ SECRETS = ("OPENAI_API_KEY",)
 # deliberately crashes the process mid-request, so the curl call never returns a
 # result.
 #
-# `status` is NOT a transcription. This README documents no status code at all,
-# and `EventPlannerTools.stepTwoCompare` calls `Runtime.getRuntime().halt(1)`
-# before the controller returns, so a live run is more likely to see a connection
-# error than any status code. The 200 below is therefore an assumption that is
-# expected to fail on the first credentialed run, and it is left standing on
-# purpose: the value that replaces it has to come from an observed response.
-# Substituting a plausible-looking one is the guessing `field = None` in
-# agents_langgraph.py exists to refuse. Recorded in the harness README's
-# Limitations so that failure lands on a documented line.
+# `status` is NOT a transcription, and it is now known to be UNREACHABLE. This
+# README documents no status code, and `EventPlannerTools.stepTwoCompare` calls
+# `Runtime.getRuntime().halt(1)` unconditionally before the controller returns.
+# Measured 2026-09-02, running offline against the canned model: TOOL 1 and TOOL
+# 2 both fire and the JVM then dies mid-request, so curl exits 000 with the port
+# closed and there is no status code to record.
+#
+# The 200 is left standing on purpose rather than replaced with a passing
+# assertion. There is no response to transcribe, and encoding "the connection
+# dies" here would assert the crash as the quickstart's documented outcome when
+# the README's outcome is the RECOVERY — reached only by commenting the halt out,
+# a source edit no suite should make. So this suite stays red and `nightly:
+# False` in suites.py, and the crash coverage lives in the crash-recovery
+# sibling, whose `kill_after_seconds` makes the same crash a runtime request.
+# Recorded in the harness README's Limitations.
 REQUESTS = (
     {
         "method": "POST",
-        "port": 8080,
+        "port": APP_PORT,
         "path": "/run",
         "payload": {"prompt": "Find a venue in Austin for a company gala"},
         "status": 200,

@@ -45,7 +45,25 @@ READY_MARKERS = ("Established gRPC bidirectional stream with Dapr sidecar",)
 HEALTH_PROBES = ()
 
 # appID and appPort from dev-dotnet-agent.yaml.
-CONNECTED_APPS = (("event-planner", 5050),)
+APP_PORT = 5050
+
+CONNECTED_APPS = (("event-planner", APP_PORT),)
+
+# Kestrel's own line, read from the app's startup output. Load-bearing because of
+# the ORDER the host logs in:
+#
+#   Starting gRPC bidirectional stream with Dapr sidecar
+#   Established gRPC bidirectional stream with Dapr sidecar   <- READY_MARKERS
+#   Now listening on: http://localhost:5050                   <- only now serving
+#
+# READY_MARKERS is the marker the README tells a reader to wait for, and it is
+# correct as documentation of Dapr connectivity — but it fires while Kestrel is
+# still in BindAsync, so it is not a serving gate. Gating the documented POST on
+# it alone raced the bind: the request got ECONNREFUSED, the test failed, and the
+# teardown's SIGTERM then cancelled BindAsync mid-flight, which surfaced as
+# "Hosting failed to start" and a gRPC cancellation — three symptoms, none of
+# them the cause. Observed 2026-09-02.
+SERVING_MARKER = f"Now listening on: http://localhost:{APP_PORT}"
 
 # EMPTY, NOT VERIFIED. `Wait Until Catalyst Attached` waits for the first inbound
 # request Catalyst makes back through the dev tunnel, which is the point at which
@@ -63,37 +81,47 @@ CONNECTED_APPS = (("event-planner", 5050),)
 # and reading what the app logs when Catalyst probes it.
 CATALYST_PROBE_MARKERS = ()
 
-SECRETS = ("OPENAI_API_KEY",)
+# Empty because the quickstart ships a canned offline model and only calls a real
+# provider when DIAGRID_QUICKSTART_MODEL=openai, which is not the path this suite
+# covers. Keep it in step with the `secrets` entry in suites.py: the two together
+# are the declaration that this suite needs no credential, and one without the
+# other is a declaration that lies.
+SECRETS = ()
 
 # README "### 2. Trigger the Agent".
 #
-# `field` is None because the README documents no response body. Fill it in from
-# an observed live response with a comment naming that response as the source.
+# OBSERVED, 2026-08-31, against a local OneBox Catalyst project with no model key
+# set. `POST /run` returned 200 in ~30s with the body:
 #
-# `status` is NOT a transcription either. This README documents no status code,
-# and of this very call it says "The process exits — this is expected": tool 2
-# crashes the process mid-request by design, so a live run is more likely to see
-# a connection error than any status code. The 200 below is an assumption
-# expected to fail on the first credentialed run, left standing on purpose for
-# the same reason `field` is None — the replacement has to come from an observed
-# response, not from a guess. See the harness README's Limitations.
+#     {"response":"Booking confirmed for Grand Ballroom. All steps complete!"}
+#
+# so `field` is "response". With the canned offline model that body is fixed: the
+# final turn echoes step_three_confirm's return string rather than model prose.
+#
+# `status` is 200 and is no longer a guess either. It used to be one because this
+# call ran the crash: the README said of it "The process exits — this is
+# expected", so a connection error was likelier than any status code. Both halves
+# of that have since changed. The crash moved to POST /crash/run and is armed by
+# kill_after_seconds, so /run arms nothing and runs to completion. Tool 2 still
+# sleeps ~30s, which is inside `POST And Expect Field`'s 120s budget.
 REQUESTS = (
     {
         "method": "POST",
-        "port": 5050,
+        "port": APP_PORT,
         "path": "/run",
         "payload": {"prompt": "Find a venue in Austin for a company gala"},
         "status": 200,
-        "field": None,
+        "field": "response",
     },
 )
 
 # Documented commands this suite deliberately does not run, each with its reason.
 UNCOVERED = (
     (
-        "diagrid dev run -f dev-dotnet-agent.yaml",
-        "the crash-recovery flow's resume step; the crash itself needs a source "
-        "edit, so the whole flow is out of scope",
+        "dotnet test unit-tests",
+        "unit tests for the offline model. This suite drives the running "
+        "quickstart against Catalyst; the same assertions do not need making "
+        "twice, and the test project is a separate build",
     ),
 )
 

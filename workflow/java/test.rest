@@ -32,3 +32,29 @@ GET http://localhost:5001/workflow/status/{{instanceId}}
 POST http://localhost:5001/workflow/terminate/{{instanceId}}
 
 ###
+
+### Crash Recovery: run under an ID you own
+# Blocks for ~30s while the slow activity commits, up to a 120s wait budget. Kill
+# the app during that window with the request below. Restarting the app is what
+# recovers the run; send this exact request again only to read back its answer,
+# because the crash killed the connection that was waiting for one. Use an id you
+# have not used before: an id that already names a finished run just attaches to it
+# and answers instantly, with no crash to see.
+# Add "kill_after_seconds": 8 to the body and the app halts itself 8s in, so you
+# can skip the kill request below and run the demo in two terminals.
+POST http://localhost:5001/crash/run
+Content-Type: application/json
+
+{
+  "id": "trip-42",
+  "reference": "ABC123"
+}
+
+###
+
+### Crash Recovery: kill the app
+# Send this while the run above is still in flight. The process dies before it can
+# reply, so this request reports a connection reset rather than a status code.
+POST http://localhost:5001/crash/kill
+
+###

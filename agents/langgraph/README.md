@@ -5,7 +5,7 @@ This quickstart demonstrates how to run a LangGraph graph as a durable Dapr Work
 ## What This Quickstart Demonstrates
 
 - **LangGraph + Dapr Workflows**: Run a compiled LangGraph StateGraph with durable execution per node
-- **Direct LLM Integration**: Calls OpenAI directly via `langchain-openai` (no Dapr conversation component needed)
+- **Direct LLM Integration**: Runs on a deterministic canned model by default, so no API key is needed; a real provider is opt-in via `langchain-openai` (no Dapr conversation component needed)
 - **Tool Integration**: Availability check tool with mock schedule data
 - **Conditional Routing**: LangGraph conditional edges for tool-calling loop
 - **REST API**: Trigger graph workflows via HTTP endpoints
@@ -16,7 +16,6 @@ This quickstart demonstrates how to run a LangGraph graph as a durable Dapr Work
 1. [Diagrid CLI](https://docs.diagrid.io/references/catalyst/catalyst-cli-intro/) installed
 2. [Python 3.11–3.13](https://www.python.org/downloads/)
 3. [uv](https://docs.astral.sh/uv/getting-started/installation/) installed
-4. An [OpenAI API key](https://platform.openai.com/api-keys)
 
 ## Setup
 
@@ -27,19 +26,24 @@ cd agents/langgraph
 uv sync
 ```
 
-### Set your API key
+<!-- The Catalyst console deep-links to this heading's anchor (#using-a-real-llm-provider).
+     Renaming this heading breaks that link silently. -->
 
-This quickstart uses OpenAI, but you can use any LLM provider supported by LangGraph.
+### Using a real LLM provider
+
+This quickstart runs offline by default. It uses a canned model, needs no API key, and returns the same tool call and the same answer on every run, whatever task you send. To use a real model instead, set `DIAGRID_QUICKSTART_MODEL` to `openai` and export your key. The example below uses OpenAI, but you can use any LLM provider supported by LangGraph.
 
 **macOS/Linux (bash/zsh):**
 
 ```bash
+export DIAGRID_QUICKSTART_MODEL="openai"
 export OPENAI_API_KEY="your-key-here"
 ```
 
 **Windows (PowerShell):**
 
 ```powershell
+$env:DIAGRID_QUICKSTART_MODEL = "openai"
 $env:OPENAI_API_KEY = "your-key-here"
 ```
 
@@ -97,7 +101,7 @@ Invoke-RestMethod -Method Post -Uri 'http://localhost:8005/agent/run' -ContentTy
 
 The agent will:
 1. Receive the scheduling request
-2. Call the LLM to determine the right tool call
+2. Call the LLM to determine the right tool call. The canned offline model always returns the same fixed tool call and the same answer, whatever task you send. See [Using a real LLM provider](#using-a-real-llm-provider) to run this step against a real model
 3. Use the `check_availability` tool to check venue availability
 4. Return available time slots for the requested date
 
@@ -140,63 +144,147 @@ Open the [Catalyst dashboard](https://catalyst.diagrid.io/agents) in your browse
 
 ## Crash Recovery Test With Catalyst
 
-The `crash_test.py` file demonstrates durable crash recovery — a capability not offered by LangGraph natively. It defines a 3-node graph where node 2 crashes with `os._exit(1)`:
+The `crash_test.py` file demonstrates durable crash recovery, a capability not offered by LangGraph natively. It defines a 3-node graph whose middle node deliberately takes about 30 seconds, and a `POST /crash/kill` endpoint that kills the process outright. Nothing is armed: the crash is a request you make, so there is no source edit, no environment variable to unset, and no second run file.
 
-1. **check_venues** — checks venue availability (completes successfully)
-2. **compare_options** — compares options (crashes before completing)
-3. **confirm_booking** — confirms the booking
+1. **check_venues**: checks venue availability. Instant, and completes
+2. **compare_options**: compares options over ~30 seconds. Kill the app during this
+3. **confirm_booking**: confirms the booking. Instant
 
-### 1. First run — trigger and crash
+The node order is the point. `check_venues` completes and Catalyst records its result before `compare_options` starts, so the crash lands between two known points and the restart can show that only the interrupted node ran again. Each node logs itself as `STEP 1`, `STEP 2` and `STEP 3`, which is how you follow it in the app log.
+
+You also choose the workflow instance ID, so you can find the same run again from a second request or in the Catalyst console.
+
+### 4. Start the app
+
+This is a second app (`crash_test.py`, not `main.py`), so stop the run from step 1 if it is still going: both dev-run files use the same `schedule-planner` app ID.
 
 ```bash
 uv run diagrid dev run -f dev-crash-test.yaml --approve
 ```
 
-Wait for `Uvicorn running on <localhost:port>`, then from another terminal:
+Wait for `Uvicorn running on http://0.0.0.0:8001`. The port is pinned in `dev-crash-test.yaml`, so the `localhost:8001` requests below always work as written.
+
+### 5. Run under an ID you own
+
+From another terminal. This request blocks for about 30 seconds while `compare_options` runs.
 
 Choose one of the following to trigger the endpoint:
 
 **macOS/Linux (curl):**
 
 ```bash
-curl -X POST http://localhost:8001/run \
+curl -X POST http://localhost:8001/crash/run \
   -H "Content-Type: application/json" \
-  -d '{"topic": "company gala on March 15"}'
+  -d '{"id": "gala-42", "topic": "company gala on March 15"}'
 ```
 
 **Windows (PowerShell):**
 
 ```powershell
-Invoke-RestMethod -Method Post -Uri 'http://localhost:8001/run' -ContentType 'application/json' -Body '{"topic": "company gala on March 15"}'
+Invoke-RestMethod -Method Post -Uri 'http://localhost:8001/crash/run' -ContentType 'application/json' -Body '{"id": "gala-42", "topic": "company gala on March 15"}'
 ```
 
-**VS Code REST Client (any OS):** Open [`test.http`](./test.http) and click *Send Request* above the request. Requires the [REST Client](https://marketplace.visualstudio.com/items?itemName=humao.rest-client) extension.
+**VS Code REST Client (any OS):** Open [`test.http`](./test.http) and click *Send Request* above the *Crash Recovery: run the graph under an ID you own* request. Requires the [REST Client](https://marketplace.visualstudio.com/items?itemName=humao.rest-client) extension.
 
-Go to the terminal where you started `uv run diagrid dev run`. You'll see step 1 complete and the process crash at step 2.
+Go to the terminal where you started `uv run diagrid dev run`. `check_venues` completes and `compare_options` announces its window:
 
 ```text
 == APP - schedule-planner == >>> STEP 1: Checking venue availability for 'company gala on March 15'...
 == APP - schedule-planner == >>> STEP 1 COMPLETE: Grand Ballroom available on March 15 (2PM-6PM, 6PM-11PM)
-...
-== APP - schedule-planner == >>> STEP 2: Comparing venue options...
+== APP - schedule-planner == >>> STEP 2: Comparing venue options over ~30s. KILL THE APP NOW to test crash recovery (POST /crash/kill, or kill -9). It resumes on restart.
+```
+
+**Two terminals instead of three.** The request takes an optional `kill_after_seconds`. Send it and the app halts *itself* that many seconds into the run, at a known point inside `compare_options`' window, so you never have to aim a kill at a moving target:
+
+```bash
+curl -X POST http://localhost:8001/crash/run \
+  -H "Content-Type: application/json" \
+  -d '{"id": "gala-42", "topic": "company gala on March 15", "kill_after_seconds": 8}'
+```
+
+In PowerShell, add the same `"kill_after_seconds": 8` to the body. Send this instead of the request above and skip step 6: the app crashes on its own. Leave the field out and nothing changes, and you crash the app yourself. Either way the rest of the walkthrough is identical.
+
+Keep the value below `CRASH_DELAY_SECONDS` (30 by default) so the crash lands inside `compare_options` rather than after the graph has finished. The clock starts when `compare_options` starts, not when the request arrives, so the budget is measured against that node's own sleep and does not have to cover the model turn and `check_venues` ahead of it. That is also why the field is safe to send on the re-issue in step 8: the timer only starts when the node actually runs, and a call that attaches to an existing run replays the recorded result instead of re-invoking it.
+
+### 6. Crash the app
+
+Skip this step if you sent `kill_after_seconds` in step 5. Otherwise, from a third terminal, while `compare_options` is still running:
+
+> **`POST /crash/kill` is demo scaffolding. Do not copy it into a real service.**
+> It is an unauthenticated endpoint that lets any caller that can reach the port
+> terminate the process, and it exists here only to make a crash reproducible on
+> demand.
+
+
+**macOS/Linux (curl):**
+
+```bash
+curl -X POST http://localhost:8001/crash/kill
+```
+
+**Windows (PowerShell):**
+
+```powershell
+Invoke-RestMethod -Method Post -Uri 'http://localhost:8001/crash/kill'
+```
+
+**VS Code REST Client (any OS):** Open [`test.http`](./test.http) and click *Send Request* above the *Crash Recovery: kill the app* request.
+
+The endpoint calls `os._exit(1)`, so the process is gone before it can answer and this request itself reports a connection reset rather than a status code. That is expected: a process that answers politely has not crashed. The blocked request from step 5 sees a reset too.
+
+```text
+== APP - schedule-planner == >>> /crash/kill: killing this process to simulate a worker crash
 ❌ App process "schedule-planner" exited with error code: exit status 1
 ```
 
-### 2. Fix and resume
+The workflow instance `gala-42` is unaffected. It lives in Catalyst, not in the process you just killed.
 
-Open `crash_test.py` and comment out the crash line (line 30):
+### 7. Restart the app
 
-```python
-# os._exit(1)  # 💥 Simulates a crash — comment out this line before the second run
-```
-
-Restart the application:
+Restart with the same command as step 4:
 
 ```bash
-uv run diagrid dev run -f dev-crash-test.yaml
+uv run diagrid dev run -f dev-crash-test.yaml --approve
 ```
 
-The workflow **resumes from step 2** — step 1 is not re-executed. The Dapr workflow engine replays the saved result from Catalyst instead of re-running the node.
+**That is the whole recovery. You do not have to send anything.** The run resumes by itself, and no HTTP request is involved: as soon as the restarted app's worker reconnects, Catalyst hands `gala-42` back to it, `compare_options` starts over from the beginning, and about 30 seconds later the graph finishes. Watch the app log, where all of this happens before you send anything:
+
+```text
+== APP - schedule-planner == >>> STEP 2: Comparing venue options over ~30s. KILL THE APP NOW to test crash recovery (POST /crash/kill, or kill -9). It resumes on restart.
+== APP - schedule-planner == >>> STEP 2 COMPLETE: Grand Ballroom (6PM-11PM) is the best option for 200 guests
+== APP - schedule-planner == >>> STEP 3: Confirming booking...
+== APP - schedule-planner == >>> STEP 3 COMPLETE: Booking confirmed: Grand Ballroom, March 15, 6PM-11PM
+```
+
+`check_venues` is **not** re-executed: its `STEP 1` lines do not appear a second time. That node had completed and Catalyst had recorded its result, so the Dapr workflow engine replayed the saved value instead of running the node again. Only the node that was interrupted runs twice.
+
+### 8. Collect the answer
+
+The run recovered on its own, but the crash also killed the request that was waiting for its answer, and that answer had nowhere to go. Once the lines above have appeared, send the **identical** request from step 5 once more to open a new connection to the run that already finished. Because the instance already exists, this call attaches to it rather than starting a second one, and the handler says so:
+
+**macOS/Linux (curl):**
+
+```bash
+curl -X POST http://localhost:8001/crash/run \
+  -H "Content-Type: application/json" \
+  -d '{"id": "gala-42", "topic": "company gala on March 15"}'
+```
+
+**Windows (PowerShell):**
+
+```powershell
+Invoke-RestMethod -Method Post -Uri 'http://localhost:8001/crash/run' -ContentType 'application/json' -Body '{"id": "gala-42", "topic": "company gala on March 15"}'
+```
+
+```text
+== APP - schedule-planner == >>> Attaching to the existing run gala-42 instead of starting a second one
+```
+
+That is the last line of the demo. If you send the request earlier, while `compare_options` is still re-running, the attach line lands in the middle of the log instead and the call blocks until the graph finishes.
+
+The reply uses the one JSON shape every crash demo in this repo returns, `{"id", "result", "message"}`. If the run has already finished, the recorded final output of the graph comes back in `result` with `message` null. If the wait budget elapses first, the same shape comes back as a `202` with `result` null and the attach instruction in `message`. That is not a failure: send the same request again to attach again.
+
+The length of `compare_options` is configurable through the `CRASH_DELAY_SECONDS` environment variable, which defaults to 30. Set it lower to shorten the window, or higher if you need more time to aim.
 
 ## Part of the Event Planning Team
 

@@ -76,6 +76,16 @@
       <artifactId>diagrid-spring-ai-starter</artifactId>
       <version>${diagrid-spring-ai.version}</version>
     </dependency>
+
+    <!-- Tests for CannedChatModel. junit-jupiter alone, not spring-boot-starter-test: the class is a
+         plain object with no Spring context to start, and `mvn package -DskipTests` (the install
+         command the console renders) skips test EXECUTION but still COMPILES tests, so the whole
+         starter would resolve during a first run whose selling point is being fast. -->
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
   <build>
