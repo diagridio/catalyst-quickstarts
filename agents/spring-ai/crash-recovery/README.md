@@ -81,10 +81,18 @@ diagrid dev run -f dev-spring-ai-crash-recovery.yaml --approve
 From another terminal (**Terminal A**), this schedules the booking under `trip-42` and blocks while the
 slow tool "commits":
 
+**macOS/Linux (curl):**
+
 ```bash
 curl -X POST "http://localhost:8080/crash/run" \
   -H "Content-Type: application/json" \
   -d '{"id":"trip-42","reference":"ABC123"}'
+```
+
+**Windows (PowerShell):**
+
+```powershell
+Invoke-RestMethod -Method Post -Uri 'http://localhost:8080/crash/run' -ContentType 'application/json' -Body '{"id":"trip-42","reference":"ABC123"}'
 ```
 
 Watch the app log for the `>>> commitReservation(ABC123)` line, which announces the ~30s window and
@@ -94,10 +102,18 @@ tells you to kill the app now.
 app halts *itself* that many seconds into the booking, at a known point inside the window, so you never
 have to aim a kill at a moving target:
 
+**macOS/Linux (curl):**
+
 ```bash
 curl -X POST "http://localhost:8080/crash/run" \
   -H "Content-Type: application/json" \
   -d '{"id":"trip-42","reference":"ABC123","kill_after_seconds":8}'
+```
+
+**Windows (PowerShell):**
+
+```powershell
+Invoke-RestMethod -Method Post -Uri 'http://localhost:8080/crash/run' -ContentType 'application/json' -Body '{"id":"trip-42","reference":"ABC123","kill_after_seconds":8}'
 ```
 
 Send this instead of the request above and skip step 3: the app crashes on its own. Leave the field out
@@ -122,8 +138,16 @@ window:
 > demand.
 
 
+**macOS/Linux (curl):**
+
 ```bash
 curl -X POST "http://localhost:8080/crash/kill"
+```
+
+**Windows (PowerShell):**
+
+```powershell
+Invoke-RestMethod -Method Post -Uri 'http://localhost:8080/crash/kill'
 ```
 
 The app process dies (Terminal A's `curl` sees a reset). The workflow `trip-42` keeps living in Catalyst.
@@ -148,10 +172,18 @@ The run recovered on its own, but the crash took the connection that was waiting
 Terminal A's call died with the process, and its answer had nowhere to go. Send the **same** call with
 the **same** id from **Terminal A** once more to open a new connection to the run that already finished:
 
+**macOS/Linux (curl):**
+
 ```bash
 curl -X POST "http://localhost:8080/crash/run" \
   -H "Content-Type: application/json" \
   -d '{"id":"trip-42","reference":"ABC123"}'
+```
+
+**Windows (PowerShell):**
+
+```powershell
+Invoke-RestMethod -Method Post -Uri 'http://localhost:8080/crash/run' -ContentType 'application/json' -Body '{"id":"trip-42","reference":"ABC123"}'
 ```
 
 It **attaches** to the recovered run (waiting if it is still committing, or returning the recorded answer

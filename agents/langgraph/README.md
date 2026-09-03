@@ -196,13 +196,21 @@ Go to the terminal where you started `uv run diagrid dev run`. `check_venues` co
 
 **Two terminals instead of three.** The request takes an optional `kill_after_seconds`. Send it and the app halts *itself* that many seconds into the run, at a known point inside `compare_options`' window, so you never have to aim a kill at a moving target:
 
+**macOS/Linux (curl):**
+
 ```bash
 curl -X POST http://localhost:8001/crash/run \
   -H "Content-Type: application/json" \
   -d '{"id": "gala-42", "topic": "company gala on March 15", "kill_after_seconds": 8}'
 ```
 
-In PowerShell, add the same `"kill_after_seconds": 8` to the body. Send this instead of the request above and skip step 6: the app crashes on its own. Leave the field out and nothing changes, and you crash the app yourself. Either way the rest of the walkthrough is identical.
+**Windows (PowerShell):**
+
+```powershell
+Invoke-RestMethod -Method Post -Uri 'http://localhost:8001/crash/run' -ContentType 'application/json' -Body '{"id": "gala-42", "topic": "company gala on March 15", "kill_after_seconds": 8}'
+```
+
+Send this instead of the request above and skip step 6: the app crashes on its own. Leave the field out and nothing changes, and you crash the app yourself. Either way the rest of the walkthrough is identical.
 
 Keep the value below `CRASH_DELAY_SECONDS` (30 by default) so the crash lands inside `compare_options` rather than after the graph has finished. The clock starts when `compare_options` starts, not when the request arrives, so the budget is measured against that node's own sleep and does not have to cover the model turn and `check_venues` ahead of it. That is also why the field is safe to send on the re-issue in step 8: the timer only starts when the node actually runs, and a call that attaches to an existing run replays the recorded result instead of re-invoking it.
 

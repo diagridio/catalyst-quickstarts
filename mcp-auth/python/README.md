@@ -148,8 +148,16 @@ caller and tool by default.
 > per caller listed), and confirm `resources/mcp-server.yaml` has no `headers` block before
 > applying, to see the fail-closed behavior below.
 
+**macOS/Linux (curl):**
+
 ```bash
 curl -s -X POST http://localhost:5001/run | python -m json.tool
+```
+
+**Windows (PowerShell):**
+
+```powershell
+Invoke-RestMethod -Method Post -Uri 'http://localhost:5001/run' | ConvertTo-Json -Depth 6
 ```
 
 Both problems currently look identical here — `Session terminated`, no detail:
@@ -225,8 +233,16 @@ diagrid apply -f resources/mcp-server.yaml
 
 Trigger the client again:
 
+**macOS/Linux (curl):**
+
 ```bash
 curl -s -X POST http://localhost:5001/run | python -m json.tool
+```
+
+**Windows (PowerShell):**
+
+```powershell
+Invoke-RestMethod -Method Post -Uri 'http://localhost:5001/run' | ConvertTo-Json -Depth 6
 ```
 
 The response is unchanged — still `Session terminated` for everything. Fixing the upstream
@@ -265,8 +281,16 @@ couple of seconds behind that. If the very next call still looks denied, retry o
 
 Trigger the client again:
 
+**macOS/Linux (curl):**
+
 ```bash
 curl -s -X POST http://localhost:5001/run | python -m json.tool
+```
+
+**Windows (PowerShell):**
+
+```powershell
+Invoke-RestMethod -Method Post -Uri 'http://localhost:5001/run' | ConvertTo-Json -Depth 6
 ```
 
 Now `add` is discoverable and succeeds, while `get_account_balance` is rejected with a clean
@@ -300,8 +324,16 @@ diagrid mcpserver access grant mcp-server --caller "*" --allow-tools "*" --wait
 
 Trigger the client again:
 
+**macOS/Linux (curl):**
+
 ```bash
 curl -s -X POST http://localhost:5001/run | python -m json.tool
+```
+
+**Windows (PowerShell):**
+
+```powershell
+Invoke-RestMethod -Method Post -Uri 'http://localhost:5001/run' | ConvertTo-Json -Depth 6
 ```
 
 Both tools are now discoverable and succeed:
@@ -517,8 +549,16 @@ caller and tool by default.
 > per caller listed), and confirm `resources/mcp-server.yaml` has no `headers` block before
 > applying, to see the fail-closed behavior below.
 
+**macOS/Linux (curl):**
+
 ```bash
 curl -s -X POST http://localhost:5001/run | python -m json.tool
+```
+
+**Windows (PowerShell):**
+
+```powershell
+Invoke-RestMethod -Method Post -Uri 'http://localhost:5001/run' | ConvertTo-Json -Depth 6
 ```
 
 Both problems currently look identical here — `Session terminated`, no detail:
