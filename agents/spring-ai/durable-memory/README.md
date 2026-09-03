@@ -46,16 +46,32 @@ diagrid dev run -f dev-spring-ai-durable-memory.yaml --approve
 From another terminal — this schedules the booking under an instance id **you own** (`trip-1`) and a
 `conversationId` (`alice`). It blocks ~30s while the `commitReservation` tool "commits":
 
+**macOS/Linux (curl):**
+
 ```bash
 curl -X POST "http://localhost:8080/chat?id=trip-1&conversationId=alice&message=Book%20a%20flight%20to%20Oslo,%20reference%20OSLO-1"
+```
+
+**Windows (PowerShell):**
+
+```powershell
+Invoke-RestMethod -Method Post -Uri 'http://localhost:8080/chat?id=trip-1&conversationId=alice&message=Book%20a%20flight%20to%20Oslo,%20reference%20OSLO-1'
 ```
 
 ### 2. Look at what memory has so far
 
 In a third terminal, while the call above is still blocked:
 
+**macOS/Linux (curl):**
+
 ```bash
 curl "http://localhost:8080/history?conversationId=alice"
+```
+
+**Windows (PowerShell):**
+
+```powershell
+Invoke-RestMethod -Uri 'http://localhost:8080/history?conversationId=alice' | ConvertTo-Json
 ```
 
 You see only the **user** question — the memory advisor's `before` phase saved it, but the `after`
@@ -67,8 +83,16 @@ phase (which saves the answer) has not run yet:
 
 ### 3. Crash the app mid-call
 
+**macOS/Linux (curl):**
+
 ```bash
 curl -X POST "http://localhost:8080/crash/kill"
+```
+
+**Windows (PowerShell):**
+
+```powershell
+Invoke-RestMethod -Method Post -Uri 'http://localhost:8080/crash/kill'
 ```
 
 The process dies. The workflow is safe in Catalyst — but the memory advisor's `after` phase never
@@ -84,8 +108,17 @@ diagrid dev run -f dev-spring-ai-durable-memory.yaml --approve
 
 Check memory again — still just the question; the crashed call never persisted an answer:
 
+**macOS/Linux (curl):**
+
 ```bash
 curl "http://localhost:8080/history?conversationId=alice"
+# ["USER: Book a flight to Oslo, reference OSLO-1"]
+```
+
+**Windows (PowerShell):**
+
+```powershell
+Invoke-RestMethod -Uri 'http://localhost:8080/history?conversationId=alice' | ConvertTo-Json
 # ["USER: Book a flight to Oslo, reference OSLO-1"]
 ```
 
@@ -95,10 +128,20 @@ a live caller. Send **the same call with the same instance id** again. It attach
 workflow, the call returns successfully, and *only now* does the memory advisor's `after` phase record
 the answer:
 
+**macOS/Linux (curl):**
+
 ```bash
 curl -X POST "http://localhost:8080/chat?id=trip-1&conversationId=alice&message=Book%20a%20flight%20to%20Oslo,%20reference%20OSLO-1"
 
 curl "http://localhost:8080/history?conversationId=alice"
+```
+
+**Windows (PowerShell):**
+
+```powershell
+Invoke-RestMethod -Method Post -Uri 'http://localhost:8080/chat?id=trip-1&conversationId=alice&message=Book%20a%20flight%20to%20Oslo,%20reference%20OSLO-1'
+
+Invoke-RestMethod -Uri 'http://localhost:8080/history?conversationId=alice' | ConvertTo-Json
 ```
 
 ```json
