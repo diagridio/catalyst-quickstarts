@@ -96,9 +96,27 @@ SUITES = (
         "data": "agents_microsoft_dotnet",
         "language": "csharp",
         "runtime": "dotnet",
-        # False until a live run and a mutation check prove it. See the harness
-        # README's Limitations.
-        "nightly": False,
+        # True as of 2026-08-28: a green live run against a real Catalyst project
+        # AND a mutation check `ci/check_mutation.py` accepted — READY_MARKERS
+        # overridden to "__mutation_check__" made `Wait Until Ready Marker` FAIL,
+        # naming the sentinel, with the enclosing test failing too.
+        #
+        # What this does NOT cover, same caveat as the langgraph row: the
+        # mutation targeted READY_MARKERS only, so the three assertions written
+        # for this suite — the `tunnels-proxy` attach marker,
+        # `expect: connection-dropped`, and the `>>> TOOL 2` log marker — have
+        # not been shown to fail when what they check breaks. The crash
+        # assertion is the one most worth mutating: its whole value is failing
+        # when a 200 comes back, which is exactly what a re-commented
+        # `Environment.Exit(1)` would produce.
+        #
+        # The run that validated the flag predates the `--yes` teardown fix and
+        # spent 600s per leg on the delete prompt. Re-run after it, 2026-08-28:
+        # the whole test takes 53s, of which `Wait Until Apps Connected` is 32s.
+        # Teardown is 1.37s, and the suite's own documented `project delete` now
+        # really deletes the project — verified by `diagrid project list` after
+        # a run with no safety-net script.
+        "nightly": True,
         "secrets": ("OPENAI_API_KEY",),
     },
     {

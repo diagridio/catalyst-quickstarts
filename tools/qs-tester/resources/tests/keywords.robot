@@ -190,6 +190,35 @@ Wait Until Ready Marker Fails When The Marker Never Arrives
     Should Be True    ${elapsed} >= 2
     ...    msg=Wait Until Ready Marker gave up after ${elapsed}s of a 3s timeout; it is reading once instead of polling
 
+Make Command Non Interactive Adds The Approval Flag To A Documented Delete
+    [Documentation]    `diagrid project delete` prompts for confirmation and waits
+    ...    forever for an answer nothing sends. Observed 2026-08-28: the MAF
+    ...    suite's documented teardown printed its WARNING and then sat until
+    ...    Robot SIGTERMed it at the 600s timeout (rc=-15), twice per verify-live
+    ...    run, and the project survived only because ci/teardown-project.sh
+    ...    passes --yes itself.
+    ...
+    ...    Same class as `diagrid login`, and handled the same way: the data
+    ...    module keeps the documented string so doc-sync still holds it to the
+    ...    README, and the flag is added at execution time.
+    ${command}=    Make Command Non Interactive    diagrid project delete qs-ci-demo-1
+    Should Be Equal    ${command}    diagrid project delete qs-ci-demo-1 --yes
+
+Make Command Non Interactive Leaves Other Commands Alone
+    [Documentation]    Narrow on purpose. Every other documented command runs
+    ...    verbatim, which is the harness's whole premise.
+    ${command}=    Make Command Non Interactive    diagrid project create qs-ci-demo-1 --wait --use
+    Should Be Equal    ${command}    diagrid project create qs-ci-demo-1 --wait --use
+
+Make Command Non Interactive Does Not Duplicate An Existing Approval Flag
+    [Documentation]    A README that already documents the non-interactive form
+    ...    must not end up with the flag twice.
+    ${yes}=    Make Command Non Interactive    diagrid project delete qs-ci-demo-1 --yes
+    Should Be Equal    ${yes}    diagrid project delete qs-ci-demo-1 --yes
+    # --approve is the documented synonym.
+    ${approve}=    Make Command Non Interactive    diagrid project delete qs-ci-demo-1 --approve
+    Should Be Equal    ${approve}    diagrid project delete qs-ci-demo-1 --approve
+
 Wait Until Catalyst Attached Finds A Probe That Arrives Late
     [Documentation]    The gate's whole job is to keep the suite from triggering
     ...    before Catalyst has attached to the app, so it has to wait rather than

@@ -18,13 +18,22 @@ If a README documents a command, run that command verbatim, substituting only th
 project name. Where a README documents nothing, the harness supplies its own
 command and labels it infrastructure.
 
-Two exceptions, both already implemented, neither to be re-litigated:
+Three exceptions, all already implemented, none to be re-litigated:
 
 1. `diagrid login` becomes `diagrid login --api-key "$DIAGRID_API_KEY"` via
    `ci/login.sh`. The documented bare form blocks on a browser prompt.
 2. The documented project name becomes `qs-ci-<leg>-<run-id>` via
    `ci/project-name.sh`. The `qs-ci-` prefix is what `ci/reap-orphans.sh`
    collects by; a name without it leaks forever.
+3. A documented `diagrid project delete` gets `--yes` appended, by
+   `Make Command Non Interactive` in `catalyst.resource`. Same reason as the
+   first: the documented form prompts for confirmation and waits forever for an
+   answer nothing sends. Measured on `agents/microsoft-dotnet`: 600s per run,
+   swallowed by the `Run Keyword And Ignore Error` around teardown.
+
+All three are execution-time rewrites. The data modules keep the documented
+strings, so doc-sync still holds them to the README and no deviation can hide
+drift.
 
 Never invent an expected value. If the README does not document it and it cannot
 be read out of the repo, assert only what is documented and leave a comment

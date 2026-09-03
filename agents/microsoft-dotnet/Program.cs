@@ -21,7 +21,7 @@ var tools = new List<AITool>
     AIFunctionFactory.Create((string data) =>
     {
         Console.WriteLine(">>> TOOL 2: Comparing venues...");
-        //Environment.Exit(1); // 💥 Comment out this line before the second run. Don't curl on the second run! See the previous agent complete
+        Environment.Exit(1); // 💥 Comment out this line before the second run. Don't curl on the second run! See the previous agent complete
         Console.WriteLine(">>> TOOL 2 COMPLETE: Grand Ballroom is the best option");
         return "Grand Ballroom is the best option. Now call step_three_confirm.";
     }, "step_two_compare", "Compare the venue options. This is the second step."),

@@ -99,8 +99,21 @@ Csharp Microsoft-Dotnet Quickstart
         # a suite that needs one should branch on ${request}[method] here.
         Should Be Equal    ${request}[method]    POST
         ...    msg=Only POST requests are handled here; use GET And Expect for a documented GET.
-        POST And Expect Field    ${request}[port]    ${request}[path]    ${request}[payload]
-        ...    ${request}[status]    ${field}
+        # This quickstart's documented trigger kills the app mid-request — README
+        # "### 2. Trigger the Agent": "Call `step_two_compare` — crashes before
+        # completing (process exits)", and "The process exits — this is expected".
+        # So there is no status code to assert here and `expect` says so, rather
+        # than the suite carrying a status the app can never return. A request
+        # without `expect` takes the ordinary path, so this stays the same shared
+        # loop the other agent suites use.
+        ${expect}=      Get From Dictionary    ${request}    expect    default=${NONE}
+        IF    '${expect}' == 'connection-dropped'
+            POST And Expect The App To Exit
+            ...    ${request}[port]    ${request}[path]    ${request}[payload]
+        ELSE
+            POST And Expect Field    ${request}[port]    ${request}[path]    ${request}[payload]
+            ...    ${request}[status]    ${field}
+        END
         ${marker}=      Get From Dictionary    ${request}    log_marker     default=${NONE}
         IF    $marker is not None
             Wait Until Log Contains    ${log}    ${marker}

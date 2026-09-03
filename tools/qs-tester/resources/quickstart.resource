@@ -135,6 +135,50 @@ Require Env Var
     Should Not Be Empty    ${value}
     ...    msg=${name} is not set, and the ${quickstart} quickstart needs it. Export it before running this suite; in CI it comes from the job's env block.
 
+POST And Expect The App To Exit
+    [Documentation]    POST ${payload} and assert the request did NOT complete,
+    ...    because the app killed its own process while handling it.
+    ...
+    ...    `agents/microsoft-dotnet` documents exactly this: "Call
+    ...    `step_two_compare` — crashes before completing (process exits)", and of
+    ...    the documented curl, "The process exits — this is expected". There is no
+    ...    status code to assert, so the assertion is the absence of a response —
+    ...    but only when the cause is the app dying.
+    ...
+    ...    Three outcomes, and two of them must fail:
+    ...
+    ...    - the connection drops -> PASS. The app exited mid-response, which is
+    ...      the documented behaviour.
+    ...    - a status code comes back -> FAIL. The crash silently stopped
+    ...      happening. Not hypothetical: `Program.cs` sat committed with
+    ...      `//Environment.Exit(1);` commented out, so on a fresh clone the
+    ...      documented crash demo did nothing. An assertion that accepted a
+    ...      response would have shipped that green.
+    ...    - the request times out -> FAIL, and distinctly. A hang is not a crash;
+    ...      it is the shape of Catalyst's attach window (see
+    ...      `Wait Until Catalyst Attached`), and this quickstart has no attach
+    ...      gate, so a hang is a live possibility. Reporting one as "crashed"
+    ...      would hide it behind an assertion that looks satisfied.
+    ...
+    ...    ${timeout} is what separates the last two: it must be longer than the
+    ...    app needs to reach its crash, and shorter than you are willing to wait
+    ...    on a hang. resources/tests/crash_assertion.robot tests all three.
+    [Arguments]    ${port}    ${path}    ${payload}    ${timeout}=120
+    ${outcome}    ${result}=    Run Keyword And Ignore Error
+    ...    POST    http://localhost:${port}${path}    json=${payload}
+    ...    expected_status=anything    timeout=${timeout}
+    IF    '${outcome}' == 'PASS'
+        Fail    POST ${path} completed with status ${result.status_code}, but this quickstart documents the app exiting mid-request. The crash is not happening. Body: ${result.text}
+    END
+    # ReadTimeout is the hang, not the crash. Rejected explicitly rather than
+    # lumped in with every other failure, so a hung run cannot read as a pass.
+    ${timed_out}=    Evaluate    'ReadTimeout' in $result or 'Read timed out' in $result
+    IF    ${timed_out}
+        Fail    POST ${path} did not answer within ${timeout}s and did not drop the connection either. That is a hang, not the documented crash — most likely Catalyst's attach window. (${result})
+    END
+    Should Contain    ${result}    ConnectionError
+    ...    msg=POST ${path} failed, but not by the app exiting: the documented crash drops the connection. (${result})
+
 POST And Expect Field
     [Documentation]    POST ${payload} and assert the status code, plus (when
     ...    ${field} is given) that the named JSON field is present and non-empty.
