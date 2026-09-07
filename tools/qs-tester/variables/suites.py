@@ -100,6 +100,46 @@ SUITES = (
         "secrets": (),
     },
     {
+        "suite": "agents/langgraph-identity/tests/quickstart.robot",
+        "family": "agent",
+        # 18 characters, inside `project_name_budget()` (26), so no explicit
+        # `leg` is needed. Measured, not estimated, against the worst-case
+        # (`local` + 10-digit epoch) run id: the CI project
+        # qs-ci-agents-langgraph-identity-local0000000000 is 47 of the 55
+        # characters allowed, and the second project verify-live.sh derives for
+        # the mutation run, qs-ci-agents-langgraph-identity-mut-local0000000000,
+        # is 51. Both fit, so the mutation check needs no shorter `leg` either --
+        # which is the case the budget alone does not cover, since
+        # project_name_budget() does not account for the `-mut` suffix.
+        "name": "langgraph-identity",
+        "data": "agents_langgraph_identity",
+        "language": "python",
+        "runtime": "python",
+        # False: neither half of the bar is met. No live run against a real
+        # Catalyst project and no mutation check, so nothing here is known to
+        # pass, or to fail when what it checks breaks. Registering True without
+        # both would fail the scheduled build nightly for everyone and leak a
+        # project each time until reap-orphans.sh collects it. The suite still
+        # runs on workflow_dispatch, which is the intended path for a first run.
+        #
+        # Worth knowing before that run: this suite's assertions are the
+        # plumbing plus a 401 on each documented route. The 200 and the 403 the
+        # README documents are unreachable from the harness -- no keyword takes
+        # headers and nothing here can mint a dataplane-Sentry-signed token --
+        # so a green run here will NOT mean identity propagation is proven. See
+        # UNCOVERED in agents_langgraph_identity.py and the harness README's
+        # Limitations.
+        "nightly": False,
+        # Empty: the quickstart ships a canned offline model (fake_model.py) and
+        # reaches a real provider only when DIAGRID_QUICKSTART_MODEL=openai,
+        # which this suite does not set -- and main.py imports langchain_openai
+        # lazily inside that branch, so the app starts with no key. Both
+        # documented requests are refused before the graph runs anyway. Keep in
+        # step with SECRETS in agents_langgraph_identity.py -- one without the
+        # other is a declaration that lies.
+        "secrets": (),
+    },
+    {
         "suite": "agents/microsoft-dotnet/tests/quickstart.robot",
         "family": "agent",
         "name": "microsoft-dotnet",

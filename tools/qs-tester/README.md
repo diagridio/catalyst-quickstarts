@@ -1,8 +1,9 @@
 # qs-tester
 
 End-to-end tests for the `workflow`, `state`, `pubsub` and `invocation`
-quickstarts, and for three agent-family ones (`agents/langgraph`,
-`agents/microsoft-dotnet`, `agents/spring-ai/event-planner`), built on
+quickstarts, and for five agent-family ones (`agents/langgraph`,
+`agents/langgraph-identity`, `agents/microsoft-dotnet`,
+`agents/spring-ai/crash-recovery`, `agents/spring-ai/event-planner`), built on
 [Robot Framework](https://robotframework.org/). The tests run the *actual*
 commands each quickstart's README documents and assert the responses and log output
 that README promises, so drift between the docs, the code, and Catalyst is caught
@@ -110,13 +111,13 @@ bash tools/qs-tester/ci/teardown-project.sh "$PROJECT"
 
 The only thing the harness ever rewrites in a documented command is the project
 name. Every canonical quickstart README spells `--project <api>-quickstart` in
-its `dev run`, and `Start Quickstart` substitutes the ephemeral name for it. The
-three agent READMEs are the exception: their `dev run` is bare, because a
+its `dev run`, and `Start Quickstart` substitutes the ephemeral name for it. All
+five agent READMEs are the exception: their `dev run` is bare, because a
 documented `project create ... --use` already selected the project, and the
 suites reproduce that bareness on purpose — see "The `dev run` command can be
 bare" below. For those, the substitution lands in the documented `project
 create` (and `project delete`, where the README documents one — `agents/langgraph`
-does not) commands instead. Everything else — the file, the
+and `agents/langgraph-identity` do not) commands instead. Everything else — the file, the
 flags, `mvn spring-boot:run`, the `uv run` prefix — runs exactly as the README
 shows it.
 
@@ -176,7 +177,7 @@ differ and are worth knowing before you touch one:
    three shapes). `ci/setup-project.sh` is for the canonical suites, whose
    READMEs document no provisioning at all, and for an agent quickstart whose
    README documents none either.
-2. **The `dev run` command can be bare.** The three suites here all follow a
+2. **The `dev run` command can be bare.** All five agent suites here follow a
    documented `project create ... --use` with a `dev run` carrying no
    `--project`. The suite reproduces that exactly, so a regression in `--use`
    fails here. (`mcp-auth/python` documents the opposite — an explicit
@@ -184,10 +185,15 @@ differ and are worth knowing before you touch one:
 3. **Assertions are structural.** Responses contain model output, so the suites
    assert a status code, a named field being present and non-empty where a
    response shape is known, and a log marker showing the expected tool ran. Be
-   careful with the status code: **none of the three READMEs behind these
-   suites documents one**, so the `status: 200` in all three data modules is an
-   assumption rather than a transcription, and for two of the three it is
-   probably wrong — see "Limitations".
+   careful with the status code: **none of the four READMEs behind the
+   `status: 200` suites documents one** (`agents/langgraph`,
+   `agents/microsoft-dotnet`, `agents/spring-ai/crash-recovery`,
+   `agents/spring-ai/event-planner`), so that 200 is an assumption rather than a
+   transcription, and for some of them it is probably wrong — see "Limitations".
+   `agents/langgraph-identity` is the counterexample: its README prints
+   `HTTP/1.1 401 Unauthorized`, so its `status: 401` really is transcribed, and
+   its response carries no model output, which is why it can assert an exact
+   `body` as well.
 4. **The manifest row's `name` is a path, and it has a 26-character budget.** An
    agent row's `name` is the quickstart's path below `agents/` with slashes
    replaced by dashes (`agents/spring-ai/event-planner` →
@@ -455,7 +461,7 @@ config, not a typo.
   mapping was verified. Note that `dev stop` also kills the local `diagrid dev run`
   process, which is harmless in teardown (the process tree is already stopped by
   then) but will end a session you are still using.
-- **`agents/langgraph` is `nightly: True`; the other three are not.** The bar for
+- **`agents/langgraph` is `nightly: True`; the other four are not.** The bar for
   that flag is a green live run *plus* a mutation check the verdict tool accepts,
   and only langgraph has cleared both (2026-08-28). Where the others stand:
   - `agents/microsoft-dotnet` has the first half. Its first green live run was
@@ -465,6 +471,8 @@ config, not a typo.
     2026-09-02, offline, covering the crash and the recovery. No mutation check.
   - `agents/spring-ai/event-planner` **cannot reach the first half**, and no
     amount of suite work changes that; see its own bullet below.
+  - `agents/langgraph-identity` has **neither** half: it has never been run
+    against Catalyst at all. See its own bullet below.
   The bullets that follow are what the missing halves cost.
 - **`agents/langgraph` has run against real Catalyst three times and not yet
   passed**, but each run has failed further along than the last. 2026-08-27:
@@ -574,22 +582,73 @@ config, not a typo.
       both fire and the client sees `RemoteDisconnected`. A red suite is only
       worth keeping if it is red for the documented reason — otherwise it is a
       race dressed up as a finding.
-- **None of the three agent READMEs documents a status code**, so
-  `REQUESTS[...]["status"] = 200` in `variables/agents_langgraph.py`,
-  `variables/agents_microsoft_dotnet.py` and
+- **`agents/langgraph-identity` covers the inbound-identity plumbing and the
+  rejection path only, and has never been run against Catalyst.** Its two
+  documented requests are the unauthenticated `GET /whoami` and
+  `POST /agent/run`, each asserted at 401 with the exact body
+  `{"error": "oauth.missing_token"}` — the shipped middleware's missing-token
+  path (`diagrid` 0.4.4, `_error_response` in `identity/asgi.py`). That much was
+  measured offline before registration, under starlette's `TestClient` with no
+  Catalyst and no network, along with the two outcomes the suite deliberately
+  does *not* assert: a malformed token surfaces as **500** (`jwt.DecodeError`
+  escapes `verify()` uncaught), and with no issuer discoverable the middleware
+  answers **503 `oauth.not_configured`**.
+  - **The authenticated calls are unreachable from this harness.** Both
+    documented `diagrid call invoke` forms are in `UNCOVERED`: no keyword here
+    takes headers, and nothing here can mint a token dataplane Sentry has
+    signed. So nothing in this suite proves a verified identity reaches the
+    app's handler. The README documents the 200 and the 403 too, and reaches
+    them through an opt-in offline issuer (`local_identity.py`) — which is the
+    basis for the pytest beside the quickstart
+    (`agents/langgraph-identity/test_identity.py`, run by
+    `.github/workflows/agents_langgraph_identity_python.yaml`) rather than for
+    this suite: it replaces Catalyst entirely and binds the same port as
+    `dev run`. That pytest covers the 200, the 403, the expired 401 and the
+    verified subject reaching the tool; it proves nothing about Catalyst, and
+    this suite proves nothing about a credential, so neither stands in for the
+    other.
+  - **Worse than a gap, and the reason this suite must not be read as identity
+    coverage: the 401 is returned *before* the verifier is built.** Measured in
+    the same probe — an unauthenticated request answers `401
+    oauth.missing_token` even with no issuer discoverable at all. So both
+    assertions pass unchanged against a project on which inbound identity was
+    never enabled, while every credential-bearing request to that same app
+    would answer 503. This suite cannot distinguish those two projects.
+  - `HEALTH_PROBES` and `CATALYST_PROBE_MARKERS` are both `()`. The first
+    because `require_auth` defaults to `True` and `OAuthMiddleware` wraps every
+    route, so no path can produce the 200 `Wait Until Apps Healthy` polls for —
+    the shipped `OAuthConfig` has five fields and no `exclude_paths` — which is
+    also why the quickstart exposes no health route and its dev config sets
+    `enableAppHealthCheck: false`. The second because this quickstart starts no
+    workflow, so it never enters the attach window that gate exists for.
+    Readiness rests on the connection gate plus one `Uvicorn running on
+    http://0.0.0.0:8006` marker.
+  - Unlike the four modules in the next bullet, **its `status: 401` is a
+    transcription**: the README prints `HTTP/1.1 401 Unauthorized` and the body
+    beneath the documented curl.
+  - The outbound leg — an agent's on-behalf-of token reaching a downstream MCP
+    tool — is absent from the quickstart by design, not by omission: it does not
+    work in any environment today, so no suite here should grow an assertion
+    about a delegated JWT.
+- **None of the four agent READMEs behind a `status: 200` documents a status
+  code**, so `REQUESTS[...]["status"] = 200` in `variables/agents_langgraph.py`,
+  `variables/agents_microsoft_dotnet.py`,
+  `variables/agents_spring_ai_crash_recovery.py` and
   `variables/agents_spring_ai_event_planner.py` is an assumption in every case,
-  not something transcribed. For `agents/langgraph` a 200 is at least plausible
+  not something transcribed. (`variables/agents_langgraph_identity.py` is the
+  exception — see the bullet above.) For `agents/langgraph` a 200 is at least plausible
   — the endpoint returns normally — but it is still unverified. For the other
   two it is worse than unverified; see the bullet above.
 - **The connection line for an agent app is now observed, not inferred.** It
   began as an inference in every agent data module — read from the quickstart's
   dev config via the appPort rule ("Readiness markers are not uniform per API"
-  above) — and `diagrid dev run` has since been seen to print it for all four:
+  above) — and `diagrid dev run` has since been seen to print it for the other
+  four:
   `agents/langgraph` (2026-08-27), then `agents/microsoft-dotnet`,
   `agents/spring-ai/crash-recovery` and `agents/spring-ai/event-planner`
   (2026-09-02). That closes the risk this bullet used to carry for
   `agents/spring-ai/event-planner`, whose entire readiness gate it is.
-- **Ten of the fourteen `agents/*` quickstarts have no suite at all** (adk,
+- **Ten of the sixteen `agents/*` quickstarts have no suite at all** (adk,
   claude-agents, crewai, dapr-agents/durable-agent, dapr-agents/orchestrator,
   deepagents, openai-agents, pydantic-ai, spring-ai/durable-memory, strands),
   and neither do `dapr-agents/*` or `mcp-auth/*`. Nothing detects drift in them beyond

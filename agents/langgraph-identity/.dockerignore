@@ -1,0 +1,16 @@
+.venv
+__pycache__/
+*.pyc
+.git
+
+# Deliberately excluded from the image, not an oversight. local_identity.py
+# swaps the whole identity plane for a self-signed in-process issuer whenever
+# DIAGRID_QUICKSTART_IDENTITY=local -- an app that trusts tokens it minted
+# itself. Without the file, main.py's lazy `from local_identity import ...`
+# raises ImportError and the app refuses to start, so setting that variable on
+# a container derived from this quickstart fails closed instead of disabling
+# authentication. Keep it out; prose is a weaker guard than a missing file.
+local_identity.py
+# The tests import local_identity, so they cannot run in the image either, and
+# a container has no reason to carry them.
+test_*.py
