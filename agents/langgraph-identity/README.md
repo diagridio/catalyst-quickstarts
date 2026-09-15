@@ -11,7 +11,7 @@ app.add_middleware(OAuthMiddleware, config=OAuthConfig(scopes={"agent.invoke"}))
 
 ## What This Quickstart Demonstrates
 
-- **Verified inbound identity**: `OAuthMiddleware` verifies the `X-Diagrid-User-Token` header on every request and puts a `VerifiedUser` on `request.state.user`, carrying `subject`, `tenant`, `scopes`, `claims` and `issuer_id`
+- **Verified inbound identity**: `OAuthMiddleware` verifies the `X-Diagrid-User-Token` header on every request and puts a `VerifiedUser` on `request.state.diagrid_user`, carrying `subject`, `tenant`, `scopes`, `claims` and `issuer_id`
 - **Nothing to configure**: `OAuthConfig` discovers the issuer, audience and JWKS URI from the sidecar's `/v1.0/metadata` endpoint, so the app hardcodes no identity coordinates and no provider URLs
 - **Fail closed, before your code**: a missing credential is a `401` and an insufficient one is a `403`, decided in the middleware before the graph, the model, or any application code runs
 - **A plain LangGraph graph**: a `StateGraph` with an `agent` node and a `tools` node, compiled and invoked directly. No Diagrid agent runner and no Dapr Workflow, so you can see exactly where identity enters and how little of the graph knows about it
@@ -278,14 +278,15 @@ The credential the app verifies is **not** the one the caller sent. Catalyst ver
 
 That is what makes the app's configuration so small. `OAuthConfig(scopes={"agent.invoke"})` names a policy and nothing else; the issuer, audience and JWKS URI are read from the sidecar's `/v1.0/metadata` at first use. Change identity providers and the app does not change.
 
-The middleware then does four things in order, and stops at the first failure:
+The middleware then does five things in order, and stops at the first failure:
 
 1. No `X-Diagrid-User-Token` header, or an empty one: `401 oauth.missing_token`
-2. Signature or claims fail against the discovered JWKS: `401`, with a code naming the reason, such as `oauth.expired`
-3. The verified scopes do not include every required scope: `403 oauth.missing_scope`
-4. Otherwise it builds a `VerifiedUser` and puts it on `request.state.user`
+2. The credential is not a well-formed JWT: `401 oauth.decode_error`
+3. Signature or claims fail against the discovered JWKS: `401`, with a code naming the reason, such as `oauth.expired`
+4. The verified scopes do not include every required scope: `403 oauth.missing_scope`
+5. Otherwise it builds a `VerifiedUser` and puts it on `request.state.diagrid_user`
 
-Only after step 4 does any of this repository's code run. Both handlers in `main.py` read `request.state.user` and can treat it as trustworthy, because an untrustworthy request never reached them.
+Only after step 5 does any of this repository's code run. Both handlers in `main.py` read `request.state.diagrid_user` and can treat it as trustworthy, because an untrustworthy request never reached them.
 
 Inside the graph, identity is deliberately ordinary. `POST /agent/run` passes the verified subject as `config={"configurable": {"user_subject": user.subject}}`, and the `tools` node reads it from there. Nothing about the graph is Diagrid-specific, which is the point: the same graph runs unchanged off Catalyst, just without a verified caller to run it for.
 

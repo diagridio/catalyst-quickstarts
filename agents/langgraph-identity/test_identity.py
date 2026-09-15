@@ -62,8 +62,7 @@ def client(issuer):
     `raise_server_exceptions=False` so an unhandled handler exception arrives as
     a 500 response rather than propagating into the test. Without it a test
     asserting a status code could not tell "the app answered 500" from "the test
-    itself blew up", and the middleware has a known uncaught path -- a malformed
-    token -- that this file pins below.
+    itself blew up", which the 400-on-bad-payload cases below depend on.
     """
     app = FastAPI()
     app.get("/whoami")(main.whoami)
@@ -138,26 +137,25 @@ def test_an_expired_credential_is_401(client, issuer):
         # credential but is not one. BEARER_PREFIX is "Bearer " -- the trailing
         # space is part of it -- and HTTP strips trailing header whitespace, so
         # the prefix never matches and the literal string "Bearer" is taken as
-        # the token. Measured, not reasoned: this is a 500, not the 401 an
-        # empty header gets.
+        # the token. It therefore lands here, among the malformed tokens, rather
+        # than on the oauth.missing_token path an empty header gets. Same status
+        # either way now, but a different code, and that is worth pinning.
         {"X-Diagrid-User-Token": "Bearer"},
     ],
 )
-def test_a_malformed_token_is_not_a_401(client, header):
-    # Pinning a library defect rather than a documented outcome. A token that is
-    # not a well-formed JWT makes PyJWKClient raise jwt.DecodeError, which
-    # `verify()` does not convert and `dispatch` does not catch, so it surfaces
-    # as a 500. The quickstart's README deliberately never claims a malformed
-    # token yields 401, and the Robot suite deliberately asserts nothing about
-    # it. This test exists so that a library fix turning this into a 401 is
-    # noticed here -- at which point the READMEs may start claiming it.
+def test_a_malformed_token_is_a_401(client, header):
+    # A token that is not a well-formed JWT makes PyJWKClient raise
+    # jwt.DecodeError. diagrid 0.4.4 let that escape as a 500; 0.4.5 converts it
+    # to oauth.decode_error, so the path now fails closed with the rest of the
+    # oauth.* family and the README is free to claim it.
+    #
+    # Asserting the code and not just the status: 401 alone would still pass if
+    # a future version routed this through missing_token or invalid_signature,
+    # and those mean different things to a reader debugging a real credential.
     response = client.get("/whoami", headers=header)
 
-    assert response.status_code == 500, (
-        "diagrid 0.4.4 leaks jwt.DecodeError as a 500. If this now returns 401, "
-        "the library was fixed: update this test and the comments in "
-        "tools/qs-tester/variables/agents_langgraph_identity.py that record it."
-    )
+    assert response.status_code == 401
+    assert response.json() == {"error": "oauth.decode_error"}
 
 
 # --- The verified caller reaches the app ------------------------------------

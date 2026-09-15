@@ -11,9 +11,9 @@
 # See "## Run Offline Without a Catalyst Project" in README.md. The two requests
 # that send no credential at all answer 401 in either mode.
 #
-# Leave the placeholder unedited and the credential-bearing requests answer 500,
-# not 401: the literal text below is not a well-formed JWT, and diagrid 0.4.4
-# lets jwt.DecodeError escape as a 500.
+# Leave the placeholder unedited and the credential-bearing requests answer
+# 401 {"error": "oauth.decode_error"}: the literal text below is not a
+# well-formed JWT, so it is rejected before any signature check happens.
 @token = <THE_CREDENTIAL_LOGGED_UNDER_200>
 
 ### Who is calling, with no credential: 401 {"error": "oauth.missing_token"}

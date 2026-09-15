@@ -10,7 +10,7 @@ WHAT THIS SUITE COVERS. The quickstart demonstrates INBOUND end-user identity:
 Catalyst verifies the caller's identity-provider token at the edge, exchanges it
 with dataplane Sentry, and passes a Catalyst-signed identity to the app in
 `X-Diagrid-User-Token`, where `OAuthMiddleware` verifies it and puts a
-`VerifiedUser` on `request.state.user`. The suite asserts the plumbing (install,
+`VerifiedUser` on `request.state.diagrid_user`. The suite asserts the plumbing (install,
 documented provisioning, dev tunnel, uvicorn serving) plus the one HTTP outcome
 that is deterministic without a credential: an unauthenticated request is
 rejected 401 with the exact body the middleware returns, on both documented
@@ -175,24 +175,22 @@ SECRETS = ()
 #     output in a 401 to make an exact comparison impossible.
 #   * The AUTHENTICATED calls cannot be expressed: no keyword here takes headers,
 #     and nothing here can mint a token dataplane Sentry signed. See UNCOVERED.
-#   * A MALFORMED-token case is deliberately absent. It is not a 401 either way:
-#     with a verifier built, `PyJWKClient.get_signing_key_from_jwt` raises
-#     jwt.DecodeError, which `verify()` does not convert (it maps only
-#     PyJWKClientError -> VerifierNotReady) and `dispatch` does not catch, so it
-#     propagates as a 500; with no discoverable issuer, `build_verifier` raises
-#     RuntimeError and the middleware answers 503 oauth.not_configured. Asserting
-#     any one of those would encode a runtime accident as a documented outcome.
-#     The README documents the 401 and 403 that a real credential produces, and
-#     reaches them through the offline issuer instead -- see UNCOVERED.
+#   * A MALFORMED-token case is deliberately absent, because which rejection you
+#     get depends on state this suite does not control. With a verifier built it
+#     is 401 oauth.decode_error; with no discoverable issuer `build_verifier`
+#     raises RuntimeError and the middleware answers 503 oauth.not_configured
+#     first, never reaching the token at all. Asserting either would encode the
+#     environment rather than the behaviour. test_identity.py pins the 401 with
+#     the offline issuer, where the verifier is guaranteed to exist.
 #
-# All four outcomes above were MEASURED, not reasoned, against diagrid 0.4.4 in
+# All four outcomes above were MEASURED, not reasoned, against diagrid 0.4.5 in
 # the quickstart's own venv -- OAuthMiddleware over a two-route FastAPI app under
 # starlette's TestClient, no Catalyst and no network:
 #
 #     GET  /whoami    no header             -> 401 {"error": "oauth.missing_token"}
 #                                              cache-control: no-store
 #     POST /agent/run no header             -> 401 {"error": "oauth.missing_token"}
-#     GET  /whoami    malformed token       -> 500, body not JSON
+#     GET  /whoami    malformed token       -> 401 {"error": "oauth.decode_error"}
 #     GET  /whoami    no issuer discoverable-> 503 {"error": "oauth.not_configured"}
 #
 # One result from that probe is a LIMITATION of this suite rather than a

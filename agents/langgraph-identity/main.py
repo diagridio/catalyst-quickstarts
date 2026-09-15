@@ -132,13 +132,13 @@ def _identity(user: VerifiedUser) -> dict:
 @app.get("/whoami")
 def whoami(request: Request) -> dict:
     """Who Catalyst says is calling. No model turn, so the 401/200 contrast is free."""
-    user: VerifiedUser = request.state.user  # set by OAuthMiddleware
+    user: VerifiedUser = request.state.diagrid_user  # set by OAuthMiddleware
     return _identity(user)
 
 
 @app.post("/agent/run")
 async def agent_run(request: Request):
-    user: VerifiedUser = request.state.user  # set by OAuthMiddleware
+    user: VerifiedUser = request.state.diagrid_user  # set by OAuthMiddleware
     logging.info(
         "[IDENTITY] verified caller subject=%s issuer=%s", user.subject, user.issuer_id
     )
