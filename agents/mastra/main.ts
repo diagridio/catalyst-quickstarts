@@ -1,5 +1,5 @@
 /**
- * Trip Assistant — one durable Mastra agent turn on Dapr Workflows, via Catalyst.
+ * SRE Agent — one durable Mastra agent turn on Dapr Workflows, via Catalyst.
  *
  * The agent's control loop runs as a Dapr Workflow: every model call and every
  * tool execution is a checkpointed activity, so killing this process mid-turn
@@ -11,35 +11,38 @@
  *   diagrid dev run -f dev-mastra.yaml --approve
  *
  * Expect two iterations for the prompt below: one model call that requests the
- * `calculate` and `getWeather` tools, then a second that turns their results
- * into an answer. Each of those steps is a separate checkpointed Dapr activity.
+ * `checkServiceHealth` and `calculateErrorRate` tools, then a second that turns
+ * their results into an answer. Each of those steps is a separate checkpointed
+ * Dapr activity.
  */
 
 import { Agent } from '@mastra/core/agent';
 import { DaprWorkflowAgentRunner } from '@diagrid/agent-mastra';
 
 import { describeModel, resolveModel } from './model';
-import { tripTools } from './tools';
+import { sreTools } from './tools';
 
-const THREAD_ID = 'trip-assistant-demo';
+const THREAD_ID = 'sre-agent-demo';
 
 async function main(): Promise<void> {
   const model = resolveModel();
   console.log(`Model: ${describeModel(model)}`);
 
   const agent = new Agent({
-    id: 'trip-assistant',
-    name: 'trip-assistant',
+    id: 'sre-agent',
+    name: 'sre-agent',
     instructions:
-      'You help travelers plan trips. Use the calculate tool for any budget ' +
-      "math and the getWeather tool to check the destination's forecast.",
+      'You are a site reliability engineer. Use the checkServiceHealth tool ' +
+      "to check a service's health and the calculateErrorRate tool to " +
+      'compute error rates from request counts. Always use your tools ' +
+      'rather than guessing.',
     model,
-    tools: tripTools,
+    tools: sreTools,
   });
 
   const runner = new DaprWorkflowAgentRunner({
     agent,
-    name: 'trip-assistant',
+    name: 'sre-agent',
     maxIterations: 10,
   });
 
@@ -54,8 +57,9 @@ async function main(): Promise<void> {
 
     const result = await runner.invoke({
       prompt:
-        "I'm splitting a $340 dinner 4 ways in Tokyo tonight — what's my " +
-        "share, and what's the weather like there?",
+        'checkout-api had 12,400 requests in the last hour with 289 ' +
+        "failures — what's the error rate, and what's the service's " +
+        'current health status?',
       threadId: THREAD_ID,
       maxIterations: 10,
       messages: [],

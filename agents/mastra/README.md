@@ -1,23 +1,23 @@
-# Mastra Quickstart - Trip Assistant
+# Mastra Quickstart - SRE Agent
 
-This quickstart demonstrates how to run a [Mastra](https://mastra.ai) agent as a durable Dapr Workflow using Diagrid Catalyst's TypeScript SDK (`@diagrid/agent-mastra`). The agent acts as a **Trip Assistant** that helps travelers with budget math and destination weather.
+This quickstart demonstrates how to run a [Mastra](https://mastra.ai) agent as a durable Dapr Workflow using Diagrid Catalyst's TypeScript SDK (`@diagrid/agent-mastra`). The agent acts as an **SRE Agent** that checks service health, calculates error rates, and tracks incident status.
 
 ## What This Quickstart Demonstrates
 
 - **Mastra + Dapr Workflows**: Run a Mastra `Agent`'s control loop as a durable Dapr Workflow — every model call and every tool call is a checkpointed activity
 - **Direct LLM Integration**: Calls OpenAI directly through Mastra's own model config (a local Ollama model works too — see [Using a local model instead](#using-a-local-model-instead)); no Dapr conversation component needed
-- **Tool Integration**: `calculate` and `getWeather` tools, each executed as its own durable activity
+- **Tool Integration**: `checkServiceHealth` and `calculateErrorRate` tools, each executed as its own durable activity
 - **Durable Crash Recovery**: Resume a workflow from the last completed activity after a crash — a capability not offered by Mastra natively (see [Crash Recovery Test With Catalyst](#crash-recovery-test-with-catalyst))
-- **Agent Registry**: Registers as `trip-assistant` in Catalyst's agent registry, viewable from the dashboard
+- **Agent Registry**: Registers as `sre-agent` in Catalyst's agent registry, viewable from the dashboard
 
 ### Role
 
-- **Agent**: `trip-assistant`
+- **Agent**: `sre-agent`
 
 ### Tools
 
-- `calculate(a, b, op)` — Performs an arithmetic calculation (add/subtract/multiply/divide).
-- `getWeather(city)` — Gets the current weather for a city.
+- `checkServiceHealth(service)` — Checks a service's current health status (status, latency, uptime).
+- `calculateErrorRate(totalRequests, failedRequests)` — Calculates an error rate percentage from request and failure counts.
 
 ## Prerequisites
 
@@ -80,7 +80,7 @@ diagrid project create mastra-quickstart --enable-managed-workflow --deploy-mana
 3. Create an agent for the project:
 
 ```bash
-diagrid agent create trip-assistant --wait
+diagrid agent create sre-agent --wait
 ```
 
 4. Run the agent with Catalyst:
@@ -96,34 +96,33 @@ Expect output like this:
 ```text
 Model: openai/gpt-4o-mini
 Starting the Dapr Workflow runtime...
-Registered "dapr.mastra.TripAssistant.workflow".
+Registered "dapr.mastra.SreAgent.workflow".
 ============================================================
 Status:     completed
 Iterations: 2
-Answer:     Your share of the dinner is $85.
-
-As for the weather in Tokyo tonight, it's sunny with a temperature of 22°C. Enjoy your dinner!
+Answer:     The checkout-api has an error rate of 2.33%. Its current health
+status is degraded, with a latency of 842 ms and an uptime of 99.2%.
 ============================================================
 Runtime shut down.
 ```
 
-`Iterations: 2` is the proof: one model call asks for the `calculate` and `getWeather` tools, then a second turns their results into the answer above. Each of those two model calls and two tool calls is a separate checkpointed Dapr activity — so a process killed mid-turn resumes from the last completed one instead of restarting. See [Crash Recovery Test With Catalyst](#crash-recovery-test-with-catalyst) for a demonstration.
+`Iterations: 2` is the proof: one model call asks for the `checkServiceHealth` and `calculateErrorRate` tools, then a second turns their results into the answer above. Each of those two model calls and two tool calls is a separate checkpointed Dapr activity — so a process killed mid-turn resumes from the last completed one instead of restarting. See [Crash Recovery Test With Catalyst](#crash-recovery-test-with-catalyst) for a demonstration.
 
 ### 2. Inspecting the Results in Catalyst
 
-Open the [Catalyst dashboard](https://catalyst.diagrid.io/agents) in your browser and navigate to Agents > trip-assistant. Then select the most recent agent workflow run to view output.
+Open the [Catalyst dashboard](https://catalyst.diagrid.io/agents) in your browser and navigate to Agents > sre-agent. Then select the most recent agent workflow run to view output.
 
 ## Crash Recovery Test With Catalyst
 
-The `crash_test.ts` file demonstrates durable crash recovery. It looks up a flight status through one tool call, and deliberately crashes the process (`process.exit(1)`) partway through the *second* model call — after the first model call and the `checkFlightStatus` tool call have both completed and been checkpointed by Catalyst, but before the model call that turns the tool's result into a final answer returns.
+The `crash_test.ts` file demonstrates durable crash recovery. It looks up an incident's status through one tool call, and deliberately crashes the process (`process.exit(1)`) partway through the *second* model call — after the first model call and the `checkIncidentStatus` tool call have both completed and been checkpointed by Catalyst, but before the model call that turns the tool's result into a final answer returns. (Yes, the SRE agent survives its own outage.)
 
 The crash point is decided by an internal counter, not by a request you send or a line you comment out — so there's no source edit, no environment variable to unset, and no separate kill command. Just run the same command twice:
 
-1. **Model call 1** — asks for the `checkFlightStatus` tool. Completes and is checkpointed by Catalyst.
-2. **checkFlightStatus** — looks up the flight, returns "on time, gate B12". Completes and is checkpointed.
+1. **Model call 1** — asks for the `checkIncidentStatus` tool. Completes and is checkpointed by Catalyst.
+2. **checkIncidentStatus** — looks up the incident, returns "mitigated, monitoring for recurrence". Completes and is checkpointed.
 3. **Model call 2** — this is where the process kills itself, before the call returns.
 
-A state file under `$TMPDIR` counts model calls and tool runs across both runs. That count is the actual proof: the turn needs two model calls and one tool call, so if `checkFlightStatus` ran only once in total, its result was replayed from Catalyst's workflow history on the second run rather than recomputed.
+A state file under `$TMPDIR` counts model calls and tool runs across both runs. That count is the actual proof: the turn needs two model calls and one tool call, so if `checkIncidentStatus` ran only once in total, its result was replayed from Catalyst's workflow history on the second run rather than recomputed.
 
 ### First run — trigger and crash
 
@@ -143,7 +142,7 @@ Tool runs:       0 so far
 Already crashed: false
 ============================================================
 >>> Model call 1 (total across runs)
->>> checkFlightStatus ran (total across runs: 1)
+>>> checkIncidentStatus ran (total across runs: 1)
 
 >>> Killing the process during model call 2, before it returns.
 >>> Run "npm run crash-test" again — Catalyst will resume this workflow.
@@ -171,13 +170,14 @@ Already crashed: true
 
 ============================================================
 Status:      completed
-Answer:      Flight DL202 is on time and departing from gate B12.
+Answer:      The status of incident INC-4471 is mitigated and currently
+under monitoring for recurrence.
 Model calls: 2 (across all runs)
 Tool runs:   1 (across all runs)
 
-✅ Recovery confirmed: checkFlightStatus ran exactly once across both runs.
+✅ Recovery confirmed: checkIncidentStatus ran exactly once across both runs.
    Its result was replayed from Catalyst workflow history, not recomputed.
 ============================================================
 ```
 
-No request has to be re-sent and no workflow ID has to be tracked by hand: `crash_test.ts` reuses the same thread ID and workflow ID on both runs, so the second run automatically reattaches to the interrupted instance and waits for it, rather than starting a new one. Catalyst redelivers the pending work the moment this process's worker reconnects — that redelivery is what "resume on restart" means here, and `checkFlightStatus`'s count staying at 1 is what proves it replayed rather than reran.
+No request has to be re-sent and no workflow ID has to be tracked by hand: `crash_test.ts` reuses the same thread ID and workflow ID on both runs, so the second run automatically reattaches to the interrupted instance and waits for it, rather than starting a new one. Catalyst redelivers the pending work the moment this process's worker reconnects — that redelivery is what "resume on restart" means here, and `checkIncidentStatus`'s count staying at 1 is what proves it replayed rather than reran.
