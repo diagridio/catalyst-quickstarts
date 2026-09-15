@@ -1,0 +1,7 @@
+version: 1
+common:
+  appLogDestination: console
+apps:
+  - appID: trip-assistant
+    appDirPath: ./
+    command: ["npm", "run", "crash-test"]
