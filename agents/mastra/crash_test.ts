@@ -9,11 +9,12 @@
  *
  * Run 1 schedules a turn under a workflow ID this script owns, then crashes
  * itself (`process.exit(1)`) partway through — after the first model call and
- * the `checkFlightStatus` tool call have both completed and been checkpointed
- * by Catalyst, but before the second (and final) model call returns. Run 2
- * reconnects to the SAME workflow instance and waits for it to finish.
+ * the `checkIncidentStatus` tool call have both completed and been
+ * checkpointed by Catalyst, but before the second (and final) model call
+ * returns. Run 2 reconnects to the SAME workflow instance and waits for it to
+ * finish.
  *
- * `checkFlightStatus` logs every time it actually runs, and that count is
+ * `checkIncidentStatus` logs every time it actually runs, and that count is
  * saved to a state file alongside the model-call count. If recovery worked,
  * the tool ran exactly ONCE across both runs — its result was replayed from
  * Catalyst's workflow history on run 2, not recomputed. See README.md for the
@@ -65,17 +66,25 @@ const startState = loadState();
 startState.runCount += 1;
 saveState(startState);
 
-const checkFlightStatus = createTool({
-  id: 'checkFlightStatus',
-  description: 'Check the status of a flight by its flight number.',
-  inputSchema: z.object({ flightNumber: z.string().describe('e.g. DL202') }),
-  outputSchema: z.object({ flightNumber: z.string(), status: z.string() }),
-  execute: ({ flightNumber }) => {
+const checkIncidentStatus = createTool({
+  id: 'checkIncidentStatus',
+  description: 'Check the status of an ongoing incident by its incident ID.',
+  inputSchema: z.object({ incidentId: z.string().describe('e.g. INC-4471') }),
+  outputSchema: z.object({
+    incidentId: z.string(),
+    status: z.string(),
+    assignee: z.string(),
+  }),
+  execute: ({ incidentId }) => {
     const state = loadState();
     state.toolRuns += 1;
     saveState(state);
-    console.log(`>>> checkFlightStatus ran (total across runs: ${state.toolRuns})`);
-    return Promise.resolve({ flightNumber, status: 'on time, gate B12' });
+    console.log(`>>> checkIncidentStatus ran (total across runs: ${state.toolRuns})`);
+    return Promise.resolve({
+      incidentId,
+      status: 'mitigated, monitoring for recurrence',
+      assignee: 'on-call SRE',
+    });
   },
 });
 
@@ -89,22 +98,22 @@ async function main(): Promise<void> {
   console.log('='.repeat(60));
 
   const agent = new Agent({
-    id: 'trip-assistant',
-    name: 'trip-assistant',
+    id: 'sre-agent',
+    name: 'sre-agent',
     instructions:
-      'You look up flight statuses. Always use the checkFlightStatus tool to ' +
-      'answer, then report the status in one short sentence.',
+      'You look up incident statuses. Always use the checkIncidentStatus ' +
+      'tool to answer, then report the status in one short sentence.',
     model: resolveModel(),
-    tools: { checkFlightStatus },
+    tools: { checkIncidentStatus },
   });
 
   // Same runner `name` as main.ts. That's what the workflow name and the
   // Catalyst agent registry entry are keyed on, so this demo's crash-recovery
-  // run and its happy-path run show up under the one "trip-assistant" agent
-  // in Catalyst rather than two unrelated identities.
+  // run and its happy-path run show up under the one "sre-agent" agent in
+  // Catalyst rather than two unrelated identities.
   const runner = new DaprWorkflowAgentRunner({
     agent,
-    name: 'trip-assistant',
+    name: 'sre-agent',
     maxIterations: 10,
   });
 
@@ -147,7 +156,7 @@ async function main(): Promise<void> {
       ? await runner.waitFor(WORKFLOW_ID)
       : await runner.invoke(
           {
-            prompt: 'What is the status of flight DL202?',
+            prompt: 'What is the status of incident INC-4471?',
             threadId: THREAD_ID,
             maxIterations: 10,
             messages: [],
@@ -169,8 +178,8 @@ async function main(): Promise<void> {
       const toolRedone = finalState.toolRuns > 1;
       console.log(
         toolRedone
-          ? '\n❌ checkFlightStatus ran more than once — completed work was recomputed.'
-          : '\n✅ Recovery confirmed: checkFlightStatus ran exactly once across ' +
+          ? '\n❌ checkIncidentStatus ran more than once — completed work was recomputed.'
+          : '\n✅ Recovery confirmed: checkIncidentStatus ran exactly once across ' +
               'both runs.\n   Its result was replayed from Catalyst workflow ' +
               'history, not recomputed.'
       );

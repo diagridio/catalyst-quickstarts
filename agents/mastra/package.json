@@ -1,8 +1,8 @@
 {
-  "name": "mastra-agent",
+  "name": "mastra-sre-agent",
   "version": "1.0.0",
   "private": true,
-  "description": "Mastra agent made durable with Diagrid Catalyst",
+  "description": "Mastra SRE agent made durable with Diagrid Catalyst",
   "type": "module",
   "scripts": {
     "start": "tsx main.ts",
