@@ -2,7 +2,7 @@
 
 End-to-end tests for the `workflow`, `state`, `pubsub` and `invocation`
 quickstarts, and for five agent-family ones (`agents/langgraph`,
-`agents/langgraph-identity`, `agents/microsoft-dotnet`,
+`agents/langgraph/enterprise-identity`, `agents/microsoft-dotnet`,
 `agents/spring-ai/crash-recovery`, `agents/spring-ai/event-planner`), built on
 [Robot Framework](https://robotframework.org/). The tests run the *actual*
 commands each quickstart's README documents and assert the responses and log output
@@ -117,7 +117,7 @@ documented `project create ... --use` already selected the project, and the
 suites reproduce that bareness on purpose — see "The `dev run` command can be
 bare" below. For those, the substitution lands in the documented `project
 create` (and `project delete`, where the README documents one — `agents/langgraph`
-and `agents/langgraph-identity` do not) commands instead. Everything else — the file, the
+and `agents/langgraph/enterprise-identity` do not) commands instead. Everything else — the file, the
 flags, `mvn spring-boot:run`, the `uv run` prefix — runs exactly as the README
 shows it.
 
@@ -190,7 +190,7 @@ differ and are worth knowing before you touch one:
    `agents/microsoft-dotnet`, `agents/spring-ai/crash-recovery`,
    `agents/spring-ai/event-planner`), so that 200 is an assumption rather than a
    transcription, and for some of them it is probably wrong — see "Limitations".
-   `agents/langgraph-identity` is the counterexample: its README prints
+   `agents/langgraph/enterprise-identity` is the counterexample: its README prints
    `HTTP/1.1 401 Unauthorized`, so its `status: 401` really is transcribed, and
    its response carries no model output, which is why it can assert an exact
    `body` as well.
@@ -471,7 +471,7 @@ config, not a typo.
     2026-09-02, offline, covering the crash and the recovery. No mutation check.
   - `agents/spring-ai/event-planner` **cannot reach the first half**, and no
     amount of suite work changes that; see its own bullet below.
-  - `agents/langgraph-identity` has **neither** half: it has never been run
+  - `agents/langgraph/enterprise-identity` has **neither** half: it has never been run
     against Catalyst at all. See its own bullet below.
   The bullets that follow are what the missing halves cost.
 - **`agents/langgraph` has run against real Catalyst three times and not yet
@@ -582,7 +582,7 @@ config, not a typo.
       both fire and the client sees `RemoteDisconnected`. A red suite is only
       worth keeping if it is red for the documented reason — otherwise it is a
       race dressed up as a finding.
-- **`agents/langgraph-identity` covers the inbound-identity plumbing and the
+- **`agents/langgraph/enterprise-identity` covers the inbound-identity plumbing and the
   rejection path only, and has never been run against Catalyst.** Its two
   documented requests are the unauthenticated `GET /whoami` and
   `POST /agent/run`, each asserted at 401 with the exact body
@@ -600,8 +600,8 @@ config, not a typo.
     app's handler. The README documents the 200 and the 403 too, and reaches
     them through an opt-in offline issuer (`local_identity.py`) — which is the
     basis for the pytest beside the quickstart
-    (`agents/langgraph-identity/test_identity.py`, run by
-    `.github/workflows/agents_langgraph_identity_python.yaml`) rather than for
+    (`agents/langgraph/enterprise-identity/test_identity.py`, run by
+    `.github/workflows/agents_enterprise_identity_python.yaml`) rather than for
     this suite: it replaces Catalyst entirely and binds the same port as
     `dev run`. That pytest covers the 200, the 403, the expired 401 and the
     verified subject reaching the tool; it proves nothing about Catalyst, and
@@ -635,7 +635,7 @@ config, not a typo.
   `variables/agents_microsoft_dotnet.py`,
   `variables/agents_spring_ai_crash_recovery.py` and
   `variables/agents_spring_ai_event_planner.py` is an assumption in every case,
-  not something transcribed. (`variables/agents_langgraph_identity.py` is the
+  not something transcribed. (`variables/agents_enterprise_identity.py` is the
   exception — see the bullet above.) For `agents/langgraph` a 200 is at least plausible
   — the endpoint returns normally — but it is still unverified. For the other
   two it is worse than unverified; see the bullet above.

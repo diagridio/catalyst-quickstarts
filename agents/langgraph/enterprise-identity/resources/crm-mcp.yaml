@@ -1,0 +1,12 @@
+# The CRM, registered with Catalyst so the agent reaches it through the MCP
+# proxy rather than calling it directly.
+apiVersion: dapr.io/v1alpha1
+kind: MCPServer
+metadata:
+  name: crm-mcp
+spec:
+  endpoint:
+    streamableHTTP:
+      url: http://localhost:8007/mcp
+scopes:
+  - identity-agent

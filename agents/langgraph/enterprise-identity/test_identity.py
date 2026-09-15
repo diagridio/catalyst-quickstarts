@@ -15,9 +15,10 @@ loopback port, so a credential that genuinely verifies is available offline.
 That is what makes the 200 and the 403 assertable here at all -- the Robot suite
 next door can present no credential and therefore asserts only the two 401s.
 
-WHAT IS DELIBERATELY NOT TESTED: the outbound leg. This quickstart covers
-inbound identity only, and nothing here may grow an assertion implying an
-agent's on-behalf-of token reaches a downstream MCP tool.
+WHAT IS DELIBERATELY NOT TESTED: the outbound leg. Carrying the caller onward to
+an MCP tool needs a Catalyst project, so it is exercised by the README
+walkthrough rather than here. These tests pin the app to offline mode, where the
+graph calls the in-process tool and no request leaves the machine.
 
 Why the app is re-assembled instead of imported: main.py installs its middleware
 at module level, which is the two-line shape the README teaches, so by the time
@@ -27,7 +28,14 @@ the compiled graph, the required scopes and the response shape are all main.py's
 own objects, so drift in any of them fails these tests rather than sliding past.
 """
 
+import asyncio
 import json
+import os
+
+# Before importing main: the mode decides which tool the graph gets, and these
+# tests are the offline one. Importing main with this unset would build a graph
+# whose tool call needs a Catalyst project.
+os.environ["DIAGRID_QUICKSTART_IDENTITY"] = "local"
 
 import pytest
 from fastapi import FastAPI
@@ -40,7 +48,7 @@ from local_identity import build_local_issuer, _b64u
 
 # main.py's own value, not a copy. A change to the app's required scope shows up
 # here as the 200 and 403 cases swapping over, which is the intended failure.
-REQUIRED_SCOPES = main.REQUIRED_SCOPES
+REQUIRED_SCOPES = main.LOCAL_REQUIRED_SCOPES
 
 # The subject fake_model.py's canned first turn asks the tool for. It is nobody,
 # and the whole point of the `tools` node is that it never reaches the tool.
@@ -214,9 +222,11 @@ def test_substitution_happens_in_the_graph_not_in_the_handler(client, issuer):
     handler: the subject travels as graph config, which is exactly why a message
     the model could rewrite is not involved.
     """
-    result = main.compiled.invoke(
-        {"messages": [HumanMessage(content=TASK["task"])]},
-        config={"configurable": {"user_subject": "dave@example.com"}},
+    result = asyncio.run(
+        main.compiled.ainvoke(
+            {"messages": [HumanMessage(content=TASK["task"])]},
+            config={"configurable": {"user_subject": "dave@example.com"}},
+        )
     )
 
     tool_answers = [m.content for m in result["messages"] if "Bookings for" in str(m.content)]
@@ -232,9 +242,11 @@ def test_an_unconfigured_subject_does_not_silently_become_the_model_guess():
     without it answers for nobody. That is the safe direction; falling through
     to the model's `someone@example.com` would be the unsafe one.
     """
-    result = main.compiled.invoke(
-        {"messages": [HumanMessage(content=TASK["task"])]},
-        config={"configurable": {}},
+    result = asyncio.run(
+        main.compiled.ainvoke(
+            {"messages": [HumanMessage(content=TASK["task"])]},
+            config={"configurable": {}},
+        )
     )
 
     joined = " ".join(str(m.content) for m in result["messages"])

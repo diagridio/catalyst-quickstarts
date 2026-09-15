@@ -58,7 +58,7 @@ class CannedToolCallingChatModel(BaseChatModel):
         return ChatResult(generations=[ChatGeneration(message=turn.model_copy(deep=True))])
 
 
-def build_canned_model() -> CannedToolCallingChatModel:
+def build_canned_model(*, offline: bool = False) -> CannedToolCallingChatModel:
     """The canned two-turn conversation this quickstart runs on.
 
     It lives here rather than in main.py so that the tests can assert against the
@@ -70,22 +70,27 @@ def build_canned_model() -> CannedToolCallingChatModel:
     middleware verified. A real provider behaves the same way, which is the
     point of substituting rather than validating.
     """
+    if offline:
+        call = {
+            "name": "my_bookings",
+            "args": {"subject": "someone@example.com"},
+            "id": "call_my_bookings_1",
+            "type": "tool_call",
+        }
+        answer = (
+            "You have two bookings: the Grand Ballroom on March 15th "
+            "(9AM-1PM) and the Rooftop Terrace on March 22nd (6PM-11PM)."
+        )
+    else:
+        call = {
+            "name": "account_summary",
+            "args": {"account_id": "ACME-1"},
+            "id": "call_account_summary_1",
+            "type": "tool_call",
+        }
+        answer = "Here is what the CRM returned for ACME-1."
+
     return CannedToolCallingChatModel(
-        first_turn=AIMessage(
-            content="",
-            tool_calls=[
-                {
-                    "name": "my_bookings",
-                    "args": {"subject": "someone@example.com"},
-                    "id": "call_my_bookings_1",
-                    "type": "tool_call",
-                }
-            ],
-        ),
-        final_turn=AIMessage(
-            content=(
-                "You have two bookings: the Grand Ballroom on March 15th "
-                "(9AM-1PM) and the Rooftop Terrace on March 22nd (6PM-11PM)."
-            )
-        ),
+        first_turn=AIMessage(content="", tool_calls=[call]),
+        final_turn=AIMessage(content=answer),
     )

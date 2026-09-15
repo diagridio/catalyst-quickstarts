@@ -1,0 +1,31 @@
+[project]
+name = "enterprise-identity-agent"
+version = "0.1.0"
+requires-python = ">=3.11,<3.14"
+dependencies = [
+    # The identity extra, not diagrid[langgraph]: the langgraph extra pulls the
+    # Diagrid agent runner, which this quickstart deliberately does not use.
+    # `identity` brings pyjwt[crypto], httpx2 and starlette -- everything
+    # diagrid.identity needs, including the RS256 signing local_identity.py does.
+    "diagrid[identity]>=0.4.6",
+    "langgraph>=1.1.10",
+    "langchain-core>=1.3.2",
+    # Only imported when DIAGRID_QUICKSTART_MODEL=openai.
+    "langchain-openai==1.2.1",
+    "fastapi==0.136.1",
+    "uvicorn[standard]==0.46.0",
+    # The MCP client the agent's outbound tool call uses, and the server the
+    # stand-in CRM runs on.
+    "mcp>=2.2.0",
+    "fastmcp>=2.0",
+]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+# test_*.py only, dropping pytest's other default glob, *_test.py. The workflow
+# .github/workflows/agents_enterprise_identity_python.yaml names no file, so
+# naming the pattern here means a new test_*.py file starts running without a CI
+# edit.
+python_files = ["test_*.py"]

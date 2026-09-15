@@ -156,7 +156,7 @@ response that carries no model output — otherwise it cannot be byte-identical
 run to run and `field`'s presence-and-non-emptiness check is what remains. It
 reaches `POST And Expect` / `GET And Expect` as their `${expected_body}`
 argument, which compares parsed JSON, so whitespace and key order are not a
-false-failure risk. `agents/langgraph-identity` is the case that has it: its
+false-failure risk. `agents/langgraph/enterprise-identity` is the case that has it: its
 middleware returns `401 {"error": "oauth.missing_token"}` before the graph
 runs, so the body is fixed. Prefer it over `field` whenever the response really
 is deterministic — an exact body is a much stronger assertion — and reach for

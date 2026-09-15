@@ -1,8 +1,8 @@
 *** Comments ***
-End-to-end test for the agents/langgraph-identity quickstart (python only: this
+End-to-end test for the agents/langgraph/enterprise-identity quickstart (python only: this
 quickstart has one implementation).
 
-Mirrors agents/langgraph-identity/README.md: "## Setup" installs, "## Run with
+Mirrors agents/langgraph/enterprise-identity/README.md: "## Setup" installs, "## Run with
 Catalyst" provisions and runs, "### 4. See It Fail Closed" is the pair of
 documented requests this suite asserts. This README documents no cleanup
 command, so deleting the project is infrastructure here.
@@ -30,23 +30,23 @@ POST-only guard says exactly this ("use GET And Expect for a documented GET").
 
 Run it:
   export DIAGRID_API_KEY=...
-  eval "$(bash tools/qs-tester/ci/project-name.sh agents-langgraph-identity | grep '^PROJECT=')"
+  eval "$(bash tools/qs-tester/ci/project-name.sh agents-enterprise-identity | grep '^PROJECT=')"
   bash tools/qs-tester/ci/login.sh
   cd tools/qs-tester
-  uv run robot --variable PROJECT:$PROJECT --outputdir results/agents-langgraph-identity \
-    ../../agents/langgraph-identity/tests/quickstart.robot
+  uv run robot --variable PROJECT:$PROJECT --outputdir results/agents-enterprise-identity \
+    ../../agents/langgraph/enterprise-identity/tests/quickstart.robot
   bash ci/teardown-project.sh "$PROJECT"
 
 *** Settings ***
-# Three levels up: this quickstart lives at agents/langgraph-identity/tests/,
+# Three levels up: this quickstart lives at agents/langgraph/enterprise-identity/tests/,
 # one directory level below agents/, like agents/langgraph.
-Resource        ../../../tools/qs-tester/resources/catalyst.resource
-Resource        ../../../tools/qs-tester/resources/quickstart.resource
+Resource        ../../../../tools/qs-tester/resources/catalyst.resource
+Resource        ../../../../tools/qs-tester/resources/quickstart.resource
 # Imported twice on purpose, same as every other suite: `Variables` exposes the
 # module-level names (@{REQUESTS}, @{READY_MARKERS}), `Library` exposes
 # get_quickstart as a keyword. Neither import alone gives both.
-Variables       ../../../tools/qs-tester/variables/agents_langgraph_identity.py
-Library         ../../../tools/qs-tester/variables/agents_langgraph_identity.py
+Variables       ../../../../tools/qs-tester/variables/agents_enterprise_identity.py
+Library         ../../../../tools/qs-tester/variables/agents_enterprise_identity.py
 Library         Collections
 Suite Setup     Should Not Be Empty    ${PROJECT}
 ...             msg=Pass --variable PROJECT:<catalyst-project-name>
@@ -57,15 +57,15 @@ ${PROJECT}      ${EMPTY}
 
 *** Test Cases ***
 Python Langgraph Identity Quickstart
-    [Tags]    python    langgraph-identity    agents
+    [Tags]    python    enterprise-identity    agents
     ${qs}=      Get Quickstart
-    ${log}=     Suite Log File    agents-langgraph-identity    python
+    ${log}=     Suite Log File    agents-enterprise-identity    python
 
     # Empty for this quickstart -- it ships a canned offline model and both
     # requests are refused before the graph runs -- but kept so that adding a
     # secret to the data module cannot silently skip the check.
     FOR    ${secret}    IN    @{qs}[secrets]
-        Require Env Var    ${secret}    agents/langgraph-identity
+        Require Env Var    ${secret}    agents/langgraph/enterprise-identity
     END
 
     Build Quickstart            ${qs}

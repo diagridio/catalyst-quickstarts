@@ -100,19 +100,19 @@ SUITES = (
         "secrets": (),
     },
     {
-        "suite": "agents/langgraph-identity/tests/quickstart.robot",
+        "suite": "agents/langgraph/enterprise-identity/tests/quickstart.robot",
         "family": "agent",
-        # 18 characters, inside `project_name_budget()` (26), so no explicit
+        # 19 characters, inside `project_name_budget()` (26), so no explicit
         # `leg` is needed. Measured, not estimated, against the worst-case
         # (`local` + 10-digit epoch) run id: the CI project
-        # qs-ci-agents-langgraph-identity-local0000000000 is 47 of the 55
+        # qs-ci-agents-enterprise-identity-local0000000000 is 48 of the 55
         # characters allowed, and the second project verify-live.sh derives for
-        # the mutation run, qs-ci-agents-langgraph-identity-mut-local0000000000,
-        # is 51. Both fit, so the mutation check needs no shorter `leg` either --
+        # the mutation run, qs-ci-agents-enterprise-identity-mut-local0000000000,
+        # is 52. Both fit, so the mutation check needs no shorter `leg` either --
         # which is the case the budget alone does not cover, since
         # project_name_budget() does not account for the `-mut` suffix.
-        "name": "langgraph-identity",
-        "data": "agents_langgraph_identity",
+        "name": "enterprise-identity",
+        "data": "agents_enterprise_identity",
         "language": "python",
         "runtime": "python",
         # False: neither half of the bar is met. No live run against a real
@@ -127,7 +127,7 @@ SUITES = (
         # README documents are unreachable from the harness -- no keyword takes
         # headers and nothing here can mint a dataplane-Sentry-signed token --
         # so a green run here will NOT mean identity propagation is proven. See
-        # UNCOVERED in agents_langgraph_identity.py and the harness README's
+        # UNCOVERED in agents_enterprise_identity.py and the harness README's
         # Limitations.
         "nightly": False,
         # Empty: the quickstart ships a canned offline model (fake_model.py) and
@@ -135,7 +135,7 @@ SUITES = (
         # which this suite does not set -- and main.py imports langchain_openai
         # lazily inside that branch, so the app starts with no key. Both
         # documented requests are refused before the graph runs anyway. Keep in
-        # step with SECRETS in agents_langgraph_identity.py -- one without the
+        # step with SECRETS in agents_enterprise_identity.py -- one without the
         # other is a declaration that lies.
         "secrets": (),
     },

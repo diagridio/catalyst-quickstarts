@@ -1,7 +1,7 @@
-"""Data for the agents/langgraph-identity end-to-end suite.
+"""Data for the agents/langgraph/enterprise-identity end-to-end suite.
 
 Every command here is transcribed verbatim from
-agents/langgraph-identity/README.md, with one substitution: the documented
+agents/langgraph/enterprise-identity/README.md, with one substitution: the documented
 project name becomes `{project}`. The README is the source of truth. Change the
 README, change this file, and `docsync/check_readme_sync.py --all` will tell you
 if you changed only one.
@@ -40,16 +40,16 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
 FAMILY = "agents"
-NAME = "langgraph-identity"
+NAME = "enterprise-identity"
 LANGUAGE = "python"
 
 # README "## Run with Catalyst", step 2. Replaced by an ephemeral qs-ci-* name at
 # run time; also what doc-sync maps onto `{project}` when comparing.
-DOCUMENTED_PROJECT = "langgraph-identity-quickstart"
+DOCUMENTED_PROJECT = "enterprise-identity-quickstart"
 
-QUICKSTART_DIR = str(REPO_ROOT / "agents" / "langgraph-identity")
+QUICKSTART_DIR = str(REPO_ROOT / "agents" / "enterprise-identity")
 
-# appID and appPort from dev-python-langgraph-identity.yaml, which is also what
+# appID and appPort from dev-enterprise-identity.yaml, which is also what
 # the documented curls target and what the documented readiness line prints.
 # Single-sourced because each value appears in three places below, and a run
 # against a port one of them disagreed about fails in a way that looks like a
@@ -57,17 +57,25 @@ QUICKSTART_DIR = str(REPO_ROOT / "agents" / "langgraph-identity")
 APP_ID = "identity-agent"
 APP_PORT = 8006
 
-# README "## Run with Catalyst", step 2. One command, and no `agent create`: this
-# is a plain FastAPI app with no Diagrid agent runner and no Dapr Workflow, so
-# `dev run` creates the App ID itself. The three managed-service skips live on
+# README "## Run with Catalyst", steps 2 and 3. No `agent create`: this is a
+# plain FastAPI app with no Diagrid agent runner and no Dapr Workflow, so
+# `dev run` creates both App IDs itself. The three managed-service skips live on
 # RUN, where the README puts them, not here.
-SETUP = ("diagrid project create {project} --use --wait",)
+#
+# The two `apply` commands register the CRM and its access policy. The policy is
+# what carries `requireUser: true`, so without it the outbound leg the suite
+# exercises would silently downgrade to no user identity at all.
+SETUP = (
+    "diagrid project create {project} --use --wait",
+    "diagrid apply -f resources/crm-mcp.yaml",
+    "diagrid apply -f resources/crm-mcp-access.yaml",
+)
 
-# README "## Setup". The documented `cd agents/langgraph-identity` is expressed as
+# README "## Setup". The documented `cd agents/langgraph/enterprise-identity` is expressed as
 # the working directory instead of a command.
 INSTALL = "uv sync"
 
-# README "## Run with Catalyst", step 3. Bare of `--project` on purpose: the
+# README "## Run with Catalyst", step 4. Bare of `--project` on purpose: the
 # documented `project create` carries `--use`, and reproducing that dependency is
 # deliberate, so a regression in `--use` breaks this suite instead of silently
 # breaking readers.
@@ -77,7 +85,7 @@ INSTALL = "uv sync"
 # broker and a workflow store the first time it creates the App ID -- minutes of
 # a CI leg spent on infrastructure nothing here touches.
 RUN = (
-    "uv run diagrid dev run -f dev-python-langgraph-identity.yaml --approve "
+    "uv run diagrid dev run -f dev-enterprise-identity.yaml --approve "
     "--skip-managed-kv --skip-managed-pubsub --skip-managed-workflow"
 )
 
@@ -93,7 +101,7 @@ TEARDOWN = ()
 # truncated at `Uvicorn running on` (which is what agents/langgraph does, because
 # its README writes the address as a `<localhost:port>` placeholder): this README
 # documents the concrete line, and main.py really binds host 0.0.0.0 on APP_PORT,
-# which dev-python-langgraph-identity.yaml sets to 8006. The stronger form also
+# which dev-enterprise-identity.yaml sets to 8006. The stronger form also
 # fails loudly if the dev config's port and this module's ever diverge.
 #
 # ONE marker, and there is no second one to add. main.py logs
@@ -114,7 +122,7 @@ READY_MARKERS = (f"Uvicorn running on http://0.0.0.0:{APP_PORT}",)
 # OAuthConfig (diagrid 0.4.4) has exactly five fields --
 # scopes/issuer/audience/jwks_uri/require_auth -- and no exclude_paths, so no
 # probe path can be exempted, which is also why the quickstart exposes no health
-# route and why dev-python-langgraph-identity.yaml sets
+# route and why dev-enterprise-identity.yaml sets
 # `enableAppHealthCheck: false`. There is nothing here that can answer 200, so
 # there is nothing to probe: readiness rests on `Wait Until Apps Connected` plus
 # the READY_MARKERS line above.
@@ -122,7 +130,7 @@ HEALTH_PROBES = ()
 
 # (appID, port) pairs `diagrid dev run` reports as
 # `Connected App ID "<id>" to http://localhost:<port>`. Read from
-# dev-python-langgraph-identity.yaml, whose single app has appID identity-agent on
+# dev-enterprise-identity.yaml, whose single app has appID identity-agent on
 # appPort 8006.
 #
 # Required, not optional: `Start Quickstart` records these so `Stop Quickstart`
@@ -204,7 +212,7 @@ SECRETS = ()
 # answer 503. This suite cannot tell those two projects apart. That is the
 # sharpest edge of "proves the middleware refuses, not that identity works", and
 # it is why the 403 and 200 live in a test that can present a credential:
-# agents/langgraph-identity/test_identity.py, which mints one offline. That test
+# agents/langgraph/enterprise-identity/test_identity.py, which mints one offline. That test
 # cannot substitute for this suite either -- it exercises no Catalyst at all --
 # so the two are complements, and neither alone proves the live inbound path.
 #
@@ -277,10 +285,11 @@ UNCOVERED = (
     ),
     (
         "diagrid call invoke post identity-agent.agent/run --id identity-agent "
-        "--verbose -d '{\"task\": \"What bookings do I have?\"}'",
+        "--verbose -d '{\"task\": \"How is ACME doing?\"}'",
         "same reason as the whoami call above: it is the authenticated path. This "
-        "is the one whose answer names the verified caller, so it is the assertion "
-        "worth having and the one this harness cannot make",
+        "is the one that exercises both legs -- the caller reaching the agent and "
+        "the agent carrying them onward to the CRM -- so it is the assertion worth "
+        "having and the one this harness cannot make",
     ),
     (
         "DIAGRID_QUICKSTART_IDENTITY=local APP_PORT=8006 uv run python main.py",
@@ -291,9 +300,9 @@ UNCOVERED = (
         "inside it: it exercises no Catalyst, and running it here would collide "
         "with the app this suite already has serving. The 200 and 403 paths this "
         "suite cannot reach are covered instead by "
-        "agents/langgraph-identity/test_identity.py, which drives the same offline "
+        "agents/langgraph/enterprise-identity/test_identity.py, which drives the same offline "
         "issuer under starlette's TestClient and runs in "
-        ".github/workflows/agents_langgraph_identity_python.yaml",
+        ".github/workflows/agents_enterprise_identity_python.yaml",
     ),
 )
 
