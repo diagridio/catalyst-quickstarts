@@ -17,3 +17,8 @@ package = false
 # importing it builds a Dapr-connected runner and client at module level. Naming the
 # pattern here also means a new test_*.py file starts running without a CI edit.
 python_files = ["test_*.py"]
+# Do not descend into nested quickstarts. agents/langgraph/enterprise-identity is
+# a separate uv project with its own lockfile, its own virtualenv and its own CI
+# job; collecting its tests from here would run them against this project's
+# dependencies, which do not include the identity extra.
+norecursedirs = ["enterprise-identity"]
