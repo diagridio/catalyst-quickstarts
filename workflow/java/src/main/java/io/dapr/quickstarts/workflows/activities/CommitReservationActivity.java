@@ -6,6 +6,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -14,7 +15,7 @@ import org.springframework.stereotype.Component;
 /**
  * A deliberately slow activity that opens the window for the crash-recovery demo.
  *
- * <p>It logs a start marker, sleeps for {@code CRASH_DELAY_SECONDS} (30 by default), then logs a
+ * <p>It logs a start marker, sleeps for {@code CRASH_DELAY_SECONDS} (10 by default), then logs a
  * commit marker and returns a confirmation code. The sleep is where you kill the app. Killing there
  * interrupts this activity mid-flight; on restart the durable runtime re-runs this incomplete
  * activity from the start while NOT re-running any activity that completed before the crash.
@@ -28,52 +29,82 @@ public class CommitReservationActivity implements WorkflowActivity {
   private static final Logger logger = LoggerFactory.getLogger(CommitReservationActivity.class);
 
   /**
-   * Seconds into the run at which {@code POST /crash/run} has armed the app to kill itself, or 0
-   * when nothing is armed. Set by {@link #noteSelfKill(int)} and read only to compose the log line
-   * in {@link #run}, which has to name the wait the reader actually gets: with a self-kill armed
-   * this activity never reaches the end of its sleep, so announcing that sleep on its own puts a
-   * number in the log that nothing honours.
+   * Seconds into THIS ACTIVITY's run at which the app should kill itself, or 0 when nothing is
+   * asked for. Recorded by the {@code /crash/run} handler in {@code WorkflowApp}, then read and
+   * acted on here.
    *
-   * <p>Static because the writer is a request handler in {@code WorkflowApp} and the reader is this
-   * activity, and one armed kill takes the whole JVM down, so there is nothing to key by instance.
-   * The fresh process after the restart starts at 0 again, which is right: nothing is armed on the
-   * replay.
+   * <p>Static because the writer is a request handler and the reader is this activity, and one
+   * armed kill takes the whole JVM down, so there is nothing to key by instance. The fresh process
+   * after the restart starts at 0 again, which is what makes the replay safe: the resumed activity
+   * re-runs this from the start and must not arm a second kill when it does.
    *
-   * <p>volatile, and an int rather than an Integer: the write happens on a request thread and the
-   * read on a workflow worker thread. 0 is unambiguous as "not armed" because the arm site already
-   * rejects a non-positive value.
+   * <p>An AtomicInteger because the activity CONSUMES it: {@code getAndSet(0)} reads the value and
+   * clears it in one step, so one recorded request arms exactly one execution. 0 is unambiguous as
+   * "not armed" because the record site already rejects a non-positive value.
    */
-  private static volatile int selfKillSeconds;
+  private static final AtomicInteger selfKillSeconds = new AtomicInteger();
 
   private final int delaySeconds;
 
-  public CommitReservationActivity(@Value("${CRASH_DELAY_SECONDS:30}") int delaySeconds) {
+  public CommitReservationActivity(@Value("${CRASH_DELAY_SECONDS:10}") int delaySeconds) {
     this.delaySeconds = delaySeconds;
   }
 
   /**
-   * Record that this process will kill itself, so {@link #run} can say so.
-   *
-   * <p>Called just after the schedule, and this activity cannot normally log before that: the
-   * worker has to be handed the work item and run the fast activity first. If it ever did win the
-   * race the line would read as though nothing were armed, which is a stale message rather than a
-   * broken demo.
+   * Record how far into this activity the JVM should halt itself, for {@link #run} to act on when
+   * it actually runs. Recording only: no timer starts here. Pass 0 to disarm.
    */
   public static void noteSelfKill(int delaySeconds) {
-    selfKillSeconds = delaySeconds;
+    selfKillSeconds.set(delaySeconds);
+  }
+
+  /**
+   * Halt the JVM {@code delaySeconds} from now, on a daemon thread.
+   *
+   * <p>Armed HERE, at the point this activity actually starts, and not back at the request. The
+   * request handler cannot start this clock honestly: between the schedule call and this activity
+   * sit the dispatch round-trip and the whole fast activity, so a budget measured from the request
+   * has to cover work the reader cannot see or predict. Measured from here it runs against this
+   * activity's own sleep, which is the window the README tells them to aim at. That is also what
+   * makes the field safe to send on a re-issue: an attaching call never reaches this line.
+   *
+   * <p>Deliberately the same {@code halt(137)} that {@code /crash/kill} uses: halt skips the
+   * shutdown hooks, so this is an abrupt crash rather than a controlled one wearing a crash's name.
+   *
+   * <p>A daemon thread so the timer can never hold the JVM open if the reader Ctrl+Cs during the
+   * countdown.
+   */
+  private static void armSelfKill(int delaySeconds) {
+    Thread timer = new Thread(() -> {
+      try {
+        Thread.sleep(delaySeconds * 1000L);
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        return;
+      }
+      logger.warn(">>> crash: halting the JVM {}s into the run, as asked by kill_after_seconds",
+          delaySeconds);
+      Runtime.getRuntime().halt(137);
+    }, "crash-self-kill");
+    timer.setDaemon(true);
+    timer.start();
   }
 
   @Override
   public Object run(WorkflowActivityContext ctx) {
     String reference = ctx.getInput(String.class);
+    // Read AND clear in one step, so one recorded request arms exactly one execution. A call that
+    // attaches records the field but never gets here, and leaving the value set would let it leak
+    // into the next run in the same process and kill an app that had never asked for it.
+    int armed = selfKillSeconds.getAndSet(0);
     // Two messages, because the reader's next move differs. Un-armed, the window is theirs to aim
     // at and they have to crash the app themselves. Armed, the app does that for them at a known
     // point, so the instruction would be wrong and the ~delay would be read as the wait.
-    int armed = selfKillSeconds;
     if (armed > 0) {
       logger.info("Committing reservation {} over ~{}s, but this process kills itself {}s into the"
           + " run, as asked by kill_after_seconds. It resumes on restart.",
           reference, delaySeconds, armed);
+      armSelfKill(armed);
     } else {
       logger.info("Committing reservation {} over ~{}s. KILL THE APP NOW to test crash recovery"
           + " (POST /crash/kill, or kill -9). It resumes on restart.", reference, delaySeconds);

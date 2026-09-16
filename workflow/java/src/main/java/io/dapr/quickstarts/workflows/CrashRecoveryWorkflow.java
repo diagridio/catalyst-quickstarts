@@ -12,7 +12,7 @@ import org.springframework.stereotype.Component;
  *
  * <p>{@link OrderProcessingWorkflow} cannot do this job. Its only delay is the 2s payment, and two
  * seconds is not a window a human can aim a second terminal at. This workflow runs one instant
- * activity and then one that takes about 30 seconds, so a kill lands between two known points.
+ * activity and then one that takes about 10 seconds, so a kill lands between two known points.
  *
  * <p>The activity ORDER is the whole design. The fast notification completes first, so Catalyst has
  * persisted its result before the slow activity starts. After a restart that notification is

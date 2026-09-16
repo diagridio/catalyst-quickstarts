@@ -80,6 +80,27 @@ Javascript Workflow Crash Recovery
     [Tags]    javascript    crash
     Skip    javascript ships no crash-recovery demo: workflow/javascript/README.md has no section 7
 
+# The self-kill cases, one per crash language. Separate from the crash cases above and
+# not folded into them, because they run the app on its DEFAULT delay and those cases
+# inject one: a fold would need a clean restart anyway, and a failure here has to point
+# at `kill_after_seconds` rather than at a recovery assertion that shares its case.
+Csharp Workflow Self Kill
+    [Tags]    csharp    crash    selfkill
+    Run Workflow Self Kill    csharp
+
+Java Workflow Self Kill
+    [Tags]    java    crash    selfkill
+    Run Workflow Self Kill    java
+
+Python Workflow Self Kill
+    [Tags]    python    crash    selfkill
+    Run Workflow Self Kill    python
+
+# Skips itself for the same reason the crash case above does.
+Javascript Workflow Self Kill
+    [Tags]    javascript    crash    selfkill
+    Skip    javascript ships no crash-recovery demo: workflow/javascript/README.md has no section 7
+
 *** Keywords ***
 Run Workflow Quickstart
     [Arguments]    ${language}
@@ -129,10 +150,12 @@ Run Workflow Crash Recovery
     ${log_first}=   Suite Log File    workflow    ${language}    crash-first
     ${log_again}=   Suite Log File    workflow    ${language}    crash-restart
 
-    # The apps read both of these from the environment they inherit. 30s four times over is
-    # not a cost this suite should pay to prove something 20s proves, and a short wait budget
-    # turns the blocking first call into the documented 202. Removed again in [Teardown]
-    # below, so neither can leak into a case that runs after this one.
+    # The apps read both of these from the environment they inherit. The delay goes UP from
+    # the app's 10s default, not down: the short wait budget below spends 5s of the window
+    # answering the documented 202, and what is left of 10s is not enough to then see the
+    # start marker and fire the kill. The short budget is what turns the blocking first call
+    # into that 202 in the first place. Removed again in [Teardown] below, so neither can
+    # leak into a case that runs after this one.
     Set Environment Variable    CRASH_DELAY_SECONDS    ${CRASH_DELAY_SECONDS}
     Set Environment Variable    CRASH_WAIT_SECONDS     ${CRASH_WAIT_SECONDS}
 
@@ -178,7 +201,7 @@ Run Workflow Crash Recovery
     ...    msg=A 202 must tell the caller to re-issue the same id
 
     # Asserts the injected delay actually reached the app. The marker carries the number,
-    # so a value that never propagated (and left the app on its 30s default) fails here
+    # so a value that never propagated (and left the app on its 10s default) fails here
     # instead of surfacing later as a kill that lands after the window closed.
     Wait Until Log Contains     ${log_first}    ${received}                  timeout=120s
     Wait Until Log Contains     ${log_first}    ${CRASH_COMMITTING_MARKER}    timeout=60s
@@ -231,3 +254,69 @@ Run Workflow Crash Recovery
     # dev-run tree; a keyword teardown runs in addition to it, so the env var is cleaned
     # up here and the process tree is still stopped by the suite exactly once.
     [Teardown]    Remove Environment Variable    CRASH_DELAY_SECONDS    CRASH_WAIT_SECONDS
+
+Run Workflow Self Kill
+    [Documentation]    README section 7.1's `kill_after_seconds` variant, at the documented
+    ...    value and against the app's documented default delay.
+    ...
+    ...    The crash case above covers the MANUAL kill and everything after it, so this one
+    ...    deliberately stops at the crash. Restart, replay and attach are the same machinery
+    ...    on both paths and are already proven there; the only thing unique to this path is
+    ...    whether the fuse lands inside the slow activity's window, and that is decided in
+    ...    the first ten seconds.
+    ...
+    ...    It is a real assertion rather than a smoke test because the fuse is armed INSIDE
+    ...    CommitReservationActivity, microseconds before its sleep. If it were armed at the
+    ...    request instead, the 8s budget would have to cover the schedule round-trip and the
+    ...    whole fast activity, this case would be measuring Catalyst's dispatch latency, and
+    ...    a red run would mean "the cloud was slow" as often as "the code is wrong".
+    [Arguments]    ${language}
+    Should Contain    ${CRASH_LANGUAGES}    ${language}
+    ...    msg=${language} ships no crash-recovery demo
+    ${qs}=      Get Quickstart    workflow    ${language}
+    ${log}=     Suite Log File    workflow    ${language}    selfkill
+
+    # Defensive, not redundant. The crash case sets both of these and removes them in its
+    # own teardown, but this case has to hold on the app's DEFAULTS, and `--test "Python
+    # Workflow Self Kill"` has to behave the same as a full-suite run. An inherited
+    # CRASH_DELAY_SECONDS would silently move the window this case is asserting about.
+    Remove Environment Variable    CRASH_DELAY_SECONDS    CRASH_WAIT_SECONDS
+
+    Build Quickstart            ${qs}
+    Start Quickstart            ${qs}    ${PROJECT}    ${log}
+    Wait Until Apps Connected   ${qs}    ${log}
+    Wait Until Apps Healthy     ${qs}
+
+    # Unique per run, for the reason the crash case gives: a constant id is already
+    # COMPLETED the second time this runs against the same project, and /crash/run would
+    # then attach, execute no activity, and arm nothing.
+    ${unique}=      Generate Random String    6    [NUMBERS]
+    ${crash_id}=    Replace String    ${CRASH_INSTANCE_ID}    {language}    ${language}-sk-${unique}
+    ${payload}=     Create Dictionary    id=${crash_id}    reference=${CRASH_REFERENCE}
+    ...             kill_after_seconds=${CRASH_KILL_AFTER_SECONDS}
+
+    # The response cannot be asserted on: the app kills itself while this call is still
+    # blocked, so the connection dies before a body is written. That is the documented
+    # behaviour, and it is why the proof below is entirely in the log.
+    Run Keyword And Ignore Error
+    ...    POST    http://localhost:5001/crash/run    json=${payload}    timeout=30
+
+    # The whole assertion. This sentence only exists if the activity STARTED and found the
+    # armed value waiting for it, and it carries both numbers, so a fuse that fired ahead
+    # of the window, an app that was not on its default delay, and a value that never
+    # reached the activity all fail here rather than downstream.
+    Wait Until Log Contains     ${log}    ${CRASH_ARMED_COMMITTING_MARKER}    timeout=120s
+
+    # And the fuse actually fired. Without this the case would pass against an app that
+    # merely logged its intent to crash: the armed line is written before the sleep, so it
+    # is present either way.
+    Wait Until Log Contains     ${log}    ${CRASH_SELF_KILL_MARKER}    timeout=60s
+
+    # The process is really gone, not merely claiming to be. Same gate the crash case uses
+    # after POST /crash/kill.
+    Wait Until Keyword Succeeds    30s    2s    App Port Is Closed    5001
+
+    # The CLI parent survives the app it supervises, so take the tree down: the suite's
+    # Test Teardown stops the quickstart, and leaving a half-dead tree behind would let the
+    # next case inherit port 5001.
+    Run Keyword And Ignore Error    Stop Process Tree    apps

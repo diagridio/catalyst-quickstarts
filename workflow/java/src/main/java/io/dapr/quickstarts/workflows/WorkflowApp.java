@@ -49,7 +49,7 @@ public class WorkflowApp {
   private static final Logger logger = LoggerFactory.getLogger(WorkflowApp.class);
 
   // The wait budget for the blocking /crash/run. Kept comfortably above the slow activity's
-  // default 30s so the first call is still blocked when you kill the app. Overridable through
+  // default 10s so the first call is still blocked when you kill the app. Overridable through
   // CRASH_WAIT_SECONDS, which is how the e2e suite exercises the 202 branch without waiting
   // two minutes for it.
   @Value("${CRASH_WAIT_SECONDS:120}")
@@ -178,13 +178,13 @@ public class WorkflowApp {
       if (!instanceExists(workflowClient.getInstanceState(id, false))) {
         logger.info("Starting crash-recovery workflow {} for reservation {}", id, request.getReference());
         workflowClient.scheduleNewWorkflow(CrashRecoveryWorkflow.class, request.getReference(), id);
-        // Armed here and nowhere else: only on the branch that actually scheduled a run, and
-        // only after the schedule call returned. On the attach branch below it would halt the
-        // JVM every time the reader tried to read the answer.
+        // RECORDED here, and armed later by the slow activity itself. No timer starts on this
+        // thread: see CommitReservationActivity#armSelfKill for why the clock has to start where
+        // the window does. Recording 0 when nothing was asked for is load-bearing, because the
+        // activity consumes this value and a stale one would halt a later run that never asked.
         Integer killAfter = request.getKillAfterSeconds();
-        if (killAfter != null && killAfter > 0) {
-          armSelfKill(killAfter);
-        }
+        CommitReservationActivity.noteSelfKill(
+            killAfter != null && killAfter > 0 ? killAfter : 0);
       } else {
         logger.info("Attaching to existing crash-recovery workflow {}", id);
       }
@@ -244,43 +244,6 @@ public class WorkflowApp {
    * Returns: nothing. The process is gone before a response can be written, so the caller sees a
    * connection reset.
    */
-  /**
-   * Halt the JVM {@code delaySeconds} from now, on a daemon thread.
-   *
-   * <p>What lets the demo run in two terminals instead of three. {@code /crash/run} blocks for
-   * the length of the slow activity, so the shell that starts a run cannot also stop the app,
-   * and the kill has always needed a terminal of its own. Arming it here removes that terminal
-   * AND the race: the crash lands at a known point inside the window rather than wherever the
-   * reader's reflexes put it.
-   *
-   * <p>Deliberately the same {@code halt(137)} that {@code /crash/kill} uses, for the reason
-   * given there: halt skips the shutdown hooks, so this is an abrupt crash rather than a
-   * controlled one wearing a crash's name.
-   *
-   * <p>A daemon thread so the timer can never hold the JVM open if the reader Ctrl+Cs during
-   * the countdown.
-   */
-  private void armSelfKill(int delaySeconds) {
-    // Tell the slow activity, so the line it prints names this delay rather than the sleep it was
-    // going to take. That sleep is the number the reader used to see, and it is not the one they
-    // wait: the app dies partway through it.
-    CommitReservationActivity.noteSelfKill(delaySeconds);
-
-    Thread timer = new Thread(() -> {
-      try {
-        Thread.sleep(delaySeconds * 1000L);
-      } catch (InterruptedException e) {
-        Thread.currentThread().interrupt();
-        return;
-      }
-      logger.warn(">>> crash: halting the JVM {}s into the run, as asked by kill_after_seconds",
-          delaySeconds);
-      Runtime.getRuntime().halt(137);
-    }, "crash-self-kill");
-    timer.setDaemon(true);
-    timer.start();
-  }
-
   @PostMapping("/crash/kill")
   public void crashKill() {
     logger.warn(">>> /crash/kill: halting the JVM to simulate a worker crash");
