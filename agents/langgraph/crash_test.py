@@ -117,7 +117,9 @@ workflow_client = DaprWorkflowClient()
 
 # The wait budget for the blocking POST /crash/run. Kept comfortably above step 2's
 # default 30s so the first call is still blocked when you kill the app.
-CRASH_WAIT_SECONDS = 120
+# Overridable through CRASH_WAIT_SECONDS, which is how an automated run exercises the
+# 202 branch without waiting two minutes for it.
+CRASH_WAIT_SECONDS = int(os.environ.get("CRASH_WAIT_SECONDS", "120"))
 
 
 # ── FastAPI server ───────────────────────────────────────────
@@ -133,6 +135,17 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan)
+
+
+# Health check endpoint - verifies the service is running
+# GET /
+# Returns: { "message": "Health check passed. Everything is running smoothly!" }
+#
+# It answers only once the lifespan above has run, so a 200 here means the
+# workflow runner registered with Catalyst, not merely that the port is open.
+@app.get("/")
+async def read_root():
+    return {"message": "Health check passed. Everything is running smoothly!"}
 
 
 class CrashRunRequest(BaseModel):
