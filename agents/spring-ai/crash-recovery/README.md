@@ -76,7 +76,7 @@ diagrid agent create spring-ai-crash-recovery --wait
 diagrid dev run -f dev-spring-ai-crash-recovery.yaml --approve
 ```
 
-### 2. Book under an id you own (blocks ~30s)
+### 2. Book under an id you own (blocks ~10s)
 
 From another terminal (**Terminal A**), this schedules the booking under `trip-42` and blocks while the
 slow tool "commits":
@@ -95,7 +95,7 @@ curl -X POST "http://localhost:8080/crash/run" \
 Invoke-RestMethod -Method Post -Uri 'http://localhost:8080/crash/run' -ContentType 'application/json' -Body '{"id":"trip-42","reference":"ABC123"}'
 ```
 
-Watch the app log for the `>>> commitReservation(ABC123)` line, which announces the ~30s window and
+Watch the app log for the `>>> commitReservation(ABC123)` line, which announces the ~10s window and
 tells you to kill the app now.
 
 **Two terminals instead of three.** The request takes an optional `kill_after_seconds`. Send it and the
@@ -120,7 +120,7 @@ Send this instead of the request above and skip step 3: the app crashes on its o
 and nothing changes, and you crash the app yourself from Terminal B. Either way the rest of the
 walkthrough is identical.
 
-Keep the value below `crash-recovery.delay-seconds` (30 by default) so the crash lands inside the
+Keep the value below `crash-recovery.delay-seconds` (10 by default) so the crash lands inside the
 booking rather than after it has finished. The clock starts when `commitReservation` starts, not when
 the request arrives, so the budget is measured against that tool's own sleep and does not have to cover
 the LLM turn ahead of it. That is also why the field is safe to send on the re-issue in *Collect the
@@ -215,7 +215,7 @@ and so is one whose `reference` is outside `A-Z a-z 0-9 _ -` or longer than 64 c
   `DurableAdvisor.INSTANCE_ID_KEY`: that id is the attach handle a retry re-uses.
 - The booking tool (`SlowBookingTools.commitReservation`) is a **global `@Tool` bean** so it is
   re-registered on a restarted worker and the resumed activity can run it (a request-scoped tool would
-  be gone after a cold restart). It sleeps for `crash-recovery.delay-seconds` (30 by default) to open
+  be gone after a cold restart). It sleeps for `crash-recovery.delay-seconds` (10 by default) to open
   the crash window.
 - On a re-issue with the same id, the durable runtime attaches to the existing instance instead of
   scheduling a new one. If the call's wait budget elapses it throws `DurableCallTimeoutException` with
@@ -235,14 +235,14 @@ and so is one whose `reference` is outside `A-Z a-z 0-9 _ -` or longer than 64 c
 The tool's sleep is configurable, like the delay in the sibling crash demos. This app reads a Spring
 property rather than an environment variable: `crash-recovery.delay-seconds` in
 [`src/main/resources/application.properties`](./src/main/resources/application.properties), which
-defaults to 30. Set it lower to shorten the crash window, or higher if you need more time to aim the
+defaults to 10. Set it lower to shorten the crash window, or higher if you need more time to aim the
 second terminal:
 
 ```properties
-crash-recovery.delay-seconds=10
+crash-recovery.delay-seconds=5
 ```
 
-The value is also what the tool's log line reports, so `committing over ~10s` confirms the change took
+The value is also what the tool's log line reports, so `committing over ~5s` confirms the change took
 effect. Keep it comfortably below `diagrid.spring-ai.completion-timeout` (the blocking call's wait
 budget, set to 2m in the same file) so the first `/crash/run` is still blocked when you kill the app.
 

@@ -1,6 +1,7 @@
 import hashlib
 import logging
 import os
+import threading
 from dapr.ext.workflow import WorkflowActivityContext, DaprWorkflowContext
 from model import InventoryItem, InventoryRequest, InventoryResult, PaymentRequest, Notification, OrderResult, OrderPayload
 import time
@@ -60,37 +61,74 @@ def confirmation_code(reference: str) -> str:
     digest = hashlib.sha256(reference.encode('utf-8')).hexdigest()
     return 'BK-' + digest[:8].upper()
 
-# Seconds into the run at which POST /crash/run has armed the app to kill itself, or None
-# when nothing is armed. Set by main.arm_self_kill and read only to compose the log line
-# below, which has to name the wait the reader actually gets: with a self-kill armed the slow
-# activity never reaches the end of its sleep, so announcing that sleep on its own puts a
-# number in the log that nothing honours.
+# Seconds into THIS ACTIVITY's run at which the app should kill itself, or 0 when nothing is
+# asked for. Recorded by main's /crash/run handler, then read and acted on here.
 #
 # A plain module-level value is enough. One armed kill takes the whole process down, so there
-# is nothing to key by instance, and the fresh process after the restart starts at None
-# again, which is right: nothing is armed on the replay.
-_self_kill_seconds = None
+# is nothing to key by instance, and the fresh process after the restart starts at 0 again,
+# which is what makes the replay safe: the resumed activity re-runs this from the start and
+# must not arm a second kill when it does.
+_self_kill_seconds = 0
 
 def note_self_kill(delay_seconds: int):
-    """Record that this process will kill itself, so the slow activity can say so.
+    """Record how far into this activity the process should kill itself. Pass 0 to disarm.
 
-    Called just after the schedule, and the activity below cannot normally log before that:
-    the worker has to be handed the work item and run the fast activity first. If it ever did
-    win the race the line would read as though nothing were armed, which is a stale message
-    rather than a broken demo.
+    Recording only: no timer starts here. See _arm_self_kill for why the timer belongs in the
+    activity rather than at the request.
     """
     global _self_kill_seconds
     _self_kill_seconds = delay_seconds
 
+def _consume_self_kill() -> int:
+    """Read the armed value and clear it in one step, so one request arms one execution.
+
+    The clear is load-bearing. A call that attaches to an existing run records the field and
+    then never reaches this activity, so a value left set would survive to the next run in the
+    same process and kill an app that had never asked for it.
+    """
+    global _self_kill_seconds
+    armed = _self_kill_seconds
+    _self_kill_seconds = 0
+    return armed
+
+def _arm_self_kill(delay_seconds: int):
+    """Kill this process `delay_seconds` from now, on a daemon thread.
+
+    Armed HERE, at the point the slow activity actually starts, and not back at the request.
+    The request handler cannot start this clock honestly: between the schedule call and this
+    activity sit the dispatch round-trip and the whole fast activity, so a budget measured
+    from the request has to cover work the reader cannot see or predict. Measured from here it
+    runs against this activity's own sleep, which is the window the README tells them to aim
+    at. That is also what makes the field safe to send on a re-issue: an attaching call never
+    reaches this line.
+
+    Deliberately the same os._exit(1) that /crash/kill uses. A gentler exit would make this a
+    controlled shutdown wearing a crash's name, which is the one thing this demo must not do.
+
+    daemon=True so the timer can never hold the process open: a Ctrl+C during the countdown
+    should still end the app rather than wait for a kill nobody wants any more.
+    """
+    def _kill():
+        time.sleep(delay_seconds)
+        logger.warning(
+            f'>>> crash: killing this process {delay_seconds}s into the run, as asked by kill_after_seconds'
+        )
+        os._exit(1)
+
+    threading.Thread(target=_kill, daemon=True).start()
+
 def commit_reservation_activity(ctx: WorkflowActivityContext, input: str):
-    delay = int(os.environ.get('CRASH_DELAY_SECONDS', '30'))
+    delay = int(os.environ.get('CRASH_DELAY_SECONDS', '10'))
+    # Read AND clear in one step, so one recorded request arms exactly one execution.
+    armed = _consume_self_kill()
     # Two messages, because the reader's next move differs. Un-armed, the window is theirs to
     # aim at and they have to crash the app themselves. Armed, the app does that for them at a
     # known point, so the instruction would be wrong and the ~delay would be read as the wait.
-    if _self_kill_seconds:
+    if armed:
         logger.info(f'Committing reservation {input} over ~{delay}s, but this process kills '
-                    f'itself {_self_kill_seconds}s into the run, as asked by kill_after_seconds. '
+                    f'itself {armed}s into the run, as asked by kill_after_seconds. '
                     f'It resumes on restart.')
+        _arm_self_kill(armed)
     else:
         logger.info(f'Committing reservation {input} over ~{delay}s. KILL THE APP NOW to test '
                     f'crash recovery (POST /crash/kill, or kill -9). It resumes on restart.')

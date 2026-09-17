@@ -25,7 +25,7 @@ import org.springframework.web.bind.annotation.RestController;
  * handle a repeat call re-uses.
  *
  * <pre>
- * # 1. Terminal A: book under an id YOU own. Blocks ~30s while the slow tool "commits".
+ * # 1. Terminal A: book under an id YOU own. Blocks ~10s while the slow tool "commits".
  * curl -X POST "http://localhost:8080/crash/run" -H "Content-Type: application/json" \
  *   -d '{"id":"trip-42","reference":"ABC123"}'
  * # 2. Terminal B: during that window, SIGKILL the app (worker and blocked caller both die):

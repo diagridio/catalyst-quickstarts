@@ -51,7 +51,7 @@ public class SlowBookingTools {
 
   private final int delaySeconds;
 
-  public SlowBookingTools(@Value("${crash-recovery.delay-seconds:30}") int delaySeconds) {
+  public SlowBookingTools(@Value("${crash-recovery.delay-seconds:10}") int delaySeconds) {
     this.delaySeconds = delaySeconds;
   }
 

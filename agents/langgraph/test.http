@@ -7,7 +7,7 @@ Content-Type: application/json
 }
 
 ### Crash Recovery: run the graph under an ID you own
-### Blocks for ~30s while step 2 runs. Kill the app during that window with the
+### Blocks for ~10s while step 2 runs. Kill the app during that window with the
 ### request below. Restarting the app is what recovers the run; send this exact
 ### request again only to read back its answer, because the crash killed the
 ### connection that was waiting for one.

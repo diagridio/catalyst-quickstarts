@@ -18,7 +18,7 @@ var builder = WebApplication.CreateBuilder(args);
 // nothing to interrupt.
 var delaySeconds = int.TryParse(Environment.GetEnvironmentVariable("CRASH_DELAY_SECONDS"), out var seconds)
     ? seconds
-    : 30;
+    : 10;
 
 // The TOOL ORDER is the design. Each tool call is a separate Dapr workflow activity, so
 // step_one_search completes and Catalyst records its result before the slow step_two_compare
@@ -157,7 +157,7 @@ app.MapPost("/run", async (IDaprAgentInvoker invoker, RunRequest req, Cancellati
 });
 
 // ── Crash-recovery demo ──────────────────────────────────────────────────────
-// The wait budget for the blocking /crash/run. Kept comfortably above tool 2's default 30s
+// The wait budget for the blocking /crash/run. Kept comfortably above tool 2's default 10s
 // so the first call is still blocked when you kill the app.
 var crashWait = TimeSpan.FromSeconds(180);
 

@@ -1,8 +1,10 @@
 namespace WorkflowApp.Activities
 {
     using System;
+    using System.Diagnostics;
     using System.Security.Cryptography;
     using System.Text;
+    using System.Threading;
     using System.Threading.Tasks;
     using Dapr.Workflow;
     using Microsoft.Extensions.Logging;
@@ -10,7 +12,7 @@ namespace WorkflowApp.Activities
     /// <summary>
     /// A deliberately slow activity that opens the window for the crash-recovery demo.
     ///
-    /// It logs a start marker, waits for CRASH_DELAY_SECONDS (30 by default), then logs a commit
+    /// It logs a start marker, waits for CRASH_DELAY_SECONDS (10 by default), then logs a commit
     /// marker and returns a confirmation code. The wait is where you kill the app. Killing there
     /// interrupts this activity mid-flight; on restart the durable runtime re-runs this incomplete
     /// activity from the start while NOT re-running any activity that completed before the crash.
@@ -21,23 +23,22 @@ namespace WorkflowApp.Activities
     public class CommitReservationActivity : WorkflowActivity<string, string>
     {
         /// <summary>
-        /// Seconds into the run at which POST /crash/run has armed the app to kill itself, or 0
-        /// when nothing is armed. Set by NoteSelfKill and read only to compose the log line in
-        /// RunAsync, which has to name the wait the reader actually gets: with a self-kill armed
-        /// this activity never reaches the end of its delay, so announcing that delay on its own
-        /// puts a number in the log that nothing honours.
+        /// Seconds into THIS ACTIVITY's run at which the app should kill itself, or 0 when
+        /// nothing is asked for. Recorded by the /crash/run handler in Program.cs, then read and
+        /// acted on here.
         ///
-        /// Static because the writer is a request handler in Program.cs and the reader is this
-        /// activity, and one armed kill takes the whole process down, so there is nothing to key
-        /// by instance. The fresh process after the restart starts at 0 again, which is right:
-        /// nothing is armed on the replay.
+        /// Static because the writer is a request handler and the reader is this activity, and
+        /// one armed kill takes the whole process down, so there is nothing to key by instance.
+        /// The fresh process after the restart starts at 0 again, which is what makes the replay
+        /// safe: the resumed activity re-runs this from the start and must not arm a second kill
+        /// when it does.
         ///
-        /// volatile, and an int rather than an int?: the write happens on a request thread and
-        /// the read on a workflow worker thread, and a single int cannot be read half-written the
-        /// way a nullable struct's two fields can. 0 is unambiguous as "not armed" because the
-        /// arm site already rejects a non-positive value.
+        /// An int rather than an int?: the write happens on a request thread and the read on a
+        /// workflow worker thread, and a single int cannot be read half-written the way a
+        /// nullable struct's two fields can. 0 is unambiguous as "not armed" because the record
+        /// site already rejects a non-positive value.
         /// </summary>
-        static volatile int selfKillSeconds;
+        static int selfKillSeconds;
 
         readonly ILogger logger;
         readonly int delaySeconds;
@@ -48,26 +49,56 @@ namespace WorkflowApp.Activities
             this.delaySeconds = int.TryParse(
                 Environment.GetEnvironmentVariable("CRASH_DELAY_SECONDS"), out var seconds)
                 ? seconds
-                : 30;
+                : 10;
         }
 
         /// <summary>
-        /// Record that this process will kill itself, so RunAsync can say so.
-        ///
-        /// Called just after the schedule, and this activity cannot normally log before that: the
-        /// worker has to be handed the work item and run the fast activity first. If it ever did
-        /// win the race the line would read as though nothing were armed, which is a stale
-        /// message rather than a broken demo.
+        /// Record how far into this activity the process should kill itself, for RunAsync to act
+        /// on when it actually runs. Recording only: no timer starts here. Pass 0 to disarm.
         /// </summary>
-        public static void NoteSelfKill(int delaySeconds) => selfKillSeconds = delaySeconds;
+        public static void NoteSelfKill(int delaySeconds) =>
+            Interlocked.Exchange(ref selfKillSeconds, delaySeconds);
+
+        /// <summary>
+        /// Kill this process <paramref name="delaySeconds"/> from now, on a background task.
+        ///
+        /// Armed HERE, at the point this activity actually starts, and not back at the request.
+        /// The request handler cannot start this clock honestly: between the schedule call and
+        /// this activity sit the dispatch round-trip and the whole fast activity, so a budget
+        /// measured from the request has to cover work the reader cannot see or predict.
+        /// Measured from here it runs against this activity's own delay, which is the window the
+        /// README tells them to aim at. That is also what makes the field safe to send on a
+        /// re-issue: an attaching call never reaches this line.
+        /// </summary>
+        static void ArmSelfKill(int delaySeconds)
+        {
+            // Discarded on purpose: this task is a fuse, not something to await. Nothing can
+            // observe its completion, because its last act is to end the process.
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(TimeSpan.FromSeconds(delaySeconds));
+                // Console.WriteLine plus an explicit flush, for the reason /crash/kill gives in
+                // Program.cs: the default console logger hands the line to a background thread
+                // and the kill beats it, so the one line explaining the death never prints.
+                Console.WriteLine($">>> crash: killing this process {delaySeconds}s into the run, as asked by kill_after_seconds");
+                Console.Out.Flush();
+                // Kill(), matching /crash/kill: Environment.Exit runs the ProcessExit handlers,
+                // which makes it a controlled shutdown wearing a crash's name.
+                Process.GetCurrentProcess().Kill();
+            });
+        }
 
         public override async Task<string> RunAsync(WorkflowActivityContext context, string reference)
         {
+            // Read AND clear in one step, so one recorded request arms exactly one execution. A
+            // call that attaches records the field but never gets here, and leaving the value set
+            // would let it leak into the next run in the same process and kill an app that had
+            // never asked for it.
+            var armed = Interlocked.Exchange(ref selfKillSeconds, 0);
             // Two messages, because the reader's next move differs. Un-armed, the window is
             // theirs to aim at and they have to crash the app themselves. Armed, the app does
             // that for them at a known point, so the instruction would be wrong and the ~delay
             // would be read as the wait.
-            var armed = selfKillSeconds;
             if (armed > 0)
             {
                 this.logger.LogInformation(
@@ -75,6 +106,7 @@ namespace WorkflowApp.Activities
                     reference,
                     this.delaySeconds,
                     armed);
+                ArmSelfKill(armed);
             }
             else
             {

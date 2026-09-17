@@ -124,8 +124,11 @@ OFFLINE_MODEL_MARKER = ">>> Using the canned offline model"
 SERVING_MARKER = f"Tomcat started on port {APP_PORT}"
 
 # How many seconds into the booking the app halts itself. README "### 2." says to
-# keep this below `crash-recovery.delay-seconds` (30 by default) so the crash
-# lands inside the booking rather than after it finished.
+# keep this below `crash-recovery.delay-seconds` (10 by default) so the crash
+# lands inside the booking rather than after it finished. This suite injects no
+# delay, so 10s is the window this 8 is measured against: the tool's sleep and the
+# self-kill timer start within microseconds of each other, so the 2s of headroom is
+# deterministic rather than a race.
 KILL_AFTER_SECONDS = 8
 
 # Documented commands this suite deliberately does not run, each with its reason.
