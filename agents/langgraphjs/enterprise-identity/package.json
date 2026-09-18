@@ -1,0 +1,32 @@
+{
+  "name": "enterprise-identity-agent",
+  "version": "1.0.0",
+  "private": true,
+  "description": "LangGraph.js agent that knows who is calling it, on Diagrid Catalyst",
+  "type": "module",
+  "scripts": {
+    "start": "tsx main.ts",
+    "crm": "tsx crm_server.ts",
+    "test": "node --import tsx --test *.test.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@diagrid/agent-core": "0.2.0",
+    "@langchain/core": "^1.2.11",
+    "@langchain/langgraph": "^1.4.15",
+    "@langchain/openai": "^1.5.13",
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "express": "^5.2.1",
+    "jose": "^6.2.12",
+    "tsx": "^4.23.12",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/node": "^22.13.0",
+    "typescript": "^5.7.3"
+  },
+  "engines": {
+    "node": ">=22.13.0"
+  }
+}

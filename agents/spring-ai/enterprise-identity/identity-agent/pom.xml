@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>io.diagrid.quickstart.springai</groupId>
+    <artifactId>enterprise-identity</artifactId>
+    <version>1.0.0</version>
+  </parent>
+
+  <artifactId>identity-agent</artifactId>
+  <name>identity-agent</name>
+  <description>The Spring AI agent that knows who is calling it and calls its tools as that person</description>
+
+  <dependencies>
+    <!-- The two REST endpoints, and the servlet container the identity filter installs into. -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+
+    <!-- Spring AI: ChatClient plus tool calling. Reached only when
+         DIAGRID_QUICKSTART_MODEL=openai; the quickstart runs on CannedChatModel otherwise. -->
+    <dependency>
+      <groupId>org.springframework.ai</groupId>
+      <artifactId>spring-ai-starter-model-openai</artifactId>
+    </dependency>
+
+    <!-- THE ENTIRE INBOUND IDENTITY INTEGRATION. One servlet Filter over
+         io.diagrid:diagrid-ai-identity, which arrives transitively and carries the verification,
+         the Catalyst discovery and the outbound propagation. Its own single dependency,
+         com.nimbusds:nimbus-jose-jwt, arrives with it — which is also what lets
+         LocalIdentityIssuer sign RS256 credentials offline without a dependency of its own. -->
+    <dependency>
+      <groupId>io.diagrid</groupId>
+      <artifactId>diagrid-spring-ai-identity</artifactId>
+    </dependency>
+
+    <!-- The MCP client for the outbound leg: the agent's tool call to the CRM, made through
+         Catalyst's MCP proxy so that Catalyst can attach the calling user to it. -->
+    <dependency>
+      <groupId>io.modelcontextprotocol.sdk</groupId>
+      <artifactId>mcp</artifactId>
+    </dependency>
+
+    <!-- MockMvc, so the tests drive the real OAuthFilter in a real filter chain in front of the
+         real controller: the thing under test here IS the filter's position in the chain. -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-maven-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <configuration>
+          <!-- The tests run against the offline issuer, the only identity plane they can mint a
+               credential for. The application reads the mode from the environment, and a JVM cannot
+               set its own environment variables, so it is set for the test fork here. -->
+          <environmentVariables>
+            <DIAGRID_QUICKSTART_IDENTITY>local</DIAGRID_QUICKSTART_IDENTITY>
+          </environmentVariables>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+</project>

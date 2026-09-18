@@ -1,0 +1,55 @@
+name: javascript langgraph identity agent quickstart
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/agents_enterprise_identity_javascript.yaml
+      - agents/langgraphjs/enterprise-identity/**
+  pull_request:
+    branches:
+      - main
+    paths:
+      - .github/workflows/agents_enterprise_identity_javascript.yaml
+      - agents/langgraphjs/enterprise-identity/**
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: "read"
+    if: github.repository_owner == 'diagridio'
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: "npm"
+          cache-dependency-path: agents/langgraphjs/enterprise-identity/package-lock.json
+
+      # `npm ci` rather than `npm install`, and that is the point of running it
+      # here: it installs exactly the lockfile and fails if package.json and
+      # package-lock.json disagree, so this job is the guard on lock staleness.
+      # A stale lock would otherwise surface in the quickstart's Dockerfile.
+      #
+      # The tests need no test framework of their own: `npm test` is
+      # `node --import tsx --test *.test.ts`, so nothing was added to
+      # package.json to make them runnable. No filename here either, for the
+      # same reason the script uses a pattern: a new test file runs without a
+      # CI edit.
+      #
+      # `npm run typecheck` runs as well, and it is not redundant: tsx strips
+      # types rather than checking them, so a type error would otherwise ship
+      # silently and the tests would still pass.
+      #
+      # No credentials and no network: the tests stand the Catalyst identity
+      # plane up in-process (local_identity.buildLocalIssuer) and drive
+      # main.ts's own `buildApp` on a loopback port, so the 200 and 403 paths
+      # the Robot suite cannot reach are covered here instead.
+      - name: inbound identity tests
+        working-directory: agents/langgraphjs/enterprise-identity
+        run: |
+          npm ci
+          npm run typecheck
+          npm test

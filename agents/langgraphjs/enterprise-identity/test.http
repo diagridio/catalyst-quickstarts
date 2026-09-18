@@ -1,0 +1,37 @@
+# Paste the credential the offline issuer logs under `200`. Start it with:
+#
+#   DIAGRID_QUICKSTART_IDENTITY=local APP_PORT=8006 npm start
+#
+# See "Run Offline Without a Catalyst Project" in README.md. The two requests
+# that send no credential at all answer 401 in either mode.
+@token = <THE_CREDENTIAL_LOGGED_UNDER_200>
+
+### Who is calling, with no credential: 401 {"error": "oauth.missing_token"}
+### The middleware rejects this before the graph, the model, or any app code runs.
+GET http://localhost:8006/whoami
+
+### Who is calling, with a credential: 200 and the verified caller
+### subject, tenant and issuerId are read off the token the app verified, never
+### off the request.
+GET http://localhost:8006/whoami
+X-Diagrid-User-Token: Bearer {{token}}
+
+### Run the agent as that user: 200
+### The reply names the caller because the verified subject reached the tool
+### through the graph's config, not because the tool read a header.
+POST http://localhost:8006/agent/run
+X-Diagrid-User-Token: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "task": "What bookings do I have?"
+}
+
+### Run the agent with no credential: 401 {"error": "oauth.missing_token"}
+### Same rejection on every route. requireAuth is app-wide, not per-path.
+POST http://localhost:8006/agent/run
+Content-Type: application/json
+
+{
+    "task": "What bookings do I have?"
+}
