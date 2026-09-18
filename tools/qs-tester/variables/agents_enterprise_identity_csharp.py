@@ -1,16 +1,16 @@
-"""Data for the agents/langchaingo/enterprise-identity end-to-end suite.
+"""Data for the agents/microsoft-dotnet/enterprise-identity end-to-end suite.
 
 Every command here is transcribed verbatim from
-agents/langchaingo/enterprise-identity/README.md, with one substitution: the
+agents/microsoft-dotnet/enterprise-identity/README.md, with one substitution: the
 documented project name becomes `{project}`. The README is the source of truth.
 Change the README, change this file, and `docsync/check_readme_sync.py --all`
 will tell you if you changed only one.
 
-A separate module from `agents_enterprise_identity`, which is the PYTHON
-quickstart's data. The two suites are siblings, not languages of one suite: they
-have different directories, different install and run commands and different
-readiness markers, so they cannot share a module the way the canonical suites
-share `quickstarts.py`.
+WHY THE MODULE NAME CARRIES `_csharp` WHEN NO OTHER AGENT MODULE NAMES A
+LANGUAGE. This quickstart is the C# port of agents/langgraph/enterprise-identity,
+whose data module is `agents_enterprise_identity`. Two quickstarts of the same
+name need two modules, and the python one was named first. The asymmetry is
+therefore deliberate rather than a convention this file invented.
 
 What this suite covers. The quickstart demonstrates inbound end-user identity:
 Catalyst verifies the caller and passes a verified identity to the app in
@@ -31,18 +31,23 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
 FAMILY = "agents"
-NAME = "enterprise-identity-go"
-LANGUAGE = "go"
+NAME = "enterprise-identity-csharp"
+LANGUAGE = "csharp"
 
-# README "## Run with Catalyst", step 1. Replaced by an ephemeral qs-ci-* name at
+# README "## Run with Catalyst", step 2. Replaced by an ephemeral qs-ci-* name at
 # run time; also what doc-sync maps onto `{project}` when comparing.
-DOCUMENTED_PROJECT = "enterprise-identity-quickstart"
+#
+# Deliberately NOT the python sibling's `enterprise-identity-quickstart`: the two
+# quickstarts are run side by side by anyone comparing them, and reusing one
+# project name would have the second `project create` collide with the first.
+DOCUMENTED_PROJECT = "enterprise-identity-dotnet-quickstart"
 
-# The full path, langchaingo segment included. Note that the python sibling's
-# module has `agents/enterprise-identity` here, missing its `langgraph`
-# segment -- that looks like a real bug in it rather than a convention, so it is
-# deliberately not mirrored.
-QUICKSTART_DIR = str(REPO_ROOT / "agents" / "langchaingo" / "enterprise-identity")
+# Written from the real path on disk, and worth saying why that is worth saying:
+# the python sibling's module has this wrong (`agents/enterprise-identity`, where
+# the quickstart is at `agents/langgraph/enterprise-identity`), and every suite
+# keyword takes its cwd from this value. Copying it would have installed and run
+# in a directory that does not exist.
+QUICKSTART_DIR = str(REPO_ROOT / "agents" / "microsoft-dotnet" / "enterprise-identity")
 
 # appID and appPort from dev-enterprise-identity.yaml, which is also what the
 # documented curls target and what the documented readiness line prints.
@@ -51,6 +56,8 @@ QUICKSTART_DIR = str(REPO_ROOT / "agents" / "langchaingo" / "enterprise-identity
 # broken quickstart rather than a broken data module.
 APP_ID = "identity-agent"
 APP_PORT = 8006
+CRM_APP_ID = "crm-mcp"
+CRM_APP_PORT = 8007
 
 # `identity-agent` is created before the MCPServer on purpose: crm-mcp.yaml
 # scopes the CRM to that App ID, and Catalyst rejects a scope naming an App ID
@@ -59,8 +66,8 @@ APP_PORT = 8006
 
 #
 # The two `apply` commands register the CRM and its access policy. The policy is
-# what carries `requireUser: true`, so without it the outbound leg the README
-# walks through would silently downgrade to no user identity at all.
+# what carries `requireUser: true`, so without it the outbound leg would silently
+# downgrade to no user identity at all.
 SETUP = (
     "diagrid project create {project} --use --wait",
     "diagrid appid create identity-agent --wait",
@@ -68,23 +75,23 @@ SETUP = (
     "diagrid apply -f resources/crm-mcp-access.yaml",
 )
 
-# README "## Setup". The documented `cd agents/langchaingo/enterprise-identity`
+# README "## Setup". The documented `cd agents/microsoft-dotnet/enterprise-identity`
 # is expressed as the working directory instead of a command.
 #
-# `go build ./...` is not a formality here the way `uv sync` is next door. It
-# downloads the module graph, warms the build cache, and -- on a runner whose Go
-# is older than the 1.26.4 go.mod asks for -- fetches the toolchain. Without it
-# all of that happens inside `go run` while `Wait Until Ready Marker` is already
-# counting down.
-INSTALL = "go build ./..."
+# Two builds joined by `&&`, and not a bare `dotnet build`: this quickstart has no
+# solution file, because the repository's .gitignore excludes `*.sln` and no
+# quickstart here ships one. A bare `dotnet build` in a directory holding two
+# sibling projects and no project file of its own fails with "could not find a
+# project", so the shape is the one every multi-project quickstart in this repo
+# already uses -- compare `dotnet restore ./client && dotnet restore ./server` for
+# invocation/csharp. `unit-tests` is absent on purpose: this suite does not run it,
+# and `dotnet test unit-tests` builds it anyway.
+INSTALL = "dotnet build ./agent && dotnet build ./crm-mcp"
 
 # README "## Run with Catalyst", step 1, item 4. Bare of `--project` on purpose:
 # the documented `project create` carries `--use`, and reproducing that
 # dependency is deliberate, so a regression in `--use` breaks this suite instead
 # of silently breaking readers.
-#
-# No `uv run` prefix, unlike the python sibling: the diagrid CLI is on PATH and
-# there is no Python environment to enter.
 #
 # The three `--skip-managed-*` flags are transcribed, not chosen. This app calls
 # no Dapr building block, and without them `dev run` provisions a KV store, a
@@ -97,86 +104,80 @@ RUN = (
 
 # Empty on purpose: this README documents no cleanup command. It has no
 # "## Clean Up" section and no `diagrid project delete`, so deleting the project
-# is infrastructure here and `ci/teardown-project.sh` owns it. Same shape as
-# the python enterprise-identity suite. Adding a plausible-looking delete would
-# be inventing a documented command, and doc-sync would correctly reject it.
+# is infrastructure here and `ci/teardown-project.sh` owns it. Same shape as the
+# python sibling. Adding a plausible-looking delete would be inventing a
+# documented command, and doc-sync would correctly reject it.
 TEARDOWN = ()
 
 # README "## Run with Catalyst", step 1, item 4: "Wait until the output shows
-# `listening on http://0.0.0.0:8006`". Transcribed complete rather than
-# truncated at `listening on`: this README documents the concrete line, main.go
-# really binds host 0.0.0.0 on APP_PORT, and dev-enterprise-identity.yaml sets
-# that to 8006. The stronger form also fails loudly if the dev config's port and
-# this module's ever diverge.
+# `Now listening on: http://localhost:8006`".
 #
-# ONE marker, and there is no second one to add. main.go logs
+# KESTREL'S LINE, AND NEITHER SIBLING'S. The python quickstart's marker is a
+# uvicorn line, which does not apply. The agents/microsoft-dotnet marker is
+# `Established gRPC bidirectional stream with Dapr sidecar`, which this app will
+# NEVER print: it registers no Dapr client at all -- no DaprClient, no workflow
+# runtime, no agent runner -- so nothing opens that stream. Kestrel's own line is
+# the only honest marker here, and unlike the sibling's it is also a genuine
+# serving gate rather than a connectivity one, which is why this module needs no
+# separate SERVING_MARKER: the marker the README documents and the moment the
+# port opens are the same event.
+#
+# ONE marker, and there is no second one to add. The app logs
 # `[IDENTITY] verified caller subject=...` and `[IDENTITY] tool call for
 # subject=...`, but both are on the AUTHENTICATED path -- the first inside
-# `POST /agent/run` after the middleware has admitted the request, the second in
-# the tool call one step later. Neither can appear in a run this suite can
-# produce.
-#
-# The app's other unconditional startup line ("Using the canned offline
-# model: ...") is deliberately NOT a second marker: it is printed before the
-# listener is bound, so matching it would let the request loop start against a
-# port nothing is answering on yet.
-READY_MARKERS = (f"listening on http://0.0.0.0:{APP_PORT}",)
+# `POST /agent/run` after the middleware has admitted the request, the second one
+# step later. Neither can appear in a run this suite can produce. The middleware
+# prints nothing at all when it is merely installed, so "the middleware is
+# loaded" is not separately assertable: the 401 in REQUESTS is the evidence for
+# that, and it is evidence produced by the shipped middleware.
+READY_MARKERS = (f"Now listening on: http://localhost:{APP_PORT}",)
 
 # EMPTY, and the reason is specific to this quickstart rather than to agent apps
-# in general. `Wait Until Apps Healthy` polls for a 200. `RequireAuth` resolves
-# to true on the zero `OAuthConfig` -- the whole point of the demo -- and
-# `identity.Middleware` wraps EVERY route, so every path answers
-# 401 oauth.missing_token until a verified credential arrives. The shipped
-# OAuthConfig (go-ai v0.2.0) has exactly five fields --
-# Scopes/Issuer/Audience/JWKSURI/RequireAuth, plus AllowInsecureJWKS -- and no
-# path exclusions, so no probe path can be exempted, which is also why the
-# quickstart exposes no health route and why dev-enterprise-identity.yaml sets
-# `enableAppHealthCheck: false`. There is nothing here that can answer 200, so
-# there is nothing to probe: readiness rests on `Wait Until Apps Connected` plus
-# the READY_MARKERS line above.
+# in general. `Wait Until Apps Healthy` polls for a 200. `RequireAuth` defaults
+# to True -- the whole point of the demo -- and `OAuthMiddleware` sits ahead of
+# EVERY route, so every path answers 401 oauth.missing_token until a verified
+# credential arrives. `OAuthConfig` (Diagrid.AI.Identity 1.2.0) has exactly five
+# properties -- Scopes/Issuer/Audience/JwksUri/RequireAuth, plus
+# AllowInsecureJwks -- and no path exclusion, so no probe path can be exempted,
+# which is also why the quickstart exposes no health route and why
+# dev-enterprise-identity.yaml sets `enableAppHealthCheck: false`. There is
+# nothing here that can answer 200, so there is nothing to probe: readiness rests
+# on `Wait Until Apps Connected` plus the READY_MARKERS line above.
 HEALTH_PROBES = ()
 
 # (appID, port) pairs `diagrid dev run` reports as
 # `Connected App ID "<id>" to http://localhost:<port>`. Read from
-# dev-enterprise-identity.yaml, whose agent app has appID identity-agent on
-# appPort 8006.
+# dev-enterprise-identity.yaml, which has two apps.
 #
 # Required, not optional: `Start Quickstart` records these so `Stop Quickstart`
 # can release each local app connection, and a run that skips that leaves a
-# trust.diagrid.io endpoint pointing at a dead tunnel, which makes the next
-# run's 500s ambiguous.
-#
-# Only the agent app, not crm-mcp. The suite never reaches the CRM: both
-# documented requests are refused by the agent's middleware, so the CRM's
-# connection is not part of what readiness means here, and listing it would make
-# the connection gate wait on a tunnel this run has no use for.
-CONNECTED_APPS = ((APP_ID, APP_PORT),)
+# trust.diagrid.io endpoint pointing at a dead tunnel, which makes the next run's
+# 500s ambiguous. That an agent app emits this line at all is observed on the
+# other registered agent suites, but not yet for THESE two apps.
+CONNECTED_APPS = ((APP_ID, APP_PORT), (CRM_APP_ID, CRM_APP_PORT))
 
 # EMPTY, and unlike the other agent suites this is a decision rather than a gap.
 # `Wait Until Catalyst Attached` guards the window in which a WORKFLOW call hangs
 # unrecoverably (measured on agents/langgraph, 2026-08-27: a POST at readiness+0
 # hung for the full 120s client timeout and twelve retries over 181s never
-# recovered it). This quickstart starts no workflow -- it is a plain net/http app
+# recovered it). This quickstart starts no workflow -- it is a plain ASP.NET app
 # with no Diagrid runner and no Dapr building block, and both requests below are
 # refused by the middleware before any Dapr call is made. The window this gate
 # exists for is not one this suite enters.
 #
 # Left empty rather than guessed for the ordinary reason too: the marker is
 # whatever THIS app's logging makes visible for an inbound request from Catalyst,
-# and nobody has watched this app's dev-run output yet. It writes no access log
-# at all -- net/http has none and this app adds none -- so unlike the python
-# sibling there is not even a uvicorn line to infer from. A marker that never
+# and nobody has watched this app's dev-run output yet. A marker that never
 # appears makes the gate time out loudly; a marker matched from the wrong line
-# lets the suite through early and silently. Fill it in from a real run, or
-# leave it empty and say why.
+# lets the suite through early and silently. Fill it in from a real run, or leave
+# it empty and say why.
 CATALYST_PROBE_MARKERS = ()
 
-# Empty. The quickstart ships a canned offline model (fake_model.go) and reaches
-# a real provider only when DIAGRID_QUICKSTART_MODEL=openai, which this suite
-# does not set -- and `buildModel` constructs the OpenAI client only inside that
-# branch, so the app starts with no key at all. Both requests below are refused
-# before the agent runs anyway. Keep in step with the `secrets` entry in
-# suites.py: one without the other is a declaration that lies.
+# Empty. The quickstart ships a canned offline model (agent/CannedChatClient.cs)
+# and reaches a real provider only when DIAGRID_QUICKSTART_MODEL=openai, which
+# this suite does not set. Both requests below are refused before the agent runs
+# anyway. Keep in step with the `secrets` entry in suites.py: one without the
+# other is a declaration that lies.
 SECRETS = ()
 
 # The documented calls, in documented order. README "### 4. See It Fail Closed".
@@ -185,56 +186,51 @@ SECRETS = ()
 # accident -- it is the only HTTP outcome assertable here, and it is asserted on
 # both documented routes:
 #
-#   * With no `X-Diagrid-User-Token` header and RequireAuth resolving to true,
-#     the middleware returns 401 with body exactly
-#     {"error": "oauth.missing_token"} (go-ai v0.2.0, `writeError` in
-#). No verifier is built, no JWKS is fetched, no
-#     sidecar and no model is touched on that path, so it is byte-identical run
-#     to run -- which is why these assert the EXACT body (`GET And Expect` /
-#     `POST And Expect`) rather than settling for the field-presence check
-#     `POST And Expect Field` performs. There is no model output in a 401 to make
-#     an exact comparison impossible.
+#   * With no `X-Diagrid-User-Token` header and RequireAuth=true, the middleware
+#     returns 401 with body exactly {"error": "oauth.missing_token"}
+#     (Diagrid.AI.Identity 1.2.0, `WriteErrorAsync` in OAuthMiddleware.cs). No
+#     verifier is built, no JWKS is fetched, no sidecar and no model is touched on
+#     that path, so it is byte-identical run to run -- which is why these assert
+#     the EXACT body (`GET And Expect` / `POST And Expect`) rather than settling
+#     for the field-presence check `POST And Expect Field` performs. There is no
+#     model output in a 401 to make an exact comparison impossible.
 #   * The AUTHENTICATED calls cannot be expressed: no keyword here takes headers,
 #     and this harness cannot mint a credential. See UNCOVERED.
 #   * A MALFORMED-token case is deliberately absent, because which rejection you
 #     get depends on state this suite does not control. With a verifier built it
-#     is 401 oauth.decode_error; with no discoverable issuer `BuildVerifier`
-#     returns an error and the middleware answers 503 oauth.not_configured
-#     first, never reaching the token at all. Asserting either would encode the
-#     environment rather than the behaviour. identity_test.go pins the 401 with
-#     the offline issuer, where the verifier is guaranteed to exist.
+#     is 401 oauth.decode_error; with no discoverable issuer the verifier cannot
+#     be built and the middleware answers 503 oauth.not_configured first, never
+#     reaching the token at all. Asserting either would encode the environment
+#     rather than the behaviour. unit-tests/IdentityTests.cs pins the 401 with the
+#     offline issuer, where the verifier is guaranteed to exist.
 #
-# The four outcomes above were measured on the quickstart's own offline build
-# (`go run -tags offline .`, no Catalyst and no network off loopback) for the two
-# below plus the decode_error; the 503 is read from the SDK's
-# read from the SDK rather than observed, since the offline build
-# always has coordinates.
+# BOTH OUTCOMES BELOW WERE MEASURED, not reasoned, against Diagrid.AI.Identity
+# 1.2.0 in this quickstart's own offline mode on 2026-09-17 -- the shipped
+# middleware over the shipped two-route app, no Catalyst and no network:
 #
-# One property of the missing-token branch is a LIMITATION of this suite rather
-# than a reassurance, and it is the one worth carrying forward: in
-# the empty-token check runs before the verifier is built, so with no
-# issuer discoverable at all -- no `identity` block in the sidecar's
-# /v1.0/metadata, nothing federated on the project -- the unauthenticated request
-# still answers exactly `401 oauth.missing_token`. Both assertions below
-# therefore pass unchanged against a project on which inbound identity was never
-# enabled, while every credential-bearing request to that same app would answer
-# 503. This suite cannot tell those two projects apart. That is the sharpest edge
-# of "proves the middleware refuses, not that identity works", and it is why the
-# 403 and 200 live in a test that can present a credential:
-# agents/langchaingo/enterprise-identity/identity_test.go, which mints one
-# offline. That test cannot substitute for this suite either -- it exercises no
-# Catalyst at all -- so the two are complements, and neither alone proves the
-# live inbound path.
+#     GET  /whoami    no header  -> 401 {"error":"oauth.missing_token"}
+#                                   Cache-Control: no-store
+#     POST /agent/run no header  -> 401 {"error":"oauth.missing_token"}
 #
-# The status is a TRANSCRIPTION here, as in the python sibling: the README prints
+# One property of that branch is a LIMITATION of this suite rather than a
+# reassurance, and it is the one worth carrying forward: the missing-token check
+# runs BEFORE the verifier is built, so with no issuer discoverable at all the
+# unauthenticated request still answers exactly 401 oauth.missing_token. Both
+# assertions below therefore pass unchanged against a project on which inbound
+# identity was never enabled, while every credential-bearing request to that same
+# app would answer 503. This suite cannot tell those two projects apart. That is
+# the sharpest edge of "proves the middleware refuses, not that identity works",
+# and it is why the 403 and 200 live in a test that can present a credential.
+#
+# The status is a TRANSCRIPTION here, like the python sibling's: the README prints
 # `HTTP/1.1 401 Unauthorized` and the body beneath the first curl. Keep it that
 # way -- if the README stops showing it, this becomes an assumption and this
 # comment has to say so.
 #
-# `log_marker` deliberately absent on both, and for a stronger reason than next
-# door: this app writes no access log, so a refused request leaves NOTHING in the
-# dev-run output. There is no line to wait for, and doc-sync would in any case
-# require one inside a fenced block in the README.
+# `log_marker` deliberately absent on both. Kestrel's request log is off at the
+# default `Microsoft.AspNetCore: Warning` level this quickstart's appsettings.json
+# sets, so there is no per-request line to wait for; and even with it on, the
+# assertion would add nothing the body comparison has not already made.
 #
 # Optional keys a request may carry, of which these use one:
 #   body        the exact expected response body, compared as parsed JSON
@@ -259,12 +255,9 @@ REQUESTS = (
         "body": _MISSING_TOKEN_BODY,
     },
     # README's second fail-closed curl, under "Every route answers the same way".
-    # The README prints the response block only once, above, so the body here is
-    # transcribed from test.http (`### Run the agent with no credential: 401
-    # {"error": "oauth.missing_token"}`) -- and then measured, in the offline run
-    # recorded above, on this exact route. Worth asserting separately rather than
-    # trusting the prose: this is the route that would matter, and "RequireAuth is
-    # app-wide, not per-path" is precisely the claim it checks.
+    # Worth asserting separately rather than trusting the prose: this is the route
+    # that would matter, and "RequireAuth is app-wide, not per-path" is precisely
+    # the claim it checks.
     {
         "method": "POST",
         "port": APP_PORT,
@@ -289,9 +282,9 @@ UNCOVERED = (
         "headers, and the middleware verifies the signature against a dataplane "
         "Sentry JWKS. Running the CLI form would assert rc==0 and nothing about "
         "the body -- and the README itself says a plain Diagrid login carries "
-        "`openid profile email offline_access`, so against an issuer that "
-        "required a scope it would answer 403 oauth.missing_scope, which is not "
-        "a documented failure but the documented outcome without a federated "
+        "`openid profile email offline_access`, so against a project with a "
+        "required scope it would answer 403 oauth.missing_scope, which is not a "
+        "documented failure but the documented outcome without a federated "
         "identity provider",
     ),
     (
@@ -303,17 +296,18 @@ UNCOVERED = (
         "having and the one this harness cannot make",
     ),
     (
-        "DIAGRID_QUICKSTART_IDENTITY=local APP_PORT=8006 go run -tags offline .",
+        "DIAGRID_QUICKSTART_IDENTITY=local dotnet run --project agent "
+        "--urls http://localhost:8006",
         "README '## Run Offline Without a Catalyst Project'. It replaces Catalyst "
         "with a throwaway in-process issuer to make the 200, 403 and 401 reachable "
         "with no project at all, and it binds the same port 8006 as `dev run`. That "
         "makes it an alternative to this suite's entire flow rather than a step "
         "inside it: it exercises no Catalyst, and running it here would collide "
-        "with the app this suite already has serving. The 200 and 403 paths this "
-        "suite cannot reach are covered instead by "
-        "agents/langchaingo/enterprise-identity/identity_test.go, which drives "
-        "the same offline issuer through the app's real handlers and runs in "
-        ".github/workflows/agents_enterprise_identity_go.yaml",
+        "with the app this suite already has serving. The 200, 403 and "
+        "substitution paths this suite cannot reach are covered instead by "
+        "agents/microsoft-dotnet/enterprise-identity/unit-tests, which drives the "
+        "same offline issuer under Microsoft.AspNetCore.TestHost and runs in "
+        ".github/workflows/agents_enterprise_identity_csharp.yaml",
     ),
 )
 

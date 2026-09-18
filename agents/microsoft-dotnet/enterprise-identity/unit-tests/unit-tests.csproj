@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+    <RootNamespace>EnterpriseIdentity.Tests</RootNamespace>
+    <!-- Repeated from the agent: the tests drive Diagrid.AI.Identity directly. -->
+    <NoWarn>$(NoWarn);DGRDID001</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.0" />
+    <!-- Drives the re-assembled app in-process: no port to bind and no server to race. -->
+    <PackageReference Include="Microsoft.AspNetCore.TestHost" Version="10.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The tests assemble a real WebApplication, so they need ASP.NET and not only TestHost. -->
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- A project reference rather than a <Compile Include> of the files under test, so that the
+         tests drive the app's own objects and resolve the same transitive versions it does. -->
+    <ProjectReference Include="../agent/agent.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,20 @@
+version: 1
+common:
+  appLogDestination: console
+  # require_auth is app-wide and there is no per-path exclusion, so every route -- including
+  # anything a probe could reach -- answers 401 oauth.missing_token until a verified credential
+  # arrives. A health check would therefore report a perfectly healthy app as down, which is also
+  # why this quickstart exposes no health route.
+  enableAppHealthCheck: false
+  logLevel: info
+apps:
+  - appID: identity-agent
+    appDirPath: ./agent
+    appPort: 8006
+    appProtocol: http
+    command: ["dotnet", "run", "--urls", "http://localhost:8006"]
+  - appID: crm-mcp
+    appDirPath: ./crm-mcp
+    appPort: 8007
+    appProtocol: http
+    command: ["dotnet", "run", "--urls", "http://localhost:8007"]

@@ -1,10 +1,12 @@
 # qs-tester
 
 End-to-end tests for the `workflow`, `state`, `pubsub` and `invocation`
-quickstarts, and for five agent-family ones (`agents/langgraph`,
-`agents/langchaingo/enterprise-identity`, `agents/langgraph/enterprise-identity`,
-`agents/microsoft-dotnet`,
-`agents/spring-ai/crash-recovery`, `agents/spring-ai/event-planner`), built on
+quickstarts, and for the agent-family ones registered in `variables/suites.py`
+(`agents/langgraph`, `agents/langchaingo/enterprise-identity`,
+`agents/langgraph/enterprise-identity`, `agents/langgraphjs/enterprise-identity`,
+`agents/microsoft-dotnet`, `agents/microsoft-dotnet/enterprise-identity`,
+`agents/spring-ai/crash-recovery`, `agents/spring-ai/enterprise-identity`,
+`agents/spring-ai/event-planner`), built on
 [Robot Framework](https://robotframework.org/). The tests run the *actual*
 commands each quickstart's README documents and assert the responses and log output
 that README promises, so drift between the docs, the code, and Catalyst is caught
@@ -474,8 +476,11 @@ config, not a typo.
     2026-09-02, offline, covering the crash and the recovery. No mutation check.
   - `agents/spring-ai/event-planner` **cannot reach the first half**, and no
     amount of suite work changes that; see its own bullet below.
-    - Both `enterprise-identity` suites have **neither** half: neither has been
-      run in the scheduled build. See their own bullet below.
+    - The `enterprise-identity` suites have **neither** half: no live run in the
+      scheduled build and no mutation check. Each does have an offline measurement
+      that its one HTTP assertion is real — the app builds, serves on its
+      documented port, and answers both documented routes 401
+      `{"error":"oauth.missing_token"}`. See their own bullet below.
   The bullets that follow are what the missing halves cost.
 - **`agents/langgraph` has run against real Catalyst three times and not yet
   passed**, but each run has failed further along than the last. 2026-08-27:
@@ -585,7 +590,7 @@ config, not a typo.
       both fire and the client sees `RemoteDisconnected`. A red suite is only
       worth keeping if it is red for the documented reason — otherwise it is a
       race dressed up as a finding.
-- **The three `enterprise-identity` suites cover the inbound-identity plumbing and
+- **The five `enterprise-identity` suites cover the inbound-identity plumbing and
   the rejection path only.** Each asserts its two documented requests — the
   unauthenticated `GET /whoami` and `POST /agent/run` — at 401 with the exact
   body `{"error": "oauth.missing_token"}`. That much was measured offline before
@@ -627,6 +632,12 @@ config, not a typo.
   exception — see the bullet above.) For `agents/langgraph` a 200 is at least plausible
   — the endpoint returns normally — but it is still unverified. For the other
   two it is worse than unverified; see the bullet above.
+  `agents/microsoft-dotnet/enterprise-identity` is the exception: its README
+  prints `HTTP/1.1 401 Unauthorized` and the body beneath the documented `curl`,
+  so both statuses in `variables/agents_enterprise_identity_csharp.py` are
+  transcribed rather than assumed — and both were measured offline against the
+  shipped middleware. If that README ever stops showing the status, they become
+  assumptions and the data module's comment has to say so.
 - **The connection line for an agent app is now observed, not inferred.** It
   began as an inference in every agent data module — read from the quickstart's
   dev config via the appPort rule ("Readiness markers are not uniform per API"

@@ -24,6 +24,14 @@
     <Content Remove="unit-tests/**" />
     <None Remove="unit-tests/**" />
     <EmbeddedResource Remove="unit-tests/**" />
+    <!-- enterprise-identity/ is a second quickstart living below this one, with three projects of
+         its own. Same reason, and it bites harder: without this, `dotnet build`
+         here compiles that quickstart's agent, CRM and test sources into THIS app and fails on
+         every Diagrid.AI.Identity, MCP and xunit type it has no reference to. -->
+    <Compile Remove="enterprise-identity/**" />
+    <Content Remove="enterprise-identity/**" />
+    <None Remove="enterprise-identity/**" />
+    <EmbeddedResource Remove="enterprise-identity/**" />
   </ItemGroup>
 
 </Project>

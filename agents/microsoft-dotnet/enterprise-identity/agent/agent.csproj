@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>EnterpriseIdentity</RootNamespace>
+    <!-- Diagrid.AI.Identity marks its whole surface [Experimental("DGRDID001")], so consuming it
+         without this acknowledgement is a build error. -->
+    <NoWarn>$(NoWarn);DGRDID001</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Diagrid.AI.Identity" Version="1.2.0" />
+    <PackageReference Include="Microsoft.Agents.AI" Version="1.9.0" />
+    <PackageReference Include="ModelContextProtocol" Version="2.2.0" />
+    <!-- Floored at the Microsoft.Extensions.AI version Microsoft.Agents.AI requires, so the two
+         cannot resolve to different ones. -->
+    <PackageReference Include="Microsoft.Extensions.AI.OpenAI" Version="10.6.0" />
+  </ItemGroup>
+
+</Project>

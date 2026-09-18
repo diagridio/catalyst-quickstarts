@@ -190,7 +190,7 @@ SECRETS = ()
 #   * With no `X-Diagrid-User-Token` header and requireAuth defaulting to true,
 #     the middleware returns 401 with body exactly
 #     {"error": "oauth.missing_token"} (@diagrid/agent-core 0.2.0,
-#     `oauthMiddleware` in identity/express.ts over the `rejected` outcome in
+#     the middleware's rejected outcome in
 #     identity/authenticate.ts). No verifier is built, no JWKS is fetched, no
 #     sidecar and no model is touched on that path, so it is byte-identical run
 #     to run -- which is why these assert the EXACT body (`GET And Expect` /
@@ -221,7 +221,7 @@ SECRETS = ()
 # One property of the middleware is a LIMITATION of this suite rather than a
 # reassurance, and it is the one worth carrying forward: the missing-token branch
 # runs BEFORE the lazy verifier is built (identity/authenticate.ts refuses on an
-# empty token before it awaits `getVerifier()`), so with no issuer discoverable
+# empty token before the verifier is built), so with no issuer discoverable
 # at all -- no `identity` block in the sidecar's /v1.0/metadata, nothing
 # federated on the project -- the unauthenticated request still answers exactly
 # `401 oauth.missing_token`. Both assertions below therefore pass unchanged

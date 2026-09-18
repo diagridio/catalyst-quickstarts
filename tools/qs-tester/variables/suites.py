@@ -199,6 +199,35 @@ SUITES = (
         "secrets": (),
     },
     {
+        "suite": "agents/microsoft-dotnet/enterprise-identity/tests/quickstart.robot",
+        "family": "agent",
+        # 26 characters, which is exactly `project_name_budget()` -- so it passes
+        # the validator and still needs the explicit `leg` below. Measured against
+        # the worst-case (`local` + 10-digit epoch) run id: the CI project
+        # qs-ci-agents-enterprise-identity-csharp-local0000000000 is 55 of the 55
+        # characters allowed, and the second project verify-live.sh derives for the
+        # mutation run appends `-mut`, which is 59 and over. project_name_budget()
+        # does not account for that suffix, so the budget alone does not catch it.
+        "name": "enterprise-identity-csharp",
+        # Short enough that the `-mut` project fits too:
+        # qs-ci-agents-ei-csharp-mut-local0000000000 is 42 of the 55 characters.
+        "leg": "ei-csharp",
+        "data": "agents_enterprise_identity_csharp",
+        "language": "csharp",
+        "runtime": "dotnet",
+        # This suite has not been enabled for the scheduled build yet: it runs on
+        # workflow_dispatch, which is the intended path for a first run. Its
+        # assertions are the plumbing plus a 401 on each documented route.
+        "nightly": False,
+        # Empty: the quickstart ships a canned offline model
+        # (agent/CannedChatClient.cs) and reaches a real provider only when
+        # DIAGRID_QUICKSTART_MODEL=openai, which this suite does not set. Both
+        # documented requests are refused before the agent runs anyway. Keep in
+        # step with SECRETS in agents_enterprise_identity_csharp.py -- one without
+        # the other is a declaration that lies.
+        "secrets": (),
+    },
+    {
         "suite": "agents/microsoft-dotnet/tests/quickstart.robot",
         "family": "agent",
         "name": "microsoft-dotnet",
