@@ -22,10 +22,10 @@ matrix; these rows exist here for the dryrun and doc-sync only.
 `runtime` selects which CI runtime-setup step the suite needs, and is the reason
 language is a per-suite property for agent-family quickstarts rather than a
 matrix dimension: agents/microsoft-dotnet is .NET, agents/spring-ai is Java,
-agents/langchaingo is Go, and the rest are Python. Adding a runtime here means
-adding the matching conditional setup step to the `e2e-agents` job in
-`.github/workflows/e2e-quickstarts.yml`; a runtime this table allows and that
-workflow has no step for produces a leg that cannot build.
+agents/langchaingo is Go, agents/langgraphjs is Node, and the rest are Python.
+Adding a runtime here means adding the matching conditional setup step to the
+`e2e-agents` job in `.github/workflows/e2e-quickstarts.yml`; a runtime this table
+allows and that workflow has no step for produces a leg that cannot build.
 """
 
 from pathlib import Path
@@ -163,6 +163,39 @@ SUITES = (
         # documented requests are refused before the agent runs anyway. Keep in
         # step with SECRETS in agents_enterprise_identity_go.py -- one without
         # the other is a declaration that lies.
+        "secrets": (),
+    },
+    {
+        "suite": "agents/langgraphjs/enterprise-identity/tests/quickstart.robot",
+        "family": "agent",
+        # NOT the path-below-agents convention (`langgraphjs-enterprise-identity`
+        # would be 31 characters, over `project_name_budget()`), so this is an
+        # explicit short name. 22 characters, measured rather than estimated
+        # against the worst-case (`local` + 10-digit epoch) run id: the CI
+        # project qs-ci-agents-enterprise-identity-js-local0000000000 is 51 of
+        # the 55 characters allowed, and the second project
+        # .claude/skills/add-quickstart-e2e-test/scripts/verify-live.sh derives
+        # for the mutation run, qs-ci-agents-enterprise-identity-js-mut-local0000000000,
+        # is exactly 55 — at MAX_PROJECT_NAME and not over. That is the case the
+        # budget alone does not cover, since project_name_budget() does not
+        # account for the `-mut` suffix, and this row has no margin left for it:
+        # one more character in `name` and the mutation run would fail at
+        # `diagrid project create` while `--validate` still passed.
+        "name": "enterprise-identity-js",
+        "data": "agents_enterprise_identity_javascript",
+        "language": "javascript",
+        "runtime": "javascript",
+        # This suite has not been enabled for the scheduled build yet: it runs on
+        # workflow_dispatch, which is the intended path for a first run. Its
+        # assertions are the plumbing plus a 401 on each documented route.
+        "nightly": False,
+        # Empty: the quickstart ships a canned offline model (model.ts) and
+        # reaches a real provider only when DIAGRID_QUICKSTART_MODEL=openai,
+        # which this suite does not set -- and main.ts imports @langchain/openai
+        # dynamically inside that branch, so the app starts with no key. Both
+        # documented requests are refused before the graph runs anyway. Keep in
+        # step with SECRETS in agents_enterprise_identity_javascript.py -- one
+        # without the other is a declaration that lies.
         "secrets": (),
     },
     {

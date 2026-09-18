@@ -585,49 +585,39 @@ config, not a typo.
       both fire and the client sees `RemoteDisconnected`. A red suite is only
       worth keeping if it is red for the documented reason — otherwise it is a
       race dressed up as a finding.
-- **The two `enterprise-identity` suites cover the inbound-identity plumbing and
+- **The three `enterprise-identity` suites cover the inbound-identity plumbing and
   the rejection path only.** Each asserts its two documented requests — the
   unauthenticated `GET /whoami` and `POST /agent/run` — at 401 with the exact
-  body `{"error": "oauth.missing_token"}`. That much was measured offline
-  before registration, with no Catalyst and no network, along with the
-  malformed-token outcome neither suite asserts: **401 `oauth.decode_error`**
-  for go, and a **500** for python. The unasserted **503
-  `oauth.not_configured`**, when no issuer is discoverable, the offline build
-  cannot produce, because it always has coordinates.
-  - **The authenticated calls are unreachable from this harness.** Both
-    documented `diagrid call invoke` forms are in `UNCOVERED`: no keyword here
-    takes headers, and this harness cannot mint a credential. So nothing in this
-    suite proves a verified identity reaches the
-    app's handler. The README documents the 200 and the 403 too, and reaches
-      them through an opt-in offline issuer (`local_identity.py`, and
-      `local_identity.go` behind the `offline` build tag) — which is the basis for
-      the test beside each quickstart, run by that quickstart's own workflow,
-      rather than for this suite: it replaces Catalyst entirely and binds the same
-      port as `dev run`. Those tests cover the 200, the 403, the expired 401, the
-      verified subject reaching the tool, and for go the outbound call carrying the
-      caller against a stand-in MCP server; they prove nothing about Catalyst, and
-      these suites prove nothing about a credential, so neither stands in for the
-      other.
-    - **The reason neither suite should be read as identity coverage: the 401 is
-      returned *before* the verifier is built.** An unauthenticated request answers
-      `401 oauth.missing_token` even with no issuer discoverable, so both
-      assertions pass unchanged against a project on which inbound identity was
-      never enabled, while every credential-bearing request to that same app would
-      answer 503. These suites cannot distinguish those two projects.
-    - `HEALTH_PROBES` and `CATALYST_PROBE_MARKERS` are both `()`. The first because
-      authentication is required on every route, so no path can produce the 200
-      `Wait Until Apps Healthy` polls for — which is also why each quickstart
-      exposes no health route and its dev config sets `enableAppHealthCheck:
-      false`. The second because neither quickstart starts a workflow, so it never
-      enters the attach window that gate exists for. Readiness rests on the
-      connection gate plus one listening marker.
-    - Unlike the modules in the next bullet, **their `status: 401` is a
-      transcription**: each README prints `HTTP/1.1 401 Unauthorized` and the body
-      beneath the documented curl.
-    - The go suite is the **first `go` runtime in this harness**, so registering it
-      meant widening `RUNTIMES` in `variables/suites.py` and adding a `Set up Go`
-      step to the `e2e-agents` job. A `go` row registered without that step
-      produces a leg that cannot build.
+  body `{"error": "oauth.missing_token"}`. That much was measured offline before
+  registration, with no Catalyst and no network, along with the malformed-token
+  outcome none of them asserts: **401 `oauth.decode_error`** for go and
+  typescript, and a **500** for python.
+  - **The authenticated calls are unreachable from this harness.** Both documented
+    `diagrid call invoke` forms are in `UNCOVERED`: no keyword here takes headers,
+    and this harness cannot mint a credential. So nothing in these suites proves a
+    verified identity reaches the app's handler. Each README documents the 200 and
+    the 403 too, and reaches them through an opt-in offline issuer, which is the
+    basis for the test beside each quickstart rather than for these suites: it
+    replaces Catalyst entirely and binds the same port as `dev run`. Those tests
+    prove nothing about Catalyst, and these suites prove nothing about a
+    credential, so neither stands in for the other.
+  - **The reason none of them should be read as identity coverage: the 401 is
+    returned *before* the verifier is built.** An unauthenticated request answers
+    `401 oauth.missing_token` even with no issuer discoverable, so the assertions
+    pass unchanged against a project on which inbound identity was never enabled,
+    while every credential-bearing request to that same app would answer 503.
+    These suites cannot distinguish those two projects.
+  - `HEALTH_PROBES` and `CATALYST_PROBE_MARKERS` are both `()`. Authentication is
+    required on every route, so no path can produce the 200 `Wait Until Apps
+    Healthy` polls for — which is also why each quickstart exposes no health route
+    and its dev config sets `enableAppHealthCheck: false`. And none of them starts
+    a workflow, so they never enter the attach window that gate exists for.
+    Readiness rests on the connection gate plus one listening marker.
+  - **Their `status: 401` is a transcription**: each README prints
+    `HTTP/1.1 401 Unauthorized` and the body beneath the documented curl.
+  - Registering these added two runtimes to this family: `go`, which needed a
+    `Set up Go` step in the `e2e-agents` job, and `javascript`, whose `setup-node`
+    step had never run for an agent suite before.
   - **None of the four agent READMEs behind a `status: 200` documents a status
     code**, so `REQUESTS[...]["status"] = 200` in `variables/agents_langgraph.py`,
     `variables/agents_microsoft_dotnet.py`,

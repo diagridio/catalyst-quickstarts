@@ -1,0 +1,23 @@
+version: 1
+common:
+  appLogDestination: console
+  # No route can answer 200: requireAuth defaults to true and the identity
+  # middleware wraps every path, so an unauthenticated probe would report a
+  # perfectly healthy app as down.
+  enableAppHealthCheck: false
+  logLevel: info
+apps:
+  - appID: identity-agent
+    appDirPath: ./
+    appPort: 8006
+    appProtocol: http
+    command: ["npm", "start"]
+    env:
+      APP_PORT: "8006"
+  - appID: crm-mcp
+    appDirPath: ./
+    appPort: 8007
+    appProtocol: http
+    command: ["npm", "run", "crm"]
+    env:
+      APP_PORT: "8007"

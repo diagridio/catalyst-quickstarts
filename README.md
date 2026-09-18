@@ -16,6 +16,7 @@ Catalyst works with the following agent frameworks:
 | [Mastra](agents/mastra/) | TypeScript agent framework with tool calling, made durable with Catalyst |
 | [CrewAI](agents/crewai/) | Multi-agent crews with role-based collaboration, made durable with Catalyst |
 | [LangGraph](agents/langgraph/) | Graph-based agent orchestration with conditional routing, made durable with Catalyst |
+| [LangGraph.js](agents/langgraphjs/) | Graph-based agent orchestration for TypeScript, with the end user's verified identity propagated to its tools by Catalyst |
 | [Strands](agents/strands/) | Model-driven agent framework from AWS with tool use, made durable with Catalyst |
 | [Microsoft Agent Framework](agents/microsoft-dotnet/) | Enterprise agent framework from Microsoft, made durable with Catalyst |
 | [Spring AI](agents/spring-ai/) | Spring's AI framework for Java, made durable with Catalyst |
