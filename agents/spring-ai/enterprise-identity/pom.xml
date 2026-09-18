@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-parent</artifactId>
+    <version>4.0.5</version>
+    <relativePath/>
+  </parent>
+
+  <groupId>io.diagrid.quickstart.springai</groupId>
+  <artifactId>enterprise-identity</artifactId>
+  <version>1.0.0</version>
+  <packaging>pom</packaging>
+  <name>enterprise-identity</name>
+  <description>Catalyst Spring AI Quickstart — end-user identity, end to end</description>
+
+  <!-- An aggregator so one `mvn package -DskipTests` builds both the agent and the stand-in
+       CRM. -->
+  <modules>
+    <module>identity-agent</module>
+    <module>crm-mcp</module>
+  </modules>
+
+  <properties>
+    <java.version>21</java.version>
+    <spring-ai.version>2.0.0</spring-ai.version>
+    <!-- The identity modules. Published on Maven Central; the version the quickstart is written
+         against, not a range, so a reader gets the API these files document. -->
+    <diagrid-identity.version>0.4.0</diagrid-identity.version>
+    <!-- The version spring-ai-mcp 2.0.0 is built against. Pinned here rather than inherited so the
+         agent's outbound MCP client and the CRM's MCP server cannot drift onto two different
+         protocol implementations. -->
+    <mcp.version>2.0.0</mcp.version>
+  </properties>
+
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>org.springframework.ai</groupId>
+        <artifactId>spring-ai-bom</artifactId>
+        <version>${spring-ai.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+      <dependency>
+        <groupId>io.modelcontextprotocol.sdk</groupId>
+        <artifactId>mcp-bom</artifactId>
+        <version>${mcp.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+      <dependency>
+        <groupId>io.diagrid</groupId>
+        <artifactId>diagrid-spring-ai-identity</artifactId>
+        <version>${diagrid-identity.version}</version>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
+  <!-- No diagrid-spring-ai-starter and no Dapr SDK: this quickstart demonstrates identity on the
+       synchronous path — one HTTP request, one model turn, one tool call, all on the request
+       thread — and calls no Dapr building block. -->
+</project>
