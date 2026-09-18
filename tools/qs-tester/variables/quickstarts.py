@@ -231,9 +231,20 @@ CRASH_LANGUAGES = ("csharp", "java", "python")
 CRASH_INSTANCE_ID = "trip-42-{language}"
 CRASH_REFERENCE = "ABC123"
 
-# The delay driven into the app so the suite does not pay 30s per language. Long
-# enough that firing the request, seeing the start marker and firing the kill all
-# fit inside the window.
+# The app's own default, which is what every README documents and what a reader who
+# sets nothing gets. Transcribed from the three implementations (workflow.py,
+# CommitReservationActivity.java, CommitReservationActivity.cs), which agree on it.
+# Only the docsync check reads this: it is the window a documented
+# `kill_after_seconds` has to land inside, and the suite's own injected delay below
+# is not that window.
+CRASH_DEFAULT_DELAY_SECONDS = "10"
+
+# The delay driven into the app, deliberately ABOVE the default above. The suite
+# spends 5s of the window waiting out CRASH_WAIT_SECONDS for the documented 202
+# before it can even look for the start marker, so the reader's 10s leaves too
+# little room to then see that marker and fire the kill. 20s is long enough that
+# firing the request, seeing the start marker and firing the kill all fit inside
+# the window, four languages over.
 CRASH_DELAY_SECONDS = "20"
 
 # The wait budget driven into the app, well BELOW the delay above so the blocking
@@ -263,6 +274,35 @@ CRASH_RECEIVED_MARKER = f"Reservation {{id}} received for {CRASH_REFERENCE}"
 CRASH_COMMITTING_MARKER = (
     f"Committing reservation {CRASH_REFERENCE} over ~{CRASH_DELAY_SECONDS}s"
 )
+# The `kill_after_seconds` the self-kill case sends, and the two markers that case
+# waits on. This is the value every crash README documents, sent against the app's
+# DEFAULT delay rather than the injected one above, because the documented value and
+# the documented window are the pair a reader actually gets.
+#
+# 8 against a 10s default leaves 2s, and that headroom is deterministic rather than a
+# race: the apps arm the fuse inside the slow activity, microseconds before its sleep
+# starts, so nothing between the request and the activity is inside the budget.
+CRASH_KILL_AFTER_SECONDS = 8
+
+# The armed variant of the committing line, which the un-armed CRASH_COMMITTING_MARKER
+# above cannot stand in for: it carries the INJECTED delay, and this case injects none.
+# Asserting this one sentence covers the three things the self-kill path has to get
+# right at once. The activity started (so the fuse did not fire ahead of the window it
+# is aimed at), the app is on its documented default, and the activity consumed the
+# armed value instead of the request arming it. All three languages log it identically.
+CRASH_ARMED_COMMITTING_MARKER = (
+    f"Committing reservation {CRASH_REFERENCE} over ~{CRASH_DEFAULT_DELAY_SECONDS}s, but this"
+    f" process kills itself {CRASH_KILL_AFTER_SECONDS}s into the run"
+)
+
+# Logged by the fuse itself, at the moment it fires. Truncated before the verb because
+# the languages differ there (python and csharp kill a process, java halts a JVM) and
+# before the number for the same reason the marker above carries it instead. The
+# leading `>>> crash: ` is what makes it unique: POST /crash/kill logs `>>> /crash/kill:`,
+# and the armed committing line above also names kill_after_seconds, so a looser
+# substring would match a line that proves nothing about the fuse.
+CRASH_SELF_KILL_MARKER = ">>> crash: "
+
 CRASH_COMMITTED_MARKER = (
     f"Committed reservation {CRASH_REFERENCE}. Confirmation code: {CRASH_CODE}"
 )

@@ -481,7 +481,7 @@ def check(api: str, language: str, repo_root: Path) -> list[str]:
 _CRASH_BODY_KEYS = {"id", "result", "message"}
 _CRASH_PAYLOAD_KEYS = {"id", "reference"}
 # Optional on the wire, so optional here: `kill_after_seconds` arms the app to crash
-# itself instead of the reader aiming POST /crash/kill at a 30-second window. The suite
+# itself instead of the reader aiming POST /crash/kill at a 10-second window. The suite
 # drives the manual kill, not this field, so it is allowed rather than required. A
 # required-key check alone would reject the READMEs that document it.
 _CRASH_PAYLOAD_OPTIONAL_KEYS = {"kill_after_seconds"}
@@ -537,7 +537,10 @@ def _check_crash_section(api: str, language: str, markdown: str, where: str) -> 
             )
         # A self-kill that lands after the slow activity has already finished shows the
         # reader a completed run and no crash at all, so the documented value has to fall
-        # inside the window it is aimed at.
+        # inside the window it is aimed at. Measured against the app's DEFAULT delay and
+        # not the one the suite injects: the reader following the README sets no
+        # environment variable, so the default is the only window they get, and it is the
+        # shorter of the two.
         kill_after = payload.get("kill_after_seconds")
         if kill_after is not None:
             if not isinstance(kill_after, int) or kill_after <= 0:
@@ -545,11 +548,11 @@ def _check_crash_section(api: str, language: str, markdown: str, where: str) -> 
                     f"{where}: documented kill_after_seconds {kill_after!r} is not a "
                     f"positive integer"
                 )
-            elif kill_after >= int(qs.CRASH_DELAY_SECONDS):
+            elif kill_after >= int(qs.CRASH_DEFAULT_DELAY_SECONDS):
                 problems.append(
                     f"{where}: documented kill_after_seconds {kill_after} is not inside "
-                    f"the slow activity's {qs.CRASH_DELAY_SECONDS}s window, so the crash "
-                    f"would land after the run had already finished"
+                    f"the slow activity's default {qs.CRASH_DEFAULT_DELAY_SECONDS}s "
+                    f"window, so the crash would land after the run had already finished"
                 )
 
     # The documented response body, which is where the three-way drift lived.
@@ -569,7 +572,7 @@ def _check_crash_section(api: str, language: str, markdown: str, where: str) -> 
 
     # The proof line the README tells the reader to look for has to be the one the
     # suite waits on. CRASH_COMMITTING_MARKER is deliberately excluded: it carries the
-    # delay, and the README documents the 30s default while the suite injects 20s.
+    # delay, and the README documents the 10s default while the suite injects 20s.
     if qs.CRASH_COMMITTED_MARKER not in documented:
         problems.append(
             f"{where}: section 7 never quotes the committed marker the harness waits "

@@ -198,7 +198,7 @@ Open the [Workflow viewer](https://catalyst.diagrid.io/workflows/executions) in 
 
 ## 7. Recover from a crash
 
-Durable execution earns its name when a process dies mid-run. This quickstart ships a second workflow for exactly that: `CrashRecoveryWorkflow` runs a fast activity, then a slow one that takes about 30 seconds. You kill the app during the slow activity, restart it, and watch the run finish without redoing the work it had already recorded.
+Durable execution earns its name when a process dies mid-run. This quickstart ships a second workflow for exactly that: `CrashRecoveryWorkflow` runs a fast activity, then a slow one that takes about 10 seconds. You kill the app during the slow activity, restart it, and watch the run finish without redoing the work it had already recorded.
 
 Two things make the demo legible. You choose the instance ID, so you can find the same run again. And the confirmation code is derived from the booking reference, so the answer after the restart is visibly the same answer.
 
@@ -210,7 +210,7 @@ flowchart TD
   START((Start)):::startNode
   ACT1(Notify: Reservation Received)
   ACT2(Commit Reservation
-  ~30s)
+  ~10s)
   ACT3(Notify: Reservation Completed)
   END((End)):::endNode
 
@@ -227,7 +227,7 @@ Leave the application from step 5 running.
 
 ### 7.1 Start a run under an ID you own
 
-Open a new terminal. This request blocks for about 30 seconds while the slow activity commits.
+Open a new terminal. This request blocks for about 10 seconds while the slow activity commits.
 
 > **Pick an ID you have not used before.** Re-issuing an ID attaches to the run it already names instead of starting a new one, so an ID left over from a finished run answers instantly with a correct-looking confirmation and you never see a crash at all. Every language quickstart here shares the same project (`workflow-quickstart`) and the same documented ID (`trip-42`), so if you have already walked through another language, substitute a distinct ID such as `trip-42-java` wherever the rest of this section writes `trip-42`.
 
@@ -249,7 +249,7 @@ In the terminal running `diagrid dev run`, the fast activity completes and the s
 
 ```text
 == APP - order-workflow == Notification: Reservation trip-42 received for ABC123
-== APP - order-workflow == Committing reservation ABC123 over ~30s. KILL THE APP NOW to test crash recovery (POST /crash/kill, or kill -9). It resumes on restart.
+== APP - order-workflow == Committing reservation ABC123 over ~10s. KILL THE APP NOW to test crash recovery (POST /crash/kill, or kill -9). It resumes on restart.
 ```
 
 **Two terminals instead of three.** The request takes an optional `kill_after_seconds`. Send it and the app halts *itself* that many seconds into the run, at a known point inside the window, so you never have to aim a kill at a moving target:
@@ -260,7 +260,7 @@ curl -i -X POST http://localhost:5001/crash/run -H "Content-Type: application/js
 
 In PowerShell, add the same `"kill_after_seconds": 8` to the body. Send this instead of the request above and skip 7.2 entirely: the app crashes on its own. Leave the field out and nothing changes, and you crash the app yourself in 7.2. Either way the rest of the walkthrough is identical.
 
-The value has to land inside the slow activity's window, so keep it below `CRASH_DELAY_SECONDS` (30 by default). It is also safe to send on the re-issue in 7.4: a call that attaches to an existing run never arms a second kill.
+The value has to land inside the slow activity's window, so keep it below `CRASH_DELAY_SECONDS` (10 by default). The clock starts when the slow activity starts, not when the request arrives, so the budget is measured against that activity's own delay and does not have to cover scheduling the run or the fast activity ahead of it. That is also why the field is safe to send on the re-issue in 7.4: the timer only starts when the activity actually runs, and a call that attaches to an existing run never re-enters it.
 
 ### 7.2 Crash the app mid-run
 
@@ -304,7 +304,7 @@ diagrid dev run --project workflow-quickstart --app-id order-workflow --approve 
 **Read the app log carefully, because this is the whole proof:**
 
 ```text
-== APP - order-workflow == Committing reservation ABC123 over ~30s. KILL THE APP NOW to test crash recovery (POST /crash/kill, or kill -9). It resumes on restart.
+== APP - order-workflow == Committing reservation ABC123 over ~10s. KILL THE APP NOW to test crash recovery (POST /crash/kill, or kill -9). It resumes on restart.
 == APP - order-workflow == Committed reservation ABC123. Confirmation code: BK-E0BEBD22
 == APP - order-workflow == Notification: Reservation trip-42 has completed! Reservation ABC123 confirmed. Confirmation code: BK-E0BEBD22
 ```
@@ -341,7 +341,7 @@ Open the [Workflow viewer](https://catalyst.diagrid.io/workflows/executions) and
 
 > **The instance ID is a handle you own.** A durable activity is *at-least-once*, so make side-effecting work idempotent by keying off a business value, as `CommitReservationActivity` keys its confirmation code off the booking reference. To run the demo again, pick a new ID: this one now names a finished run, and re-issuing it would only attach to that.
 
-The slow activity's length is configurable through the `CRASH_DELAY_SECONDS` environment variable, which defaults to 30. Set it lower to shorten the window, or higher if you need more time to aim, but stay under the wait budget `/crash/run` allows: a delay above that makes the first call return a `202` instead of the blocking `200` step 7.1 describes. That budget is `CRASH_WAIT_SECONDS`, which defaults to 120, so raise it too if you want a longer delay than that.
+The slow activity's length is configurable through the `CRASH_DELAY_SECONDS` environment variable, which defaults to 10. Set it lower to shorten the window, or higher if you need more time to aim, but stay under the wait budget `/crash/run` allows: a delay above that makes the first call return a `202` instead of the blocking `200` step 7.1 describes. That budget is `CRASH_WAIT_SECONDS`, which defaults to 120, so raise it too if you want a longer delay than that.
 
 ## 8. Clean Up
 

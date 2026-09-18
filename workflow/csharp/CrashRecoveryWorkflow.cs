@@ -9,9 +9,9 @@ namespace WorkflowApp.Workflows
     /// Crash-recovery demo: a workflow built to be interrupted.
     ///
     /// OrderProcessingWorkflow cannot do this job. Its delays are 2s of payment and 5s of
-    /// inventory update, and seven seconds split across two activities is not a window a human
-    /// can aim a second terminal at. This workflow runs one instant activity and then one that
-    /// takes about 30 seconds, so a kill lands between two known points.
+    /// inventory update, and seven seconds split across two activities gives a human no single
+    /// window to aim a second terminal at. This workflow runs one instant activity and then one
+    /// contiguous ~10s one, so a kill lands between two known points.
     ///
     /// The activity ORDER is the whole design. The fast notification completes first, so Catalyst
     /// has persisted its result before the slow activity starts. After a restart that notification

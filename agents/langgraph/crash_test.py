@@ -50,7 +50,7 @@ _self_kill_seconds: Optional[int] = None
 def compare_options(state: PlannerState) -> dict:
     # The delay is what makes the crash aimable. Without it all three nodes finish in
     # single-digit milliseconds and there is no window for POST /crash/kill to land in.
-    delay = int(os.environ.get("CRASH_DELAY_SECONDS", "30"))
+    delay = int(os.environ.get("CRASH_DELAY_SECONDS", "10"))
     # Two messages, because the reader's next move differs. Un-armed, the window is theirs to
     # aim at and they have to crash the app themselves. Armed, the app does that for them at a
     # known point, so the instruction would be wrong and the ~delay would be read as the wait.
@@ -116,8 +116,10 @@ runner = DaprWorkflowGraphRunner(
 workflow_client = DaprWorkflowClient()
 
 # The wait budget for the blocking POST /crash/run. Kept comfortably above step 2's
-# default 30s so the first call is still blocked when you kill the app.
-CRASH_WAIT_SECONDS = 120
+# default 10s so the first call is still blocked when you kill the app.
+# Overridable through CRASH_WAIT_SECONDS, which is how an automated run exercises the
+# 202 branch without waiting two minutes for it.
+CRASH_WAIT_SECONDS = int(os.environ.get("CRASH_WAIT_SECONDS", "120"))
 
 
 # ── FastAPI server ───────────────────────────────────────────
@@ -133,6 +135,17 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan)
+
+
+# Health check endpoint - verifies the service is running
+# GET /
+# Returns: { "message": "Health check passed. Everything is running smoothly!" }
+#
+# It answers only once the lifespan above has run, so a 200 here means the
+# workflow runner registered with Catalyst, not merely that the port is open.
+@app.get("/")
+async def read_root():
+    return {"message": "Health check passed. Everything is running smoothly!"}
 
 
 class CrashRunRequest(BaseModel):

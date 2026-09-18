@@ -91,7 +91,8 @@ SECRETS = ()
 # README "### 2. Trigger the Agent".
 #
 # OBSERVED, 2026-08-31, against a local OneBox Catalyst project with no model key
-# set. `POST /run` returned 200 in ~30s with the body:
+# set. `POST /run` returned 200 in ~30s with the body (tool 2's delay has since
+# dropped from 30s to 10s, so the same call now returns in ~10s):
 #
 #     {"response":"Booking confirmed for Grand Ballroom. All steps complete!"}
 #
@@ -103,7 +104,7 @@ SECRETS = ()
 # expected", so a connection error was likelier than any status code. Both halves
 # of that have since changed. The crash moved to POST /crash/run and is armed by
 # kill_after_seconds, so /run arms nothing and runs to completion. Tool 2 still
-# sleeps ~30s, which is inside `POST And Expect Field`'s 120s budget.
+# sleeps ~10s, which is inside `POST And Expect Field`'s 120s budget.
 REQUESTS = (
     {
         "method": "POST",

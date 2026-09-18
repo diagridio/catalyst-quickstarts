@@ -1,6 +1,6 @@
 # Microsoft Agent Framework (.NET) Quickstart - Event Planner
 
-This quickstart demonstrates how to run a Microsoft Agent Framework agent as a durable Dapr Workflow using the `Diagrid.AI.Microsoft.AgentFramework` .NET package. The agent acts as an **Event Planner** with three tools that it calls in sequence, the second of which deliberately takes about 30 seconds. That is the window in which you kill the app to prove the run survives it.
+This quickstart demonstrates how to run a Microsoft Agent Framework agent as a durable Dapr Workflow using the `Diagrid.AI.Microsoft.AgentFramework` .NET package. The agent acts as an **Event Planner** with three tools that it calls in sequence, the second of which deliberately takes about 10 seconds. That is the window in which you kill the app to prove the run survives it.
 
 ## What This Quickstart Demonstrates
 
@@ -112,15 +112,15 @@ Invoke-RestMethod -Method Post -Uri 'http://localhost:5050/run' -ContentType 'ap
 
 The agent will:
 1. Call `step_one_search`: finds venues. Instant
-2. Call `step_two_compare`: compares them over about 30 seconds
+2. Call `step_two_compare`: compares them over about 10 seconds
 3. Call `step_three_confirm`: confirms the booking. Instant
 
-So this request takes about half a minute. You'll see:
+So this request takes on the order of fifteen seconds, and longer on a live model, which has to compose a turn between each tool call. You'll see:
 
 ```text
 == APP - event-planner == >>> TOOL 1: Searching venues in 'Austin'...
 == APP - event-planner == >>> TOOL 1 COMPLETE: Found 3 venues
-== APP - event-planner == >>> TOOL 2: Comparing venues over ~30s. KILL THE APP NOW to test crash recovery (POST /crash/kill, or kill -9). It resumes on restart.
+== APP - event-planner == >>> TOOL 2: Comparing venues over ~10s. KILL THE APP NOW to test crash recovery (POST /crash/kill, or kill -9). It resumes on restart.
 == APP - event-planner == >>> TOOL 2 COMPLETE: Grand Ballroom is the best option
 == APP - event-planner == >>> TOOL 3: Confirming booking...
 == APP - event-planner == >>> TOOL 3 COMPLETE: Booking confirmed for Grand Ballroom
@@ -170,7 +170,7 @@ Invoke-RestMethod -Method Post -Uri 'http://localhost:5050/crash/run' -ContentTy
 
 Send this instead of the request above and skip the kill step below: the app crashes on its own. Leave the field out and nothing changes, and you crash the app yourself. Either way the rest of the walkthrough is identical.
 
-Keep the value below `CRASH_DELAY_SECONDS` (30 by default) so the crash lands inside tool 2 rather than after the run has finished. The clock starts when tool 2 starts, not when the request arrives, so the budget is measured against tool 2's own delay and does not have to cover the LLM turn and tool 1 ahead of it. That is also why the field is safe to send on the re-issue below: the timer only starts when tool 2 actually runs, and a call that attaches to an existing run replays the recorded result instead of re-invoking it.
+Keep the value below `CRASH_DELAY_SECONDS` (10 by default) so the crash lands inside tool 2 rather than after the run has finished. The clock starts when tool 2 starts, not when the request arrives, so the budget is measured against tool 2's own delay and does not have to cover the LLM turn and tool 1 ahead of it. That is also why the field is safe to send on the re-issue below: the timer only starts when tool 2 actually runs, and a call that attaches to an existing run replays the recorded result instead of re-invoking it.
 
 **Crash the app.** Skip this if you sent `kill_after_seconds` above. Otherwise, from a third terminal, while tool 2 is still comparing:
 
@@ -207,7 +207,7 @@ diagrid dev run -f dev-dotnet-agent.yaml --approve
 **That is the whole recovery. You do not have to send anything.** The run is not waiting on you: Catalyst has been retrying the interrupted tool call the entire time the app was down, and it hands the pending work back within a second of the restarted app's worker reconnecting. The log below is usually scrolling before you can type:
 
 ```text
-== APP - event-planner == >>> TOOL 2: Comparing venues over ~30s. KILL THE APP NOW to test crash recovery (POST /crash/kill, or kill -9). It resumes on restart.
+== APP - event-planner == >>> TOOL 2: Comparing venues over ~10s. KILL THE APP NOW to test crash recovery (POST /crash/kill, or kill -9). It resumes on restart.
 == APP - event-planner == >>> TOOL 2 COMPLETE: Grand Ballroom is the best option
 == APP - event-planner == >>> TOOL 3: Confirming booking...
 == APP - event-planner == >>> TOOL 3 COMPLETE: Booking confirmed for Grand Ballroom
@@ -237,7 +237,7 @@ Because the instance already exists, this call attaches to the run you started b
 
 > On the offline model the final sentence is tool 3's own return string, so it is identical on every run and under every ID. Set `DIAGRID_QUICKSTART_MODEL=openai` and the model composes that sentence instead, and running the demo again under a **new** ID can then produce different prose from identical tool results. Re-using `gala-42` cannot, on either path: the killed call never returned a body, and the re-issued call replays that instance's recorded output. Either way, the proof to read is the app log and the execution trace in the console, not the prose.
 
-The length of tool 2 is configurable through the `CRASH_DELAY_SECONDS` environment variable, which defaults to 30. Set it lower to shorten the window, or higher if you need more time to aim.
+The length of tool 2 is configurable through the `CRASH_DELAY_SECONDS` environment variable, which defaults to 10. Set it lower to shorten the window, or higher if you need more time to aim.
 
 ### 4. Inspecting the Results in Catalyst
 

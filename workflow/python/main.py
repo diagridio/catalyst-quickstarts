@@ -19,7 +19,6 @@ from fastapi.responses import JSONResponse, Response
 import json
 import logging
 import os
-import threading
 import time
 import uvicorn
 import uuid
@@ -133,39 +132,10 @@ def terminate_workflow(instance_id: str):
 
 # ── Crash-recovery demo ──────────────────────────────────────────────────────
 # The wait budget for the blocking /crash/run. Kept comfortably above the slow
-# activity's default 30s so the first call is still blocked when you kill the app.
+# activity's default 10s so the first call is still blocked when you kill the app.
 # Overridable through CRASH_WAIT_SECONDS, which is how the e2e suite exercises the
 # 202 branch without waiting two minutes for it.
 CRASH_WAIT_SECONDS = int(os.environ.get('CRASH_WAIT_SECONDS', '120'))
-
-def arm_self_kill(delay_seconds: int):
-    """Kill this process `delay_seconds` from now, on a background thread.
-
-    This is what lets the demo run in two terminals instead of three. /crash/run blocks for
-    the length of the slow activity, so the shell that starts a run cannot also stop the app,
-    and the kill has always needed a terminal of its own. Arming it here removes that
-    terminal AND the race: the crash lands at a known point inside the window rather than
-    wherever the reader's reflexes put it.
-
-    Deliberately the same os._exit(1) that /crash/kill uses. A gentler exit would make this a
-    controlled shutdown wearing a crash's name, which is the one thing this demo must not do.
-
-    daemon=True so the timer can never hold the process open: a Ctrl+C during the countdown
-    should still end the app rather than wait for a kill nobody wants any more.
-    """
-    # Tell the slow activity, so the line it prints names this delay rather than the sleep it
-    # was going to take. That sleep is the number the reader used to see, and it is not the
-    # one they wait: the app dies partway through it.
-    note_self_kill(delay_seconds)
-
-    def _kill():
-        time.sleep(delay_seconds)
-        logger.warning(
-            f'>>> crash: killing this process {delay_seconds}s into the run, as asked by kill_after_seconds'
-        )
-        os._exit(1)
-
-    threading.Thread(target=_kill, daemon=True).start()
 
 def crash_response(instance_id: str, result=None, message=None, status_code: int = 200):
     """The one response shape every crash demo in this repo returns. All three fields are
@@ -200,11 +170,16 @@ def crash_run(req: CrashRunRequest):
             workflow_client.schedule_new_workflow(
                 workflow=crash_recovery_workflow, input=req.reference, instance_id=req.id
             )
-            # Armed here and nowhere else: only on the branch that actually scheduled a run,
-            # and only after the schedule call returned. On the attach branch below it would
-            # kill the app every time the reader tried to read the answer.
-            if req.kill_after_seconds and req.kill_after_seconds > 0:
-                arm_self_kill(req.kill_after_seconds)
+            # RECORDED here, and armed later by the slow activity itself. No timer starts on
+            # this thread: see workflow._arm_self_kill for why the clock has to start where
+            # the window does. Recording 0 when nothing was asked for is load-bearing, because
+            # the activity consumes this value and a stale one would kill a later run that
+            # never asked.
+            note_self_kill(
+                req.kill_after_seconds
+                if req.kill_after_seconds and req.kill_after_seconds > 0
+                else 0
+            )
         else:
             # The instance already exists, so this call attaches to it rather than
             # booking a second time. That is the whole point of a caller-owned ID.

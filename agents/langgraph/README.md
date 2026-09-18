@@ -144,10 +144,10 @@ Open the [Catalyst dashboard](https://catalyst.diagrid.io/agents) in your browse
 
 ## Crash Recovery Test With Catalyst
 
-The `crash_test.py` file demonstrates durable crash recovery, a capability not offered by LangGraph natively. It defines a 3-node graph whose middle node deliberately takes about 30 seconds, and a `POST /crash/kill` endpoint that kills the process outright. Nothing is armed: the crash is a request you make, so there is no source edit, no environment variable to unset, and no second run file.
+The `crash_test.py` file demonstrates durable crash recovery, a capability not offered by LangGraph natively. It defines a 3-node graph whose middle node deliberately takes about 10 seconds, and a `POST /crash/kill` endpoint that kills the process outright. Nothing is armed: the crash is a request you make, so there is no source edit, no environment variable to unset, and no second run file.
 
 1. **check_venues**: checks venue availability. Instant, and completes
-2. **compare_options**: compares options over ~30 seconds. Kill the app during this
+2. **compare_options**: compares options over ~10 seconds. Kill the app during this
 3. **confirm_booking**: confirms the booking. Instant
 
 The node order is the point. `check_venues` completes and Catalyst records its result before `compare_options` starts, so the crash lands between two known points and the restart can show that only the interrupted node ran again. Each node logs itself as `STEP 1`, `STEP 2` and `STEP 3`, which is how you follow it in the app log.
@@ -166,7 +166,7 @@ Wait for `Uvicorn running on http://0.0.0.0:8001`. The port is pinned in `dev-cr
 
 ### 5. Run under an ID you own
 
-From another terminal. This request blocks for about 30 seconds while `compare_options` runs.
+From another terminal. This request blocks for about 10 seconds while `compare_options` runs.
 
 Choose one of the following to trigger the endpoint:
 
@@ -191,7 +191,7 @@ Go to the terminal where you started `uv run diagrid dev run`. `check_venues` co
 ```text
 == APP - schedule-planner == >>> STEP 1: Checking venue availability for 'company gala on March 15'...
 == APP - schedule-planner == >>> STEP 1 COMPLETE: Grand Ballroom available on March 15 (2PM-6PM, 6PM-11PM)
-== APP - schedule-planner == >>> STEP 2: Comparing venue options over ~30s. KILL THE APP NOW to test crash recovery (POST /crash/kill, or kill -9). It resumes on restart.
+== APP - schedule-planner == >>> STEP 2: Comparing venue options over ~10s. KILL THE APP NOW to test crash recovery (POST /crash/kill, or kill -9). It resumes on restart.
 ```
 
 **Two terminals instead of three.** The request takes an optional `kill_after_seconds`. Send it and the app halts *itself* that many seconds into the run, at a known point inside `compare_options`' window, so you never have to aim a kill at a moving target:
@@ -212,7 +212,7 @@ Invoke-RestMethod -Method Post -Uri 'http://localhost:8001/crash/run' -ContentTy
 
 Send this instead of the request above and skip step 6: the app crashes on its own. Leave the field out and nothing changes, and you crash the app yourself. Either way the rest of the walkthrough is identical.
 
-Keep the value below `CRASH_DELAY_SECONDS` (30 by default) so the crash lands inside `compare_options` rather than after the graph has finished. The clock starts when `compare_options` starts, not when the request arrives, so the budget is measured against that node's own sleep and does not have to cover the model turn and `check_venues` ahead of it. That is also why the field is safe to send on the re-issue in step 8: the timer only starts when the node actually runs, and a call that attaches to an existing run replays the recorded result instead of re-invoking it.
+Keep the value below `CRASH_DELAY_SECONDS` (10 by default) so the crash lands inside `compare_options` rather than after the graph has finished. The clock starts when `compare_options` starts, not when the request arrives, so the budget is measured against that node's own sleep and does not have to cover the model turn and `check_venues` ahead of it. That is also why the field is safe to send on the re-issue in step 8: the timer only starts when the node actually runs, and a call that attaches to an existing run replays the recorded result instead of re-invoking it.
 
 ### 6. Crash the app
 
@@ -255,10 +255,10 @@ Restart with the same command as step 4:
 uv run diagrid dev run -f dev-crash-test.yaml --approve
 ```
 
-**That is the whole recovery. You do not have to send anything.** The run resumes by itself, and no HTTP request is involved: as soon as the restarted app's worker reconnects, Catalyst hands `gala-42` back to it, `compare_options` starts over from the beginning, and about 30 seconds later the graph finishes. Watch the app log, where all of this happens before you send anything:
+**That is the whole recovery. You do not have to send anything.** The run resumes by itself, and no HTTP request is involved: as soon as the restarted app's worker reconnects, Catalyst hands `gala-42` back to it, `compare_options` starts over from the beginning, and about 10 seconds later the graph finishes. Watch the app log, where all of this happens before you send anything:
 
 ```text
-== APP - schedule-planner == >>> STEP 2: Comparing venue options over ~30s. KILL THE APP NOW to test crash recovery (POST /crash/kill, or kill -9). It resumes on restart.
+== APP - schedule-planner == >>> STEP 2: Comparing venue options over ~10s. KILL THE APP NOW to test crash recovery (POST /crash/kill, or kill -9). It resumes on restart.
 == APP - schedule-planner == >>> STEP 2 COMPLETE: Grand Ballroom (6PM-11PM) is the best option for 200 guests
 == APP - schedule-planner == >>> STEP 3: Confirming booking...
 == APP - schedule-planner == >>> STEP 3 COMPLETE: Booking confirmed: Grand Ballroom, March 15, 6PM-11PM
@@ -292,7 +292,7 @@ That is the last line of the demo. If you send the request earlier, while `compa
 
 The reply uses the one JSON shape every crash demo in this repo returns, `{"id", "result", "message"}`. If the run has already finished, the recorded final output of the graph comes back in `result` with `message` null. If the wait budget elapses first, the same shape comes back as a `202` with `result` null and the attach instruction in `message`. That is not a failure: send the same request again to attach again.
 
-The length of `compare_options` is configurable through the `CRASH_DELAY_SECONDS` environment variable, which defaults to 30. Set it lower to shorten the window, or higher if you need more time to aim.
+The length of `compare_options` is configurable through the `CRASH_DELAY_SECONDS` environment variable, which defaults to 10. Set it lower to shorten the window, or higher if you need more time to aim.
 
 ## Part of the Event Planning Team
 
