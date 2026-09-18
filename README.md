@@ -13,6 +13,7 @@ Catalyst works with the following agent frameworks:
 | Framework | Description |
 |-----------|-------------|
 | [Dapr Agents](agents/dapr-agents/) | Native Dapr agent framework with built-in durability, state, and pub/sub for multi-agent orchestration |
+| [Mastra](agents/mastra/) | TypeScript agent framework with tool calling, made durable with Catalyst |
 | [CrewAI](agents/crewai/) | Multi-agent crews with role-based collaboration, made durable with Catalyst |
 | [LangGraph](agents/langgraph/) | Graph-based agent orchestration with conditional routing, made durable with Catalyst |
 | [Strands](agents/strands/) | Model-driven agent framework from AWS with tool use, made durable with Catalyst |

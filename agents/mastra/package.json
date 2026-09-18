@@ -1,0 +1,24 @@
+{
+  "name": "mastra-sre-agent",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Mastra SRE agent made durable with Diagrid Catalyst",
+  "type": "module",
+  "scripts": {
+    "start": "tsx main.ts",
+    "crash-test": "tsx crash_test.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@diagrid/agent-mastra": "0.1.0",
+    "@mastra/core": "^1.57.0",
+    "tsx": "^4.23.12",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.3"
+  },
+  "engines": {
+    "node": ">=22.13.0"
+  }
+}
