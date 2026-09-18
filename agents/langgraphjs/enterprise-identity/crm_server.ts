@@ -105,9 +105,7 @@ app.use(express.json());
 
 // A fresh server and transport per request, and `sessionIdGenerator: undefined`
 // to say so: stateless mode. Catalyst's MCP proxy opens its own connection for
-// each tool call, so there is no session for a CRM to keep -- and a shared
-// transport answers the first request and then 500s, because its per-response
-// state belongs to one exchange.
+// each tool call, so there is no session for a CRM to keep.
 app.post(MCP_PATH, async (req, res) => {
   const mcp = buildServer();
   const transport = new StreamableHTTPServerTransport({

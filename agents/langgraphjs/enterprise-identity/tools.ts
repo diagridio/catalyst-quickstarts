@@ -1,10 +1,6 @@
 /**
  * The agent's tools.
  *
- * Separate from main.ts so the tests can import the real tool without paying
- * for main.ts's module-level work: importing main.ts compiles the graph and
- * builds the model.
- *
  * Two tools, showing the two ways an agent can act for someone. `my_bookings`
  * runs in-process and is handed the caller's subject as an argument.
  * `account_summary` leaves the process, and carries the caller in a token
@@ -53,9 +49,7 @@ const MCP_URL =
  * A `fetch` that carries the calling user, built once for the process.
  *
  * Safe to share across requests: the caller is read at send time, not now, so
- * concurrent requests each carry their own. This is the second of the two
- * identity lines the README points at -- the other is the middleware install
- * in main.ts.
+ * concurrent requests each carry their own.
  */
 const identityFetch = createIdentityFetch();
 
@@ -63,9 +57,8 @@ export const accountSummary = tool(
   async ({ account_id }: { account_id: string }) => {
     const transport = new StreamableHTTPClientTransport(new URL(MCP_URL), {
       fetch: identityFetch,
-      // The sidecar's own API token, which authenticates the AGENT to Catalyst.
-      // Orthogonal to the user token: this says which app is calling, and
-      // `identityFetch` says which person it is calling for.
+      // Authenticates the agent itself to Catalyst; `identityFetch` carries
+      // the user.
       requestInit: {
         headers: { 'dapr-api-token': process.env['DAPR_API_TOKEN'] ?? '' },
       },

@@ -33,9 +33,8 @@ import {
 } from './tools';
 
 // Only the offline issuer demands a scope. Scopes come from your identity
-// provider, and a Diagrid login carries `openid profile email offline_access`
-// and nothing else, so requiring one on the Catalyst path would answer 403 for
-// everybody. See "On scopes" in the README.
+// provider, and a Diagrid login carries `openid profile email offline_access`.
+// See "On scopes" in the README.
 export const LOCAL_REQUIRED_SCOPES: readonly string[] = ['agent.invoke'];
 
 /** The graph config key the verified subject travels under. */
@@ -63,8 +62,7 @@ const toolsByName = OFFLINE_IDENTITY ? localToolsByName : catalystToolsByName;
 
 const chatModel = await buildModel(OFFLINE_IDENTITY);
 // `bindTools` is an optional member of BaseChatModel -- some providers cannot
-// call tools at all -- so it is checked rather than asserted away. Python has
-// no equivalent branch, because there the base method exists and raises.
+// call tools at all -- so it is checked rather than asserted away.
 if (!chatModel.bindTools) {
   throw new Error(
     `the configured model (${chatModel._llmType()}) cannot call tools`
@@ -82,20 +80,12 @@ async function callModel(
 /**
  * Whether the caller's identity belongs in this tool call's arguments.
  *
- * Asking the schema rather than hardcoding a tool name is what keeps the
- * substitution correct when a tool is added -- the equivalent of the Python
- * quickstart's `"subject" in tool.args`. A new tool taking a subject is
- * substituted into without a change here, and one that takes none cannot be
- * handed a caller.
+ * Asking the schema rather than hardcoding a tool name keeps the substitution
+ * correct as tools are added: a new tool taking a subject is substituted into
+ * without a change here, and one that takes none cannot be handed a caller.
  *
- * Unlike Python's `tool.args`, there is no one type to ask: `schema` is a zod
- * object here (`shape`), but `tool()` also accepts a plain JSON Schema
- * (`properties`), and a shape neither of those describes would read as "takes
- * no subject". That failure direction is the dangerous one -- it would let the
- * subject the MODEL asked for through untouched -- so a subject the model
- * supplied counts on its own, whatever introspection made of the schema. The
- * model's value is then overwritten rather than trusted, which is the whole
- * point of substituting.
+ * A subject the model supplied counts on its own, whatever the schema said, so
+ * the model's value is always overwritten rather than trusted.
  */
 function takesSubject(
   tool: StructuredToolInterface,
@@ -200,10 +190,6 @@ async function buildOAuthConfig(): Promise<OAuthConfig> {
  * Claim names only, never claim values: `user.claims` is a real person's
  * decoded credential, and echoing it back would leak whatever the identity
  * provider chose to put there.
- *
- * `scopes` needs no sorting here, unlike the Python quickstart's `_identity`:
- * @diagrid/agent-core already hands back a sorted, deduplicated list, because
- * the order a token happened to use must not decide what this body says.
  */
 function identity(user: VerifiedUser): Record<string, unknown> {
   return {
@@ -220,9 +206,8 @@ function identity(user: VerifiedUser): Record<string, unknown> {
  * `getVerifiedUser` is honestly typed `VerifiedUser | undefined`, because a
  * route that `requireAuth: false` opened up has no caller to report. This app
  * leaves `requireAuth` at its default, so the guard is written out rather than
- * cast away -- and it answers 500 with no body, because reaching it would mean
- * a bug in this app's wiring, and answering `oauth.missing_token` would put a
- * code on the wire the middleware did not produce.
+ * cast away. It answers 500 rather than an oauth error code, which only the
+ * middleware produces.
  */
 function requireUser(req: Request, res: Response): VerifiedUser | undefined {
   const user = getVerifiedUser(req);
@@ -246,23 +231,14 @@ function isBodyParseError(error: unknown): boolean {
 
 /**
  * The app, assembled around one identity policy.
- *
- * A function rather than a module-level app so that identity.test.ts can drive
- * these exact handlers, this exact graph and this exact required-scope constant
- * against its own offline issuer. Nothing is duplicated into the test, so drift
- * in any of them fails there rather than sliding past.
  */
 export function buildApp(config: OAuthConfig): express.Express {
   const app = express();
   // Express advertises itself on every response by default. An app behind
   // Catalyst has no reason to tell callers what it is built on.
   app.disable('x-powered-by');
-  // Express also stamps an ETag on every JSON response, which starlette does
-  // not. Both routes here answer per-caller: `/whoami` IS the caller, and
-  // `/agent/run` names them in its reply. A validator invites a shared cache to
-  // store and revalidate one person's identity for the next request that looks
-  // the same, so the two responses go out with no validator at all -- which is
-  // also the header set the Python quickstart's documented output shows.
+  // Both routes answer per-caller, so no ETag is sent: a validator would invite
+  // a shared cache to store one person's identity.
   app.disable('etag');
 
   // --- The entire Catalyst identity integration ----------------------------
@@ -273,17 +249,11 @@ export function buildApp(config: OAuthConfig): express.Express {
   // sets enableAppHealthCheck: false -- an unauthenticated probe would only
   // ever see the 401. There is no per-path exclusion; requireAuth is app-wide.
   //
-  // Body parsing is mounted on the one route that reads a body, and AFTER the
-  // middleware either way: an unauthenticated request is refused before this
-  // app spends anything on its payload, so a malformed body from an anonymous
-  // caller is still a 401 rather than a 400. Scoping it to the route also keeps
-  // `GET /whoami` unable to answer 400 for a body it never looks at, which is
-  // how the Python quickstart behaves -- there only the handler that calls
-  // `await request.json()` can fail on one.
+  // Body parsing is mounted after the middleware and only on the route that
+  // reads a body, so an unauthenticated request is refused before the app
+  // spends anything on its payload.
   //
-  // `type: () => true` parses every body as JSON whatever the Content-Type,
-  // which is what FastAPI's `await request.json()` does. A reader who forgets
-  // the header gets the same answer here.
+  // `type: () => true` parses every body as JSON whatever the Content-Type.
   const parseJsonBody = express.json({ type: () => true });
 
   /** Who Catalyst says is calling. No model turn, so the 401/200 contrast is free. */
@@ -344,19 +314,10 @@ export function buildApp(config: OAuthConfig): express.Express {
         next(error);
         return;
       }
-      // Anything else is this app failing rather than the caller, and the
-      // likeliest cause in this quickstart is the outbound MCP call not
-      // reaching Catalyst. A body over express.json's size limit lands here
-      // too.
-      //
-      // Express's default handler would answer with an HTML page carrying the
-      // stack and this file's absolute path, because NODE_ENV is not
-      // `production` under `diagrid dev run` or `npm start`. An app that fails
-      // while holding a verified caller's credential should not describe its
-      // own internals to whoever asked. The stack goes to the log the
-      // walkthrough tells you to read; the response says only that the request
-      // failed, which is what the Python quickstart's `Internal Server Error`
-      // does.
+      // Anything else is this app failing rather than the caller. An app that
+      // fails while holding a verified caller's credential should not describe
+      // its own internals: the stack goes to the log, and the response says
+      // only that the request failed.
       console.error(`[ERROR] ${req.method} ${req.path} failed`, error);
       res.status(HTTP_INTERNAL_SERVER_ERROR).json({ error: 'internal_error' });
     }
@@ -366,8 +327,7 @@ export function buildApp(config: OAuthConfig): express.Express {
 }
 
 // Guarded so this module can be imported without starting a server or binding
-// a port. Importing it still compiles the graph and builds the model, which is
-// why tools.ts and model.ts hold the parts the tests assert against.
+// a port.
 if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
   const port = Number(process.env['APP_PORT'] ?? DEFAULT_APP_PORT);
   buildApp(await buildOAuthConfig()).listen(port, HOST, () => {

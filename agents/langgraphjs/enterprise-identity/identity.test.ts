@@ -6,31 +6,16 @@
  *     npm test
  *
  * which is `node --import tsx --test *.test.ts`: node's own test runner and
- * `node:assert`, so no test framework is a dependency of this quickstart. The
- * pattern rather than this filename, so that a second test file starts running
- * without a package.json or a CI edit.
- * That is the same trade the Python quickstart makes by keeping pytest
- * ephemeral -- nothing here can force a lockfile regeneration, and a stale lock
- * would fail `npm ci` in CI and in the Dockerfile.
+ * `node:assert`, so no test framework is a dependency of this quickstart.
  *
- * No Catalyst, no Dapr, no network and no API key. `buildLocalIssuer` from
- * local_identity.ts stands in for the Catalyst identity plane: it signs with a
- * throwaway key it generates in-process and serves the public half as JWKS on a
- * loopback port, so a credential that genuinely verifies is available offline.
- * That is what makes the 200 and the 403 assertable here at all -- the Robot
- * suite next door can present no credential and therefore asserts only the two
- * 401s.
+ * They cover the 401, the 403, the 200 and the verified subject reaching the
+ * tool. No Catalyst project, no network and no API key: `buildLocalIssuer` from
+ * local_identity.ts stands in for the Catalyst identity plane, signing with a
+ * throwaway key it generates in-process.
  *
- * WHAT IS DELIBERATELY NOT TESTED: the outbound leg. Carrying the caller onward
- * to an MCP tool needs a Catalyst project, so it is exercised by the README
- * walkthrough rather than here. These tests pin the app to offline mode, where
- * the graph calls the in-process tool and no request leaves the machine.
- *
- * Unlike the Python quickstart, the app is NOT re-assembled here. main.ts
- * exports `buildApp(config)` and keeps its `listen` behind a main-module guard,
- * so these tests drive main.ts's own handlers, its own compiled graph and its
- * own required-scope constant against this test's issuer. Nothing is copied, so
- * drift in any of them fails here rather than sliding past.
+ * The app is not re-assembled here. main.ts exports `buildApp(config)`, so
+ * these tests drive its own handlers, its own compiled graph and its own
+ * required-scope constant.
  */
 
 import assert from 'node:assert/strict';
@@ -118,15 +103,12 @@ describe('fail closed, before any application code runs', () => {
       // `requireAuth` defaults to true and oauthMiddleware is installed with
       // `app.use`, so this is the app-wide rule the README claims, checked on
       // both documented routes rather than on one and assumed for the other.
-      // The exact body is the one the Robot suite asserts against a live
-      // Catalyst project.
       const response =
         method === 'GET' ? await get(path) : await post(path, payload);
 
       assert.equal(response.status, 401);
       assert.deepEqual(await response.json(), { error: 'oauth.missing_token' });
-      // An authorization verdict is not a cacheable response. This header is
-      // the middleware's, not express's, and the README documents it.
+      // An authorization verdict is not a cacheable response.
       assert.equal(response.headers.get('cache-control'), 'no-store');
     });
   }

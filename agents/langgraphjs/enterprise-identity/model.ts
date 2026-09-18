@@ -6,10 +6,6 @@
  * result. That keeps the demo free, offline and identical on every run.
  *
  * Set OPENAI_API_KEY and DIAGRID_QUICKSTART_MODEL=openai to use a real provider.
- *
- * Named model.ts rather than fake_model.ts to match agents/mastra/model.ts,
- * which is this repository's convention for a TypeScript quickstart's model
- * selection. It is the counterpart of the Python quickstart's fake_model.py.
  */
 
 import type { BaseLanguageModelInput } from '@langchain/core/language_models/base';
@@ -39,11 +35,6 @@ interface CannedTurn {
  * The decision reads the conversation rather than counting calls. A call
  * counter resets with the process and would ask for the tool a second time;
  * the replayed message history is the only state that always tells the truth.
- *
- * `modelName` is a convention the Catalyst console's agent registry relies on.
- * That registry is populated by the Diagrid agent runner, which this sample
- * deliberately does not use, so the field is not load-bearing here. It is kept
- * so the Python and TypeScript LangGraph quickstarts read as one family.
  */
 class CannedToolCallingChatModel extends BaseChatModel {
   readonly modelName = 'canned-offline';
@@ -62,14 +53,8 @@ class CannedToolCallingChatModel extends BaseChatModel {
   }
 
   /**
-   * Accepted and ignored: the tool call below is already decided, so there is
-   * no schema for this model to read.
-   *
-   * Unlike Python, where `BaseChatModel.bind_tools` raises
-   * `NotImplementedError` and overriding is therefore mandatory, `bindTools` is
-   * an optional member of `BaseChatModel` here. It is overridden anyway, so
-   * that main.ts binds tools the same way against either model and the shape
-   * the README teaches holds for both.
+   * Accepted and ignored: the canned tool call is already decided. Overridden
+   * so main.ts binds tools the same way against either model.
    */
   override bindTools(
     _tools: BindToolsInput[]
@@ -95,14 +80,10 @@ class CannedToolCallingChatModel extends BaseChatModel {
 /**
  * The canned two-turn conversation this quickstart runs on.
  *
- * It lives here rather than in main.ts so that the tests can assert against the
- * real thing instead of a copy of it. main.ts's `buildModel()` returns this.
- *
  * Note the subject the first turn asks for: `someone@example.com`, which is
  * nobody. A model does not know who is calling and must not be trusted to
  * decide -- main.ts's `callTools` replaces this argument with the subject the
- * middleware verified. A real provider behaves the same way, which is the
- * point of substituting rather than validating.
+ * middleware verified. A real provider is treated the same way.
  */
 export function buildCannedModel({ offline = false } = {}): BaseChatModel {
   const call: ToolCall = offline
@@ -132,9 +113,8 @@ export function buildCannedModel({ offline = false } = {}): BaseChatModel {
 /**
  * Real provider on request, canned model otherwise.
  *
- * `@langchain/openai` is imported dynamically so the canned path never loads
- * it. That is what lets this quickstart start with no API key at all, which is
- * what CI and the Robot suite depend on.
+ * `@langchain/openai` is imported dynamically, so the canned path never loads
+ * it and needs no API key.
  */
 export async function buildModel(offline: boolean): Promise<BaseChatModel> {
   if (process.env['DIAGRID_QUICKSTART_MODEL'] === 'openai') {

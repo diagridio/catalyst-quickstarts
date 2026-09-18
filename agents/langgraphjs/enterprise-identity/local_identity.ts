@@ -7,12 +7,8 @@
  * 200, 403 and 401 -- is reachable with no Catalyst project and no identity
  * provider.
  *
- * Why it exists: 403 oauth.missing_scope needs a credential that genuinely
- * verifies. Against real Catalyst you cannot mint one that lacks a scope, and
- * with no issuer configured at all the middleware answers 503
- * oauth.not_configured instead. This is the only way the scope check is
- * observable. It is the same trade model.ts makes for the model: free, offline,
- * identical on every run.
+ * Why it exists: 403 oauth.missing_scope needs a credential that verifies but
+ * lacks a required scope, which this issuer can mint.
  *
  * Never a real deployment. The private key lives in this process's memory and
  * the credentials it signs are logged in plain text.
@@ -40,11 +36,6 @@ const EXPIRED_LIFETIME_SECONDS = -300;
 
 /**
  * A running throwaway issuer: its config, and the credentials it accepts.
- *
- * `startLocalIssuer` returns only the config, because that is all main.ts
- * needs. The credentials are returned as well so that identity.test.ts can
- * present them, which is the only way the 200 and 403 paths are assertable
- * without a Catalyst project.
  */
 export interface LocalIssuer {
   readonly config: OAuthConfig;
@@ -57,12 +48,7 @@ export interface LocalIssuer {
 }
 
 /**
- * Start the throwaway issuer and mint the three credentials it accepts.
- *
- * Logs nothing: `startLocalIssuer` is the entry point that prints the
- * credentials for a reader to paste, and a test that already holds them has no
- * reason to write three JWTs to its own output.
- */
+/** Start the throwaway issuer and mint the three credentials it accepts. */
 export async function buildLocalIssuer(
   requiredScopes: readonly string[]
 ): Promise<LocalIssuer> {
@@ -95,9 +81,8 @@ export async function buildLocalIssuer(
   await new Promise<void>((resolve) => {
     server.listen(0, '127.0.0.1', resolve);
   });
-  // The Node analogue of Python's daemon thread. Without it a listening server
-  // keeps the event loop alive, so `node --test` would hang after the last
-  // assertion instead of exiting.
+  // Without this a listening server keeps the event loop alive, so `node
+  // --test` would hang after the last assertion instead of exiting.
   server.unref();
   const { port } = server.address() as AddressInfo;
   const jwksUri = `http://127.0.0.1:${port}/jwks.json`;
@@ -124,8 +109,7 @@ export async function buildLocalIssuer(
       issuer: ISSUER,
       audience: AUDIENCE,
       // Plain http, and no `allowInsecureJwks`: the SDK exempts loopback hosts
-      // from the https requirement, because that is where a local sidecar
-      // publishes its keys. A flag that is not needed is not set.
+      // from the https requirement, so a flag that is not needed is not set.
       jwksUri,
     },
     verified: await mint('alice@example.com', requiredScopes),
@@ -141,9 +125,8 @@ export async function buildLocalIssuer(
 /**
  * Start the throwaway issuer, log its credentials, and return its config.
  *
- * This is what main.ts calls. The six log lines are the ones the README's
- * "## Run Offline Without a Catalyst Project" block reproduces, so their text
- * is part of the documented output.
+ * The log lines are the ones the README's "Run Offline Without a Catalyst
+ * Project" section reproduces.
  */
 export async function startLocalIssuer(
   requiredScopes: readonly string[]

@@ -1,19 +1,9 @@
-# Paste the credential the offline issuer logs under `200`, and NOT a token from
-# your own identity provider. These requests reach the app directly on port
-# 8006, which bypasses Catalyst -- so the app is verifying against whichever
-# issuer it was configured with, and a token signed by anyone else is refused
-# 401 oauth.invalid_signature. Under `diagrid dev run` that issuer is Catalyst,
-# and nothing you can paste here will satisfy it; the credential-bearing
-# requests below therefore need the offline issuer:
+# Paste the credential the offline issuer logs under `200`. Start it with:
 #
 #   DIAGRID_QUICKSTART_IDENTITY=local APP_PORT=8006 npm start
 #
-# See "## Run Offline Without a Catalyst Project" in README.md. The two requests
+# See "Run Offline Without a Catalyst Project" in README.md. The two requests
 # that send no credential at all answer 401 in either mode.
-#
-# Leave the placeholder unedited and the credential-bearing requests answer
-# 401 {"error": "oauth.decode_error"}: the literal text below is not a
-# well-formed JWT, so it is rejected before any signature check happens.
 @token = <THE_CREDENTIAL_LOGGED_UNDER_200>
 
 ### Who is calling, with no credential: 401 {"error": "oauth.missing_token"}
@@ -22,9 +12,7 @@ GET http://localhost:8006/whoami
 
 ### Who is calling, with a credential: 200 and the verified caller
 ### subject, tenant and issuerId are read off the token the app verified, never
-### off the request. Against real Catalyst they come from a Catalyst-signed
-### identity the sidecar produced from your identity provider's token, and the
-### app never sees that original; offline they come from local_identity.ts.
+### off the request.
 GET http://localhost:8006/whoami
 X-Diagrid-User-Token: Bearer {{token}}
 
