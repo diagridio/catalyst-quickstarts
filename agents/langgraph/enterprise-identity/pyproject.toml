@@ -1,0 +1,25 @@
+[project]
+name = "enterprise-identity-agent"
+version = "0.1.0"
+requires-python = ">=3.11,<3.14"
+dependencies = [
+    # The identity extra: everything diagrid.identity needs.
+    "diagrid[identity]>=0.5.0",
+    "langgraph>=1.1.10",
+    "langchain-core>=1.3.2",
+    # Only imported when DIAGRID_QUICKSTART_MODEL=openai.
+    "langchain-openai==1.2.1",
+    "fastapi==0.136.1",
+    "uvicorn[standard]==0.46.0",
+    # The MCP client the agent's outbound tool call uses, and the server the
+    # stand-in CRM runs on.
+    "mcp>=2.2.0",
+    "fastmcp>=2.0",
+]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+# Collect test_*.py only.
+python_files = ["test_*.py"]
