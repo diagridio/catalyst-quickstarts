@@ -1,0 +1,14 @@
+.git
+
+# The tests need the offline throwaway issuer, which this image is deliberately
+# built without, and a container has no reason to carry them.
+*_test.go
+
+# NOTE for anyone comparing this with the Python sibling, which excludes
+# local_identity.py here: in Go the offline issuer cannot be fenced off by
+# leaving a file out, because a Go build with a missing source file fails at
+# image-build time rather than failing closed at run time. The `offline` build
+# tag does that job instead -- the Dockerfile builds without it, so
+# DIAGRID_QUICKSTART_IDENTITY=local on a container derived from this quickstart
+# refuses to start rather than quietly turning authentication off. The compiler
+# is the guard; prose would be a weaker one.

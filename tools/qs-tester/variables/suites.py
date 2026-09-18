@@ -21,8 +21,11 @@ matrix; these rows exist here for the dryrun and doc-sync only.
 
 `runtime` selects which CI runtime-setup step the suite needs, and is the reason
 language is a per-suite property for agent-family quickstarts rather than a
-matrix dimension: agents/microsoft-dotnet is .NET, agents/spring-ai is Java, and
-the rest are Python.
+matrix dimension: agents/microsoft-dotnet is .NET, agents/spring-ai is Java,
+agents/langchaingo is Go, and the rest are Python. Adding a runtime here means
+adding the matching conditional setup step to the `e2e-agents` job in
+`.github/workflows/e2e-quickstarts.yml`; a runtime this table allows and that
+workflow has no step for produces a leg that cannot build.
 """
 
 from pathlib import Path
@@ -32,7 +35,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
 FAMILIES = ("canonical", "agent")
-RUNTIMES = ("python", "dotnet", "java", "javascript")
+RUNTIMES = ("python", "dotnet", "java", "javascript", "go")
 
 SUITES = (
     {
@@ -97,6 +100,51 @@ SUITES = (
         # completion (READY_MARKERS is "Uvicorn running on", and the data file
         # notes "REQUEST ARRIVING is the signal, not the response"), none of which
         # depend on model output. The 2026-08-28 mutation evidence below stands.
+        "secrets": (),
+    },
+    {
+        "suite": "agents/langchaingo/enterprise-identity/tests/quickstart.robot",
+        "family": "agent",
+        # 22 characters, inside `project_name_budget()` (26), so the budget check
+        # passes on `name` alone -- but the explicit `leg` below is not optional.
+        # Measured against the worst-case (`local` + 10-digit epoch) run id, the
+        # CI project qs-ci-agents-enterprise-identity-go-local0000000000 is 51 of
+        # the 55 characters allowed, and the second project verify-live.sh
+        # derives for the mutation run,
+        # qs-ci-agents-enterprise-identity-go-mut-local0000000000, is exactly 55.
+        # That fits only by arithmetic, and `project_name_budget()` does not
+        # account for the `-mut` suffix, so nothing would have caught it drifting
+        # one character over. The shorter leg takes the mutation name to 48.
+        "name": "enterprise-identity-go",
+        "leg": "ent-identity-go",
+        "data": "agents_enterprise_identity_go",
+        "language": "go",
+        # The first `go` row in this table, which is why RUNTIMES had to grow one
+        # and why `.github/workflows/e2e-quickstarts.yml` needed a `Set up Go`
+        # step beside its .NET, Java and Node ones.
+        "runtime": "go",
+        # False: neither half of the bar is met. No live run against a real
+        # Catalyst project and no mutation check, so nothing here is known to
+        # pass, or to fail when what it checks breaks. Registering True without
+        # both would fail the scheduled build nightly for everyone and leak a
+        # project each time until reap-orphans.sh collects it. The suite still
+        # runs on workflow_dispatch, which is the intended path for a first run.
+        #
+        # Worth knowing before that run: this suite's assertions are the
+        # plumbing plus a 401 on each documented route. The 200 and the 403 the
+        # README documents are unreachable from the harness -- no keyword takes
+        # headers and nothing here can mint a dataplane-Sentry-signed token --
+        # so a green run here will NOT mean identity propagation is proven. See
+        # UNCOVERED in agents_enterprise_identity_go.py and the harness README's
+        # Limitations.
+        "nightly": False,
+        # Empty: the quickstart ships a canned offline model (fake_model.go) and
+        # reaches a real provider only when DIAGRID_QUICKSTART_MODEL=openai,
+        # which this suite does not set -- and buildModel constructs the OpenAI
+        # client only inside that branch, so the app starts with no key. Both
+        # documented requests are refused before the agent runs anyway. Keep in
+        # step with SECRETS in agents_enterprise_identity_go.py -- one without
+        # the other is a declaration that lies.
         "secrets": (),
     },
     {
