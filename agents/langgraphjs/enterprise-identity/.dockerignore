@@ -1,0 +1,15 @@
+node_modules
+.git
+
+# Deliberately excluded from the image, not an oversight. local_identity.ts
+# swaps the whole identity plane for a self-signed in-process issuer whenever
+# DIAGRID_QUICKSTART_IDENTITY=local -- an app that trusts tokens it minted
+# itself. Without the file, main.ts's lazy `await import('./local_identity')`
+# throws ERR_MODULE_NOT_FOUND and the app refuses to start, so setting that
+# variable on a container derived from this quickstart fails closed instead of
+# disabling authentication. Keep it out; prose is a weaker guard than a missing
+# file.
+local_identity.ts
+# The tests import local_identity, so they cannot run in the image either, and
+# a container has no reason to carry them.
+*.test.ts

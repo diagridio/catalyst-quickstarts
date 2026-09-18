@@ -574,6 +574,59 @@ config, not a typo.
       both fire and the client sees `RemoteDisconnected`. A red suite is only
       worth keeping if it is red for the documented reason — otherwise it is a
       race dressed up as a finding.
+- **`agents/langgraphjs/enterprise-identity` covers the inbound-identity
+  plumbing and the rejection path only, and has never been run against
+  Catalyst.** Its two documented requests are the unauthenticated
+  `GET /whoami` and `POST /agent/run`, each asserted at 401 with the exact body
+  `{"error": "oauth.missing_token"}` — the shipped middleware's missing-token
+  path (`@diagrid/agent-core` 0.2.0, `oauthMiddleware` in `identity/express.ts`
+  over `authenticate` in `identity/authenticate.ts`). That much was measured
+  offline before registration, against the app's own `buildApp` with the
+  quickstart's offline issuer and no Catalyst, along with the malformed-token
+  401 `oauth.decode_error` and the wrong-scope 403 the suite deliberately does
+  *not* assert.
+  - **The authenticated calls are unreachable from this harness.** Both
+    documented `diagrid call invoke` forms are in `UNCOVERED`: no keyword here
+    takes headers, and nothing here can mint a token dataplane Sentry has
+    signed. So nothing in this suite proves a verified identity reaches the
+    app's handler. The README documents the 200 and the 403 too, and reaches
+    them through an opt-in offline issuer (`local_identity.ts`) — which is the
+    basis for the node test beside the quickstart
+    (`agents/langgraphjs/enterprise-identity/identity.test.ts`, run by
+    `.github/workflows/agents_enterprise_identity_javascript.yaml`) rather than
+    for this suite: it replaces Catalyst entirely and binds the same port as
+    `dev run`. That test covers the 200, the 403, the expired 401 and the
+    verified subject reaching the tool; it proves nothing about Catalyst, and
+    this suite proves nothing about a credential, so neither stands in for the
+    other.
+  - **Worse than a gap, and the reason this suite must not be read as identity
+    coverage: the 401 is returned *before* the verifier is built.**
+    `authenticate` refuses an empty token before it awaits the lazy verifier, so
+    an unauthenticated request answers `401 oauth.missing_token` even with no
+    issuer discoverable at all. Both assertions pass unchanged against a project
+    on which inbound identity was never enabled, while every credential-bearing
+    request to that same app would answer 503. This suite cannot distinguish
+    those two projects.
+  - `HEALTH_PROBES` and `CATALYST_PROBE_MARKERS` are both `()`. The first
+    because `requireAuth` defaults to `true` and `oauthMiddleware` is installed
+    with `app.use` ahead of every route, so no path can produce the 200
+    `Wait Until Apps Healthy` polls for — the shipped `OAuthConfig` has six
+    fields and no per-path exclusion — which is also why the quickstart exposes
+    no health route and its dev config sets `enableAppHealthCheck: false`. The
+    second because this quickstart starts no workflow, so it never enters the
+    attach window that gate exists for; and express, unlike uvicorn, logs
+    nothing per request, so there may be no candidate line to fill in at all.
+    Readiness rests on the connection gate plus one
+    `Listening on http://0.0.0.0:8006` marker.
+  - Its `status: 401` is a **transcription**: the README prints
+    `HTTP/1.1 401 Unauthorized` and the body beneath the documented curl.
+  - **It is the first agent row with `runtime: javascript`.** The `e2e-agents`
+    leg has a `setup-node` step gated on exactly that value, but no agent suite
+    has ever used it, so that step has never run in this family.
+  - The outbound leg — an agent's on-behalf-of token reaching a downstream MCP
+    tool — is absent from the quickstart by design, not by omission: it does not
+    work in any environment today, so no suite here should grow an assertion
+    about a delegated JWT.
 - **None of the three agent READMEs documents a status code**, so
   `REQUESTS[...]["status"] = 200` in `variables/agents_langgraph.py`,
   `variables/agents_microsoft_dotnet.py` and
