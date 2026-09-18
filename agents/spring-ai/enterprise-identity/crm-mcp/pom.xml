@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>io.diagrid.quickstart.springai</groupId>
+    <artifactId>enterprise-identity</artifactId>
+    <version>1.0.0</version>
+  </parent>
+
+  <artifactId>crm-mcp</artifactId>
+  <name>crm-mcp</name>
+  <description>A stand-in CRM behind MCP, which reports the user and the agent a call arrived for</description>
+
+  <dependencies>
+    <!-- The MCP streamable-HTTP endpoint resources/crm-mcp.yaml registers with Catalyst,
+         auto-configured rather than hand-rolled. -->
+    <dependency>
+      <groupId>org.springframework.ai</groupId>
+      <artifactId>spring-ai-starter-mcp-server-webmvc</artifactId>
+    </dependency>
+  </dependencies>
+
+  <!-- NO identity dependency, and that is the point of the module rather than an omission. The CRM
+       verifies nothing: Catalyst verified the caller before this process was reached, and minted the
+       on-behalf-of token that arrives here. This app only decodes it in order to show it. -->
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-maven-plugin</artifactId>
+      </plugin>
+    </plugins>
+  </build>
+</project>

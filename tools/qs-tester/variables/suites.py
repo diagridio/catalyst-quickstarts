@@ -249,6 +249,37 @@ SUITES = (
         # agents_spring_ai_event_planner.py.
         "secrets": (),
     },
+    {
+        "suite": "agents/spring-ai/enterprise-identity/tests/quickstart.robot",
+        "family": "agent",
+        "name": "spring-ai-enterprise-identity",
+        "data": "agents_spring_ai_enterprise_identity",
+        "language": "java",
+        "runtime": "java",
+        # 29 characters, which is OVER `project_name_budget()` (26), so this row
+        # needs the explicit `leg` below. Measured against the worst-case
+        # (`local` + 10-digit epoch) run id rather than estimated: with the leg,
+        # the CI project qs-ci-agents-spring-ai-identity-local0000000000 is 47 of
+        # the 55 characters allowed, and the second project verify-live.sh derives
+        # for the mutation run, qs-ci-agents-spring-ai-identity-mut-local0000000000,
+        # is 51. Both fit -- which is the case the budget alone does not cover,
+        # since project_name_budget() does not account for the `-mut` suffix.
+        #
+        # The two sibling spring-ai rows carry no `leg` and are inside the budget
+        # at 23 and 24 characters, but neither is inside it for the `-mut` case,
+        # so there was no precedent to copy here.
+        "leg": "spring-ai-identity",
+        # This suite has not been enabled for the scheduled build yet: it runs on
+        # workflow_dispatch, which is the intended path for a first run. Its
+        # assertions are the plumbing plus a 401 on each documented route.
+        "nightly": False,
+        # Empty: the quickstart ships a canned offline model (CannedChatModel.java)
+        # and reaches a real provider only when DIAGRID_QUICKSTART_MODEL=openai,
+        # which this suite does not set. Keep in step with SECRETS in
+        # agents_spring_ai_enterprise_identity.py -- one without the other is a
+        # declaration that lies.
+        "secrets": (),
+    },
 )
 
 _REQUIRED = {
