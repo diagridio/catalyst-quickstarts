@@ -37,11 +37,8 @@ if (offlineIdentity)
         config.JwksUri = issuer.Config.JwksUri;
     });
 #else
-    // A compiled assembly cannot omit a source file the way the python sibling's .dockerignore
-    // omits local_identity.py, so the guard is this: the issuer does not exist in a Release build
-    // and asking for it refuses to start. The Dockerfile publishes -c Release, so setting this
-    // variable on a container fails closed instead of quietly trusting tokens the app minted
-    // itself. Prose is a weaker guard than a missing type.
+    // The offline issuer is compiled out of Release builds, so a container that sets this variable
+    // fails to start rather than trusting tokens the app minted itself.
     throw new InvalidOperationException(
         "DIAGRID_QUICKSTART_IDENTITY=local is a debug-only mode: it replaces the Catalyst identity "
         + "plane with a throwaway in-process issuer, so it is compiled out of Release builds. "
@@ -110,9 +107,7 @@ if (offlineIdentity)
 }
 #endif
 
-// Materialised at start-up rather than on the first request. Two reasons: the line saying which
-// model was chosen belongs in the startup output a reader is watching, and a missing OPENAI_API_KEY
-// on the opt-in provider path should stop the app rather than fail the first call.
+// Built at start-up so a missing OPENAI_API_KEY stops the app rather than failing the first call.
 app.Services.GetRequiredService<IdentityAgent>();
 
 // Who Catalyst says is calling. No model turn, so the 401/200 contrast is free.
@@ -140,9 +135,8 @@ IChatClient BuildChatClient(ILoggerFactory loggerFactory)
         return new CannedChatClient(offlineIdentity);
     }
 
-    // IsNullOrWhiteSpace, not a null check: on Unix an exported-but-empty variable reads back as
-    // "", which would fail deeper in the OpenAI client with a message about an argument rather than
-    // about the key.
+    // IsNullOrWhiteSpace, not a null check: an exported-but-empty variable reads back as "", which
+    // would otherwise fail deeper in the OpenAI client.
     var apiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY");
     if (string.IsNullOrWhiteSpace(apiKey))
     {

@@ -19,20 +19,13 @@ namespace EnterpriseIdentity;
 /// and no identity provider.
 /// </para>
 /// <para>
-/// Why it exists: 403 <c>oauth.missing_scope</c> needs a credential that genuinely verifies.
-/// Against real Catalyst you cannot mint one that lacks a scope, and with no issuer configured at
-/// all the middleware answers 503 <c>oauth.not_configured</c> instead. This is the only way the
-/// scope check is observable. It is the same trade <see cref="CannedChatClient"/> makes for the
-/// model: free, offline, identical on every run.
+/// Why it exists: a 403 needs a credential that verifies but lacks a required scope. This issuer
+/// can mint one.
 /// </para>
 /// <para>
-/// WHY THE WHOLE FILE IS BEHIND <c>#if DEBUG</c>. The python sibling keeps its issuer out of the
-/// container by listing the file in <c>.dockerignore</c>, so the import fails and the app refuses
-/// to start. A C# source file cannot be dropped from a compiled assembly that way, so the guard
-/// moved to compile time: the Dockerfile publishes <c>-c Release</c>, this type does not exist in
-/// that build, and Program.cs's Release branch throws at start-up when the variable is set.
-/// Setting it on a container therefore fails closed instead of quietly trusting tokens the app
-/// minted itself.
+/// Why the whole file is behind <c>#if DEBUG</c>: the Dockerfile publishes <c>-c Release</c>, so a
+/// container that sets <c>DIAGRID_QUICKSTART_IDENTITY=local</c> fails to start instead of trusting
+/// tokens the app minted itself.
 /// </para>
 /// <para>
 /// Never a real deployment. The private key lives in this process's memory and the credentials it
@@ -54,9 +47,8 @@ public static class LocalIdentity
     /// The scope the offline issuer demands.
     /// </summary>
     /// <remarks>
-    /// Only the offline issuer demands one. Scopes come from your identity provider, and a Diagrid
-    /// login carries <c>openid profile email offline_access</c> and nothing else, so requiring one
-    /// on the Catalyst path would answer 403 for everybody. See "On scopes" in the README.
+    /// Only the offline issuer demands one. On the Catalyst path, require the scopes your own
+    /// identity provider issues. See "On scopes" in the README.
     /// </remarks>
     public static readonly string[] RequiredScopes = ["agent.invoke"];
 
@@ -94,11 +86,6 @@ public static class LocalIdentity
     /// <summary>
     /// Starts the throwaway issuer and mints the three credentials it accepts.
     /// </summary>
-    /// <remarks>
-    /// Logs nothing: <see cref="LogCredentials"/> is what prints the credentials for a reader to
-    /// paste, and a test that already holds them has no reason to write three JWTs to its own
-    /// output.
-    /// </remarks>
     /// <param name="requiredScopes">The scopes the verified credential must carry.</param>
     /// <returns>The running issuer.</returns>
     public static LocalIssuer BuildLocalIssuer(IReadOnlyCollection<string> requiredScopes)
@@ -159,8 +146,7 @@ public static class LocalIdentity
     /// The numbers are unpadded base64url, which is what JWKS requires:
     /// <see cref="Base64Url"/> emits that spelling, where a
     /// <see cref="Convert.ToBase64String(byte[])"/> would emit <c>+</c>, <c>/</c> and <c>=</c> and
-    /// the verifier would reject the key — surfacing as an opaque 503 rather than as a
-    /// wrong-encoding error.
+    /// the verifier would reject the key.
     /// </remarks>
     /// <param name="key">The signing key.</param>
     /// <returns>The JWKS document, as JSON.</returns>

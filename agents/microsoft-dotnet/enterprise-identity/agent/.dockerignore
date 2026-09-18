@@ -1,11 +1,3 @@
 bin/
 obj/
 .git
-
-# NOTE for anyone comparing this with the python sibling's .dockerignore, which excludes
-# local_identity.py so that DIAGRID_QUICKSTART_IDENTITY=local cannot work in a container: that
-# guard is NOT here, and its absence is deliberate rather than an oversight. A C# source file is
-# compiled into the assembly and cannot be dropped from an image, so the same fail-closed
-# behaviour is enforced at compile time instead -- LocalIdentity.cs is behind `#if DEBUG`, the
-# Dockerfile publishes `-c Release`, and Program.cs's Release branch throws at start-up when the
-# variable is set. Different mechanism, same effect: setting it on a container refuses to start.

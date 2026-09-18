@@ -9,22 +9,13 @@ namespace EnterpriseIdentity;
 /// </summary>
 /// <remarks>
 /// <para>
-/// Separate from Program.cs so that the unit tests can drive the app's OWN handlers rather than a
-/// copy of them. Program.cs installs its middleware and reads its environment at start-up, which is
-/// the shape the README teaches, so the tests re-assemble the two ASP.NET lines around these
-/// methods and point them at a throwaway issuer of their own.
+/// Separate from Program.cs so the unit tests drive the app's own handlers rather than a copy of
+/// them.
 /// </para>
 /// <para>
 /// Both handlers read the verified caller with <c>GetVerifiedUser()</c> and can treat it as
 /// trustworthy, because an untrustworthy request never reached them: <c>RequireAuth</c> stays at its
-/// default <see langword="true"/>, so <c>OAuthMiddleware</c> refuses a tokenless request before any
-/// of this runs.
-/// </para>
-/// <para>
-/// Sealed with a private constructor rather than <see langword="static"/>: a static class cannot be
-/// a generic type argument, and these handlers want <c>ILogger&lt;IdentityEndpoints&gt;</c> so the
-/// identity line a reader watches for in the dev-run output is categorised by the routes that emit
-/// it.
+/// default <see langword="true"/>, so <c>OAuthMiddleware</c> refuses a tokenless request first.
 /// </para>
 /// </remarks>
 public sealed class IdentityEndpoints

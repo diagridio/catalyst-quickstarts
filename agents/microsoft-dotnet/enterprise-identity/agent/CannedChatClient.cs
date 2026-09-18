@@ -13,16 +13,14 @@ namespace EnterpriseIdentity;
 /// <c>OPENAI_API_KEY</c> to use a real provider instead.
 /// </para>
 /// <para>
-/// NOTE THE SUBJECT THE FIRST TURN ASKS FOR: <see cref="ModelGuess"/>, which is nobody. A model
+/// Note the subject the first turn asks for: <see cref="ModelGuess"/>, which is nobody. A model
 /// does not know who is calling and must not be trusted to decide — <see cref="Tools.MyBookings"/>
 /// is built around the subject the middleware verified and substitutes it over this argument. A
 /// real provider behaves the same way, which is the point of substituting rather than validating.
 /// </para>
 /// <para>
-/// THE TURN IS CHOSEN BY COUNTING TOOL RESULTS IN THE CONVERSATION, NEVER BY A CALL COUNTER. The
-/// whole conversation is replayed into every call, so counting results there stays correct however
-/// many times the client is re-entered; a counter field is per-process state that would ask for the
-/// tool a second time after a restart.
+/// The turn is chosen by counting tool results in the conversation, so it stays correct however
+/// many times the client is re-entered.
 /// </para>
 /// </remarks>
 public sealed class CannedChatClient : IChatClient

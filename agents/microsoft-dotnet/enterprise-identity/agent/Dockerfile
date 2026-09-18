@@ -7,11 +7,8 @@ COPY . ./
 RUN dotnet restore
 # Build and publish a release
 #
-# `-c Release` is load-bearing here, not habit. It carries the intent the python sibling puts in its
-# .dockerignore: a compiled language cannot omit a source file from the image, so the throwaway
-# offline issuer is behind `#if DEBUG` and Program.cs's Release branch throws at start-up when
-# DIAGRID_QUICKSTART_IDENTITY=local is set. Setting that variable on a container derived from this
-# quickstart therefore refuses to start rather than quietly trusting tokens the app minted itself.
+# `-c Release` is required: the throwaway offline issuer is compiled out of Release builds, so a
+# container derived from this image cannot run with it.
 RUN dotnet publish -c Release -o out
 
 # Build runtime image

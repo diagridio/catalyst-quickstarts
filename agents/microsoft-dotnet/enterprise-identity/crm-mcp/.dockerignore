@@ -1,7 +1,3 @@
 bin/
 obj/
 .git
-
-
-# This app has no offline-identity mode and nothing to fail closed about: it verifies nothing, and
-# the agent next door is where the identity story lives.

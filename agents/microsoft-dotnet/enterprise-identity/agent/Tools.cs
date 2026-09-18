@@ -31,25 +31,19 @@ public static class Tools
     /// </summary>
     /// <remarks>
     /// <para>
-    /// THE SUBSTITUTION THIS WHOLE SAMPLE IS ABOUT. The tool still declares a <c>subject</c>
+    /// The substitution this whole sample is about. The tool still declares a <c>subject</c>
     /// parameter, so the model asks for one and asks for the wrong one — the canned first turn
     /// requests <see cref="CannedChatClient.ModelGuess"/>, who is nobody. The body ignores that
     /// argument and answers for <paramref name="verifiedSubject"/>, which came from the
     /// middleware's <c>VerifiedUser</c> and reached this tool as per-run configuration the model
     /// cannot rewrite.
     /// </para>
-    /// <para>
-    /// Substituting beats validating here: there is no version of this where the model's opinion of
-    /// who is calling matters, so comparing the two values would only invite a policy about when
-    /// the model is allowed to be right.
-    /// </para>
     /// </remarks>
     /// <param name="verifiedSubject">The subject the middleware verified for this request.</param>
     /// <returns>The tool, closed over that subject.</returns>
     public static AIFunction MyBookings(string verifiedSubject) => AIFunctionFactory.Create(
-        // `subject` is declared and then deliberately unused: it is what puts the parameter in the
-        // schema the model sees, and dropping it would change the demo from "the model asked for
-        // the wrong person and was overridden" to "the model was never allowed to ask".
+        // `subject` is declared and deliberately unused: it is what puts the parameter in the
+        // schema the model sees, so the model can ask for the wrong person and be overridden.
         (string subject) =>
             $"Bookings for {verifiedSubject}: "
             + "Grand Ballroom on March 15th, 9AM-1PM; "

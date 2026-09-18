@@ -57,7 +57,7 @@ public sealed class IdentityAgent
     /// Builds the agent.
     /// </summary>
     /// <remarks>
-    /// THE AGENT IS BUILT WITH NO TOOLS, WHICH IS DELIBERATE.
+    /// The agent is built with no tools, which is deliberate.
     /// <see cref="ChatClientAgentRunOptions.ChatOptions"/> is merged with the agent's own defaults
     /// per invocation, and for collections such as <see cref="ChatOptions.Tools"/> the two are
     /// UNIONED rather than substituted. An agent constructed with a default tool that also received
@@ -125,8 +125,7 @@ public sealed class IdentityAgent
         var transcript = new List<string> { task };
         foreach (var content in response.Messages.SelectMany(message => message.Contents))
         {
-            // The empty assistant message that carries only a function call is dropped, the same
-            // way the python sibling drops its content-less AIMessage.
+            // The empty assistant message that carries only a function call is dropped.
             var text = content switch
             {
                 // A tool result may arrive as the string the tool returned or as the JSON the

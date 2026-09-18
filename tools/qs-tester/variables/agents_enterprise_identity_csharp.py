@@ -90,7 +90,7 @@ CRM_APP_PORT = 8007
 # downgrade to no user identity at all.
 SETUP = (
     "diagrid project create {project} --use --wait",
-    "diagrid agent create identity-agent --wait",
+    "diagrid appid create identity-agent --wait",
     "diagrid apply -f resources/crm-mcp.yaml",
     "diagrid apply -f resources/crm-mcp-access.yaml",
 )

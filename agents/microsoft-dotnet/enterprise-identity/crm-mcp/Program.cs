@@ -10,8 +10,7 @@ builder.Services
     .WithHttpTransport()
     .WithTools<CrmTools>();
 
-// The C# stand-in for fastmcp's get_http_headers(): the tool below needs the headers of the request
-// the MCP call arrived on, and this is what makes them reachable from inside it.
+// The tool below needs the headers of the request the MCP call arrived on.
 builder.Services.AddHttpContextAccessor();
 
 var app = builder.Build();

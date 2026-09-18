@@ -18,7 +18,7 @@ namespace EnterpriseIdentity.Tests;
 /// </summary>
 /// <remarks>
 /// <para>
-/// WHY THE APP IS RE-ASSEMBLED INSTEAD OF STARTED. Program.cs reads its environment and installs its
+/// Why the app is re-assembled instead of started: Program.cs reads its environment and installs its
 /// middleware at start-up, which is the two-line shape the README teaches, so by the time it is
 /// running its policy is fixed and cannot be pointed at this fixture's issuer. The two ASP.NET lines
 /// are therefore rebuilt here — but the handlers, the agent, the canned model, the tool and the
@@ -34,7 +34,7 @@ namespace EnterpriseIdentity.Tests;
 /// therefore asserts only the two 401s.
 /// </para>
 /// <para>
-/// WHAT IS DELIBERATELY NOT TESTED: the outbound leg. Carrying the caller onward to an MCP tool
+/// What is deliberately not tested: the outbound leg. Carrying the caller onward to an MCP tool
 /// needs a Catalyst project, so it is exercised by the README walkthrough rather than here. This
 /// fixture pins the app to offline mode, where the agent calls the in-process tool and no request
 /// leaves the machine.
@@ -324,12 +324,9 @@ public sealed class IdentityTests(IdentityAppFixture fixture) : IClassFixture<Id
     /// </summary>
     /// <remarks>
     /// <para>
-    /// Worth pinning here and not in the python sibling, because this port carries a risk the
-    /// reference does not. There the verified subject rides a per-invocation <c>configurable</c>
-    /// dictionary; here one singleton <see cref="IdentityAgent"/> — wrapping one
-    /// <c>ChatClientAgent</c> — is shared by every request, and the caller's tool arrives as
-    /// per-run <c>ChatClientAgentRunOptions</c> that the framework MERGES with the agent's own
-    /// defaults.
+    /// One singleton <see cref="IdentityAgent"/> — wrapping one <c>ChatClientAgent</c> — is shared
+    /// by every request, and the caller's tool arrives as per-run <c>ChatClientAgentRunOptions</c>
+    /// that the framework merges with the agent's own defaults.
     /// </para>
     /// <para>
     /// A merge that mutated the agent instead of the invocation would cross two callers' subjects

@@ -2,9 +2,8 @@
 # proxy rather than calling it directly.
 #
 # `auth.spiffe.jwt` is what marks this as a server Catalyst may mint delegated
-# tokens for. The other auth profiles present an application credential with no
-# user in it, so on-behalf-of only works with this one. Catalyst derives the
-# token's audience from the server's own identity; you do not set it here.
+# tokens for. Catalyst derives the token's audience from the server's own
+# identity; you do not set it here.
 apiVersion: dapr.io/v1alpha1
 kind: MCPServer
 metadata:
