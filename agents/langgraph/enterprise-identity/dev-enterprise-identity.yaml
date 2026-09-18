@@ -1,0 +1,20 @@
+version: 1
+common:
+  appLogDestination: console
+  enableAppHealthCheck: false
+  logLevel: info
+apps:
+  - appID: identity-agent
+    appDirPath: ./
+    appPort: 8006
+    appProtocol: http
+    command: ["python", "main.py"]
+    env:
+      APP_PORT: "8006"
+  - appID: crm-mcp
+    appDirPath: ./
+    appPort: 8007
+    appProtocol: http
+    command: ["python", "crm_server.py"]
+    env:
+      APP_PORT: "8007"

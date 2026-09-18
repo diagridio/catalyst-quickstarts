@@ -103,6 +103,35 @@ SUITES = (
         "secrets": (),
     },
     {
+        "suite": "agents/langgraph/enterprise-identity/tests/quickstart.robot",
+        "family": "agent",
+        # 19 characters, inside `project_name_budget()` (26), so no explicit
+        # `leg` is needed. Measured, not estimated, against the worst-case
+        # (`local` + 10-digit epoch) run id: the CI project
+        # qs-ci-agents-enterprise-identity-local0000000000 is 48 of the 55
+        # characters allowed, and the second project verify-live.sh derives for
+        # the mutation run, qs-ci-agents-enterprise-identity-mut-local0000000000,
+        # is 52. Both fit, so the mutation check needs no shorter `leg` either --
+        # which is the case the budget alone does not cover, since
+        # project_name_budget() does not account for the `-mut` suffix.
+        "name": "enterprise-identity",
+        "data": "agents_enterprise_identity",
+        "language": "python",
+        "runtime": "python",
+        # This suite has not been enabled for the scheduled build yet: it runs on
+        # workflow_dispatch, which is the intended path for a first run. Its
+        # assertions are the plumbing plus a 401 on each documented route.
+        "nightly": False,
+        # Empty: the quickstart ships a canned offline model (fake_model.py) and
+        # reaches a real provider only when DIAGRID_QUICKSTART_MODEL=openai,
+        # which this suite does not set -- and main.py imports langchain_openai
+        # lazily inside that branch, so the app starts with no key. Both
+        # documented requests are refused before the graph runs anyway. Keep in
+        # step with SECRETS in agents_enterprise_identity.py -- one without the
+        # other is a declaration that lies.
+        "secrets": (),
+    },
+    {
         "suite": "agents/langchaingo/enterprise-identity/tests/quickstart.robot",
         "family": "agent",
         # 22 characters, inside `project_name_budget()` (26), so the budget check
