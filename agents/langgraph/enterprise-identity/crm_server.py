@@ -48,4 +48,8 @@ def account_summary(account_id: str) -> str:
 
 
 if __name__ == "__main__":
-    mcp.run(transport="http", host="0.0.0.0", port=int(os.environ.get("APP_PORT", "8007")))
+    try:
+        mcp.run(transport="http", host="0.0.0.0", port=int(os.environ.get("APP_PORT", "8007")))
+    except KeyboardInterrupt:
+        # fastmcp's runner re-raises it; uvicorn, which the agent uses, does not.
+        pass
