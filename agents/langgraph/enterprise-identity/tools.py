@@ -1,13 +1,9 @@
 """The agent's tools.
 
-Separate from main.py so the tests can import the real tool without paying for
-main.py's module-level work: importing main.py installs the identity middleware
-and compiles the graph.
-
-Two tools, showing the two ways an agent can act for someone. `my_bookings`
-runs in-process and is handed the caller's subject as an argument.
-`account_summary` leaves the process, and carries the caller in a token Catalyst
-mints for that one call.
+`my_bookings` runs in-process and is handed the caller's subject as an argument.
+`account_summary` leaves the process and takes no subject at all: the caller
+travels in a token Catalyst mints for that one call, so the CRM establishes who
+is asking for itself rather than believing the agent.
 """
 
 import os
@@ -28,26 +24,17 @@ def my_bookings(subject: str) -> str:
     )
 
 
-
-
-# --- The outbound half: calling a tool as the user -------------------------
-# `my_bookings` above runs in-process, so it trusts whatever subject the agent
-# hands it. `account_summary` below leaves the process, and that changes the
-# trust story: it takes no subject at all. The calling user travels in a token
-# Catalyst mints for this one call, so the CRM establishes who is asking for
-# itself rather than believing the agent.
-
 MCP_SERVER_NAME = "crm-mcp"
 
-# Catalyst's MCP proxy. Reaching a tool through this path is what attaches the
-# calling user; calling the CRM directly would not.
+# Catalyst's MCP proxy: reaching the tool through this path is what attaches the
+# calling user. Calling the CRM directly would not.
 MCP_URL = (
     f"{os.environ.get('DAPR_HTTP_ENDPOINT', 'http://localhost:3500')}"
     f"/v1.0/diagrid/mcp/{MCP_SERVER_NAME}"
 )
 
-# Safe to share across requests: the caller is read at send time, so concurrent
-# requests each carry their own.
+# Safe to share: the caller is read at send time, so concurrent requests each
+# carry their own.
 _mcp_client = AsyncClient(headers={"dapr-api-token": os.environ.get("DAPR_API_TOKEN", "")})
 
 
@@ -61,9 +48,6 @@ async def account_summary(account_id: str) -> str:
             return answer.content[0].text
 
 
-# The graph gets one tool or the other. The offline issuer has no Catalyst
-# project behind it, so it cannot reach an MCP server; `my_bookings` keeps the
-# whole walkthrough runnable there.
 local_tools = [my_bookings]
 local_tools_by_name = {t.name: t for t in local_tools}
 

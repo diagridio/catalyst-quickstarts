@@ -115,20 +115,9 @@ SUITES = (
         "data": "agents_enterprise_identity",
         "language": "python",
         "runtime": "python",
-        # False: neither half of the bar is met. No live run against a real
-        # Catalyst project and no mutation check, so nothing here is known to
-        # pass, or to fail when what it checks breaks. Registering True without
-        # both would fail the scheduled build nightly for everyone and leak a
-        # project each time until reap-orphans.sh collects it. The suite still
-        # runs on workflow_dispatch, which is the intended path for a first run.
-        #
-        # Worth knowing before that run: this suite's assertions are the
-        # plumbing plus a 401 on each documented route. The 200 and the 403 the
-        # README documents are unreachable from the harness -- no keyword takes
-        # headers and nothing here can mint a dataplane-Sentry-signed token --
-        # so a green run here will NOT mean identity propagation is proven. See
-        # UNCOVERED in agents_enterprise_identity.py and the harness README's
-        # Limitations.
+        # This suite has not been enabled for the scheduled build yet: it runs on
+        # workflow_dispatch, which is the intended path for a first run. Its
+        # assertions are the plumbing plus a 401 on each documented route.
         "nightly": False,
         # Empty: the quickstart ships a canned offline model (fake_model.py) and
         # reaches a real provider only when DIAGRID_QUICKSTART_MODEL=openai,

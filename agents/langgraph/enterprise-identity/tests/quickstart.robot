@@ -7,26 +7,12 @@ Catalyst" provisions and runs, "### 4. See It Fail Closed" is the pair of
 documented requests this suite asserts. This README documents no cleanup
 command, so deleting the project is infrastructure here.
 
-WHAT THIS SUITE PROVES, precisely: the documented install and provisioning
-commands succeed, the app connects through the dev tunnel, uvicorn serves on the
-documented port, and an unauthenticated request to either documented route is
-refused 401 with the exact body `{"error": "oauth.missing_token"}` -- the shipped
-middleware's missing-token path (diagrid 0.4.4, `_error_response` in
-identity/asgi.py).
+What this suite asserts: the documented install and provisioning commands
+succeed, the app starts on the documented port, and an unauthenticated request
+to either documented route is refused 401 with `{"error": "oauth.missing_token"}`.
 
-WHAT IT DOES NOT PROVE: that an authenticated request succeeds, or that a
-verified identity reaches the app's handler. No keyword here takes headers and
-nothing here can mint a token dataplane Sentry signed, so both documented
-`diagrid call invoke` calls are in UNCOVERED and the gap is recorded in the
-harness README's Limitations. Do not add an assertion that implies otherwise.
-The OUTBOUND leg (on-behalf-of to a downstream MCP tool) is out of the
-quickstart's scope entirely, and does not work in any environment today. Do not
-add an assertion implying a downstream MCP server receives a delegated JWT.
-
-The request loop below is the shape every agent-family suite uses, with one
-addition this is the first suite to need: it branches on ${request}[method],
-because the README's primary fail-closed example is a GET. The other suites'
-POST-only guard says exactly this ("use GET And Expect for a documented GET").
+Authenticated requests need a credential this suite cannot mint, so both
+documented `diagrid call invoke` calls are listed in UNCOVERED.
 
 Run it:
   export DIAGRID_API_KEY=...

@@ -2,7 +2,7 @@
 
 This quickstart demonstrates a LangGraph agent running on **Diagrid Catalyst** that knows *who is calling it* and calls its tools as that person. The caller presents a credential from an identity provider; Catalyst verifies it, hands the agent a verified user, and mints a fresh token for each tool call so the tool can see the caller too. The agent handles no password, API key or token of its own.
 
-Two lines of application code buy both halves. Look at `main.py` and note what is absent: no graph node imports anything from Diagrid, and no node reads a header or a credential.
+Two lines of application code do both. No graph node imports anything from Diagrid, and no node reads a header or a credential.
 
 ```python
 app.add_middleware(OAuthMiddleware, config=OAuthConfig())   # who is calling
@@ -11,11 +11,11 @@ mcp_client = AsyncClient()                                  # carry them onward
 
 ## What This Quickstart Demonstrates
 
-- **Verified inbound identity**: `OAuthMiddleware` verifies the `X-Diagrid-User-Token` header on every request and puts a `VerifiedUser` on `request.state.diagrid_user`, carrying `subject`, `tenant`, `scopes`, `claims` and `issuer_id`
+- **Verified inbound identity**: `OAuthMiddleware` verifies the `X-Diagrid-User-Token` header on every request and hands the handler a `VerifiedUser` via `verified_user(request)`, carrying `subject`, `tenant`, `scopes`, `claims` and `issuer_id`
 - **Nothing to configure**: `OAuthConfig` discovers the issuer, audience and JWKS URI from Catalyst, so the app hardcodes no identity coordinates and no provider URLs
 - **The caller reaches the tool too**: the agent's outbound call goes through Catalyst's MCP proxy, which mints a token naming both the user and the agent acting for them, so the CRM establishes who is asking rather than trusting the agent
 - **Fail closed, before your code**: a missing credential is a `401` and an insufficient one is a `403`, decided in the middleware before the graph, the model, or any application code runs
-- **A plain LangGraph graph**: a `StateGraph` with an `agent` node and a `tools` node, compiled and invoked directly. No Diagrid agent runner and no Dapr Workflow, so you can see exactly where identity enters and how little of the graph knows about it
+- **A plain LangGraph graph**: a `StateGraph` with an `agent` node and a `tools` node, compiled and invoked directly, so you can see exactly where identity enters and how little of the graph knows about it
 - **The verified subject, not the model's guess**: the canned model asks for `someone@example.com`, who is nobody. The `tools` node substitutes the verified subject over it, so the answer names the real caller
 - **Direct LLM integration**: runs on a deterministic canned model by default, so no API key is needed; a real provider is opt-in via `langchain-openai`
 
@@ -35,7 +35,7 @@ The difference matters. With inbound alone, the agent knows you are Alice and th
 2. [Python 3.11-3.13](https://www.python.org/downloads/)
 3. [uv](https://docs.astral.sh/uv/getting-started/installation/) installed
 
-No LLM API key, and no identity provider of your own. The model is canned by default, and the last section runs the whole thing offline against a throwaway issuer.
+No LLM API key, and no identity provider of your own: the last section runs the whole thing offline against a throwaway issuer.
 
 ## Setup
 
@@ -48,7 +48,7 @@ uv sync
 
 ### Using a real LLM provider
 
-This quickstart runs offline by default. It uses a canned model, needs no API key, and returns the same tool call and the same answer on every run, whatever task you send. To use a real model instead, set `DIAGRID_QUICKSTART_MODEL` to `openai` and export your key. The example below uses OpenAI, but you can use any LLM provider supported by LangGraph.
+To use a real model instead of the canned one, set `DIAGRID_QUICKSTART_MODEL` to `openai` and export your key. The example below uses OpenAI, but you can use any LLM provider supported by LangGraph.
 
 **macOS/Linux (bash/zsh):**
 
@@ -64,7 +64,7 @@ $env:DIAGRID_QUICKSTART_MODEL = "openai"
 $env:OPENAI_API_KEY = "your-key-here"
 ```
 
-The identity behavior is identical either way. A real model, like the canned one, does not know who is calling and is not consulted on the question.
+The identity behavior is identical either way.
 
 ## Run with Catalyst
 
@@ -85,11 +85,26 @@ diagrid project create enterprise-identity-quickstart --use --wait
 3. Register the CRM and say who may use it:
 
 ```bash
+diagrid appid create identity-agent --wait
 diagrid apply -f resources/crm-mcp.yaml
 diagrid apply -f resources/crm-mcp-access.yaml
 ```
 
-The first registers the CRM as an MCP server, so the agent reaches it through Catalyst rather than calling it directly. The second is the interesting one:
+`crm-mcp.yaml` scopes the CRM to `identity-agent`, so that App ID is created first. The CRM needs no such step — registering the MCP server creates its App ID for you.
+
+On-behalf-of needs two things.
+
+The MCP server has to use the **SPIFFE JWT** auth profile. That is what makes it a server Catalyst will mint delegated tokens for — the other auth profiles carry an application credential with no user in it. Catalyst derives the token's audience from the server's own identity, so there is nothing environment-specific to fill in:
+
+```yaml
+auth:
+  spiffe:
+    jwt:
+      header: Authorization
+      headerValuePrefix: "Bearer "
+```
+
+And the access policy has to ask for a user:
 
 ```yaml
 rules:
@@ -103,7 +118,7 @@ auth:
     requireUser: true
 ```
 
-`requireUser: true` is what turns on on-behalf-of. With it set, Catalyst mints a token carrying the calling user before forwarding to the CRM, and refuses the call outright when there is no user to act for. Leave it off and the CRM is reached by the agent alone, with no user attached.
+`requireUser: true` is the switch. With it, Catalyst mints a token carrying the calling user before forwarding to the CRM, and refuses the call outright when there is no user to act for. Without it, the call reaches the CRM with no user attached.
 
 4. Run the agent with Catalyst:
 
@@ -111,7 +126,7 @@ auth:
 uv run diagrid dev run -f dev-enterprise-identity.yaml --approve --skip-managed-kv --skip-managed-pubsub --skip-managed-workflow
 ```
 
-The three `--skip-*` flags are worth understanding rather than copying. This agent calls no Dapr building block at all: no state, no pub/sub, no workflow. There is nothing for a managed KV store, a managed broker or a managed workflow store to serve, and without these flags `dev run` provisions all three the first time it creates the App ID. Identity needs none of them, because it is served by the sidecar itself.
+This agent uses no state, pub/sub or workflow, so the `--skip-*` flags keep `dev run` from provisioning them.
 
 Wait until the output shows `Uvicorn running on http://0.0.0.0:8006`.
 
@@ -125,7 +140,7 @@ From another terminal.
 diagrid call invoke get identity-agent.whoami --id identity-agent --verbose
 ```
 
-`--verbose` is what prints the response body. It also echoes the request that was sent, so treat that output as you would treat the credential itself.
+`--verbose` prints the response body. It also echoes the request that was sent, so treat that output as you would treat the credential itself.
 
 `GET /whoami` runs no model turn and no tool, which makes it the cheapest place to see identity on its own. It returns the four fields `main.py` chooses to expose from the `VerifiedUser`:
 
@@ -136,7 +151,7 @@ issuer_id   the `iss` value on the verified token
 scopes      the scopes the verified credential carried
 ```
 
-The full decoded credential is available to the handler as `user.claims`, and `main.py` deliberately does not return it. Claim *names* are safe to echo; claim *values* are a real person's identity data, and whatever the provider chose to put there would leak with them.
+The full decoded credential is available to the handler as `user.claims`, and `main.py` deliberately does not return it. Claim *names* are safe to echo; claim *values* are a real person's identity data.
 
 > **On scopes.** `OAuthConfig()` here requires a *verified* caller and nothing more. You can also demand a scope -- `OAuthConfig(scopes={"reports.read"})` answers `403 {"error": "oauth.missing_scope"}` for any verified caller without it. The walkthrough does not, because scopes come from your identity provider and no Catalyst command can add them: a Diagrid login carries `openid profile email offline_access` and nothing else, so requiring one would answer 403 for everybody. [Run Offline Without a Catalyst Project](#run-offline-without-a-catalyst-project) demonstrates the 403 against an issuer that does mint the scope.
 
@@ -155,7 +170,7 @@ Account ACME-1: 3 open opportunities, $120k pipeline.
 Served to user=...oidc-user/auth0-...  via agent=...ns/prj-.../identity-agent
 ```
 
-Two identities in one call. `user` is you; `agent` is the thing that asked on your behalf. The CRM was never told who you are -- it read both off the token Catalyst minted for that single call, which is why it could also apply your permissions if it had any.
+Two identities in one call. `user` is you; `agent` is the thing that asked on your behalf. The CRM was never told who you are -- it read both identities off the token Catalyst minted for that call.
 
 Note what `account_summary` in `tools.py` does *not* take: a subject argument. It cannot be told who is calling, so it cannot be lied to. That is the difference between this and `my_bookings`, whose caller is a string the agent fills in.
 
@@ -166,7 +181,7 @@ You can watch both hops in the terminal running `diagrid dev run`:
 == APP - crm-mcp        == INFO:root:account_summary(ACME-1) for user=... via agent=...
 ```
 
-The first line is Catalyst's verdict on your credential. The second is the CRM, one network hop later, independently establishing the same person.
+The agent and the CRM each establish the same caller.
 
 ### 4. See It Fail Closed
 
@@ -184,7 +199,7 @@ content-type: application/json
 {"error":"oauth.missing_token"}
 ```
 
-The `cache-control: no-store` is the middleware's, not FastAPI's: an authorization verdict is not a cacheable response.
+An authorization verdict is not cached: the response carries `cache-control: no-store`.
 
 Every route answers the same way. `require_auth` defaults to `True` and applies to the whole app, with no per-path exclusion:
 
@@ -194,22 +209,20 @@ curl -i -X POST http://localhost:8006/agent/run \
   -d '{"task": "What bookings do I have?"}'
 ```
 
-That app-wide rule is also why this quickstart exposes no health endpoint and why `dev-enterprise-identity.yaml` sets `enableAppHealthCheck: false`. An unauthenticated probe could only ever see the `401`, so a health check would report a perfectly healthy app as down.
+An unauthenticated probe would always see the `401`, so this quickstart exposes no health endpoint and `dev-enterprise-identity.yaml` sets `enableAppHealthCheck: false`.
 
-**VS Code REST Client (any OS):** Open [`test.http`](./test.http) and click *Send Request* above either of the two requests that send no credential. Requires the [REST Client](https://marketplace.visualstudio.com/items?itemName=humao.rest-client) extension. Its other two requests need a credential the app will accept, and these requests reach port 8006 directly — bypassing Catalyst — so a token from your own identity provider is refused `401 oauth.invalid_signature` here. Fill in `@token` from the offline section below, which is the only mode that mints a credential this app verifies.
+**VS Code REST Client (any OS):** Open [`test.http`](./test.http) and click *Send Request* above either of the two requests that send no credential. Requires the [REST Client](https://marketplace.visualstudio.com/items?itemName=humao.rest-client) extension. The other two requests need a credential: fill in `@token` with the one the offline issuer logs under `200`. These requests reach port 8006 directly, so a token from another issuer is refused `401 oauth.invalid_signature`.
 
 To stop, press CTRL+C in the terminal running `diagrid dev run`.
 
 ## Run Offline Without a Catalyst Project
 
-**What this is for.** Two things, and it is opt-in for both:
+This mode is opt-in, and it is good for two things:
 
 1. **Try the quickstart with no Catalyst project at all** -- no login, no project, no identity provider.
-2. **See the `403`**, which the walkthrough above cannot show you. A `403` needs a credential that verifies but lacks a required scope, and scopes come from your identity provider: a Diagrid login carries `openid profile email offline_access` and no Catalyst command can add to that. Here the issuer is yours, so it can mint a credential deliberately missing one.
+2. **See the `403`**, which the walkthrough above cannot show you. A `403` needs a credential that verifies but lacks a required scope. Here the issuer is yours, so it can mint one deliberately missing a scope. See [On scopes](#2-ask-the-agent-who-you-are) above.
 
-`local_identity.py` generates a throwaway key at startup, serves the public half on a loopback port, and signs three credentials: valid, wrong-scope, and expired. It is the same trade `fake_model.py` makes for the model -- free, offline, identical on every run.
-
-Two limits worth knowing. It shows the **inbound** half only: with no Catalyst project there is no MCP server to reach, so the graph calls the in-process tool and the on-behalf-of leg does not appear. And it is never part of a deployment -- `.dockerignore` keeps it out of the image, so setting the variable on a container fails to start rather than quietly turning authentication off.
+Two limits worth knowing. It shows the **inbound** half only: with no Catalyst project there is no MCP server to reach, so the graph calls the in-process tool and the on-behalf-of leg does not appear. And it is never part of a deployment -- `.dockerignore` keeps `local_identity.py` out of the image, so setting the variable on a container fails to start rather than quietly turning authentication off.
 
 ### 1. Start the Local Issuer
 
@@ -233,7 +246,7 @@ INFO:root:  eyJhbGciOiJSUzI1NiIsImtpZCI6ImxvY2FsLXF1aWNrc3RhcnQta2V5...
 INFO:     Uvicorn running on http://0.0.0.0:8006 (Press CTRL+C to quit)
 ```
 
-Read the warning literally. The private key lives in this process's memory, and the credentials it signs are printed in plain text. Nothing here has a counterpart in a deployed app.
+The private key lives in this process's memory and the credentials are printed in plain text. Never use this mode in a deployment.
 
 ### 2. A Verified Caller (200)
 
@@ -299,7 +312,7 @@ HTTP/1.1 403 Forbidden
 
 ### 4. An Expired Credential (401)
 
-The credential logged under `401` is the `200` credential, five minutes stale:
+The credential logged under `401` is the `200` credential, five minutes stale. The verifier allows 120 seconds of clock skew, so anything younger than that still returns `200`:
 
 ```bash
 export TOKEN="<the credential logged under 401>"
@@ -312,11 +325,9 @@ HTTP/1.1 401 Unauthorized
 {"error":"oauth.expired"}
 ```
 
-Five minutes, not one. The verifier allows 120 seconds of clock skew, so a credential that expired a minute ago still returns `200`. Anything demonstrating expiry has to be older than the skew window.
-
 ## How It Works
 
-The credential the app verifies is **not** the one the caller sent. Catalyst verifies the caller's upstream identity-provider token at the edge, exchanges it with dataplane Sentry, and passes a Catalyst-signed identity to the app in `X-Diagrid-User-Token`. Your application never sees the original token and never talks to your identity provider.
+The credential the app verifies is **not** the one the caller sent. Catalyst verifies the caller's identity-provider token and passes a Catalyst-signed identity to the app in `X-Diagrid-User-Token`. Your application never sees the original token and never talks to your identity provider.
 
 That is what makes the app's configuration so small. `OAuthConfig()` names a policy and nothing else -- here, "a verified caller is required". The issuer, audience and JWKS URI are read from Catalyst at first use, so changing identity providers changes nothing in the app.
 
@@ -326,9 +337,9 @@ The middleware then does five things in order, and stops at the first failure:
 2. The credential is not a well-formed JWT: `401 oauth.decode_error`
 3. Signature or claims fail against the discovered JWKS: `401`, with a code naming the reason, such as `oauth.expired`
 4. The verified scopes do not include every required scope: `403 oauth.missing_scope`
-5. Otherwise it builds a `VerifiedUser` and puts it on `request.state.diagrid_user`
+5. Otherwise it builds a `VerifiedUser` and attaches it to the request, where `verified_user(request)` reads it
 
-Only after step 5 does any of this repository's code run. Both handlers in `main.py` read `request.state.diagrid_user` and can treat it as trustworthy, because an untrustworthy request never reached them.
+Only after step 5 does any of this repository's code run. Both handlers in `main.py` call `verified_user(request)` and can treat the result as trustworthy, because an untrustworthy request never reached them.
 
 Inside the graph, identity is deliberately ordinary. `POST /agent/run` passes the verified subject as `config={"configurable": {"user_subject": user.subject}}`, and the `tools` node reads it from there. Nothing about the graph is Diagrid-specific, which is the point: the same graph runs unchanged off Catalyst, just without a verified caller to run it for.
 
@@ -339,9 +350,9 @@ Inside the graph, identity is deliberately ordinary. `POST /agent/run` passes th
 | `main.py` | The FastAPI app, the two-line middleware install, the LangGraph graph, `GET /whoami` and `POST /agent/run` |
 | `tools.py` | Both tools: `my_bookings(subject)` runs in-process, `account_summary(account_id)` goes out through Catalyst's MCP proxy and carries the caller with it |
 | `crm_server.py` | The stand-in CRM behind MCP. Its one tool reports the user and the agent it was called for |
-| `resources/` | The `MCPServer` registration and the access policy whose `requireUser: true` turns on on-behalf-of |
+| `resources/` | `crm-mcp.yaml` registers the CRM with the SPIFFE JWT auth profile; `crm-mcp-access.yaml` grants the agent access and sets `requireUser: true`. On-behalf-of needs both |
 | `fake_model.py` | The deterministic canned model, so the quickstart needs no API key |
-| `local_identity.py` | The opt-in throwaway issuer used by the offline section and by `test_identity.py`. Never part of a deployment — `.dockerignore` keeps it out of the image, so setting `DIAGRID_QUICKSTART_IDENTITY=local` on a container fails to start rather than disabling authentication |
+| `local_identity.py` | The opt-in throwaway issuer used by the offline section and by `test_identity.py`. Never part of a deployment |
 | `dev-enterprise-identity.yaml` | The `diagrid dev run` file: `identity-agent` on port 8006, `crm-mcp` on 8007 |
 | `test_identity.py` | The offline tests: `401`, `403`, `200`, and the verified subject reaching the tool. `uv run --with pytest pytest` |
 | `test.http` | The same four requests, for the VS Code REST Client. Its credential-bearing pair needs the offline issuer |

@@ -5,12 +5,6 @@ serves the public half as JWKS on localhost, and logs three ready-to-paste
 credentials so every response this quickstart describes -- 200, 403 and 401 --
 is reachable with no Catalyst project and no identity provider.
 
-Why it exists: 403 oauth.missing_scope needs a credential that genuinely
-verifies. Against real Catalyst you cannot mint one that lacks a scope, and with
-no issuer configured at all the middleware answers 503 oauth.not_configured
-instead. This is the only way the scope check is observable. It is the same
-trade fake_model.py makes for the model: free, offline, identical on every run.
-
 Never a real deployment. The private key lives in this process's memory and the
 credentials it signs are logged in plain text.
 """
@@ -33,20 +27,13 @@ ISSUER = "https://local-identity.invalid"
 AUDIENCE = "catalyst-quickstart"
 KID = "local-quickstart-key"
 
-# diagrid.identity's verifier allows 120s of clock skew, so a credential that
-# expired a minute ago still verifies. Anything demonstrating oauth.expired has
-# to be older than that.
+# The verifier allows 120s of clock skew, so anything demonstrating
+# oauth.expired has to be older than that.
 _EXPIRED_LIFETIME_SECONDS = -300
 
 
 class LocalIssuer(NamedTuple):
-    """A running throwaway issuer: its config, and the credentials it accepts.
-
-    `start_local_issuer` returns only the config, because that is all main.py
-    needs. The credentials are returned as well so that test_identity.py can
-    present them, which is the only way the 200 and 403 paths are assertable
-    without a Catalyst project.
-    """
+    """A running throwaway issuer: its config, and the credentials it accepts."""
 
     config: OAuthConfig
     verified: str  # carries the required scopes -> 200
@@ -61,12 +48,7 @@ def _b64u(value: int) -> str:
 
 
 def build_local_issuer(required_scopes: FrozenSet[str]) -> LocalIssuer:
-    """Start the throwaway issuer and mint the three credentials it accepts.
-
-    Logs nothing: `start_local_issuer` is the entry point that prints the
-    credentials for a reader to paste, and a test that already holds them has no
-    reason to write three JWTs to its own output.
-    """
+    """Start the throwaway issuer and mint the three credentials it accepts."""
     key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
     pem = key.private_bytes(
         serialization.Encoding.PEM,
@@ -98,11 +80,11 @@ def build_local_issuer(required_scopes: FrozenSet[str]) -> LocalIssuer:
             self.wfile.write(jwks)
 
         def log_message(self, *args: object) -> None:
-            # The default handler writes every request to stderr, which buries
-            # the app's own log lines.
+            # The default handler writes every request to stderr, burying the
+            # app's own log lines.
             pass
 
-    # Port 0: the OS picks a free one, so this never collides with the app.
+    # Port 0: the OS picks a free port.
     server = HTTPServer(("127.0.0.1", 0), Handler)
     threading.Thread(target=server.serve_forever, daemon=True).start()
     jwks_uri = f"http://127.0.0.1:{server.server_port}/jwks.json"
@@ -138,12 +120,7 @@ def build_local_issuer(required_scopes: FrozenSet[str]) -> LocalIssuer:
 
 
 def start_local_issuer(required_scopes: FrozenSet[str]) -> OAuthConfig:
-    """Start the throwaway issuer, log its credentials, and return its config.
-
-    This is what main.py calls. The three log lines are the ones the README's
-    "## Run Offline Without a Catalyst Project" block reproduces, so their text
-    is part of the documented output.
-    """
+    """Start the throwaway issuer, log its credentials, and return its config."""
     issuer = build_local_issuer(required_scopes)
 
     logging.warning("LOCAL IDENTITY MODE - throwaway keys, never a real deployment")

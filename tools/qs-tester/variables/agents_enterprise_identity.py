@@ -6,31 +6,16 @@ project name becomes `{project}`. The README is the source of truth. Change the
 README, change this file, and `docsync/check_readme_sync.py --all` will tell you
 if you changed only one.
 
-WHAT THIS SUITE COVERS. The quickstart demonstrates INBOUND end-user identity:
-Catalyst verifies the caller's identity-provider token at the edge, exchanges it
-with dataplane Sentry, and passes a Catalyst-signed identity to the app in
-`X-Diagrid-User-Token`, where `OAuthMiddleware` verifies it and puts a
-`VerifiedUser` on `request.state.diagrid_user`. The suite asserts the plumbing (install,
-documented provisioning, dev tunnel, uvicorn serving) plus the one HTTP outcome
-that is deterministic without a credential: an unauthenticated request is
-rejected 401 with the exact body the middleware returns, on both documented
-routes.
+What this suite covers. The quickstart demonstrates inbound end-user identity:
+Catalyst verifies the caller and passes a verified identity to the app in
+`X-Diagrid-User-Token`. The suite asserts the plumbing -- build, documented
+provisioning, the app serving -- plus the one HTTP outcome that is deterministic
+without a credential: an unauthenticated request is refused 401 on both
+documented routes.
 
-WHAT IT DOES NOT COVER. Any request that carries a credential. Nothing in this
-harness can mint a token dataplane Sentry has signed, and `POST And Expect
-Field` / `POST And Expect` / `GET And Expect` take no headers argument, so the
-200 and the 403 the README documents are unreachable from here. Both documented
-`diagrid call invoke` forms are in UNCOVERED with that reason, and the gap is
-recorded in the harness README's Limitations. So this suite proves the middleware
-REFUSES correctly; it does not prove a verified identity reaches the handler --
-and, measured rather than assumed, it cannot even tell a project with inbound
-identity enabled from one without it, because the missing-token 401 is returned
-before the verifier is ever built. See REQUESTS.
-
-The OUTBOUND leg (an agent's on-behalf-of token reaching a downstream MCP tool)
-is absent from the quickstart on purpose, not by omission: it does not work in
-any environment today. Nothing here may imply a downstream MCP server receives a
-delegated JWT.
+Requests that carry a credential are out of scope here, because this harness
+cannot mint one and the request keywords take no headers. Both documented
+`diagrid call invoke` forms are listed in UNCOVERED with that reason.
 """
 
 from pathlib import Path
@@ -47,7 +32,7 @@ LANGUAGE = "python"
 # run time; also what doc-sync maps onto `{project}` when comparing.
 DOCUMENTED_PROJECT = "enterprise-identity-quickstart"
 
-QUICKSTART_DIR = str(REPO_ROOT / "agents" / "enterprise-identity")
+QUICKSTART_DIR = str(REPO_ROOT / "agents" / "langgraph" / "enterprise-identity")
 
 # appID and appPort from dev-enterprise-identity.yaml, which is also what
 # the documented curls target and what the documented readiness line prints.
@@ -57,16 +42,18 @@ QUICKSTART_DIR = str(REPO_ROOT / "agents" / "enterprise-identity")
 APP_ID = "identity-agent"
 APP_PORT = 8006
 
-# README "## Run with Catalyst", steps 2 and 3. No `agent create`: this is a
-# plain FastAPI app with no Diagrid agent runner and no Dapr Workflow, so
-# `dev run` creates both App IDs itself. The three managed-service skips live on
-# RUN, where the README puts them, not here.
+# `identity-agent` is created before the MCPServer on purpose: crm-mcp.yaml
+# scopes the CRM to that App ID, and Catalyst rejects a scope naming an App ID
+# that does not exist yet. The CRM's own App ID must NOT be created here --
+# registering the MCP server creates it, and a hand-made one collides by name.
+
 #
 # The two `apply` commands register the CRM and its access policy. The policy is
 # what carries `requireUser: true`, so without it the outbound leg the suite
 # exercises would silently downgrade to no user identity at all.
 SETUP = (
     "diagrid project create {project} --use --wait",
+    "diagrid appid create identity-agent --wait",
     "diagrid apply -f resources/crm-mcp.yaml",
     "diagrid apply -f resources/crm-mcp-access.yaml",
 )
@@ -119,7 +106,7 @@ READY_MARKERS = (f"Uvicorn running on http://0.0.0.0:{APP_PORT}",)
 # to True -- the whole point of the demo -- and OAuthMiddleware is a
 # BaseHTTPMiddleware wrapping EVERY route, so every path answers
 # 401 oauth.missing_token until a verified credential arrives. The shipped
-# OAuthConfig (diagrid 0.4.4) has exactly five fields --
+# OAuthConfig has exactly five fields --
 # scopes/issuer/audience/jwks_uri/require_auth -- and no exclude_paths, so no
 # probe path can be exempted, which is also why the quickstart exposes no health
 # route and why dev-enterprise-identity.yaml sets
@@ -175,14 +162,14 @@ SECRETS = ()
 #
 #   * With no `X-Diagrid-User-Token` header and require_auth=True, the middleware
 #     returns 401 with body exactly {"error": "oauth.missing_token"} (diagrid
-#     0.4.4, `_error_response` in identity/asgi.py). No verifier is built, no JWKS
+#). No verifier is built, no JWKS
 #     is fetched, no sidecar and no model is touched on that path, so it is
 #     byte-identical run to run -- which is why these assert the EXACT body
 #     (`GET And Expect` / `POST And Expect`) rather than settling for the
 #     field-presence check `POST And Expect Field` performs. There is no model
 #     output in a 401 to make an exact comparison impossible.
 #   * The AUTHENTICATED calls cannot be expressed: no keyword here takes headers,
-#     and nothing here can mint a token dataplane Sentry signed. See UNCOVERED.
+#     and this harness cannot mint a credential. See UNCOVERED.
 #   * A MALFORMED-token case is deliberately absent, because which rejection you
 #     get depends on state this suite does not control. With a verifier built it
 #     is 401 oauth.decode_error; with no discoverable issuer `build_verifier`
@@ -191,7 +178,7 @@ SECRETS = ()
 #     environment rather than the behaviour. test_identity.py pins the 401 with
 #     the offline issuer, where the verifier is guaranteed to exist.
 #
-# All four outcomes above were MEASURED, not reasoned, against diagrid 0.4.5 in
+# All four outcomes above were measured in
 # the quickstart's own venv -- OAuthMiddleware over a two-route FastAPI app under
 # starlette's TestClient, no Catalyst and no network:
 #

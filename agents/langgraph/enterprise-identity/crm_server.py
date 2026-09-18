@@ -1,8 +1,7 @@
 """A stand-in CRM, exposed over MCP.
 
 Its one tool reports the identity the call arrived with. The agent sends no
-password and no API key, and the CRM still knows whose question it is
-answering -- and which agent asked on their behalf.
+password and no API key, and the CRM still knows whose question it is answering.
 """
 
 import base64

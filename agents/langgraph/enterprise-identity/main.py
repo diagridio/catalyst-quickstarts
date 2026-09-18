@@ -9,7 +9,7 @@ from langchain_core.messages import HumanMessage, ToolMessage
 from langgraph.graph import StateGraph, START, MessagesState
 
 from diagrid.identity import OAuthConfig, VerifiedUser
-from diagrid.identity.asgi import OAuthMiddleware
+from diagrid.identity.asgi import OAuthMiddleware, verified_user
 from fake_model import build_canned_model
 from tools import (
     catalyst_tools,
@@ -18,16 +18,10 @@ from tools import (
     local_tools_by_name,
 )
 
-# Only the offline issuer demands a scope. Scopes come from your identity
-# provider, and a Diagrid login carries `openid profile email offline_access`
-# and nothing else, so requiring one on the Catalyst path would answer 403 for
-# everybody. See "On scopes" in the README.
 LOCAL_REQUIRED_SCOPES = frozenset({"agent.invoke"})
 
-# Which identity plane the app trusts, and so which tool the graph can use.
-# The offline issuer runs with no Catalyst project behind it, so there is no MCP
-# server to reach and the graph calls the in-process tool instead. Against
-# Catalyst the tool call leaves the agent and picks the caller up on the way.
+# The offline issuer has no Catalyst project behind it, so it cannot reach an
+# MCP server and the graph calls the in-process tool instead.
 OFFLINE_IDENTITY = os.environ.get("DIAGRID_QUICKSTART_IDENTITY") == "local"
 tools = local_tools if OFFLINE_IDENTITY else catalyst_tools
 tools_by_name = local_tools_by_name if OFFLINE_IDENTITY else catalyst_tools_by_name
@@ -59,11 +53,8 @@ def call_model(state: MessagesState) -> dict:
 async def call_tools(state: MessagesState, config) -> dict:
     """Run the requested tools on behalf of the verified caller.
 
-    The subject comes from the graph's config, which the HTTP handler filled in
-    from the middleware's VerifiedUser, and it overrides whatever subject the
-    model asked for. A model can request anybody's bookings; only the verified
-    caller's are ever served. Substituting beats validating here -- there is no
-    version of this where the model's opinion of who is calling matters.
+    The subject comes from the graph's config, filled in from the verified
+    credential, and it overrides whatever subject the model asked for.
     """
     subject = config["configurable"].get("user_subject", "")
     last_message = state["messages"][-1]
@@ -86,9 +77,6 @@ def should_use_tools(state: MessagesState) -> str:
     return "__end__"
 
 
-# An ordinary LangGraph graph. Note what is absent: there is no Diagrid import in
-# any node, and no node reads a header or a credential. Identity is handled
-# entirely in the ASGI layer below and reaches the graph as plain config.
 graph = StateGraph(MessagesState)
 graph.add_node("agent", call_model)
 graph.add_node("tools", call_tools)
@@ -101,16 +89,9 @@ compiled = graph.compile()
 def build_oauth_config() -> OAuthConfig:
     """The identity policy the middleware enforces on every request.
 
-    Against Catalyst this is one line -- issuer, audience and JWKS URI are all
-    discovered from Catalyst, so the app configures none of them.
-
-    To require a scope as well, pass one: `OAuthConfig(scopes={"reports.read"})`
-    answers 403 for any verified caller without it. That needs an identity
-    provider issuing the scope, which is why the walkthrough does not use it.
-
-    DIAGRID_QUICKSTART_IDENTITY=local swaps in a throwaway offline issuer so the
-    200, 403 and 401 responses are all reachable with no Catalyst project and no
-    identity provider at all. See local_identity.py.
+    Against Catalyst, issuer, audience and JWKS URI are all discovered, so the
+    app configures none of them. Pass `OAuthConfig(scopes={"reports.read"})` to
+    require a scope as well.
     """
     if OFFLINE_IDENTITY:
         from local_identity import start_local_issuer
@@ -120,22 +101,17 @@ def build_oauth_config() -> OAuthConfig:
     return OAuthConfig()
 
 
-# --- The entire Catalyst identity integration ------------------------------
 app = FastAPI()
+# require_auth defaults to True, so every route is authenticated, app-wide and
+# with no per-path exclusion.
 app.add_middleware(OAuthMiddleware, config=build_oauth_config())
-# ---------------------------------------------------------------------------
-# require_auth stays at its default True, so every route is authenticated. That
-# is why no health route is exposed and why dev-enterprise-identity.yaml
-# sets enableAppHealthCheck: false -- an unauthenticated probe would only ever
-# see the 401. There is no per-path exclusion; require_auth is app-wide.
 
 
 def _identity(user: VerifiedUser) -> dict:
     """The verified caller, as JSON.
 
     Claim names only, never claim values: `user.claims` is a real person's
-    decoded credential, and echoing it back would leak whatever the identity
-    provider chose to put there.
+    decoded credential and must not be echoed back.
     """
     return {
         "subject": user.subject,
@@ -147,14 +123,14 @@ def _identity(user: VerifiedUser) -> dict:
 
 @app.get("/whoami")
 def whoami(request: Request) -> dict:
-    """Who Catalyst says is calling. No model turn, so the 401/200 contrast is free."""
-    user: VerifiedUser = request.state.diagrid_user  # set by OAuthMiddleware
+    """Who Catalyst says is calling."""
+    user: VerifiedUser = verified_user(request)
     return _identity(user)
 
 
 @app.post("/agent/run")
 async def agent_run(request: Request):
-    user: VerifiedUser = request.state.diagrid_user  # set by OAuthMiddleware
+    user: VerifiedUser = verified_user(request)
     logging.info(
         "[IDENTITY] verified caller subject=%s issuer=%s", user.subject, user.issuer_id
     )
@@ -174,8 +150,7 @@ async def agent_run(request: Request):
             content={"error": "bad_request", "detail": "task must be a non-empty string"},
         )
 
-    # The verified subject travels as config, not as a message the model could
-    # rewrite. LangGraph runs the graph's synchronous nodes off the event loop.
+    # The subject travels as config, not as a message the model could rewrite.
     result = await compiled.ainvoke(
         {"messages": [HumanMessage(content=task)]},
         config={"configurable": {"user_subject": user.subject}},
@@ -188,9 +163,6 @@ async def agent_run(request: Request):
     }
 
 
-# Guarded so this module can be imported without starting a server or binding a
-# port. Importing it still installs the middleware and compiles the graph, which
-# is why tools.py and fake_model.py hold the parts the tests assert against.
 if __name__ == "__main__":
     import uvicorn
 
