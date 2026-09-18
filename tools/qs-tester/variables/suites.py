@@ -183,6 +183,55 @@ SUITES = (
         # agents_spring_ai_event_planner.py.
         "secrets": (),
     },
+    {
+        "suite": "agents/spring-ai/enterprise-identity/tests/quickstart.robot",
+        "family": "agent",
+        "name": "spring-ai-enterprise-identity",
+        "data": "agents_spring_ai_enterprise_identity",
+        "language": "java",
+        "runtime": "java",
+        # 29 characters, which is OVER `project_name_budget()` (26), so this row
+        # needs the explicit `leg` below. Measured against the worst-case
+        # (`local` + 10-digit epoch) run id rather than estimated: with the leg,
+        # the CI project qs-ci-agents-spring-ai-identity-local0000000000 is 47 of
+        # the 55 characters allowed, and the second project verify-live.sh derives
+        # for the mutation run, qs-ci-agents-spring-ai-identity-mut-local0000000000,
+        # is 51. Both fit -- which is the case the budget alone does not cover,
+        # since project_name_budget() does not account for the `-mut` suffix.
+        #
+        # The two sibling spring-ai rows carry no `leg` and are inside the budget
+        # at 23 and 24 characters, but neither is inside it for the `-mut` case,
+        # so there was no precedent to copy here.
+        "leg": "spring-ai-identity",
+        # False: neither half of the bar is met. No live run against a real
+        # Catalyst project and no mutation check, so nothing here is known to
+        # pass, or to fail when what it checks breaks. Registering True without
+        # both would fail the scheduled build nightly for everyone and leak a
+        # project each time until reap-orphans.sh collects it. The suite still
+        # runs on workflow_dispatch, which is the intended path for a first run.
+        #
+        # Worth knowing before that run: this suite's assertions are the plumbing
+        # plus a 401 on each documented route. The 200 and the 403 the README
+        # documents are unreachable from the harness -- no keyword takes headers
+        # and nothing here can mint a dataplane-Sentry-signed token -- so a green
+        # run here will NOT mean identity propagation is proven. Those two live in
+        # the quickstart's own unit tests instead, run by
+        # .github/workflows/agents_enterprise_identity_java.yaml. See UNCOVERED in
+        # agents_spring_ai_enterprise_identity.py.
+        #
+        # One thing this row's first live run has to settle: whether the OUTBOUND
+        # on-behalf-of leg the README documents works end to end against Catalyst
+        # today. The suite cannot assert it, and the harness notes on the Python
+        # sibling say it works in no environment yet while that quickstart's
+        # README walks a reader through it. Those two claims cannot both be right.
+        "nightly": False,
+        # Empty: the quickstart ships a canned offline model (CannedChatModel.java)
+        # and reaches a real provider only when DIAGRID_QUICKSTART_MODEL=openai,
+        # which this suite does not set. Keep in step with SECRETS in
+        # agents_spring_ai_enterprise_identity.py -- one without the other is a
+        # declaration that lies.
+        "secrets": (),
+    },
 )
 
 _REQUIRED = {

@@ -16,18 +16,29 @@ starting over. On Catalyst the workflow state store is managed for you — no co
 | [event-planner](event-planner/) | The drop-in basics: a 3-tool Event Planner agent. Tool 2 crashes the process; on restart the workflow **auto-resumes** from the checkpoint — completed steps are replayed, not re-run. Mirrors the [Microsoft Agent Framework](../microsoft-dotnet/) quickstart. |
 | [crash-recovery](crash-recovery/) | The idempotency story: schedules under a **caller-owned instance id**. Kill the app mid-booking and restart it, and the run recovers on its own. Calling again with the same id then **attaches** to that run and returns the same confirmation code instead of booking twice. |
 | [durable-memory](durable-memory/) | Where the durability boundary sits: durable chat with a `MessageChatMemoryAdvisor`. Spring AI runs advisors **synchronously**, so the memory advisor's response phase (saving the answer) runs only **after a successful call** — a crash keeps the workflow but not the answer, until you re-attach. |
+| [enterprise-identity](enterprise-identity/) | **The one member with no starter.** End-user identity, end to end: `OAuthFilter` verifies the caller's Catalyst-signed credential on every request, and the agent's outbound MCP tool call carries that same caller to a stand-in CRM on their behalf. Plain synchronous `ChatClient.call()`, no workflow — see the note below. |
 
 Start with **event-planner** for the "add the starter, get durability" experience, then
 **crash-recovery** to make a side-effecting tool safe to retry, then **durable-memory** to see where
 the durability boundary sits — the workflow, not Spring AI's caller-side advisor chain.
+
+**enterprise-identity is the exception to everything above.** It is the only quickstart in this
+family that does *not* depend on `io.diagrid:diagrid-spring-ai-starter`, and that is deliberate: it
+demonstrates *identity*, not durability, and every hop it shows — the verified caller reaching the
+agent, and the agent carrying that caller onward to an MCP tool — happens synchronously on the
+request thread. Adding the starter would run the same agent as a Dapr Workflow and move the tool
+call onto a thread the caller's identity does not reach on its own. It uses a second, independent
+package instead: `io.diagrid:diagrid-spring-ai-identity`. The two compose, but the quickstart keeps
+them apart so that what each one buys is legible.
 
 ## Prerequisites
 
 1. [Diagrid CLI](https://docs.diagrid.io/catalyst/references/cli-reference/overview) installed
 2. [JDK 21](https://adoptium.net/) or later, and [Maven 3.9+](https://maven.apache.org/download.cgi)
 3. An [OpenAI API key](https://platform.openai.com/api-keys), for **event-planner** and
-   **durable-memory**. **crash-recovery** ships an offline model and needs no account; set
-   `DIAGRID_QUICKSTART_MODEL=openai` there to run it against a real provider instead.
+   **durable-memory**. **crash-recovery** and **enterprise-identity** ship an offline model and need
+   no account; set `DIAGRID_QUICKSTART_MODEL=openai` in either to run it against a real provider
+   instead.
 
 Each quickstart has its own README with the full run steps.
 
@@ -62,6 +73,7 @@ the record with no error logged. A client built from the injected `ChatClient.Bu
 and so is never registered.
 
 **event-planner** wires this up; **crash-recovery** and **durable-memory** do not yet, so they run
-durably but register nothing.
+durably but register nothing. **enterprise-identity** registers nothing either, and cannot: the
+registry ships in the starter, which that quickstart deliberately does not have.
 
 The library lives at [diagridio/java-ai](https://github.com/diagridio/java-ai).

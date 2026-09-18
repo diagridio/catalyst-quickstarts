@@ -1,0 +1,3 @@
+# The image needs the jar and nothing else; see the Dockerfile.
+src
+pom.xml

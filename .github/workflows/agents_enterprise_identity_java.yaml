@@ -1,0 +1,52 @@
+name: java spring-ai identity agent quickstart
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/agents_enterprise_identity_java.yaml
+      - agents/spring-ai/enterprise-identity/**
+  pull_request:
+    branches:
+      - main
+    paths:
+      - .github/workflows/agents_enterprise_identity_java.yaml
+      - agents/spring-ai/enterprise-identity/**
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: "read"
+    if: github.repository_owner == 'diagridio'
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-java@v4
+        with:
+          # 21, matching the java.version in the quickstart's aggregator pom and
+          # the toolchain the other agents/spring-ai quickstarts are built with.
+          # Spring Boot 4 requires it.
+          java-version: "21"
+          distribution: temurin
+          cache: maven
+
+      # No credentials and no network: the tests stand the Catalyst identity
+      # plane up in-process (LocalIdentityIssuer generates a throwaway RSA key
+      # and serves JWKS on a loopback port) and drive the real OAuthFilter in a
+      # real filter chain through MockMvc. So the 200 and the 403 the Robot suite
+      # cannot reach -- it can present no credential at all -- are covered here
+      # instead, along with the subject substitution the whole quickstart is
+      # about.
+      #
+      # Run at the aggregator, so the stand-in CRM module is compiled too: it has
+      # no tests of its own, and a compile error in it would otherwise reach main
+      # unnoticed by this lane.
+      #
+      # No test filter: surefire runs every *Test class in the directory, so a new
+      # one starts running without an edit here. The offline identity mode the
+      # tests need is set for the surefire fork in identity-agent/pom.xml rather
+      # than here, so `mvn test` behaves the same on a laptop.
+      - name: inbound identity tests
+        run: |
+          cd agents/spring-ai/enterprise-identity && mvn -B test

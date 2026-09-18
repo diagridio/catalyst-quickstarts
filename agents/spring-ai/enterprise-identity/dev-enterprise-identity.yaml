@@ -1,0 +1,24 @@
+version: 1
+common:
+  appLogDestination: console
+  # Every route answers 401 until a verified credential arrives -- requireAuth is application-wide
+  # and there is no per-path exclusion -- so an unauthenticated probe could only ever see the 401
+  # and a health check would report a perfectly healthy app as down. That is also why this
+  # quickstart exposes no health endpoint.
+  enableAppHealthCheck: false
+  logLevel: info
+apps:
+  - appID: identity-agent
+    appDirPath: ./identity-agent
+    appPort: 8006
+    appProtocol: http
+    command: ["mvn", "spring-boot:run"]
+    env:
+      APP_PORT: "8006"
+  - appID: crm-mcp
+    appDirPath: ./crm-mcp
+    appPort: 8007
+    appProtocol: http
+    command: ["mvn", "spring-boot:run"]
+    env:
+      APP_PORT: "8007"
