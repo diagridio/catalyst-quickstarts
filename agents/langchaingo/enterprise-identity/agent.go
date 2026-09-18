@@ -42,10 +42,8 @@ var (
 
 // agent is the whole agent: a model, and the tools it may call.
 //
-// This is a plain loop, not a workflow. There is no Diagrid agent runner, no
-// Dapr Workflow and no durable state, so you can see exactly where identity
-// enters and how little of the agent knows about it -- which is nothing: the
-// only Diagrid-aware line in this file is the absence of one.
+// A plain loop, not a workflow: no agent runner, no Dapr Workflow, no durable
+// state, so it is easy to see where identity enters.
 type agent struct {
 	model llms.Model
 
@@ -157,9 +155,7 @@ func (a *agent) run(ctx context.Context, task, subject string) ([]string, error)
 //
 // This is where the whole thesis of the quickstart lives. The verified subject
 // OVERRIDES whatever subject the model asked for: a model can request anybody's
-// bookings, and only the verified caller's are ever served. Substituting beats
-// validating here -- there is no version of this where the model's opinion of
-// who is calling matters.
+// bookings, and only the verified caller's are ever served.
 func (a *agent) callTool(ctx context.Context, call llms.ToolCall, subject string) (string, error) {
 	if call.FunctionCall == nil {
 		return "", errors.New("model requested a tool call carrying no function")

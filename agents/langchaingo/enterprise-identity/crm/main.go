@@ -84,8 +84,11 @@ func newMCPServer() *mcp.Server {
 func newMux() *http.ServeMux {
 	server := newMCPServer()
 	mux := http.NewServeMux()
+	// Requests arrive through Catalyst, whose Host is not loopback. This server
+	// is reachable only through Catalyst.
 	mux.Handle(mcpPath, mcp.NewStreamableHTTPHandler(
-		func(*http.Request) *mcp.Server { return server }, nil))
+		func(*http.Request) *mcp.Server { return server },
+		&mcp.StreamableHTTPOptions{DisableLocalhostProtection: true}))
 	return mux
 }
 

@@ -65,11 +65,8 @@ type tool struct {
 // whatever the model asked for. A tool that leaves the process does not take
 // one: it cannot be told who is calling, so it cannot be lied to.
 //
-// Read off the declaration the model sees rather than stored beside it, so the
-// two cannot disagree. A flag maintained by hand could say "no subject" about a
-// tool whose schema declares one, and the model's guess would then reach the
-// tool with nothing to catch it. Derived, the failure mode inverts: a renamed
-// property means the tool is handed no subject at all and answers for nobody,
+// Derived from the declaration the model sees, so the two cannot disagree. If
+// the property is renamed the tool is handed no subject and answers for nobody,
 // which is the safe direction.
 func (t tool) takesSubject() bool {
 	return t.declares(argSubject)

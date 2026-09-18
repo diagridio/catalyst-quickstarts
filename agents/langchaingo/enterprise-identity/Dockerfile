@@ -11,10 +11,8 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . ./
-# Built WITHOUT `-tags offline`, and that is the security property rather than a
-# size saving: the offline throwaway issuer in local_identity.go is guarded by
-# that tag, so these binaries physically cannot mint the credentials they would
-# then trust. See local_identity_disabled.go.
+# Built without `-tags offline` deliberately: the throwaway issuer is guarded by
+# that tag, so these binaries cannot mint credentials they would then trust.
 #
 # CGO_ENABLED=0 for a static binary the runtime image needs no libc for.
 RUN CGO_ENABLED=0 go build -o out/identity-agent . \

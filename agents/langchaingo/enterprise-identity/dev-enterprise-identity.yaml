@@ -1,10 +1,8 @@
 version: 1
 common:
   appLogDestination: console
-  # false because every route answers 401 until a verified credential arrives.
-  # `require_auth` is app-wide with no per-path exclusion, so this quickstart
-  # exposes no health route and an unauthenticated probe could only ever see the
-  # 401 -- a health check would report a perfectly healthy app as down.
+  # Every route requires a verified credential, so there is no health route to
+  # probe.
   enableAppHealthCheck: false
   logLevel: info
 apps:

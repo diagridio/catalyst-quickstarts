@@ -88,8 +88,7 @@ func main() {
 	handler := newHandler(oauth, newAgent(offline))
 
 	addr := "0.0.0.0:" + appPort()
-	// The line the README's "## Run with Catalyst" tells a reader to wait for,
-	// and the readiness marker the end-to-end suite matches on.
+	// The line the README tells a reader to wait for.
 	log.Printf("listening on http://%s", addr)
 	if err := http.ListenAndServe(addr, handler); err != nil {
 		log.Fatalf("serve: %v", err)
@@ -100,10 +99,8 @@ func main() {
 
 // newHandler puts the identity middleware in front of the app's routes.
 //
-// RequireAuth stays at its default true, so every route is authenticated. That
-// is why no health route is exposed and why dev-enterprise-identity.yaml sets
-// enableAppHealthCheck: false -- an unauthenticated probe would only ever see
-// the 401. There is no per-path exclusion; RequireAuth is app-wide.
+// RequireAuth stays at its default true, so every route is authenticated.
+// There is no per-path exclusion.
 func newHandler(oauth identity.OAuthConfig, a *agent) http.Handler {
 	return identity.Middleware(oauth)(newMux(a))
 }
@@ -192,11 +189,8 @@ func agentRun(a *agent) http.HandlerFunc {
 // verified caller is a 400 while the same body from an anonymous one is still a
 // 401.
 //
-// The body is decoded as `any` rather than straight into a struct so that a
-// JSON array -- valid JSON, wrong shape -- is reported as a bad task rather
-// than as unparseable input, which is the distinction the two details draw. A
-// struct would also accept `{"task": 7}` as the zero string and turn a type
-// error into an empty task.
+// The body is decoded as `any` so a wrong-shaped body is reported as a bad task
+// rather than as unparseable input.
 func decodeTask(r *http.Request) (task string, problem string) {
 	var body any
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {

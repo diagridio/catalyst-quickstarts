@@ -29,12 +29,9 @@ import (
 // response this quickstart describes -- 200, 403 and 401 -- is reachable with
 // no Catalyst project and no identity provider.
 //
-// Why it exists: 403 oauth.missing_scope needs a credential that genuinely
-// verifies. Against real Catalyst you cannot mint one that lacks a scope, and
-// with no issuer configured at all the middleware answers
-// 503 oauth.not_configured instead. This is the only way the scope check is
-// observable. It is the same trade fake_model.go makes for the model: free,
-// offline, identical on every run.
+// 403 oauth.missing_scope needs a credential that verifies but lacks a scope;
+// with no issuer configured the middleware answers 503 oauth.not_configured
+// instead.
 //
 // Never a real deployment. The private key lives in this process's memory and
 // the credentials it signs are logged in plain text. The `offline` build tag is
@@ -60,9 +57,7 @@ const (
 // accepts.
 //
 // startLocalIssuer returns only the config, because that is all main.go needs.
-// The credentials are exported here as well so that identity_test.go can
-// present them, which is the only way the 200 and 403 paths are assertable
-// without a Catalyst project.
+// The credentials are kept here as well so the tests can present them.
 type localIssuer struct {
 	config identity.OAuthConfig
 
