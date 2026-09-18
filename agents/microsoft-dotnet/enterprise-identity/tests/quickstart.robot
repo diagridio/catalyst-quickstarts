@@ -8,35 +8,12 @@ Mirrors agents/microsoft-dotnet/enterprise-identity/README.md: "## Setup" builds
 of documented requests this suite asserts. This README documents no cleanup
 command, so deleting the project is infrastructure here.
 
-WHAT THIS SUITE PROVES, precisely: the documented build and provisioning commands
-succeed, both apps connect through the dev tunnel, Kestrel serves on the
-documented port, and an unauthenticated request to either documented route is
-refused 401 with the exact body `{"error": "oauth.missing_token"}` -- the shipped
-middleware's missing-token path (Diagrid.AI.Identity 1.2.0, `WriteErrorAsync` in
-OAuthMiddleware.cs).
+What this suite asserts: the documented install and provisioning commands
+succeed, the app starts on the documented port, and an unauthenticated request
+to either documented route is refused 401 with `{"error": "oauth.missing_token"}`.
 
-WHAT IT DOES NOT PROVE: that an authenticated request succeeds, or that a
-verified identity reaches the app's handler. No keyword here takes headers and
-nothing here can mint a token dataplane Sentry signed, so both documented
-`diagrid call invoke` calls are in UNCOVERED. Do not add an assertion that
-implies otherwise. The OUTBOUND leg (on-behalf-of to the CRM's MCP tool) happens
-only on an authenticated call, so it is out of this suite's reach for the same
-reason -- do not add an assertion implying the CRM received a delegated JWT.
-Those gaps are covered instead by
-agents/microsoft-dotnet/enterprise-identity/unit-tests, which stands the identity
-plane up in-process and asserts the 200, the 403, the expired 401 and the subject
-substitution.
-
-There is no separate SERVING_MARKER gate here, unlike the agents/microsoft-dotnet
-suite next door. That suite needs one because the marker its README documents is
-the Dapr connectivity line, which Kestrel logs BEFORE it binds the port. This app
-registers no Dapr client at all, so it never prints that line: the marker its
-README documents IS Kestrel's `Now listening on`, so READY_MARKERS is already the
-serving gate. See READY_MARKERS in the data module.
-
-The request loop below is the shape every agent-family suite uses, with the
-GET/POST branch the python sibling's suite introduced: it branches on
-${request}[method], because the README's primary fail-closed example is a GET.
+Authenticated requests need a credential this suite cannot mint, so both
+documented `diagrid call invoke` calls are listed in UNCOVERED.
 
 Run it:
   export DIAGRID_API_KEY=...

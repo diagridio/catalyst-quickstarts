@@ -6,19 +6,16 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>EnterpriseIdentity</RootNamespace>
     <!-- Diagrid.AI.Identity marks its whole surface [Experimental("DGRDID001")], so consuming it
-         without this is a build error. Acknowledged here exactly as the SDK's own example does. -->
+         without this acknowledgement is a build error. -->
     <NoWarn>$(NoWarn);DGRDID001</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- The published package, never a ProjectReference to a local SDK checkout: a reader cloning
-         this repository has the former and not the latter. -->
     <PackageReference Include="Diagrid.AI.Identity" Version="1.2.0" />
     <PackageReference Include="Microsoft.Agents.AI" Version="1.9.0" />
-    <!-- The MCP client the outbound tool call uses. The stand-in CRM next door is the server half. -->
     <PackageReference Include="ModelContextProtocol" Version="2.2.0" />
-    <!-- Only reached when DIAGRID_QUICKSTART_MODEL=openai. Floored at the Microsoft.Extensions.AI
-         version Microsoft.Agents.AI 1.9.0 requires, so the two cannot resolve to different ones. -->
+    <!-- Floored at the Microsoft.Extensions.AI version Microsoft.Agents.AI requires, so the two
+         cannot resolve to different ones. -->
     <PackageReference Include="Microsoft.Extensions.AI.OpenAI" Version="10.6.0" />
   </ItemGroup>
 

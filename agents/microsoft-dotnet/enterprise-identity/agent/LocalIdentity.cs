@@ -9,71 +9,31 @@ using Microsoft.IdentityModel.Tokens;
 namespace EnterpriseIdentity;
 
 /// <summary>
-/// An offline stand-in for the Catalyst identity plane.
+/// An offline stand-in for the Catalyst identity plane, enabled with
+/// <c>DIAGRID_QUICKSTART_IDENTITY=local</c>. Debug-only, and never a real deployment: the throwaway
+/// private key lives in this process's memory and the credentials it signs are logged in plain text.
 /// </summary>
-/// <remarks>
-/// <para>
-/// Opt in with <c>DIAGRID_QUICKSTART_IDENTITY=local</c>. It generates a throwaway RSA key, serves
-/// the public half as JWKS on a loopback port, and logs three ready-to-paste credentials so every
-/// response this quickstart describes — 200, 403 and 401 — is reachable with no Catalyst project
-/// and no identity provider.
-/// </para>
-/// <para>
-/// Why it exists: a 403 needs a credential that verifies but lacks a required scope. This issuer
-/// can mint one.
-/// </para>
-/// <para>
-/// Why the whole file is behind <c>#if DEBUG</c>: the Dockerfile publishes <c>-c Release</c>, so a
-/// container that sets <c>DIAGRID_QUICKSTART_IDENTITY=local</c> fails to start instead of trusting
-/// tokens the app minted itself.
-/// </para>
-/// <para>
-/// Never a real deployment. The private key lives in this process's memory and the credentials it
-/// signs are logged in plain text.
-/// </para>
-/// </remarks>
 public static class LocalIdentity
 {
-    /// <summary>The <c>iss</c> the offline credentials carry, and the value the verifier expects.</summary>
+    /// <summary>The <c>iss</c> the offline credentials carry.</summary>
     public const string Issuer = "https://local-identity.invalid";
 
-    /// <summary>The <c>aud</c> the offline credentials carry.</summary>
     public const string Audience = "catalyst-quickstart";
 
-    /// <summary>The key id in both the JWKS document and every token header.</summary>
     public const string KeyId = "local-quickstart-key";
 
     /// <summary>
-    /// The scope the offline issuer demands.
+    /// The scope the offline issuer demands. On the Catalyst path, require the scopes your own
+    /// identity provider issues.
     /// </summary>
-    /// <remarks>
-    /// Only the offline issuer demands one. On the Catalyst path, require the scopes your own
-    /// identity provider issues. See "On scopes" in the README.
-    /// </remarks>
     public static readonly string[] RequiredScopes = ["agent.invoke"];
 
-    /// <summary>How long a freshly minted credential is good for.</summary>
     private const int DefaultLifetimeSeconds = 3600;
 
-    /// <summary>
-    /// How stale the expired credential is.
-    /// </summary>
-    /// <remarks>
-    /// Diagrid.AI.Identity's verifier allows <see cref="JwksVerifier.ClockSkewSeconds"/> (120s) of
-    /// clock skew, so a credential that expired a minute ago still verifies. Anything demonstrating
-    /// <c>oauth.expired</c> has to be older than that.
-    /// </remarks>
+    /// <summary>How stale the expired credential is: past the verifier's 120s skew allowance.</summary>
     private const int ExpiredLifetimeSeconds = -300;
 
-    /// <summary>
-    /// A running throwaway issuer: the policy it implies, and the credentials it accepts.
-    /// </summary>
-    /// <remarks>
-    /// Program.cs needs only <see cref="Config"/>. The three credentials are returned as well so
-    /// that the unit tests can present them, which is the only way the 200 and 403 paths are
-    /// assertable without a Catalyst project.
-    /// </remarks>
-    /// <param name="Config">The identity policy, pointed at this issuer.</param>
+    /// <summary>A running throwaway issuer: its policy, and the credentials it accepts.</summary>
     /// <param name="Verified">Carries the required scopes — 200.</param>
     /// <param name="WrongScope">Verifies, carries the wrong scope — 403 <c>oauth.missing_scope</c>.</param>
     /// <param name="Expired">Carries the required scopes but is stale — 401 <c>oauth.expired</c>.</param>
@@ -83,17 +43,11 @@ public static class LocalIdentity
         string WrongScope,
         string Expired);
 
-    /// <summary>
-    /// Starts the throwaway issuer and mints the three credentials it accepts.
-    /// </summary>
-    /// <param name="requiredScopes">The scopes the verified credential must carry.</param>
-    /// <returns>The running issuer.</returns>
     public static LocalIssuer BuildLocalIssuer(IReadOnlyCollection<string> requiredScopes)
     {
         ArgumentNullException.ThrowIfNull(requiredScopes);
 
-        // Not disposed, and not owned by a `using`: the key has to outlive this method because it
-        // signs tokens below and backs the JWKS the verifier fetches for as long as the app runs.
+        // Not disposed: it backs the JWKS the verifier fetches for as long as the app runs.
         var key = RSA.Create(2048);
         var jwksUri = StartJwksEndpoint(JwksDocument(key));
         var now = DateTime.UtcNow;
@@ -102,28 +56,17 @@ public static class LocalIdentity
             Config: new OAuthConfig
             {
                 Scopes = [.. requiredScopes],
-                // Set explicitly, which is what makes this offline: with both Issuer and JwksUri
-                // present the verifier skips discovery entirely and never looks for a sidecar.
+                // With both set, the verifier skips discovery entirely and never looks for a sidecar.
                 Issuer = Issuer,
                 Audience = Audience,
                 JwksUri = jwksUri,
-                // AllowInsecureJwks stays off. A loopback http:// endpoint is exempt from the
-                // https requirement on its own, so nothing here opts into plaintext generally.
             },
             Verified: Mint(key, now, "alice@example.com", requiredScopes),
             WrongScope: Mint(key, now, "bob@example.com", ["reports.read"]),
             Expired: Mint(key, now, "carol@example.com", requiredScopes, ExpiredLifetimeSeconds));
     }
 
-    /// <summary>
-    /// Logs the issuer's credentials so a reader can paste them.
-    /// </summary>
-    /// <remarks>
-    /// These lines are the ones the README's "## Run Offline Without a Catalyst Project" block
-    /// reproduces, so their text is part of the documented output.
-    /// </remarks>
-    /// <param name="logger">Receives the credentials, in plain text.</param>
-    /// <param name="issuer">The running issuer.</param>
+    /// <summary>Logs the issuer's credentials, in plain text, so a reader can paste them.</summary>
     public static void LogCredentials(ILogger logger, LocalIssuer issuer)
     {
         ArgumentNullException.ThrowIfNull(logger);
@@ -139,17 +82,7 @@ public static class LocalIdentity
         logger.LogInformation("  {Token}", issuer.Expired);
     }
 
-    /// <summary>
-    /// The JWKS document for <paramref name="key"/>'s public half.
-    /// </summary>
-    /// <remarks>
-    /// The numbers are unpadded base64url, which is what JWKS requires:
-    /// <see cref="Base64Url"/> emits that spelling, where a
-    /// <see cref="Convert.ToBase64String(byte[])"/> would emit <c>+</c>, <c>/</c> and <c>=</c> and
-    /// the verifier would reject the key.
-    /// </remarks>
-    /// <param name="key">The signing key.</param>
-    /// <returns>The JWKS document, as JSON.</returns>
+    /// <summary>The key's public half, with its numbers in the unpadded base64url JWKS requires.</summary>
     private static string JwksDocument(RSA key)
     {
         ArgumentNullException.ThrowIfNull(key);
@@ -174,46 +107,29 @@ public static class LocalIdentity
     }
 
     /// <summary>
-    /// Serves <paramref name="jwks"/> on a loopback port the OS picks.
+    /// Serves <paramref name="jwks"/> on a loopback port the OS picks. Never disposed: it has to
+    /// answer the verifier's fetch for as long as the process lives.
     /// </summary>
-    /// <remarks>
-    /// Port 0, so this never collides with the app. The host is started and deliberately never
-    /// disposed: it has to answer the verifier's fetch for as long as the process lives, and the
-    /// process ending is what shuts it down.
-    /// </remarks>
-    /// <param name="jwks">The JWKS document to serve.</param>
-    /// <returns>The absolute JWKS URI.</returns>
     private static string StartJwksEndpoint(string jwks)
     {
         var builder = WebApplication.CreateSlimBuilder();
         builder.WebHost.UseUrls("http://127.0.0.1:0");
-        // Otherwise this second host's own request log buries the app's startup lines, including
-        // the three credentials a reader is here to copy.
+        // Otherwise this host's request log buries the credentials a reader is here to copy.
         builder.Logging.ClearProviders();
 
         var app = builder.Build();
         app.MapGet("/jwks.json", () => Results.Text(jwks, "application/json"));
         app.Start();
 
-        // Read after Start, not before: the bound port is only known once Kestrel has taken it.
+        // Read after Start: the bound port is only known once Kestrel has taken it.
         var origin = app.Urls.First();
         return $"{origin}/jwks.json";
     }
 
     /// <summary>
-    /// Signs one credential.
+    /// Signs one credential. A negative <paramref name="lifetimeSeconds"/> backdates the whole
+    /// window, producing one that already expired.
     /// </summary>
-    /// <param name="key">The signing key.</param>
-    /// <param name="now">The reference time, shared by every credential in one issuer.</param>
-    /// <param name="subject">The <c>sub</c> claim.</param>
-    /// <param name="scopes">The <c>scp</c> claim, space-delimited on the wire.</param>
-    /// <param name="lifetimeSeconds">
-    /// How long the credential is good for. A NEGATIVE value is a credential that already expired
-    /// that many seconds ago; the issue time is backdated with it so the window stays coherent,
-    /// which <see cref="SecurityTokenDescriptor"/> requires and which is also what a genuinely
-    /// stale credential looks like.
-    /// </param>
-    /// <returns>The signed compact JWT.</returns>
     private static string Mint(
         RSA key,
         DateTime now,

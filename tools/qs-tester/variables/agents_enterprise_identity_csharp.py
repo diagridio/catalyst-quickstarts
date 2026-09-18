@@ -12,36 +12,16 @@ whose data module is `agents_enterprise_identity`. Two quickstarts of the same
 name need two modules, and the python one was named first. The asymmetry is
 therefore deliberate rather than a convention this file invented.
 
-WHAT THIS SUITE COVERS. The quickstart demonstrates end-user identity on the
-SYNC path: Catalyst verifies the caller's identity-provider token at the edge,
-exchanges it with dataplane Sentry, and passes a Catalyst-signed identity to the
-app in `X-Diagrid-User-Token`, where `OAuthMiddleware` verifies it and attaches a
-`VerifiedUser`. The suite asserts the plumbing (build, documented provisioning,
-dev tunnel, Kestrel serving) plus the one HTTP outcome that is deterministic
-without a credential: an unauthenticated request is rejected 401 with the exact
-body the middleware returns, on both documented routes.
+What this suite covers. The quickstart demonstrates inbound end-user identity:
+Catalyst verifies the caller and passes a verified identity to the app in
+`X-Diagrid-User-Token`. The suite asserts the plumbing -- build, documented
+provisioning, the app serving -- plus the one HTTP outcome that is deterministic
+without a credential: an unauthenticated request is refused 401 on both
+documented routes.
 
-WHAT IT DOES NOT COVER. Any request that carries a credential. Nothing in this
-harness can mint a token dataplane Sentry has signed, and `POST And Expect
-Field` / `POST And Expect` / `GET And Expect` take no headers argument, so the
-200 and the 403 the README documents are unreachable from here. Both documented
-`diagrid call invoke` forms are in UNCOVERED with that reason. So this suite
-proves the middleware REFUSES correctly; it does not prove a verified identity
-reaches the handler -- and, measured rather than assumed on the python sibling,
-it cannot even tell a project with inbound identity enabled from one without it,
-because the missing-token 401 is returned before the verifier is ever built. See
-REQUESTS.
-
-The OUTBOUND leg (the agent's on-behalf-of token reaching the CRM) is not
-assertable here either, for the same headers reason: it only happens on an
-authenticated call.
-
-The 200, the 403 and the subject substitution are covered instead by
-agents/microsoft-dotnet/enterprise-identity/unit-tests, which stands the identity
-plane up in-process and runs in
-.github/workflows/agents_enterprise_identity_csharp.yaml. That test exercises no
-Catalyst, so the two are complements and neither alone proves the live inbound
-path.
+Requests that carry a credential are out of scope here, because this harness
+cannot mint one and the request keywords take no headers. Both documented
+`diagrid call invoke` forms are listed in UNCOVERED with that reason.
 """
 
 from pathlib import Path
@@ -215,7 +195,7 @@ SECRETS = ()
 #     for the field-presence check `POST And Expect Field` performs. There is no
 #     model output in a 401 to make an exact comparison impossible.
 #   * The AUTHENTICATED calls cannot be expressed: no keyword here takes headers,
-#     and nothing here can mint a token dataplane Sentry signed. See UNCOVERED.
+#     and this harness cannot mint a credential. See UNCOVERED.
 #   * A MALFORMED-token case is deliberately absent, because which rejection you
 #     get depends on state this suite does not control. With a verifier built it
 #     is 401 oauth.decode_error; with no discoverable issuer the verifier cannot

@@ -9,9 +9,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- No Diagrid dependency at all, and that is the point: the CRM verifies nothing. Catalyst has
-         already verified the signature by the time the call arrives, so this server only decodes
-         the claims in order to show them. -->
+    <!-- No Diagrid dependency, and that is the point: Catalyst has already verified the signature
+         by the time the call arrives, so this server only decodes the claims to show them. -->
     <PackageReference Include="ModelContextProtocol.AspNetCore" Version="2.2.0" />
   </ItemGroup>
 

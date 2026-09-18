@@ -14,20 +14,15 @@ builder.Services
 builder.Services.AddHttpContextAccessor();
 
 var app = builder.Build();
-// "/mcp", explicitly: MapMcp() defaults to the application root, and resources/crm-mcp.yaml
-// registers this server with Catalyst at http://localhost:8007/mcp.
+// "/mcp" explicitly, which is where resources/crm-mcp.yaml registers this server with Catalyst.
 app.MapMcp("/mcp");
 
 await app.RunAsync();
 
 /// <summary>
-/// A stand-in CRM, exposed over MCP.
+/// A stand-in CRM, exposed over MCP. Its one tool reports the identity the call arrived with: the
+/// agent sends no password and no API key, and the CRM still knows whose question it is answering.
 /// </summary>
-/// <remarks>
-/// Its one tool reports the identity the call arrived with. The agent sends no password and no API
-/// key, and the CRM still knows whose question it is answering — and which agent asked on their
-/// behalf.
-/// </remarks>
 [McpServerToolType]
 internal sealed class CrmTools(IHttpContextAccessor httpContextAccessor, ILogger<CrmTools> logger)
 {
@@ -36,19 +31,14 @@ internal sealed class CrmTools(IHttpContextAccessor httpContextAccessor, ILogger
 
     private const string BearerPrefix = "Bearer ";
 
-    /// <summary>
-    /// Summarises a CRM account, and reports who the CRM is answering.
-    /// </summary>
-    /// <param name="accountId">The account to summarise.</param>
-    /// <returns>The summary, naming the calling user and the agent acting for them.</returns>
     [McpServerTool(Name = "account_summary")]
     [Description("Summarise a CRM account, and report who the CRM is answering.")]
     public string AccountSummary([Description("The CRM account id.")] string accountId)
     {
         var claims = CallingUser();
         var user = ReadString(claims, "sub") ?? "<no user identity>";
-        // `act` is the actor claim: the agent that made this call on the user's behalf. Two
-        // identities in one token is what on-behalf-of means.
+        // `act` is the actor claim: the agent that called on the user's behalf. Two identities in
+        // one token is what on-behalf-of means.
         var agent = claims is not null
             && claims.Value.TryGetProperty("act", out var actor)
             && actor.ValueKind == JsonValueKind.Object
@@ -66,15 +56,10 @@ internal sealed class CrmTools(IHttpContextAccessor httpContextAccessor, ILogger
     }
 
     /// <summary>
-    /// Reads the calling user from the token Catalyst minted for this request.
+    /// Reads the calling user from the credential Catalyst minted for this request. Catalyst has
+    /// verified it already, so this only decodes the claims to show them: a server that decided
+    /// anything on them would have to verify for itself.
     /// </summary>
-    /// <remarks>
-    /// Catalyst verifies the signature before the request arrives, so this only decodes the claims
-    /// in order to show them. A server that needed to decide anything on these claims would have to
-    /// verify the token itself — which is what Diagrid.AI.Identity's middleware is for, and why the
-    /// agent next door installs it and this stand-in does not.
-    /// </remarks>
-    /// <returns>The decoded payload, or <see langword="null"/> when the call carried no user.</returns>
     private JsonElement? CallingUser()
     {
         var raw = httpContextAccessor.HttpContext?.Request.Headers[UserTokenHeader].ToString();
@@ -95,16 +80,14 @@ internal sealed class CrmTools(IHttpContextAccessor httpContextAccessor, ILogger
 
         try
         {
-            // Base64Url handles the unpadded encoding JWT segments use, which a plain
-            // Convert.FromBase64String would reject.
+            // JWT segments are unpadded base64url, which Convert.FromBase64String would reject.
             var payload = Base64Url.DecodeFromChars(parts[1]);
             using var document = JsonDocument.Parse(payload);
             return document.RootElement.Clone();
         }
         catch (Exception exception) when (exception is FormatException or JsonException)
         {
-            // A malformed token is a display problem here and nothing more: this server is not the
-            // one adjudicating the call, so it reports "no user identity" rather than refusing.
+            // This server is not the one adjudicating the call, so it reports rather than refuses.
             logger.LogWarning("the user token on this request could not be decoded");
             return null;
         }

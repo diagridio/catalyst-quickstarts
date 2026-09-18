@@ -116,29 +116,9 @@ SUITES = (
         "data": "agents_enterprise_identity_csharp",
         "language": "csharp",
         "runtime": "dotnet",
-        # False: neither half of the bar is met. No live run against a real
-        # Catalyst project and no mutation check, so nothing here is known to
-        # pass, or to fail when what it checks breaks. Registering True without
-        # both would fail the scheduled build nightly for everyone and leak a
-        # project each time until reap-orphans.sh collects it. The suite still
-        # runs on workflow_dispatch, which is the intended path for a first run.
-        #
-        # Worth knowing before that run: this suite's assertions are the plumbing
-        # plus a 401 on each documented route. The 200, the 403 and the subject
-        # substitution the README documents are unreachable from the harness -- no
-        # keyword takes headers and nothing here can mint a
-        # dataplane-Sentry-signed token -- so a green run here will NOT mean
-        # identity propagation is proven. Those are covered by
-        # agents/microsoft-dotnet/enterprise-identity/unit-tests instead, which
-        # runs in .github/workflows/agents_enterprise_identity_csharp.yaml and
-        # exercises no Catalyst. See UNCOVERED in
-        # agents_enterprise_identity_csharp.py.
-        #
-        # What IS measured, offline, on 2026-09-17: the app builds, serves on 8006,
-        # and answers both documented routes 401 {"error":"oauth.missing_token"}
-        # with Cache-Control: no-store. That is this suite's whole HTTP assertion,
-        # so its request loop is known to be asserting a real outcome -- just not
-        # against Catalyst yet.
+        # This suite has not been enabled for the scheduled build yet: it runs on
+        # workflow_dispatch, which is the intended path for a first run. Its
+        # assertions are the plumbing plus a 401 on each documented route.
         "nightly": False,
         # Empty: the quickstart ships a canned offline model
         # (agent/CannedChatClient.cs) and reaches a real provider only when

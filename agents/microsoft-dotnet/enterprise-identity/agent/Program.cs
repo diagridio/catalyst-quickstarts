@@ -3,10 +3,8 @@ using EnterpriseIdentity;
 using Microsoft.Extensions.AI;
 using OpenAI;
 
-// Which identity plane the app trusts, and so which tool the agent can use. The offline issuer runs
-// with no Catalyst project behind it, so there is no MCP server to reach and the agent calls the
-// in-process tool instead. Against Catalyst the tool call leaves the agent and picks the caller up
-// on the way.
+// Which identity plane the app trusts, and so which tool the agent can use: the offline issuer has
+// no Catalyst project behind it, so there is no MCP server to reach.
 var offlineIdentity = string.Equals(
     Environment.GetEnvironmentVariable("DIAGRID_QUICKSTART_IDENTITY"),
     "local",
@@ -15,8 +13,7 @@ var offlineIdentity = string.Equals(
 var builder = WebApplication.CreateBuilder(args);
 
 #if DEBUG
-// Declared out here so the credentials can be logged after the app is built, which is the first
-// point at which there is a logger to log them with.
+// Declared out here so the credentials can be logged once there is a logger to log them with.
 LocalIdentity.LocalIssuer? localIssuer = null;
 #endif
 
@@ -24,9 +21,7 @@ LocalIdentity.LocalIssuer? localIssuer = null;
 if (offlineIdentity)
 {
 #if DEBUG
-    // DIAGRID_QUICKSTART_IDENTITY=local swaps in a throwaway offline issuer so the 200, 403 and 401
-    // responses are all reachable with no Catalyst project and no identity provider at all. The
-    // credentials are logged below. See LocalIdentity.cs.
+    // A throwaway offline issuer, so 200, 403 and 401 are all reachable with no Catalyst project.
     var issuer = LocalIdentity.BuildLocalIssuer(LocalIdentity.RequiredScopes);
     localIssuer = issuer;
     builder.Services.AddDiagridIdentity(config =>
@@ -37,8 +32,7 @@ if (offlineIdentity)
         config.JwksUri = issuer.Config.JwksUri;
     });
 #else
-    // The offline issuer is compiled out of Release builds, so a container that sets this variable
-    // fails to start rather than trusting tokens the app minted itself.
+    // Compiled out of Release builds, so a container cannot trust tokens the app minted itself.
     throw new InvalidOperationException(
         "DIAGRID_QUICKSTART_IDENTITY=local is a debug-only mode: it replaces the Catalyst identity "
         + "plane with a throwaway in-process issuer, so it is compiled out of Release builds. "
@@ -47,23 +41,17 @@ if (offlineIdentity)
 }
 else
 {
-    // Against Catalyst this is the whole configuration. Issuer, audience and JWKS URI are all
-    // discovered from Catalyst, so the app names none of them.
-    //
-    // To require a scope as well, pass one: AddDiagridIdentity(config => config.Scopes =
-    // ["reports.read"]) answers 403 for any verified caller without it. That needs an identity
-    // provider issuing the scope, which is why the walkthrough does not use it.
+    // Against Catalyst this is the whole configuration: issuer, audience and JWKS URI are all
+    // discovered, so the app names none of them. Pass config.Scopes to require a scope as well.
     builder.Services.AddDiagridIdentity();
 }
 
-// The outbound half. This client carries the calling user on every request it makes: its handler
-// reads the inbound token at send time, so one shared client is safe under concurrency and
-// concurrent requests each carry their own caller. The app never assembles an identity header.
+// The outbound half. The handler reads the inbound token at send time, so one shared client is safe
+// under concurrency and the app never assembles an identity header itself.
 builder.Services.AddDiagridIdentityHttpClient(configure: client =>
 {
-    // Catalyst's own API token, which is a separate concern from the end user's identity: this one
-    // says the APP may talk to its sidecar, the user token says WHO it is talking for. Added only
-    // when set, because an empty header value is rejected outright.
+    // Catalyst's own API token, a separate concern from the end user's identity: this says the APP
+    // may talk to its sidecar, the user token says WHO it is talking for.
     var daprApiToken = Environment.GetEnvironmentVariable("DAPR_API_TOKEN");
     if (!string.IsNullOrEmpty(daprApiToken))
     {
@@ -77,9 +65,7 @@ builder.Services.AddSingleton(serviceProvider =>
     var loggerFactory = serviceProvider.GetRequiredService<ILoggerFactory>();
     var httpClientFactory = serviceProvider.GetRequiredService<IHttpClientFactory>();
 
-    // The agent gets one tool or the other, built per request from the verified subject. The
-    // offline issuer cannot reach an MCP server, so my_bookings keeps the whole walkthrough
-    // runnable there; account_summary takes no subject and ignores the one it is offered.
+    // The agent gets one tool or the other, built per request from the verified subject.
     Func<string, AIFunction> toolForCaller = offlineIdentity
         ? Tools.MyBookings
         : _ => Tools.AccountSummary(
@@ -95,10 +81,8 @@ var app = builder.Build();
 // --- The other half of the identity integration ----------------------------
 app.UseDiagridIdentity();
 // ---------------------------------------------------------------------------
-// RequireAuth stays at its default true, so every route is authenticated. That is why no health
-// route is exposed and why dev-enterprise-identity.yaml sets enableAppHealthCheck: false -- an
-// unauthenticated probe would only ever see the 401. There is no per-path exclusion; RequireAuth is
-// app-wide.
+// RequireAuth stays at its default true, so every route is authenticated — including any health
+// probe, which is why dev-enterprise-identity.yaml sets enableAppHealthCheck: false.
 
 #if DEBUG
 if (offlineIdentity)
@@ -116,9 +100,8 @@ app.MapPost("/agent/run", IdentityEndpoints.AgentRun);
 
 await app.RunAsync();
 
-// The model: a real provider on request, the canned one otherwise. The identity behaviour is
-// identical either way -- a real model, like the canned one, does not know who is calling and is
-// not consulted on the question.
+// The model: a real provider on request, the canned one otherwise. Neither is consulted on who is
+// calling.
 IChatClient BuildChatClient(ILoggerFactory loggerFactory)
 {
     var logger = loggerFactory.CreateLogger("EnterpriseIdentity.Model");
@@ -135,8 +118,7 @@ IChatClient BuildChatClient(ILoggerFactory loggerFactory)
         return new CannedChatClient(offlineIdentity);
     }
 
-    // IsNullOrWhiteSpace, not a null check: an exported-but-empty variable reads back as "", which
-    // would otherwise fail deeper in the OpenAI client.
+    // IsNullOrWhiteSpace, not a null check: an exported-but-empty variable reads back as "".
     var apiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY");
     if (string.IsNullOrWhiteSpace(apiKey))
     {
