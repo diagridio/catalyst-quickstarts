@@ -10,7 +10,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@diagrid/agent-mastra": "0.1.0",
+    "@diagrid/agent-mastra": "0.2.0",
     "@mastra/core": "^1.57.0",
     "tsx": "^4.23.12",
     "zod": "^4.4.3"
