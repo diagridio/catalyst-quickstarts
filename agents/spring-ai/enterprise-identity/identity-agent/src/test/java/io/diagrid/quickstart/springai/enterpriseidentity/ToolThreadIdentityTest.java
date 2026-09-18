@@ -21,22 +21,13 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
 /**
- * The precondition the whole outbound leg rests on: the caller's credential is readable on the
- * thread a tool runs on.
+ * The precondition the outbound leg rests on: the caller's credential is readable on the thread a
+ * tool runs on.
  *
- * <p>{@link OutboundIdentityHandoffTest} pins what {@link CatalystMcpClient} does with the token
- * once it holds one. This pins the step before that, which is the easier one to lose because it is
- * not this quickstart's code at all: Spring AI decides where a tool call runs, and
- * {@link IdentityContext} is a {@code ThreadLocal} that {@link OAuthFilter} sets on the request
- * thread. If Spring AI ever ran tool calls on a pool of its own,
- * {@code CatalystMcpClient.captureCaller} would find nothing, the call to the CRM would go out with
- * no identity header, and the CRM would answer for {@code <no user identity>} instead of failing.
- * That is a silent regression, so it gets a test rather than a paragraph.
- *
- * <p>Driven through the real controller and the real {@code ChatClient}, because the thread a tool
- * runs on is decided by that path and by nothing a narrower test could set up. The tool asserted
- * against is the offline one — the mode these tests run in — but the thread it runs on is chosen by
- * Spring AI's tool-calling loop, which does not know or care which tool it is calling.
+ * <p>Spring AI decides where a tool call runs, and {@link IdentityContext} is a
+ * {@code ThreadLocal} that {@link OAuthFilter} sets on the request thread. If tool calls ever moved
+ * to a pool of their own, the call to the CRM would go out with no identity header and the CRM
+ * would answer for {@code <no user identity>} instead of failing — a silent regression.
  */
 @SpringBootTest
 class ToolThreadIdentityTest {
@@ -49,10 +40,7 @@ class ToolThreadIdentityTest {
   @Autowired
   private OAuthFilter filter;
 
-  /**
-   * A spy rather than a mock: the tool still does its real work, so this test does not quietly
-   * become a test of a stub.
-   */
+  /** A spy rather than a mock, so the tool still does its real work. */
   @MockitoSpyBean
   private BookingTools bookingTools;
 
@@ -74,15 +62,7 @@ class ToolThreadIdentityTest {
     mockMvc = MockMvcBuilders.webAppContextSetup(context).addFilters(filter).build();
   }
 
-  /**
-   * The exact credential, not merely a non-null one.
-   *
-   * <p>{@code IdentityContext.currentUserToken()} holds the token with the {@code Bearer} prefix
-   * already trimmed, which is the form {@code CatalystMcpClient} re-prefixes when it sets the
-   * outbound header. Comparing it against the credential this request presented therefore checks
-   * both halves of the claim: that a caller is visible to the tool at all, and that it is
-   * <em>this</em> caller.
-   */
+  /** The exact credential, not merely a non-null one: it must be <em>this</em> caller. */
   @Test
   void theCallersCredentialIsReadableOnTheThreadTheToolRunsOn() throws Exception {
     mockMvc.perform(post("/agent/run")

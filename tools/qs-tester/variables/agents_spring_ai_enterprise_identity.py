@@ -6,35 +6,16 @@ documented project name becomes `{project}`. The README is the source of truth.
 Change the README, change this file, and `docsync/check_readme_sync.py --all`
 will tell you if you changed only one.
 
-WHAT THIS SUITE COVERS. The quickstart demonstrates INBOUND end-user identity:
-Catalyst verifies the caller's identity-provider token at the edge, exchanges it
-with dataplane Sentry, and passes a Catalyst-signed identity to the app in
-`X-Diagrid-User-Token`, where `OAuthFilter` verifies it and publishes a
-`VerifiedUser` the handlers read with `OAuthFilter.verifiedUser(request)`. The
-suite asserts the plumbing (install, documented provisioning, dev tunnel, Tomcat
-serving, the canned model being the one in play) plus the one HTTP outcome that
-is deterministic without a credential: an unauthenticated request is rejected 401
-with the exact body the filter returns, on both documented routes.
+What this suite covers. The quickstart demonstrates inbound end-user identity:
+Catalyst verifies the caller and passes a verified identity to the app in
+`X-Diagrid-User-Token`. The suite asserts the plumbing -- build, documented
+provisioning, the app serving -- plus the one HTTP outcome that is deterministic
+without a credential: an unauthenticated request is refused 401 on both
+documented routes.
 
-WHAT IT DOES NOT COVER. Any request that carries a credential. Nothing in this
-harness can mint a token dataplane Sentry has signed, and `POST And Expect
-Field` / `POST And Expect` / `GET And Expect` take no headers argument, so the
-200 and the 403 the README documents are unreachable from here. Both documented
-`diagrid call invoke` forms are in UNCOVERED with that reason. So this suite
-proves the filter REFUSES correctly; it does not prove a verified identity
-reaches the handler -- and it cannot even tell a project with inbound identity
-enabled from one without it, because the missing-token 401 is returned before the
-verifier is ever built. See REQUESTS.
-
-Those two gaps are covered instead by the quickstart's own unit tests, which
-stand the identity plane up in-process and run in
-.github/workflows/agents_enterprise_identity_java.yaml.
-
-The OUTBOUND leg (an agent's on-behalf-of token reaching a downstream MCP tool)
-is asserted by nothing here. The quickstart's README documents it and its
-`CatalystMcpClient` implements it, but this harness cannot observe it: it would
-need a credential-bearing request to start the chain. Nothing here may imply a
-downstream MCP server receives a delegated JWT.
+Requests that carry a credential are out of scope here, because this harness
+cannot mint one and the request keywords take no headers. Both documented
+`diagrid call invoke` forms are listed in UNCOVERED with that reason.
 """
 
 from pathlib import Path
@@ -74,7 +55,7 @@ CRM_APP_PORT = 8007
 # downgrade to no user identity at all.
 SETUP = (
     "diagrid project create {project} --use --wait",
-    "diagrid agent create identity-agent --wait",
+    "diagrid appid create identity-agent --wait",
     "diagrid apply -f resources/crm-mcp.yaml",
     "diagrid apply -f resources/crm-mcp-access.yaml",
 )
@@ -209,7 +190,7 @@ SECRETS = ()
 #     `POST And Expect Field` performs. There is no model output in a 401 to make
 #     an exact comparison impossible.
 #   * The AUTHENTICATED calls cannot be expressed: no keyword here takes headers,
-#     and nothing here can mint a token dataplane Sentry signed. See UNCOVERED.
+#     and this harness cannot mint a credential. See UNCOVERED.
 #   * A MALFORMED-token case is deliberately absent, because which rejection you
 #     get depends on state this suite does not control. With a verifier built it
 #     is 401 oauth.decode_error; with no discoverable issuer JwksVerifier.build

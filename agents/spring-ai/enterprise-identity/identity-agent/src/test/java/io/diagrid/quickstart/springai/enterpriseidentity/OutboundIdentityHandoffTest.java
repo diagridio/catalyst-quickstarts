@@ -18,16 +18,10 @@ import org.junit.jupiter.api.Test;
 /**
  * The outbound on-behalf-of hand-off, pinned without a Catalyst project.
  *
- * <p>The full outbound leg needs one: a token naming both the user and the agent is minted by
- * Catalyst's MCP proxy, and nothing here can produce one. What <em>is</em> assertable offline is the
- * part that is this quickstart's own code and the part most likely to break silently — carrying the
- * caller from the request thread to the thread the MCP transport sends on. A regression there sends
- * the call with no identity header at all and the CRM answers for {@code <no user identity>} rather
- * than failing, which is precisely the failure a test should catch instead of a reader.
- *
- * <p>The two halves are exercised on two different threads on purpose. Reading the caller on one and
- * setting the header on another is the whole mechanism; a test that did both on one thread would
- * pass against an implementation that simply read the {@code ThreadLocal} at send time.
+ * <p>What is assertable offline is carrying the caller from the request thread to the thread the
+ * MCP transport sends on. The two halves run on two threads on purpose: a test that did both
+ * on one thread would pass against an implementation that simply read the {@code ThreadLocal} at
+ * send time.
  */
 class OutboundIdentityHandoffTest {
 
@@ -58,13 +52,7 @@ class OutboundIdentityHandoffTest {
         .contains(IdentityContext.BEARER_PREFIX + TOKEN);
   }
 
-  /**
-   * No inbound caller is not an error.
-   *
-   * <p>A cron trigger or a pub/sub delivery has no user, so the call goes out with no identity header
-   * rather than an empty one — a downstream service can tell "no user" from "a user with a blank
-   * credential". This is also what the offline walkthrough would hit if it ever reached the CRM.
-   */
+  /** No inbound caller is not an error: no identity header at all, rather than an empty one. */
   @Test
   void noCallerSendsNoIdentityHeader() throws Exception {
     McpTransportContext captured = CatalystMcpClient.captureCaller();
@@ -78,14 +66,7 @@ class OutboundIdentityHandoffTest {
     assertThat(identityHeader(sent)).isEmpty();
   }
 
-  /**
-   * A stale context must not resurrect a previous caller.
-   *
-   * <p>Pinned because the capture and the send are separated in time as well as across threads: the
-   * header is decided from the context handed to that one call, so clearing the request thread's
-   * token after capture does not retroactively change what was captured, and a context captured with
-   * no caller stays without one however the request thread changes afterwards.
-   */
+  /** The header is decided from the captured context, not from what the sending thread holds. */
   @Test
   void theHeaderComesFromTheCapturedContextAndNotFromTheSendingThread() throws Exception {
     McpTransportContext withoutCaller = CatalystMcpClient.captureCaller();

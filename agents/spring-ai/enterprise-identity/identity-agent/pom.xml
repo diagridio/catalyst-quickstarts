@@ -32,10 +32,7 @@
          io.diagrid:diagrid-ai-identity, which arrives transitively and carries the verification,
          the Catalyst discovery and the outbound propagation. Its own single dependency,
          com.nimbusds:nimbus-jose-jwt, arrives with it — which is also what lets
-         LocalIdentityIssuer sign RS256 credentials offline without a dependency of its own.
-
-         NOT diagrid-spring-ai-starter: that is the durability path (every ChatClient.call() run as
-         a Dapr Workflow) and this quickstart is the synchronous one. See the aggregator pom. -->
+         LocalIdentityIssuer sign RS256 credentials offline without a dependency of its own. -->
     <dependency>
       <groupId>io.diagrid</groupId>
       <artifactId>diagrid-spring-ai-identity</artifactId>
@@ -49,8 +46,7 @@
     </dependency>
 
     <!-- MockMvc, so the tests drive the real OAuthFilter in a real filter chain in front of the
-         real controller. A plain junit-jupiter dependency (what the event-planner sibling uses)
-         would not do: the thing under test here IS the filter's position in the chain. -->
+         real controller: the thing under test here IS the filter's position in the chain. -->
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-test</artifactId>
@@ -68,12 +64,9 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
         <configuration>
-          <!-- The tests run against the offline issuer, which is the only identity plane they can
-               mint a credential for: the 200 and the 403 are unreachable without one. The mode is
-               read from the environment by the application (so that a reader sets it on the command
-               line), and a JVM cannot set its own environment variables, so it has to be set for
-               the fork here rather than inside a test. InboundIdentityTest asserts that it arrived
-               instead of failing obscurely if this is ever removed. -->
+          <!-- The tests run against the offline issuer, the only identity plane they can mint a
+               credential for. The application reads the mode from the environment, and a JVM cannot
+               set its own environment variables, so it is set for the test fork here. -->
           <environmentVariables>
             <DIAGRID_QUICKSTART_IDENTITY>local</DIAGRID_QUICKSTART_IDENTITY>
           </environmentVariables>

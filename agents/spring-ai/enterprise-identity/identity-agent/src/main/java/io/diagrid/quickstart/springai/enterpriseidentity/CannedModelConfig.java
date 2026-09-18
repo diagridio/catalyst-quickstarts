@@ -10,13 +10,7 @@ import org.springframework.context.annotation.Conditional;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.type.AnnotatedTypeMetadata;
 
-/**
- * Selects the offline {@link CannedChatModel} unless the reader asked for a real provider.
- *
- * <p>Kept out of {@link AgentConfig} on purpose: that class defines the agent and is read as the
- * agent's definition, and a conditional model bean sitting in it would be the second thing that file
- * does.
- */
+/** Selects the offline {@link CannedChatModel} unless the reader asked for a real provider. */
 @Configuration
 public class CannedModelConfig {
 
@@ -32,28 +26,9 @@ public class CannedModelConfig {
   }
 
   /**
-   * True unless {@code spring.ai.model.chat} names OpenAI, which is what
-   * {@code application.properties} maps {@code DIAGRID_QUICKSTART_MODEL} onto.
-   *
-   * <p><b>This has to be the exact complement of Spring AI's own condition, and getting that wrong
-   * breaks startup.</b> {@code OpenAiChatAutoConfiguration} is
-   * {@code @ConditionalOnProperty(name = "spring.ai.model.chat", havingValue = "openai",
-   * matchIfMissing = true)}, and {@code @ConditionalOnProperty} compares with
-   * {@code equalsIgnoreCase}. So this must ignore case too: an {@code equals} comparison would make
-   * {@code DIAGRID_QUICKSTART_MODEL=OpenAI} satisfy <em>both</em> conditions, and two {@code
-   * ChatModel} beans is fatal — the injection points fail with {@code
-   * NoUniqueBeanDefinitionException} naming neither the variable the reader set nor the one they
-   * meant.
-   *
-   * <p><b>A {@code Condition} rather than {@code @ConditionalOnExpression}.</b> The property
-   * placeholder in an expression is resolved before the string is parsed, so the environment
-   * variable's value becomes SpEL source and a value containing a quote fails the context with a
-   * parse error — the same class of confusing startup failure this condition exists to avoid. Here
-   * the value is read as data and never parsed.
-   *
-   * <p>Copied deliberately from the {@code event-planner} and {@code crash-recovery} siblings rather
-   * than shared: these are standalone quickstarts a reader clones one of, and a common module
-   * between them would be a dependency no README mentions.
+   * True unless {@code spring.ai.model.chat} names OpenAI. Case-insensitive, to be the exact
+   * complement of Spring AI's own condition: two matching conditions would contribute two
+   * {@code ChatModel} beans and the context would not start.
    */
   static final class NotOpenAi implements Condition {
 

@@ -10,16 +10,13 @@ import org.springframework.stereotype.Component;
 /**
  * The outbound half: calling a tool as the user.
  *
- * <p>{@link BookingTools#myBookings} runs in-process, so it trusts whatever subject the agent hands
- * it. This tool leaves the process, and that changes the trust story: <b>it takes no subject at
- * all</b>. The calling user travels in a token Catalyst mints for this one call, so the CRM
- * establishes who is asking for itself rather than believing the agent. A tool that cannot be told
- * who is calling cannot be lied to about it.
+ * <p>Unlike {@link BookingTools#myBookings}, this tool leaves the process, and <b>takes no subject
+ * at all</b>: the calling user travels in a credential Catalyst mints for this one call, so the CRM
+ * establishes who is asking for itself rather than believing the agent.
  */
 @Component
 public class CrmTools {
 
-  /** The tool's argument name, which is what the canned model has to fill in. */
   static final String ACCOUNT_ID_ARGUMENT = "accountId";
 
   private static final Logger LOG = LoggerFactory.getLogger(CrmTools.class);
@@ -36,9 +33,8 @@ public class CrmTools {
       @ToolParam(description = "the CRM account to summarise") String accountId,
       ToolContext toolContext) {
 
-    // Logged for the reader watching `diagrid dev run`, and to make the point that the agent knows
-    // the caller here and still does not pass it: the identity travels in the token, not in an
-    // argument.
+    // The agent knows the caller here and still does not pass it: identity travels in the
+    // credential, not in an argument.
     LOG.info("[IDENTITY] tool call for subject={}",
         AgentToolContext.verifiedSubject(toolContext));
 

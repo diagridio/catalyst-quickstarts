@@ -9,16 +9,9 @@ import org.springframework.context.annotation.Configuration;
 /**
  * The agent: an ordinary Spring AI {@link ChatClient} and the tool it is offered.
  *
- * <p><b>This is where the synchronous path is guaranteed.</b> The client is built from the injected
- * {@code ChatClient.Builder} with no {@code diagrid-spring-ai-starter} on the classpath, so no
- * {@code DurableAdvisor} attaches and nothing here runs as a Dapr Workflow. A reader comparing this
- * against the {@code event-planner} sibling will find the durability dependency missing, and this is
- * the file that says why: the point of this quickstart is where identity enters and how far it
- * travels, and every hop happens on the request thread — which is also what lets the caller's
- * identity reach the outbound MCP call. See {@link CatalystMcpClient}.
- *
- * <p>Nothing in this class is Diagrid-specific, which is the point. The same agent runs unchanged
- * off Catalyst, just without a verified caller to run it for.
+ * <p>No {@code diagrid-spring-ai-starter} on the classpath, so every hop happens on the request
+ * thread — which is what lets the caller's identity reach the outbound MCP call. See
+ * {@link CatalystMcpClient}.
  */
 @Configuration
 public class AgentConfig {
@@ -36,17 +29,7 @@ public class AgentConfig {
     return builder.defaultSystem(SYSTEM).defaultTools(tools(bookingTools, crmTools)).build();
   }
 
-  /**
-   * The one tool the agent gets, chosen by which identity plane the application trusts.
-   *
-   * <p>The offline issuer has no Catalyst project behind it, so it cannot reach an MCP server;
-   * {@code my_bookings} keeps the whole walkthrough runnable there. Against Catalyst the tool call
-   * leaves the process and picks the caller up on the way.
-   *
-   * <p>Named on the client rather than discovered from the application context, which is plain
-   * Spring AI: without the diagrid starter nothing rediscovers {@code @Tool} beans, and a tool an
-   * agent may call is a tool the application named.
-   */
+  /** The one tool the agent gets: offline there is no Catalyst project, and so no MCP server. */
   private static Object tools(BookingTools bookingTools, CrmTools crmTools) {
     if (EnterpriseIdentityApplication.offlineIdentity()) {
       LOG.info("Offline identity mode: the agent calls the in-process my_bookings tool, so the "

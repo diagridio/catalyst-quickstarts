@@ -27,27 +27,15 @@ public class CrmServerApplication {
     SpringApplication.run(CrmServerApplication.class, args);
   }
 
-  /** Exposes {@code account_summary} as an MCP tool. */
   @Bean
   ToolCallbackProvider crmToolCallbacks(CrmTools crmTools) {
     return MethodToolCallbackProvider.builder().toolObjects(crmTools).build();
   }
 
   /**
-   * The MCP endpoint, declared here only so it can be given a context extractor.
-   *
-   * <p>Spring AI auto-configures this transport provider itself, and this bean replaces that one
-   * (the auto-configuration is {@code @ConditionalOnMissingBean}). Everything else about it is the
-   * default; the one thing this adds is the extractor below.
-   *
-   * <p><b>Why an extractor and not a request-scoped lookup.</b> The tool handler does not necessarily
-   * run on the servlet thread that received the request — this transport dispatches through
-   * Reactor — so reading the header from Spring's request context inside the tool would be correct
-   * only by accident. The extractor runs on the receiving thread by construction, and what it puts
-   * in the transport context reaches the tool through the MCP exchange. It is the server-side mirror
-   * of the hand-off the agent makes on the way out.
-   *
-   * @param mcpEndpoint the path {@code resources/crm-mcp.yaml} registers with Catalyst
+   * The MCP endpoint, declared only so it can be given a context extractor. An extractor rather
+   * than a request-scoped lookup because the tool handler does not necessarily run on the servlet
+   * thread that received the request — this transport dispatches through Reactor.
    */
   @Bean
   WebMvcStreamableServerTransportProvider crmTransportProvider(

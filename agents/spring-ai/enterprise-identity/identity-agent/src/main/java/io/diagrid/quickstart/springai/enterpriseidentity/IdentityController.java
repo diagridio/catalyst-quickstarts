@@ -20,12 +20,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * The two routes, and the only place this application touches identity at all.
- *
- * <p>Both read the caller through {@link OAuthFilter#verifiedUser(HttpServletRequest)} and can treat
- * it as trustworthy, because an untrustworthy request never reached them: the filter answered it
- * first. Neither route is exempt — {@code requireAuth} is application-wide, which is why there is no
- * health endpoint.
+ * The two routes, and the only place this application touches identity at all. Both read the caller
+ * through {@link OAuthFilter#verifiedUser(HttpServletRequest)} and can treat it as trustworthy,
+ * because an untrustworthy request never reached them: the filter answered it first.
  */
 @RestController
 public class IdentityController {
@@ -46,9 +43,6 @@ public class IdentityController {
     this.agent = agent;
   }
 
-  /**
-   * Who Catalyst says is calling. No model turn, so the 401/200 contrast is free.
-   */
   @GetMapping("/whoami")
   public Identity whoami(HttpServletRequest request) {
     // Present on every request that gets here: the policy is fail-closed.
@@ -62,16 +56,13 @@ public class IdentityController {
     VerifiedUser user = OAuthFilter.verifiedUser(request).orElseThrow();
     LOG.info("[IDENTITY] verified caller subject={} issuer={}", user.subject(), user.issuerId());
 
-    // Validated after authentication, so a bad body from a verified caller is a 400 while the same
-    // body from an anonymous one is still a 401.
+    // Validated after authentication, so the same body from an anonymous caller is still a 401.
     Object task = body == null ? null : body.get(TASK_FIELD);
     if (!(task instanceof String text) || text.isBlank()) {
       return ResponseEntity.badRequest().body(new ErrorResponse(BAD_REQUEST, BAD_TASK_DETAIL));
     }
 
-    // The verified subject travels as tool context, not as a message the model could rewrite. The
-    // transcript travels with it because ChatClient.call() hands back only the final assistant
-    // message; see AgentToolContext.
+    // The verified subject travels as tool context, not as a message the model could rewrite.
     Map<String, Object> toolContext = AgentToolContext.forCaller(user.subject());
     String answer = agent.prompt().user(text).toolContext(toolContext).call().content();
 
@@ -84,12 +75,7 @@ public class IdentityController {
     return ResponseEntity.ok(new RunResponse(Identity.of(user), messages));
   }
 
-  /**
-   * A body Spring could not read as JSON.
-   *
-   * <p>The filter runs before this, so an unreadable body from an anonymous caller is still a 401 —
-   * this handler is only ever reached by a verified one.
-   */
+  /** A body Spring could not read as JSON. Only ever reached by a verified caller. */
   @ExceptionHandler(HttpMessageNotReadableException.class)
   public ResponseEntity<ErrorResponse> unreadableBody() {
     return ResponseEntity.status(HttpStatus.BAD_REQUEST)
@@ -97,14 +83,8 @@ public class IdentityController {
   }
 
   /**
-   * The verified caller, as JSON.
-   *
-   * <p>Claim names only, never claim values: {@link VerifiedUser#claims()} is a real person's
-   * decoded credential, and echoing it back would leak whatever the identity provider chose to put
-   * there.
-   *
-   * <p>The scopes are sorted here rather than taken in the order they arrive, so the body is the
-   * same in every Diagrid SDK for the same token. See {@link #of}.
+   * The verified caller, as JSON. Claim names only, never claim values:
+   * {@link VerifiedUser#claims()} is a real person's decoded credential.
    */
   public record Identity(
       String subject,
@@ -113,10 +93,7 @@ public class IdentityController {
       List<String> scopes) {
 
     static Identity of(VerifiedUser user) {
-      // Sorted, and not the set's own iteration order: VerifiedUser.scopes() is a LinkedHashSet
-      // that preserves the order the credential listed them in, so two tokens carrying the same
-      // scopes in a different order would otherwise produce two different response bodies for the
-      // same caller.
+      // Sorted so the same caller always produces the same body.
       return new Identity(
           user.subject(), user.tenant(), user.issuerId(), user.scopes().stream().sorted().toList());
     }

@@ -19,8 +19,8 @@ import tools.jackson.databind.ObjectMapper;
  * The CRM's one tool: summarise an account, and report who the CRM is answering.
  *
  * <p>This application has no identity dependency and verifies nothing. Catalyst verified the caller
- * before this process was reached and minted the on-behalf-of token that arrives here, so the only
- * thing left to do is decode the claims in order to show them.
+ * before this process was reached, so all that is left is to decode the claims in order to show
+ * them.
  */
 @Component
 public class CrmTools {
@@ -28,15 +28,13 @@ public class CrmTools {
   /** The header Catalyst puts the on-behalf-of token in. Lower-cased, as HTTP delivers it. */
   static final String USER_TOKEN_HEADER = "x-diagrid-user-token";
 
-  /** Where {@code CrmServerApplication} parks the header for the tool to read. */
   static final String USER_TOKEN_CONTEXT_KEY = "diagrid.userToken";
 
   private static final String BEARER_PREFIX = "bearer ";
 
-  /** The {@code sub} of the user the call is for. */
   private static final String SUBJECT_CLAIM = "sub";
 
-  /** The delegation claim: {@code act.sub} is the agent acting for that user. */
+  /** The delegation claim: {@code act.sub} is the agent acting for the user. */
   private static final String ACTOR_CLAIM = "act";
 
   private static final String NO_USER = "<no user identity>";
@@ -65,12 +63,9 @@ public class CrmTools {
   }
 
   /**
-   * The calling user, read from the token Catalyst minted for this request.
-   *
-   * <p><b>Decoded, never verified, and that is correct here.</b> Catalyst checked the signature
-   * before the request arrived; re-checking it would mean this application knowing Catalyst's key
-   * material, which is exactly the coupling the proxy exists to remove. Nothing in the response is
-   * an authorization decision — a CRM that made one would verify.
+   * The calling user, decoded from Catalyst's credential and <b>never verified here</b>: Catalyst
+   * checked the signature before the request arrived, and nothing in the response is an
+   * authorization decision. A CRM that made one would verify.
    */
   @SuppressWarnings("unchecked")
   private static Map<String, Object> callingUser(ToolContext toolContext) {
@@ -92,13 +87,7 @@ public class CrmTools {
     }
   }
 
-  /**
-   * The raw header value, out of the MCP transport context.
-   *
-   * <p>Put there by {@code CrmServerApplication}'s context extractor, which runs on the thread that
-   * received the HTTP request. This tool may not be running on that thread, so the servlet request
-   * is not reachable from here.
-   */
+  /** From the transport context, because this tool may not run on the servlet thread. */
   private static String rawToken(ToolContext toolContext) {
     McpSyncServerExchange exchange = McpToolUtils.getMcpExchange(toolContext).orElse(null);
     if (exchange == null) {

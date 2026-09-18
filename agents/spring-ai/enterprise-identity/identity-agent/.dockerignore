@@ -1,11 +1,3 @@
 # The image needs the jar and nothing else; see the Dockerfile.
 src
 pom.xml
-
-# WORTH KNOWING, because the Python version of this quickstart gets a guard here that Java cannot
-# have. There, local_identity.py is excluded from the build context, so setting
-# DIAGRID_QUICKSTART_IDENTITY=local on a container raises ImportError and the app refuses to start
-# rather than quietly trusting tokens it minted itself. Here LocalIdentityIssuer is compiled into
-# target/*.jar before the image is built, so no exclusion in this file can reach it. The guards are
-# the opt-in environment variable and the WARNING the issuer logs on every start. The README says
-# so; prose is a weaker guard than a missing file, and pretending otherwise would be worse.

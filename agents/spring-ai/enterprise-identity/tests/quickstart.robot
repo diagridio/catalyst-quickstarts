@@ -8,33 +8,12 @@ pair of documented requests this suite asserts. This README documents no cleanup
 command -- like the Python quickstart it was ported from, and unlike the other
 two agents/spring-ai suites -- so deleting the project is infrastructure here.
 
-WHAT THIS SUITE PROVES, precisely: the documented install and provisioning
-commands succeed, both apps connect through the dev tunnel, the canned offline
-model is the one in play, Tomcat serves on the documented port, and an
-unauthenticated request to either documented route is refused 401 with the exact
-body `{"error": "oauth.missing_token"}` -- the shipped filter's missing-token
-path (diagrid-ai-identity 0.3.0, OAuthErrorCodes.MISSING_TOKEN).
+What this suite asserts: the documented install and provisioning commands
+succeed, the app starts on the documented port, and an unauthenticated request
+to either documented route is refused 401 with `{"error": "oauth.missing_token"}`.
 
-WHAT IT DOES NOT PROVE: that an authenticated request succeeds, or that a
-verified identity reaches the app's handler. No keyword here takes headers and
-nothing here can mint a token dataplane Sentry signed, so both documented
-`diagrid call invoke` calls are in UNCOVERED. Those two outcomes -- the 200 and
-the 403 -- are covered instead by the quickstart's own unit tests, which stand the
-identity plane up in-process
-(agents/spring-ai/enterprise-identity/identity-agent/src/test/java, run by
-.github/workflows/agents_enterprise_identity_java.yaml). Do not add an assertion
-here that implies otherwise.
-
-The OUTBOUND leg (on-behalf-of to a downstream MCP tool) is documented by the
-README and implemented by CatalystMcpClient, but nothing here observes it: it
-starts with a credential-bearing request this harness cannot make. Do not add an
-assertion implying a downstream MCP server receives a delegated JWT.
-
-The request loop below is the shape every agent-family suite uses, with one
-addition the Python enterprise-identity suite was first to need: it branches on
-${request}[method], because the README's primary fail-closed example is a GET.
-The other agents/spring-ai suites' POST-only guard says exactly this ("use GET
-And Expect for a documented GET").
+Authenticated requests need a credential this suite cannot mint, so both
+documented `diagrid call invoke` calls are listed in UNCOVERED.
 
 Run it:
   export DIAGRID_API_KEY=...
