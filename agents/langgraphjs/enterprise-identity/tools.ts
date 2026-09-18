@@ -1,9 +1,7 @@
 /**
- * The agent's tools.
- *
- * Two tools, showing the two ways an agent can act for someone. `my_bookings`
- * runs in-process and is handed the caller's subject as an argument.
- * `account_summary` leaves the process, and carries the caller in a token
+ * The agent's tools, showing the two ways an agent can act for someone.
+ * `my_bookings` runs in-process and is handed the caller's subject;
+ * `account_summary` leaves the process and carries the caller in a token
  * Catalyst mints for that one call.
  */
 
@@ -27,15 +25,12 @@ export const myBookings = tool(
 );
 
 // --- The outbound half: calling a tool as the user -------------------------
-// `my_bookings` above runs in-process, so it trusts whatever subject the agent
-// hands it. `account_summary` below leaves the process, and that changes the
-// trust story: it takes no subject at all. The calling user travels in a token
-// Catalyst mints for this one call, so the CRM establishes who is asking for
-// itself rather than believing the agent.
+// `account_summary` takes no subject at all. The calling user travels in a
+// token Catalyst mints for this one call, so the CRM establishes who is asking
+// for itself rather than believing the agent.
 
 const MCP_SERVER_NAME = 'crm-mcp';
 
-/** The client half of the MCP handshake. Reported to the server on connect. */
 const MCP_CLIENT_NAME = 'identity-agent';
 const MCP_CLIENT_VERSION = '1.0.0';
 
@@ -45,20 +40,15 @@ const MCP_URL =
   `${process.env['DAPR_HTTP_ENDPOINT'] ?? 'http://localhost:3500'}` +
   `/v1.0/diagrid/mcp/${MCP_SERVER_NAME}`;
 
-/**
- * A `fetch` that carries the calling user, built once for the process.
- *
- * Safe to share across requests: the caller is read at send time, not now, so
- * concurrent requests each carry their own.
- */
+// A `fetch` that carries the calling user. Safe to share across requests: the
+// caller is read at send time, so concurrent requests each carry their own.
 const identityFetch = createIdentityFetch();
 
 export const accountSummary = tool(
   async ({ account_id }: { account_id: string }) => {
     const transport = new StreamableHTTPClientTransport(new URL(MCP_URL), {
       fetch: identityFetch,
-      // Authenticates the agent itself to Catalyst; `identityFetch` carries
-      // the user.
+      // Authenticates the agent itself; `identityFetch` carries the user.
       requestInit: {
         headers: { 'dapr-api-token': process.env['DAPR_API_TOKEN'] ?? '' },
       },
@@ -74,8 +64,7 @@ export const accountSummary = tool(
         name: 'account_summary',
         arguments: { account_id },
       });
-      // `callTool` types its result loosely, so the CRM's answer is read
-      // through the shape the MCP specification gives a text content block.
+      // `callTool` types its result loosely; this is MCP's text content block.
       const [block] = answer.content as { type: string; text?: string }[];
       return block?.type === 'text' ? (block.text ?? '') : '';
     } finally {
@@ -96,9 +85,8 @@ function byName(
   return Object.fromEntries(tools.map((entry) => [entry.name, entry]));
 }
 
-// The graph gets one tool or the other. The offline issuer has no Catalyst
-// project behind it, so it cannot reach an MCP server; `my_bookings` keeps the
-// whole walkthrough runnable there.
+// The graph gets one tool or the other: offline mode has no Catalyst project
+// behind it and so cannot reach an MCP server.
 export const localTools: readonly StructuredToolInterface[] = [myBookings];
 export const localToolsByName = byName(localTools);
 

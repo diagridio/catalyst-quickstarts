@@ -1,9 +1,8 @@
 /**
  * A stand-in CRM, exposed over MCP.
  *
- * Its one tool reports the identity the call arrived with. The agent sends no
- * password and no API key, and the CRM still knows whose question it is
- * answering -- and which agent asked on their behalf.
+ * Its one tool reports the identity the call arrived with: the agent sends no
+ * password and no API key, and the CRM still knows whose question it is.
  */
 
 import { USER_TOKEN_HEADER } from '@diagrid/agent-core';
@@ -38,10 +37,8 @@ interface CallingParties {
 /**
  * Read the calling user from the token Catalyst minted for this request.
  *
- * Catalyst verifies the signature before the request arrives, so this only
- * decodes the claims in order to show them. `decodeJwt` is jose's decode-only
- * half on purpose: verifying here would mean this CRM held identity
- * coordinates of its own, which is exactly the burden Catalyst removes.
+ * Catalyst verifies the signature before the request arrives, so `decodeJwt` is
+ * jose's decode-only half on purpose: this CRM holds no identity coordinates.
  */
 function callingParties(
   headers: Record<string, string | string[] | undefined>
@@ -63,7 +60,7 @@ function callingParties(
   };
 }
 
-/** The CRM's one tool, on a server of its own. See the route below for why. */
+/** The CRM's one tool. */
 function buildServer(): McpServer {
   const mcp = new McpServer({ name: SERVER_NAME, version: SERVER_VERSION });
 
@@ -77,9 +74,8 @@ function buildServer(): McpServer {
       { account_id }: { account_id: string },
       extra: RequestHandlerExtra<never, never>
     ) => {
-      // The transport copies the inbound HTTP request's headers onto every tool
-      // call, which is the only place the on-behalf-of token appears: MCP
-      // itself carries no identity.
+      // MCP carries no identity of its own. The transport copies the inbound
+      // HTTP headers onto every tool call, which is where the token arrives.
       const { user, agent } = callingParties(extra.requestInfo?.headers ?? {});
       console.log(
         `account_summary(${account_id}) for user=${user} via agent=${agent}`
@@ -103,9 +99,8 @@ function buildServer(): McpServer {
 const app = express();
 app.use(express.json());
 
-// A fresh server and transport per request, and `sessionIdGenerator: undefined`
-// to say so: stateless mode. Catalyst's MCP proxy opens its own connection for
-// each tool call, so there is no session for a CRM to keep.
+// Stateless mode: Catalyst's MCP proxy opens its own connection for each tool
+// call, so there is no session for a CRM to keep.
 app.post(MCP_PATH, async (req, res) => {
   const mcp = buildServer();
   const transport = new StreamableHTTPServerTransport({
@@ -120,9 +115,8 @@ app.post(MCP_PATH, async (req, res) => {
   await transport.handleRequest(req, res, req.body);
 });
 
-// Stateless mode has no stream to resume and no session to delete, so the two
-// other methods the Streamable HTTP spec defines are refused rather than left
-// to answer 404 as an unrouted path.
+// Stateless mode has no stream to resume and no session to delete, so the other
+// Streamable HTTP methods are refused rather than left to answer 404.
 app.all(MCP_PATH, (_req, res) => {
   res.status(HTTP_METHOD_NOT_ALLOWED).json({
     jsonrpc: '2.0',

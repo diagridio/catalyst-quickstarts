@@ -1,11 +1,8 @@
 /**
- * A deterministic stand-in for a hosted chat model.
+ * A deterministic stand-in for a hosted chat model: a canned two-turn
+ * conversation, so the demo is free, offline and identical on every run.
  *
- * This quickstart's point is inbound identity, not model quality, so it ships a
- * canned two-turn conversation: ask for the tool, then answer from the tool's
- * result. That keeps the demo free, offline and identical on every run.
- *
- * Set OPENAI_API_KEY and DIAGRID_QUICKSTART_MODEL=openai to use a real provider.
+ * Set OPENAI_API_KEY and DIAGRID_QUICKSTART_MODEL=openai for a real provider.
  */
 
 import type { BaseLanguageModelInput } from '@langchain/core/language_models/base';
@@ -20,7 +17,6 @@ import type {
 import type { ChatResult } from '@langchain/core/outputs';
 import type { Runnable } from '@langchain/core/runnables';
 
-/** The model the `openai` mode reaches for. Cheap, and tool-calling capable. */
 const OPENAI_MODEL = 'gpt-4.1-mini';
 
 /** One canned turn: either a tool request or a final answer, never both. */
@@ -29,13 +25,7 @@ interface CannedTurn {
   readonly toolCalls: readonly ToolCall[];
 }
 
-/**
- * Returns `firstTurn` until a tool has run, then `finalTurn`.
- *
- * The decision reads the conversation rather than counting calls. A call
- * counter resets with the process and would ask for the tool a second time;
- * the replayed message history is the only state that always tells the truth.
- */
+/** Returns `firstTurn` until a tool has run, then `finalTurn`. */
 class CannedToolCallingChatModel extends BaseChatModel {
   readonly modelName = 'canned-offline';
 
@@ -52,10 +42,7 @@ class CannedToolCallingChatModel extends BaseChatModel {
     return 'canned-tool-calling';
   }
 
-  /**
-   * Accepted and ignored: the canned tool call is already decided. Overridden
-   * so main.ts binds tools the same way against either model.
-   */
+  /** Accepted and ignored: the canned tool call is already decided. */
   override bindTools(
     _tools: BindToolsInput[]
   ): Runnable<BaseLanguageModelInput, AIMessageChunk> {
@@ -71,8 +58,7 @@ class CannedToolCallingChatModel extends BaseChatModel {
       content: turn.content,
       tool_calls: [...turn.toolCalls],
     });
-    // `ChatGeneration` extends `Generation`, so `text` is required alongside
-    // the message even on the turn that carries only a tool call.
+    // `text` is required alongside the message, even on a tool-call-only turn.
     return { generations: [{ text: turn.content, message }] };
   }
 }
@@ -80,10 +66,8 @@ class CannedToolCallingChatModel extends BaseChatModel {
 /**
  * The canned two-turn conversation this quickstart runs on.
  *
- * Note the subject the first turn asks for: `someone@example.com`, which is
- * nobody. A model does not know who is calling and must not be trusted to
- * decide -- main.ts's `callTools` replaces this argument with the subject the
- * middleware verified. A real provider is treated the same way.
+ * The first turn asks for `someone@example.com`, which is nobody: the `tools`
+ * node replaces it with the subject the middleware verified.
  */
 export function buildCannedModel({ offline = false } = {}): BaseChatModel {
   const call: ToolCall = offline
@@ -111,10 +95,8 @@ export function buildCannedModel({ offline = false } = {}): BaseChatModel {
 }
 
 /**
- * Real provider on request, canned model otherwise.
- *
- * `@langchain/openai` is imported dynamically, so the canned path never loads
- * it and needs no API key.
+ * Real provider on request, canned model otherwise. `@langchain/openai` is
+ * imported dynamically, so the canned path needs no API key.
  */
 export async function buildModel(offline: boolean): Promise<BaseChatModel> {
   if (process.env['DIAGRID_QUICKSTART_MODEL'] === 'openai') {
