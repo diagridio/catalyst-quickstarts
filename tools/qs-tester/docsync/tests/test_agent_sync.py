@@ -72,6 +72,12 @@ The agent will use the check_availability tool to check venue availability.
   [ACTIVITY] Executing node 'tools' as Dapr activity
 ```
 
+```text
+HTTP/1.1 401 Unauthorized
+
+{"error":"oauth.missing_token"}
+```
+
 ## Crash Recovery Test With Catalyst
 
 ```bash
@@ -310,6 +316,76 @@ def test_check_agent_reports_a_missing_catalyst_probe_markers(tmp_path):
     del module.CATALYST_PROBE_MARKERS
     problems = check_agent(row, root, module=module)
     assert any("CATALYST_PROBE_MARKERS" in p for p in problems)
+
+
+MISSING_TOKEN = {"error": "oauth.missing_token"}
+
+
+def a_request(**overrides):
+    """The synthetic README's documented POST, with `body` overridable."""
+    request = {
+        "method": "POST",
+        "port": 8005,
+        "path": "/agent/run",
+        "payload": {"task": "Check if the Grand Ballroom is available on March 15th"},
+        "status": 200,
+        "field": None,
+    }
+    return (request | overrides,)
+
+
+def test_check_agent_accepts_a_body_documented_in_a_fenced_block(tmp_path):
+    # `body` is the exact expected response body, so it must be documented as
+    # OUTPUT — the same rule `log_marker` follows. The README's ```text block
+    # prints it in the compact spelling `curl -i` produces.
+    row, root = _fixture(tmp_path)
+    module = data_module(REQUESTS=a_request(body=MISSING_TOKEN))
+    assert check_agent(row, root, module=module) == []
+
+
+def test_check_agent_rejects_a_body_the_readme_does_not_document(tmp_path):
+    # The drift this closes: `body` is the strongest assertion an agent suite can
+    # make, and before this check it was also the freest to drift — `path`,
+    # `port` and `payload` were policed while `body` was not, so an exact-body
+    # assertion could stop matching the documented response and stay green.
+    row, root = _fixture(tmp_path)
+    module = data_module(REQUESTS=a_request(body={"error": "nonsense"}))
+    problems = check_agent(row, root, module=module)
+    assert any("nonsense" in p and "fenced block" in p for p in problems)
+
+
+def test_check_agent_rejects_a_body_that_only_appears_in_prose(tmp_path):
+    # Same trap as the log-marker prose case: a body named in a sentence is not
+    # evidence the app returns it.
+    row, root = _fixture(tmp_path)
+    readme = root / "agents" / "langgraph" / "README.md"
+    readme.write_text(README + '\nIt answers with {"error":"prose-only"}.\n')
+    module = data_module(REQUESTS=a_request(body={"error": "prose-only"}))
+    problems = check_agent(row, root, module=module)
+    assert any("prose-only" in p and "fenced block" in p for p in problems)
+
+
+def test_check_agent_accepts_either_json_spelling_of_a_body(tmp_path):
+    # A README prints a response body however the tool that produced it did:
+    # `curl -i` output is compact, a pretty-printed block is spaced. Requiring
+    # one spelling would push authors to reformat real documented output to
+    # satisfy a checker, so both are accepted.
+    row, root = _fixture(tmp_path)
+    readme = root / "agents" / "langgraph" / "README.md"
+    spaced = README.replace('{"error":"oauth.missing_token"}',
+                            '{"error": "oauth.missing_token"}')
+    assert '{"error": "oauth.missing_token"}' in spaced, "the fixture must have changed spelling"
+    readme.write_text(spaced)
+    module = data_module(REQUESTS=a_request(body=MISSING_TOKEN))
+    assert check_agent(row, root, module=module) == []
+
+
+def test_check_agent_leaves_a_request_without_a_body_alone(tmp_path):
+    # `body` stays optional: the four `status: 200` agent suites assert a field's
+    # presence instead, because their responses embed model output. Omitting it
+    # must not become an error, or those four suites could not exist.
+    row, root = _fixture(tmp_path)
+    assert check_agent(row, root, module=data_module(REQUESTS=a_request())) == []
 
 
 def _fixture(tmp_path):

@@ -2,3 +2,9 @@
 __pycache__/
 *.pyc
 .git
+
+# The nested enterprise-identity quickstart builds its own image from its own
+# Dockerfile. Without this, `COPY . .` above would bundle it into this one --
+# including its throwaway offline issuer, which its own .dockerignore exists to
+# keep out of any image.
+enterprise-identity/
