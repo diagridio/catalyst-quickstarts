@@ -1,0 +1,7 @@
+.git
+
+# A container has no reason to carry the tests.
+*_test.go
+
+# The offline issuer is fenced off by the `offline` build tag, which the
+# Dockerfile builds without, rather than by an entry here.
