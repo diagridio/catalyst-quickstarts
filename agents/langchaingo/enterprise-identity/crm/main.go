@@ -1,8 +1,6 @@
-// Command crm-server is a stand-in CRM, exposed over MCP.
-//
-// Its one tool reports the identity the call arrived with. The agent sends no
-// password and no API key, and the CRM still knows whose question it is
-// answering -- and which agent asked on their behalf.
+// Command crm-server is a stand-in CRM, exposed over MCP. Its one tool reports
+// the identity the call arrived with: the agent sends no password and no API
+// key, and the CRM still knows whose question it is answering.
 package main
 
 import (
@@ -20,8 +18,7 @@ import (
 )
 
 const (
-	// defaultAppPort is the port dev-enterprise-identity.yaml declares for this
-	// app, used when APP_PORT is unset.
+	// defaultAppPort is the port dev-enterprise-identity.yaml declares.
 	defaultAppPort = "8007"
 
 	envAppPort = "APP_PORT"
@@ -29,28 +26,24 @@ const (
 	// mcpPath is the endpoint resources/crm-mcp.yaml registers with Catalyst.
 	mcpPath = "/mcp"
 
-	// toolAccountSummary is the tool the agent calls. The agent names the same
-	// string on its side; they are two processes, so the constant cannot be
-	// shared, but a mismatch is a tool-not-found error rather than a silent one.
+	// toolAccountSummary is the tool the agent calls, named by the same string
+	// on its side. Two processes, so the constant cannot be shared.
 	toolAccountSummary = "account_summary"
 
 	// claimSubject is the calling user, and claimActor the agent acting for
-	// them. The actor claim is the on-behalf-of half of the token: RFC 8693
-	// names it `act`, and its own `sub` is the delegate.
+	// them: RFC 8693 names the on-behalf-of claim `act`, whose own `sub` is the
+	// delegate.
 	claimSubject = "sub"
 	claimActor   = "act"
 
-	// The placeholders reported when the token names nobody, so the difference
-	// between "no user" and "no agent" is legible in the answer itself.
 	noUser  = "<no user identity>"
 	noAgent = "<no agent>"
 
-	// jwtSegments is how many dot-separated parts a compact JWT has.
 	jwtSegments = 3
 )
 
-// accountArgs is the tool's input. Struct tags give the MCP SDK the argument
-// name and the schema description.
+// accountArgs is the tool's input. The struct tags give the MCP SDK the
+// argument name and the schema description.
 type accountArgs struct {
 	AccountID string `json:"account_id" jsonschema:"the CRM account to summarise"`
 }
@@ -70,7 +63,6 @@ func newMCPServer() *mcp.Server {
 		Version: "0.1.0",
 	}, nil)
 
-	// The generic AddTool derives the tool's input schema from accountArgs.
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        toolAccountSummary,
 		Description: "Summarise a CRM account, and report who the CRM is answering.",
@@ -84,8 +76,7 @@ func newMCPServer() *mcp.Server {
 func newMux() *http.ServeMux {
 	server := newMCPServer()
 	mux := http.NewServeMux()
-	// Requests arrive through Catalyst, whose Host is not loopback. This server
-	// is reachable only through Catalyst.
+	// Requests arrive through Catalyst, whose Host is not loopback.
 	mux.Handle(mcpPath, mcp.NewStreamableHTTPHandler(
 		func(*http.Request) *mcp.Server { return server },
 		&mcp.StreamableHTTPOptions{DisableLocalhostProtection: true}))
@@ -93,11 +84,8 @@ func newMux() *http.ServeMux {
 }
 
 // accountSummary summarises a CRM account, and reports who the CRM is
-// answering.
-//
-// Both identities come off the token Catalyst minted for this one call. The
-// agent was never asked who the user is, and could not have been believed if it
-// had been.
+// answering. Both identities come off the token Catalyst minted for this one
+// call; the agent was never asked who the user is.
 func accountSummary(
 	_ context.Context,
 	req *mcp.CallToolRequest,
@@ -124,19 +112,13 @@ func accountSummary(
 //
 // Catalyst verifies the signature before the request arrives, so this only
 // DECODES the claims in order to show them. A service making an authorization
-// decision on these claims would have to verify the token itself; this one only
-// reports what it was told, which is the whole of its job.
-//
-// An unreadable or absent token is an empty claim set rather than an error: the
-// tool's answer then says so, which is more use to a reader than a protocol
-// failure with no explanation.
+// decision on these claims would have to verify the token itself.
 func callingUser(req *mcp.CallToolRequest) map[string]any {
 	if req == nil || req.Extra.Header == nil {
 		return nil
 	}
 	raw := strings.TrimSpace(req.Extra.Header.Get(identity.UserTokenHeader))
-	// Case-insensitively, because the scheme prefix is written by clients in
-	// several languages and only its spelling varies.
+	// Case-insensitively: only the spelling of the scheme prefix varies.
 	token := raw
 	if len(raw) >= len(identity.BearerPrefix) &&
 		strings.EqualFold(raw[:len(identity.BearerPrefix)], identity.BearerPrefix) {
@@ -152,8 +134,6 @@ func callingUser(req *mcp.CallToolRequest) map[string]any {
 		log.Printf("user token is not a compact JWT; reporting no identity")
 		return nil
 	}
-	// RawURLEncoding, because a JWT segment is base64url with the padding
-	// stripped.
 	payload, err := base64.RawURLEncoding.DecodeString(segments[1])
 	if err != nil {
 		log.Printf("decode user token payload: %v", err)

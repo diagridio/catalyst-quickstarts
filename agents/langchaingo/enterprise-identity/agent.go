@@ -13,10 +13,8 @@ import (
 )
 
 const (
-	// maxTurns bounds the model/tool loop. The canned model answers on its
-	// second turn, so anything past a handful means a real provider is asking
-	// for tools without ever settling -- a runaway to stop rather than a
-	// conversation to continue.
+	// maxTurns bounds the model/tool loop, so a model that asks for tools
+	// without ever settling is stopped rather than followed.
 	maxTurns = 4
 
 	// envModel opts in to a real provider, and modelOpenAI is the one value
@@ -24,26 +22,15 @@ const (
 	envModel    = "DIAGRID_QUICKSTART_MODEL"
 	modelOpenAI = "openai"
 
-	// openAIModel is the model used when a reader opts in. Any provider
-	// langchaingo supports works the same way; the identity behaviour is
-	// identical either way.
 	openAIModel = "gpt-4.1-mini"
 )
 
 var (
-	// errNoAnswer reports a loop that ran out of turns without the model ever
-	// returning text.
-	errNoAnswer = errors.New("the model asked for tools on every turn and never answered")
-
-	// errEmptyResponse reports a model turn that returned no choices at all,
-	// which is a provider fault rather than a conversation that went wrong.
+	errNoAnswer      = errors.New("the model asked for tools on every turn and never answered")
 	errEmptyResponse = errors.New("the model returned no choices")
 )
 
 // agent is the whole agent: a model, and the tools it may call.
-//
-// A plain loop, not a workflow: no agent runner, no Dapr Workflow, no durable
-// state, so it is easy to see where identity enters.
 type agent struct {
 	model llms.Model
 
@@ -73,14 +60,11 @@ func newAgent(offline bool) *agent {
 	}
 }
 
-// buildModel returns a real provider on request, and the canned model
-// otherwise.
+// buildModel returns a real provider on request, and the canned model otherwise.
 func buildModel(offline bool) llms.Model {
 	if os.Getenv(envModel) == modelOpenAI {
 		model, err := openai.New(openai.WithModel(openAIModel))
 		if err != nil {
-			// A key that is missing or rejected is a configuration mistake, and
-			// the app has nothing to serve without a model.
 			log.Fatalf("openai model (%s): %v", openAIModel, err)
 		}
 		log.Printf("Using OpenAI (%s).", openAIModel)
@@ -96,13 +80,8 @@ func buildModel(offline bool) llms.Model {
 // run whatever tools it asks for, feed the results back, and stop when it
 // answers in text.
 //
-// subject is the caller the middleware verified, passed in by the HTTP handler.
-// It is an argument rather than a message precisely because a message is
-// something the model can rewrite.
-//
-// The returned slice is the conversation a reader sees in the response: the
-// task, each tool's answer, and the model's summary. The assistant turn that
-// carries only tool calls has no content, so it is not in it.
+// subject is the caller the middleware verified. It is an argument rather than
+// a message precisely because a message is something the model can rewrite.
 func (a *agent) run(ctx context.Context, task, subject string) ([]string, error) {
 	messages := []llms.MessageContent{llms.TextParts(llms.ChatMessageTypeHuman, task)}
 	transcript := []string{task}
@@ -121,10 +100,7 @@ func (a *agent) run(ctx context.Context, task, subject string) ([]string, error)
 			return append(transcript, choice.Content), nil
 		}
 
-		// A model may say something AND ask for tools in the same turn. The
-		// turn that carries only tool calls has no content and contributes
-		// nothing here, which is why the canned conversation reads as three
-		// messages rather than four.
+		// A model may say something AND ask for tools in the same turn.
 		if choice.Content != "" {
 			transcript = append(transcript, choice.Content)
 		}
@@ -132,8 +108,6 @@ func (a *agent) run(ctx context.Context, task, subject string) ([]string, error)
 
 		results := llms.MessageContent{Role: llms.ChatMessageTypeTool}
 		for _, call := range choice.ToolCalls {
-			// callTool rejects a call carrying no FunctionCall, so reading its
-			// Name below is safe only after this has succeeded.
 			answer, err := a.callTool(ctx, call, subject)
 			if err != nil {
 				return nil, err
@@ -151,11 +125,9 @@ func (a *agent) run(ctx context.Context, task, subject string) ([]string, error)
 	return nil, errNoAnswer
 }
 
-// callTool runs one requested tool on behalf of the verified caller.
-//
-// This is where the whole thesis of the quickstart lives. The verified subject
-// OVERRIDES whatever subject the model asked for: a model can request anybody's
-// bookings, and only the verified caller's are ever served.
+// callTool runs one requested tool on behalf of the verified caller. The
+// verified subject OVERRIDES whatever subject the model asked for: a model can
+// request anybody's bookings, and only the verified caller's are ever served.
 func (a *agent) callTool(ctx context.Context, call llms.ToolCall, subject string) (string, error) {
 	if call.FunctionCall == nil {
 		return "", errors.New("model requested a tool call carrying no function")
@@ -179,8 +151,7 @@ func (a *agent) callTool(ctx context.Context, call llms.ToolCall, subject string
 }
 
 // assistantTurn is the model's own turn, replayed back to it so the next turn
-// sees the tool calls it asked for. A tool result with no matching call is a
-// protocol error to a real provider.
+// sees the tool calls it asked for.
 func assistantTurn(choice *llms.ContentChoice) llms.MessageContent {
 	turn := llms.MessageContent{Role: llms.ChatMessageTypeAI}
 	if choice.Content != "" {
@@ -208,8 +179,7 @@ func decodeArguments(raw string) (map[string]any, error) {
 	return args, nil
 }
 
-// withSubject returns a copy of args carrying the verified subject, leaving the
-// model's own arguments untouched. A copy rather than an assignment so the
+// withSubject returns a copy of args carrying the verified subject, so the
 // substitution cannot be undone by anything still holding the original map.
 func withSubject(args map[string]any, subject string) map[string]any {
 	substituted := make(map[string]any, len(args)+1)

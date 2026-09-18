@@ -1,10 +1,6 @@
 // Tests for the tools themselves, and for the one property of them the whole
 // quickstart rests on: which tool the agent loop substitutes the verified
 // caller into.
-//
-// No build tag, deliberately, so these run in either mode -- `go test ./...`
-// as well as `go test -tags offline ./...`. Nothing here needs an issuer or a
-// credential: the question is what the tools DECLARE, not who is calling.
 package main
 
 import (
@@ -27,13 +23,9 @@ func withSchema(parameters any) tool {
 
 // TestSubstitutionFollowsTheDeclaredSchema pins the invariant that makes the
 // substitution in agent.callTool trustworthy: a tool is handed the verified
-// subject exactly when its declared schema says it takes one.
-//
-// The two must agree, because the model can only send arguments the schema
-// declares. A tool declaring `subject` that the loop did not substitute into
-// would be handed the model's guess -- someone@example.com, or any name a real
-// provider invented -- and answer for whoever the model named. That is the one
-// failure this quickstart exists to rule out.
+// subject exactly when its declared schema says it takes one. A tool declaring
+// `subject` that the loop did not substitute into would answer for whoever the
+// model named.
 func TestSubstitutionFollowsTheDeclaredSchema(t *testing.T) {
 	cases := []struct {
 		name  string
@@ -43,17 +35,15 @@ func TestSubstitutionFollowsTheDeclaredSchema(t *testing.T) {
 		wantSubstituted string
 	}{
 		{
-			// The in-process tool takes the caller as an argument, so it trusts
-			// whatever the agent hands it, so the agent must hand it the
-			// verified subject.
+			// The in-process tool trusts whatever the agent hands it, so the
+			// agent must hand it the verified subject.
 			name:            "offline",
 			tools:           localTools(),
 			wantSubstituted: toolMyBookings,
 		},
 		{
 			// The outbound tool takes no subject at all: the caller travels in
-			// the token Catalyst mints for the call, so there is nothing to
-			// substitute and nothing to lie to.
+			// the token Catalyst mints for the call.
 			name:            "catalyst",
 			tools:           catalystTools(),
 			wantSubstituted: "",
@@ -80,8 +70,7 @@ func TestSubstitutionFollowsTheDeclaredSchema(t *testing.T) {
 }
 
 // TestADeclarationWithNoSubjectIsNotSubstitutedInto guards the derivation
-// itself against the shapes a hand-written schema can take, rather than only
-// the two the quickstart ships.
+// against the shapes a hand-written schema can take.
 func TestADeclarationWithNoSubjectIsNotSubstitutedInto(t *testing.T) {
 	cases := []struct {
 		name string
@@ -104,16 +93,13 @@ func TestADeclarationWithNoSubjectIsNotSubstitutedInto(t *testing.T) {
 			want: false,
 		},
 		{
-			// A schema shape this quickstart does not produce. It must read as
-			// "declares no subject" rather than panic: the tool is then handed
-			// none and answers for nobody, which is the safe direction.
+			// Must read as "declares no subject" rather than panic, so the tool
+			// is handed none and answers for nobody.
 			name: "properties is not an object",
 			tool: withSchema(map[string]any{"type": "object", "properties": "nonsense"}),
 			want: false,
 		},
 		{
-			// Likewise for a schema handed over as something other than a map,
-			// which a generated declaration might be.
 			name: "parameters is not a map",
 			tool: withSchema("nonsense"),
 			want: false,

@@ -7,26 +7,12 @@ with Catalyst" provisions and runs, "### 4. See It Fail Closed" is the pair of
 documented requests this suite asserts. This README documents no cleanup
 command, so deleting the project is infrastructure here.
 
-WHAT THIS SUITE PROVES, precisely: the documented install and provisioning
-commands succeed, the app connects through the dev tunnel, the Go app serves on
-the documented port, and an unauthenticated request to either documented route
-is refused 401 with the exact body `{"error": "oauth.missing_token"}` -- the
-shipped middleware's missing-token path (github.com/diagridio/go-ai v0.2.0,
-`writeError` in identity/middleware.go).
+What this suite asserts: the documented install and provisioning commands
+succeed, the app starts on the documented port, and an unauthenticated request
+to either documented route is refused 401 with `{"error": "oauth.missing_token"}`.
 
-WHAT IT DOES NOT PROVE: that an authenticated request succeeds, or that a
-verified identity reaches the app's handler. No keyword here takes headers and
-nothing here can mint a token dataplane Sentry signed, so both documented
-`diagrid call invoke` calls are in UNCOVERED and the gap is recorded in the
-harness README's Limitations. Do not add an assertion that implies otherwise.
-The OUTBOUND leg (on-behalf-of to a downstream MCP tool) is exercised by the
-README walkthrough, which needs a credential, and offline by the quickstart's
-own Go test against a stand-in MCP server -- not here. Do not add an assertion
-implying this suite watched a downstream MCP server receive a delegated JWT.
-
-The request loop below is the shape every agent-family suite uses, including the
-branch on ${request}[method] that the python enterprise-identity suite
-introduced, because the README's primary fail-closed example is a GET.
+Authenticated requests need a credential this suite cannot mint, so both
+documented `diagrid call invoke` calls are listed in UNCOVERED.
 
 Run it:
   export DIAGRID_API_KEY=...

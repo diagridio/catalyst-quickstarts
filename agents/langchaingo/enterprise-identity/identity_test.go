@@ -1,36 +1,15 @@
 //go:build offline
 
-// Tests for the identity behaviour this quickstart demonstrates.
-//
-// Run from this directory with:
+// Tests for the identity behaviour this quickstart demonstrates. Run with:
 //
 //	go test -tags offline ./...
 //
-// The `offline` build tag is required, not incidental: it is what compiles
-// local_identity.go in, and that is the only thing here that can mint a
-// credential the app accepts. Without it the package has no issuer, which is
-// exactly the property the shipped image relies on.
+// The `offline` build tag compiles local_identity.go in, which is the only
+// thing here that can mint a credential the app accepts.
 //
-// No Catalyst, no Dapr, no network off loopback and no API key. buildLocalIssuer
-// stands in for the Catalyst identity plane: it signs with a throwaway key it
-// generates in-process and serves the public half as JWKS on a loopback port,
-// so a credential that genuinely verifies is available offline. That is what
-// makes the 200 and the 403 assertable here at all -- the Robot suite next door
-// can present no credential and therefore asserts only the two 401s.
-//
-// The app is assembled from its own constructors rather than rebuilt: newHandler
-// and newAgent are main.go's, so drift in the routes, the middleware install,
-// the agent loop or the response shape fails these tests rather than sliding
-// past. Only the OAuthConfig is this test's, because pointing the middleware at
-// the throwaway issuer is the whole point.
-//
-// WHAT IS DELIBERATELY NOT TESTED AGAINST CATALYST: the outbound leg as Catalyst
-// runs it. Carrying the caller onward through Catalyst's MCP proxy needs a
-// project, so the walkthrough in the README covers that. What IS tested here is
-// the half that is this app's responsibility and the likeliest thing to get
-// wrong in Go: that the outbound request is built from the inbound request's
-// context, so the caller's token is attached at all. See
-// TestOutboundCallCarriesTheCallerOnlyFromTheInboundContext.
+// The app is assembled from main.go's own newHandler and newAgent, so drift in
+// the routes, the middleware install, the agent loop or the response shape
+// fails these tests. Only the OAuthConfig is this test's.
 package main
 
 import (
@@ -49,16 +28,12 @@ import (
 
 const (
 	// verifiedSubject is the subject of the credential buildLocalIssuer mints
-	// under `200`. The other two it mints -- bob@example.com without the scope
-	// and carol@example.com five minutes stale -- are refused before any
-	// subject reaches the app, so only this one is named here.
+	// under `200`. The other two are refused before any subject reaches the app.
 	verifiedSubject = "alice@example.com"
 
 	task = "What bookings do I have?"
 
-	// toolAnswerForVerifiedCaller and modelAnswer are the exact strings the
-	// README's offline section prints. Asserting them keeps the documented
-	// output honest.
+	// The exact strings the README's offline section prints.
 	toolAnswerForVerifiedCaller = "Bookings for alice@example.com: " +
 		"Grand Ballroom on March 15th, 9AM-1PM; Rooftop Terrace on March 22nd, 6PM-11PM."
 	modelAnswer = "You have two bookings: the Grand Ballroom on March 15th " +
@@ -72,11 +47,8 @@ type app struct {
 	issuer  localIssuer
 }
 
-// newTestApp assembles the app once per test that needs it.
-//
-// Generating an RSA key is not free, so tests that only need the fail-closed
-// paths share one via the package-level helper below rather than each building
-// their own.
+// newTestApp assembles the app. Generating an RSA key is not free, so most
+// tests share one via testApp below rather than each building their own.
 func newTestApp(t *testing.T) app {
 	t.Helper()
 
@@ -84,8 +56,6 @@ func newTestApp(t *testing.T) app {
 	if err != nil {
 		t.Fatalf("build local issuer: %v", err)
 	}
-	// Offline: the agent gets the in-process tool, so no request leaves the
-	// machine for a tool call.
 	return app{handler: newHandler(issuer.config, newAgent(true)), issuer: issuer}
 }
 
@@ -109,8 +79,7 @@ func (a app) do(t *testing.T, method, path string, body any, headers map[string]
 	switch payload := body.(type) {
 	case nil:
 	case string:
-		// A raw string is sent verbatim, which is how the not-JSON case is
-		// expressed.
+		// A raw string is sent verbatim, expressing the not-JSON case.
 		reader = strings.NewReader(payload)
 	default:
 		encoded, err := json.Marshal(payload)
@@ -133,8 +102,7 @@ func (a app) do(t *testing.T, method, path string, body any, headers map[string]
 	return recorder
 }
 
-// auth is the header Catalyst sets on an inbound request, as the middleware
-// reads it.
+// auth is the header Catalyst sets on an inbound request.
 func auth(token string) map[string]string {
 	return map[string]string{identity.UserTokenHeader: identity.BearerPrefix + token}
 }
@@ -166,10 +134,7 @@ func assertRefused(t *testing.T, recorder *httptest.ResponseRecorder, status int
 
 func TestNoCredentialIsRefusedOnEveryRoute(t *testing.T) {
 	// RequireAuth resolves to true on the zero OAuthConfig and the middleware
-	// wraps every route, so this is the app-wide rule the README claims, checked
-	// on both documented routes rather than on one and assumed for the other.
-	// The exact body is the one the Robot suite asserts against a live Catalyst
-	// project.
+	// wraps every route, so both documented routes are checked.
 	cases := []struct {
 		name   string
 		method string
@@ -185,8 +150,7 @@ func TestNoCredentialIsRefusedOnEveryRoute(t *testing.T) {
 			recorder := testApp(t).do(t, test.method, test.path, test.body, nil)
 
 			assertRefused(t, recorder, http.StatusUnauthorized, identity.ErrorCodeMissingToken)
-			// An authorization verdict is not a cacheable response. This header
-			// is the middleware's, not this app's, and the README documents it.
+			// An authorization verdict is not a cacheable response.
 			if got := recorder.Header().Get("Cache-Control"); got != "no-store" {
 				t.Errorf("Cache-Control = %q, want %q", got, "no-store")
 			}
@@ -195,9 +159,8 @@ func TestNoCredentialIsRefusedOnEveryRoute(t *testing.T) {
 }
 
 func TestAnEmptyHeaderIsTreatedAsNoCredential(t *testing.T) {
-	// The README claims "no header, or an empty one" is 401, so both halves are
-	// checked. The SDK trims the header, so a blank value leaves an empty token
-	// and takes the same branch as an absent header.
+	// The SDK trims the header, so a blank value leaves an empty token and takes
+	// the same branch as an absent header.
 	for _, value := range []string{"", "   "} {
 		t.Run(fmt.Sprintf("%q", value), func(t *testing.T) {
 			recorder := testApp(t).do(t, http.MethodGet, "/whoami", nil,
@@ -209,9 +172,8 @@ func TestAnEmptyHeaderIsTreatedAsNoCredential(t *testing.T) {
 }
 
 func TestACredentialWithoutTheRequiredScopeIs403(t *testing.T) {
-	// 403, not 401, and the distinction is the point: authentication succeeded
-	// and authorization failed. The credential is signed by the same issuer and
-	// has not expired -- it simply carries reports.read.
+	// 403, not 401: authentication succeeded and authorization failed. The
+	// credential is signed by the same issuer and has not expired.
 	a := testApp(t)
 	recorder := a.do(t, http.MethodGet, "/whoami", nil, auth(a.issuer.wrongScope))
 
@@ -219,9 +181,7 @@ func TestACredentialWithoutTheRequiredScopeIs403(t *testing.T) {
 }
 
 func TestAnExpiredCredentialIs401(t *testing.T) {
-	// Five minutes stale, because the verifier allows 120s of clock skew. If
-	// expiredTokenLifetime ever creeps inside that window this returns 200 and
-	// fails here rather than in a reader's terminal.
+	// Five minutes stale, because the verifier allows 120s of clock skew.
 	a := testApp(t)
 	recorder := a.do(t, http.MethodGet, "/whoami", nil, auth(a.issuer.expired))
 
@@ -234,22 +194,14 @@ func TestAMalformedTokenIs401(t *testing.T) {
 		header string
 	}{
 		{name: "not a jwt", header: identity.BearerPrefix + "not-a-jwt"},
-		// A bare "Bearer" with nothing after it, which looks like an empty
-		// credential but is not one. BearerPrefix is "Bearer " -- the trailing
-		// space is part of it -- and HTTP strips trailing header whitespace, so
-		// the prefix never matches and the literal string "Bearer" is taken as
-		// the token. It therefore lands here, among the malformed tokens, rather
-		// than on the oauth.missing_token path an empty header gets. Same status
-		// either way, but a different code, and that is worth pinning.
+		// BearerPrefix is "Bearer " and HTTP strips trailing header whitespace,
+		// so the prefix never matches and the literal "Bearer" is taken as the
+		// token: malformed rather than missing. Same status, different code.
 		{name: "bare bearer", header: "Bearer"},
 	}
 
 	for _, test := range cases {
 		t.Run(test.name, func(t *testing.T) {
-			// Asserting the code and not just the status: 401 alone would still
-			// pass if a future version routed this through missing_token or
-			// invalid_signature, and those mean different things to a reader
-			// debugging a real credential.
 			recorder := testApp(t).do(t, http.MethodGet, "/whoami", nil,
 				map[string]string{identity.UserTokenHeader: test.header})
 
@@ -283,11 +235,8 @@ func TestAVerifiedCallerGetsTheDocumentedIdentity(t *testing.T) {
 		t.Errorf("scopes = %v, want %v", got.Scopes, want.Scopes)
 	}
 
-	// Claim NAMES only, and EXACTLY these four. VerifiedUser.Claims is a real
-	// person's decoded credential in a deployment, so the check is on the whole
-	// key set rather than on the absence of one field name: a future handler
-	// that exposed `claims`, or any other claim value under any name, fails
-	// here.
+	// Claim NAMES only, and EXACTLY these four: a future handler that exposed
+	// `claims`, or any other claim value under any name, fails here.
 	raw := decode[map[string]any](t, recorder)
 	documented := map[string]bool{"subject": true, "tenant": true, "issuer_id": true, "scopes": true}
 	for name := range raw {
@@ -304,10 +253,9 @@ func TestAVerifiedCallerGetsTheDocumentedIdentity(t *testing.T) {
 }
 
 func TestTheToolAnswersForTheVerifiedCallerNotTheModelGuess(t *testing.T) {
-	// The thesis of the whole quickstart, asserted end to end. The canned model
-	// asks my_bookings for someone@example.com; the agent loop substitutes the
-	// subject the middleware verified, so the answer names alice@example.com and
-	// the model's guess appears nowhere in the response.
+	// The canned model asks my_bookings for someone@example.com; the agent loop
+	// substitutes the subject the middleware verified, so the answer names
+	// alice@example.com and the model's guess appears nowhere.
 	a := testApp(t)
 	recorder := a.do(t, http.MethodPost, "/agent/run",
 		map[string]string{"task": task}, auth(a.issuer.verified))
@@ -320,8 +268,7 @@ func TestTheToolAnswersForTheVerifiedCallerNotTheModelGuess(t *testing.T) {
 	if body.User.Subject != verifiedSubject {
 		t.Errorf("user.subject = %q, want %q", body.User.Subject, verifiedSubject)
 	}
-	// The exact three messages the README's offline section prints: the task,
-	// the tool's answer, and the model's summary of it.
+	// The exact three messages the README's offline section prints.
 	want := []string{task, toolAnswerForVerifiedCaller, modelAnswer}
 	if len(body.Messages) != len(want) {
 		t.Fatalf("messages = %q, want %q", body.Messages, want)
@@ -338,10 +285,8 @@ func TestTheToolAnswersForTheVerifiedCallerNotTheModelGuess(t *testing.T) {
 }
 
 func TestSubstitutionHappensInTheAgentLoopNotInTheHandler(t *testing.T) {
-	// Run the real agent directly, with no HTTP and no middleware. This proves
-	// the substitution lives in the loop's tool call rather than in the route
-	// handler, which is exactly why a message the model could rewrite is not
-	// involved.
+	// Run the real agent directly, with no HTTP and no middleware, so the
+	// substitution is shown to live in the loop rather than the route handler.
 	messages, err := newAgent(true).run(context.Background(), task, "dave@example.com")
 	if err != nil {
 		t.Fatalf("agent run: %v", err)
@@ -357,10 +302,8 @@ func TestSubstitutionHappensInTheAgentLoopNotInTheHandler(t *testing.T) {
 }
 
 func TestAnUnsetSubjectDoesNotSilentlyBecomeTheModelGuess(t *testing.T) {
-	// A missing subject must not fall back to the model's argument. The loop
-	// substitutes unconditionally, so an agent run with no subject answers for
-	// nobody. That is the safe direction; falling through to the model's
-	// someone@example.com would be the unsafe one.
+	// The loop substitutes unconditionally, so an agent run with no subject
+	// answers for nobody rather than for the model's someone@example.com.
 	messages, err := newAgent(true).run(context.Background(), task, "")
 	if err != nil {
 		t.Fatalf("agent run: %v", err)
@@ -389,8 +332,7 @@ func TestATaskThatIsNotANonEmptyStringIs400(t *testing.T) {
 	for _, test := range cases {
 		t.Run(test.name, func(t *testing.T) {
 			// Validated after authentication, so a bad body from a verified
-			// caller is a 400 while the same body from an anonymous one is
-			// still a 401.
+			// caller is a 400 while the same body from an anonymous one is 401.
 			recorder := a.do(t, http.MethodPost, "/agent/run", test.body, auth(a.issuer.verified))
 
 			if recorder.Code != http.StatusBadRequest {
@@ -418,16 +360,11 @@ func TestABodyThatIsNotJSONIs400(t *testing.T) {
 // --- The outbound leg -------------------------------------------------------
 
 func TestOutboundCallCarriesTheCallerOnlyFromTheInboundContext(t *testing.T) {
-	// The Go-specific failure this quickstart is most likely to have, and the
-	// one no amount of reading catches: identity.NewHTTPClient reads the token
-	// off the request CONTEXT at send time, so an outbound request built with
-	// context.Background() -- or an MCP session connected once at startup --
-	// silently sends nothing and the CRM reports no user. The tool looks like it
-	// works right up to the point someone checks who it ran as.
-	//
-	// This drives the real account_summary tool against a stand-in MCP server
-	// that reports the header it saw, so the whole outbound path is exercised
-	// offline: identity client, streamable transport, per-request session.
+	// identity.NewHTTPClient reads the token off the request CONTEXT at send
+	// time, so an outbound request built with context.Background() silently
+	// sends nothing and the CRM reports no user. This drives the real
+	// account_summary tool against a stand-in MCP server that reports the
+	// header it saw.
 	const token = "header.payload.signature"
 
 	seen := make(chan string, 2)
@@ -455,8 +392,7 @@ func TestOutboundCallCarriesTheCallerOnlyFromTheInboundContext(t *testing.T) {
 	proxy := httptest.NewServer(mux)
 	defer proxy.Close()
 
-	// The tool resolves its address per call, so pointing it at the stand-in is
-	// a matter of the same environment variable Catalyst sets.
+	// The tool resolves its address per call, from the variable Catalyst sets.
 	t.Setenv(envDaprHTTPEndpoint, proxy.URL)
 	client := newMCPHTTPClient()
 
@@ -473,9 +409,8 @@ func TestOutboundCallCarriesTheCallerOnlyFromTheInboundContext(t *testing.T) {
 	})
 
 	t.Run("with no inbound caller", func(t *testing.T) {
-		// Not an error, and deliberately so: a trigger with no caller -- a cron
-		// or a pub/sub message -- goes out unauthenticated, with the header
-		// omitted rather than sent empty.
+		// Not an error: a trigger with no caller goes out unauthenticated, with
+		// the header omitted rather than sent empty.
 		if _, err := accountSummary(context.Background(), client, "ACME-1"); err != nil {
 			t.Fatalf("account summary: %v", err)
 		}
@@ -488,9 +423,8 @@ func TestOutboundCallCarriesTheCallerOnlyFromTheInboundContext(t *testing.T) {
 // --- The offline issuer itself ----------------------------------------------
 
 func TestTheIssuerServesAJWKSTheVerifierCanRead(t *testing.T) {
-	// The middleware fetches this document over the loopback port the OS picked.
-	// If it were malformed every credential-bearing test above would fail as a
-	// 503, so this makes the cause legible.
+	// If this document were malformed every credential-bearing test above would
+	// fail as a 503, so checking it directly makes the cause legible.
 	a := testApp(t)
 
 	response, err := http.Get(a.issuer.config.JWKSURI)

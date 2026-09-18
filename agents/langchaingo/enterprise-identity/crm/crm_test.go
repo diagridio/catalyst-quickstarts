@@ -1,10 +1,6 @@
 // Tests for the CRM's half of the on-behalf-of story: that it establishes who
 // the call is for from the token Catalyst minted, and reports both parties.
-//
-// No build tag, so these run in either mode. Nothing here needs an issuer: the
-// CRM never verifies the token -- Catalyst already did -- so a token with a
-// readable payload and a nonsense signature is exactly what it is handed in
-// production, as far as this code can tell.
+// Nothing here needs an issuer, because the CRM never verifies the token.
 package main
 
 import (
@@ -27,8 +23,7 @@ const (
 )
 
 // userToken builds a compact JWT whose payload carries claims. It is not signed
-// with anything: the CRM decodes and never verifies, so a signature is not part
-// of what these tests exercise.
+// with anything, because the CRM decodes and never verifies.
 func userToken(t *testing.T, claims map[string]any) string {
 	t.Helper()
 
@@ -47,10 +42,8 @@ func userToken(t *testing.T, claims map[string]any) string {
 }
 
 // headerClient is an http.Client that sets the user-token header on every
-// request, standing in for what identity.NewHTTPClient does on the agent's side
-// from the inbound request's context. Fixed here rather than context-derived,
-// because what is under test is the CRM reading the header, not the agent
-// setting it.
+// request, standing in for what identity.NewHTTPClient does on the agent's
+// side. What is under test is the CRM reading the header.
 func headerClient(header string) *http.Client {
 	return &http.Client{Transport: headerTransport{header: header}}
 }
@@ -113,8 +106,7 @@ func callTool(t *testing.T, header string) string {
 }
 
 func TestTheCRMReportsBothIdentitiesFromTheToken(t *testing.T) {
-	// The payoff of the whole quickstart, from the CRM's side: it names the user
-	// AND the agent that asked on their behalf, having been told neither.
+	// The CRM names the user AND the agent, having been told neither.
 	answer := callTool(t, identity.BearerPrefix+userToken(t, onBehalfOfClaims()))
 
 	for _, want := range []string{
@@ -129,10 +121,8 @@ func TestTheCRMReportsBothIdentitiesFromTheToken(t *testing.T) {
 }
 
 func TestTheCRMSaysSoWhenTheCallCarriesNoUser(t *testing.T) {
-	// requireUser: false on the access policy, or a call the agent made outside a
-	// verified request, both look like this. Reporting it in the answer is more
-	// use to a reader than failing the tool call: the walkthrough's whole point
-	// is the contrast between this and the line above.
+	// requireUser: false on the access policy, or a call the agent made outside
+	// a verified request, both look like this.
 	cases := []struct {
 		name   string
 		header string
@@ -158,10 +148,8 @@ func TestTheCRMSaysSoWhenTheCallCarriesNoUser(t *testing.T) {
 }
 
 func TestTheSchemePrefixIsMatchedCaseInsensitively(t *testing.T) {
-	// The header is written by clients in several languages and only the
-	// spelling of the scheme varies. A case-sensitive trim would take "bearer "
-	// as part of the token and report no user at all, which reads as a Catalyst
-	// problem rather than a string-handling one.
+	// A case-sensitive trim would take "bearer " as part of the token and report
+	// no user at all.
 	for _, prefix := range []string{"Bearer ", "bearer ", "BEARER "} {
 		t.Run(strings.TrimSpace(prefix), func(t *testing.T) {
 			if answer := callTool(t, prefix+userToken(t, onBehalfOfClaims())); !strings.Contains(
@@ -173,8 +161,8 @@ func TestTheSchemePrefixIsMatchedCaseInsensitively(t *testing.T) {
 }
 
 func TestAnActorClaimThatIsNotAnObjectReportsNoAgent(t *testing.T) {
-	// Fail closed on a claim shape nothing here produces: reporting the raw value
-	// as an agent identity would put unvalidated token content in the answer.
+	// Fail closed: reporting the raw value as an agent identity would put
+	// unvalidated token content in the answer.
 	claims := map[string]any{"sub": testUser, "act": "not-an-object"}
 
 	answer := callTool(t, identity.BearerPrefix+userToken(t, claims))

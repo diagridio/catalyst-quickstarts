@@ -21,21 +21,15 @@ import (
 	"github.com/diagridio/go-ai/identity"
 )
 
-// This file is an offline stand-in for the Catalyst identity plane.
+// This file is an offline stand-in for the Catalyst identity plane. Opt in with
+// DIAGRID_QUICKSTART_IDENTITY=local, on a binary built with `-tags offline`. It
+// generates a throwaway RSA key, serves the public half as JWKS on localhost,
+// and logs three ready-to-paste credentials, so the 200, 403 and 401 responses
+// are all reachable with no Catalyst project and no identity provider.
 //
-// Opt in with DIAGRID_QUICKSTART_IDENTITY=local, on a binary built with
-// `-tags offline`. It generates a throwaway RSA key, serves the public half as
-// JWKS on localhost, and logs three ready-to-paste credentials so every
-// response this quickstart describes -- 200, 403 and 401 -- is reachable with
-// no Catalyst project and no identity provider.
-//
-// 403 oauth.missing_scope needs a credential that verifies but lacks a scope;
-// with no issuer configured the middleware answers 503 oauth.not_configured
-// instead.
-//
-// Never a real deployment. The private key lives in this process's memory and
+// Never a real deployment: the private key lives in this process's memory and
 // the credentials it signs are logged in plain text. The `offline` build tag is
-// what keeps it out of the shipped image -- see local_identity_disabled.go.
+// what keeps it out of the shipped image.
 
 const (
 	localIssuerName = "https://local-identity.invalid"
@@ -43,29 +37,22 @@ const (
 	localKeyID      = "local-quickstart-key"
 	localTenant     = "local-tenant"
 
-	// localTokenLifetime is how long a fresh credential is good for.
 	localTokenLifetime = time.Hour
 
-	// expiredTokenLifetime is negative, so the credential it mints expired five
-	// minutes before it was issued. The SDK's verifier allows 120s of clock
-	// skew, so a credential that expired a minute ago still verifies -- anything
-	// demonstrating oauth.expired has to be older than that.
+	// expiredTokenLifetime is negative, and five minutes rather than one
+	// because the SDK's verifier allows 120s of clock skew.
 	expiredTokenLifetime = -5 * time.Minute
 )
 
 // localIssuer is a running throwaway issuer: its config, and the credentials it
 // accepts.
-//
-// startLocalIssuer returns only the config, because that is all main.go needs.
-// The credentials are kept here as well so the tests can present them.
 type localIssuer struct {
 	config identity.OAuthConfig
 
 	// verified carries the required scopes -> 200.
 	verified string
 
-	// wrongScope verifies, and carries the wrong scope -> 403
-	// oauth.missing_scope.
+	// wrongScope verifies with the wrong scope -> 403 oauth.missing_scope.
 	wrongScope string
 
 	// expired carries the required scopes but is stale -> 401 oauth.expired.
@@ -73,11 +60,7 @@ type localIssuer struct {
 }
 
 // buildLocalIssuer starts the throwaway issuer and mints the three credentials
-// it accepts.
-//
-// It logs nothing: startLocalIssuer is the entry point that prints the
-// credentials for a reader to paste, and a test that already holds them has no
-// reason to write three JWTs to its own output.
+// it accepts. It logs nothing; startLocalIssuer does the printing.
 func buildLocalIssuer(requiredScopes []string) (localIssuer, error) {
 	raw, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
@@ -131,11 +114,7 @@ func buildLocalIssuer(requiredScopes []string) (localIssuer, error) {
 }
 
 // startLocalIssuer starts the throwaway issuer, logs its credentials, and
-// returns its config.
-//
-// This is what main.go calls. The log lines are the ones the README's
-// "## Run Offline Without a Catalyst Project" block reproduces, so their text
-// is part of the documented output.
+// returns its config. The log lines are part of the documented output.
 func startLocalIssuer(requiredScopes []string) (identity.OAuthConfig, error) {
 	issuer, err := buildLocalIssuer(requiredScopes)
 	if err != nil {
@@ -158,11 +137,8 @@ func startLocalIssuer(requiredScopes []string) (identity.OAuthConfig, error) {
 }
 
 // serveJWKS publishes the public half of key on a loopback port and returns its
-// URI.
-//
-// Port 0: the OS picks a free one, so this never collides with the app. Plain
-// http needs no AllowInsecureJWKS, because the SDK exempts loopback from its
-// https-only rule -- there is no path to be on.
+// URI. Plain http needs no AllowInsecureJWKS, because the SDK exempts loopback
+// from its https-only rule.
 func serveJWKS(key jwk.Key) (string, error) {
 	public, err := key.PublicKey()
 	if err != nil {
@@ -186,16 +162,13 @@ func serveJWKS(key jwk.Key) (string, error) {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write(document)
 	})
-	// No error handling on Serve: the listener is closed only when the process
-	// exits, at which point there is nobody left to tell.
 	go func() { _ = http.Serve(listener, handler) }()
 
 	return fmt.Sprintf("http://%s/jwks.json", listener.Addr().String()), nil
 }
 
 // mintToken signs a credential with the throwaway key. A negative lifetime
-// mints one that is already stale, which is how the oauth.expired credential is
-// produced.
+// mints one that is already stale.
 func mintToken(key jwk.Key, subject string, scopes []string, lifetime time.Duration) (string, error) {
 	now := time.Now().UTC()
 	sorted := slices.Clone(scopes)

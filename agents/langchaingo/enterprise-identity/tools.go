@@ -21,13 +21,10 @@ const (
 	toolMyBookings     = "my_bookings"
 	toolAccountSummary = "account_summary"
 
-	// argSubject is the argument a tool takes the calling user as. It is the
-	// name the agent loop substitutes the verified subject over, so it is
-	// shared rather than spelled twice.
+	// argSubject is the argument a tool takes the calling user as, and the name
+	// the agent loop substitutes the verified subject over.
 	argSubject = "subject"
 
-	// argAccountID is account_summary's only argument. Note what is NOT beside
-	// it: a subject.
 	argAccountID = "account_id"
 
 	// mcpServerName is the MCPServer resource registered by
@@ -38,15 +35,13 @@ const (
 	// is what attaches the calling user; calling the CRM directly would not.
 	mcpProxyPath = "/v1.0/diagrid/mcp/"
 
-	// defaultDaprEndpoint is where the sidecar listens when DAPR_HTTP_ENDPOINT
-	// is unset.
 	defaultDaprEndpoint = "http://localhost:3500"
 
 	envDaprHTTPEndpoint = "DAPR_HTTP_ENDPOINT"
 	envDaprAPIToken     = "DAPR_API_TOKEN"
 
 	// daprAPITokenHeader authenticates the app to its own sidecar. It is the
-	// app's credential, and entirely separate from the calling user's.
+	// app's credential, entirely separate from the calling user's.
 	daprAPITokenHeader = "dapr-api-token"
 )
 
@@ -60,14 +55,10 @@ type tool struct {
 	invoke func(ctx context.Context, args map[string]any) (string, error)
 }
 
-// takesSubject reports whether this tool takes the calling user as an
-// argument, in which case the agent loop substitutes the verified subject over
-// whatever the model asked for. A tool that leaves the process does not take
-// one: it cannot be told who is calling, so it cannot be lied to.
-//
-// Derived from the declaration the model sees, so the two cannot disagree. If
-// the property is renamed the tool is handed no subject and answers for nobody,
-// which is the safe direction.
+// takesSubject reports whether this tool takes the calling user as an argument,
+// in which case the agent loop substitutes the verified subject over whatever
+// the model asked for. It is derived from the declaration the model sees, so
+// the two cannot disagree.
 func (t tool) takesSubject() bool {
 	return t.declares(argSubject)
 }
@@ -89,9 +80,8 @@ func (t tool) declares(name string) bool {
 	return declared
 }
 
-// localTools is the offline tool set. The offline issuer has no Catalyst
-// project behind it, so it cannot reach an MCP server; my_bookings keeps the
-// whole walkthrough runnable there.
+// localTools is the offline tool set, used when there is no Catalyst project
+// behind the app and therefore no MCP server to reach.
 func localTools() map[string]tool {
 	return map[string]tool{
 		toolMyBookings: {
@@ -111,8 +101,6 @@ func localTools() map[string]tool {
 					),
 				},
 			},
-			// The declared `subject` above is what makes this the tool the
-			// agent loop substitutes the verified caller into.
 			invoke: func(_ context.Context, args map[string]any) (string, error) {
 				return myBookings(stringArg(args, argSubject)), nil
 			},
@@ -123,9 +111,8 @@ func localTools() map[string]tool {
 // catalystTools is the tool set used against a Catalyst project: the one tool
 // that leaves the process and carries the caller with it.
 func catalystTools() map[string]tool {
-	// One client for the life of the process. Safe to share across requests:
-	// the caller is read off the request context at send time, so concurrent
-	// requests each carry their own.
+	// Safe to share across requests: the caller is read off the request context
+	// at send time, so concurrent requests each carry their own.
 	client := newMCPHTTPClient()
 
 	return map[string]tool{
@@ -146,8 +133,6 @@ func catalystTools() map[string]tool {
 					),
 				},
 			},
-			// No subject argument, deliberately, which is also why nothing is
-			// substituted into this call. See accountSummary.
 			invoke: func(ctx context.Context, args map[string]any) (string, error) {
 				return accountSummary(ctx, client, stringArg(args, argAccountID))
 			},
@@ -155,11 +140,9 @@ func catalystTools() map[string]tool {
 	}
 }
 
-// myBookings lists the bookings that belong to the calling user.
-//
-// It runs in-process, so it trusts whatever subject the agent hands it. That is
-// the weaker of the two trust stories here, and the agent loop is what makes it
-// sound: the subject it is handed is the one the middleware verified.
+// myBookings lists the bookings that belong to the calling user. It runs
+// in-process, so it trusts whatever subject the agent hands it; the agent loop
+// is what makes that sound.
 func myBookings(subject string) string {
 	return fmt.Sprintf("Bookings for %s: "+
 		"Grand Ballroom on March 15th, 9AM-1PM; "+
@@ -167,26 +150,21 @@ func myBookings(subject string) string {
 }
 
 // --- The outbound half: calling a tool as the user -------------------------
-// myBookings above runs in-process. accountSummary below leaves the process,
-// and that changes the trust story: it takes no subject at all. The calling
-// user travels in a token Catalyst mints for this one call, so the CRM
-// establishes who is asking for itself rather than believing the agent.
+// accountSummary takes no subject at all. The calling user travels in a token
+// Catalyst mints for this one call, so the CRM establishes who is asking for
+// itself rather than believing the agent.
 
 // accountSummary summarises a CRM account, running as the user who invoked the
 // agent.
 //
-// ctx must be the inbound request's context. That is not a detail: the identity
-// client reads the caller's token off the context at send time, so a call built
-// from context.Background() -- or from a session connected once at startup --
-// goes out with no user attached and the CRM reports nobody. The session is
-// therefore built per request, from the caller's own context.
+// ctx must be the inbound request's context: the identity client reads the
+// caller's token off it at send time, so a call built from context.Background()
+// goes out with no user attached. The session is therefore built per request.
 func accountSummary(ctx context.Context, client *http.Client, accountID string) (string, error) {
 	transport := &mcp.StreamableClientTransport{
 		Endpoint:   mcpURL(),
 		HTTPClient: client,
-		// Nothing here listens for server-initiated messages, and the standalone
-		// SSE stream would hold a connection open for the life of the session
-		// for no benefit.
+		// Nothing here listens for server-initiated messages.
 		DisableStandaloneSSE: true,
 	}
 
@@ -209,11 +187,8 @@ func accountSummary(ctx context.Context, client *http.Client, accountID string) 
 	return textContent(result)
 }
 
-// mcpURL is the tool's address on Catalyst's MCP proxy.
-//
-// Resolved per call rather than at startup so the sidecar endpoint is read
-// whenever it is needed, which is also what lets a test point the tool at a
-// stand-in server.
+// mcpURL is the tool's address on Catalyst's MCP proxy, resolved per call so a
+// test can point the tool at a stand-in server.
 func mcpURL() string {
 	endpoint := os.Getenv(envDaprHTTPEndpoint)
 	if endpoint == "" {
@@ -223,14 +198,11 @@ func mcpURL() string {
 }
 
 // newMCPHTTPClient is the outbound client, and the whole of the outbound
-// identity integration.
-//
-// Two credentials travel on this request and they are not the same thing. The
-// identity transport attaches the CALLING USER, read off the request context.
-// The inner transport attaches the app's own sidecar API TOKEN. Identity wraps
-// the API-token client rather than the other way round, because
-// [identity.NewHTTPClient] keeps and wraps the transport it is handed, so both
-// run.
+// identity integration. Two credentials travel on the request: the identity
+// transport attaches the CALLING USER, read off the request context, and the
+// inner transport attaches the app's own sidecar API TOKEN. Identity wraps the
+// API-token client rather than the other way round, because
+// [identity.NewHTTPClient] keeps and wraps the transport it is handed.
 func newMCPHTTPClient() *http.Client {
 	return identity.NewHTTPClient(&http.Client{
 		Transport: apiTokenTransport{token: os.Getenv(envDaprAPIToken)},
@@ -259,8 +231,7 @@ func (t apiTokenTransport) RoundTrip(req *http.Request) (*http.Response, error) 
 	return next.RoundTrip(clone)
 }
 
-// textContent is the tool's answer as text. An MCP tool may return several
-// content blocks of several kinds; this one returns a single text block.
+// textContent is the tool's answer as text.
 func textContent(result *mcp.CallToolResult) (string, error) {
 	for _, content := range result.Content {
 		if text, ok := content.(*mcp.TextContent); ok {
@@ -283,7 +254,7 @@ func objectSchema(properties map[string]any, required ...string) map[string]any 
 }
 
 // stringArg reads a string argument, treating a missing or wrongly typed one as
-// empty. A tool answering for nobody is the safe direction; guessing is not.
+// empty, so a tool answers for nobody rather than guessing.
 func stringArg(args map[string]any, name string) string {
 	value, _ := args[name].(string)
 	return value
