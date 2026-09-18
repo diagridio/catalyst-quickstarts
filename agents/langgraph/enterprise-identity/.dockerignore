@@ -1,0 +1,12 @@
+.venv
+__pycache__/
+*.pyc
+.git
+
+# local_identity.py is excluded so DIAGRID_QUICKSTART_IDENTITY=local cannot
+# disable authentication in a container: main.py's import fails and the app
+# refuses to start.
+local_identity.py
+# The tests import local_identity, so they cannot run in the image either, and
+# a container has no reason to carry them.
+test_*.py

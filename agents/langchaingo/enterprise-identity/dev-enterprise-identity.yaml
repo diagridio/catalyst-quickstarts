@@ -1,0 +1,26 @@
+version: 1
+common:
+  appLogDestination: console
+  # Every route requires a verified credential, so there is no health route to
+  # probe.
+  enableAppHealthCheck: false
+  logLevel: info
+apps:
+  - appID: identity-agent
+    appDirPath: ./
+    appPort: 8006
+    appProtocol: http
+    command: ["go", "run", "."]
+    env:
+      APP_PORT: "8006"
+      # A go.work file in a parent directory would otherwise pull this module
+      # into someone else's workspace and resolve its dependencies from there.
+      GOWORK: "off"
+  - appID: crm-mcp
+    appDirPath: ./
+    appPort: 8007
+    appProtocol: http
+    command: ["go", "run", "./crm"]
+    env:
+      APP_PORT: "8007"
+      GOWORK: "off"

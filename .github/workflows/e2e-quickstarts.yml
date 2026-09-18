@@ -307,6 +307,16 @@ jobs:
         with:
           node-version: 'lts/*'
 
+      # 1.26.4, because agents/langchaingo/enterprise-identity's go.mod asks for
+      # it — github.com/diagridio/go-ai v0.2.0 declares that version. The
+      # runner's preinstalled Go is older, and under GOTOOLCHAIN=local it would
+      # refuse the module outright rather than fetching what it needs.
+      - name: Set up Go
+        if: matrix.runtime == 'go'
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.26.4'
+
       - name: Install diagrid CLI
         run: |
           curl -sL https://downloads.diagrid.io/cli/install.sh | RELEASE_VERSION="$DIAGRID_CLI_VERSION" bash
