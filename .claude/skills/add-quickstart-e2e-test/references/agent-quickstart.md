@@ -148,8 +148,22 @@ are tuples.
 Each entry is a dict:
 
 Required: `method`, `port`, `path`, `payload`, `status`.
-Optional: `field` (default `None`), `commands` (default `()`), `log_marker`
-(default `None`).
+Optional: `field` (default `None`), `body` (default `None`), `commands`
+(default `()`), `log_marker` (default `None`).
+
+`body` is the **exact** expected response body, and it is legal only for a
+response that carries no model output — otherwise it cannot be byte-identical
+run to run and `field`'s presence-and-non-emptiness check is what remains. It
+reaches `POST And Expect` / `GET And Expect` as their `${expected_body}`
+argument, which compares parsed JSON, so whitespace and key order are not a
+false-failure risk. `agents/langgraph/enterprise-identity` is the case that has it: its
+middleware returns `401 {"error": "oauth.missing_token"}` before the graph
+runs, so the body is fixed. Prefer it over `field` whenever the response really
+is deterministic — an exact body is a much stronger assertion — and reach for
+`field` for anything a model wrote. Like `log_marker`, `body` must appear
+**inside a fenced block** in the README, and doc-sync enforces that; either JSON
+spelling counts, compact or spaced, because a README prints documented output
+the way the tool that produced it did.
 
 `log_marker` must appear **inside a fenced block** in the README, and doc-sync
 enforces that. A prose mention is not evidence the app prints anything: this
@@ -166,8 +180,8 @@ The suite reads optional keys with `Get From Dictionary ... default=...` (or, fo
 `commands`, `Evaluate    $request.get('commands', ())` — the default has to be an
 empty *sequence*; a `${EMPTY}` default is an empty *string*, and `Run Documented
 Commands` fails iterating a string with "not list or list-like"). This is why a
-request that needs none of the optional keys stays a plain five-key dict instead
-of carrying explicit nulls.
+request that needs none of the four optional keys stays a plain five-key dict
+instead of carrying explicit nulls.
 
 Write `status` as a number (`200`), matching every existing module. It reaches
 RequestsLibrary through `POST And Expect Field`, which converts it to a string

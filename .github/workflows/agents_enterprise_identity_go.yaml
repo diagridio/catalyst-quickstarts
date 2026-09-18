@@ -1,0 +1,63 @@
+name: go langchaingo identity agent quickstart
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/agents_enterprise_identity_go.yaml
+      - agents/langchaingo/enterprise-identity/**
+  pull_request:
+    branches:
+      - main
+    paths:
+      - .github/workflows/agents_enterprise_identity_go.yaml
+      - agents/langchaingo/enterprise-identity/**
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: "read"
+    if: github.repository_owner == 'diagridio'
+    steps:
+      - uses: actions/checkout@v4
+
+      # Pinned to the toolchain the quickstart's go.mod asks for, which is the
+      # one github.com/diagridio/go-ai v0.2.0 requires. Without this step the
+      # runner's older Go would have to download a toolchain mid-build, and with
+      # GOTOOLCHAIN=local it would fail outright.
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.26.4'
+          cache-dependency-path: agents/langchaingo/enterprise-identity/go.sum
+
+      # The SHIPPED build, without the tag, and the only step here that covers
+      # it. Everything below carries `-tags offline`, which compiles
+      # local_identity.go and leaves out the local_identity_disabled.go stub
+      # that refuses to start -- so on its own it would pass while the binary
+      # the Dockerfile actually builds, or the fail-closed guard inside it, was
+      # broken.
+      - name: shipped build
+        run: |
+          cd agents/langchaingo/enterprise-identity && go build ./... && go vet ./...
+
+      - name: vet
+        run: cd agents/langchaingo/enterprise-identity && go vet -tags offline ./...
+
+      # -tags offline is required, not incidental: it is what compiles
+      # local_identity.go in, and that is the only thing in the package that can
+      # mint a credential the app accepts. The shipped image is built WITHOUT the
+      # tag, which is what keeps the throwaway issuer out of it.
+      #
+      # No credentials and no network off loopback: the tests stand the Catalyst
+      # identity plane up in-process (buildLocalIssuer) and drive the app's own
+      # handlers, so the 200 and 403 paths the Robot suite cannot reach are
+      # covered here instead. The outbound leg is exercised against a stand-in
+      # MCP server in the same package.
+      #
+      # No file names: every test in the directory runs, so a new one needs no
+      # edit here.
+      - name: inbound identity tests
+        run: |
+          cd agents/langchaingo/enterprise-identity && go test -tags offline ./...

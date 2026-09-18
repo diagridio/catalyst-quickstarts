@@ -323,6 +323,38 @@ def check_agent(row, repo_root, module=None):
     # output shows ..."), which is a perfectly good way to document a readiness
     # marker and would fail here.
     fenced = fenced_block_bodies(markdown)
+
+    # `body` is an EXACT expected response body, so it has to be documented as
+    # output in the README — same rule as a log marker, and for the same reason:
+    # a body nobody documented is a body nothing pins. Without this check the
+    # strongest assertion an agent suite can make is also the one most free to
+    # drift, since `status`, `method` and `body` were all unpoliced while
+    # `path`, `port` and `payload` were checked.
+    #
+    # Both serialisations are accepted. A README prints a response body however
+    # the tool that produced it did: `curl -i` output is compact
+    # (`{"error":"oauth.missing_token"}`) while a pretty-printed JSON block is
+    # spaced. Which one a README shows says nothing about whether the body is
+    # real, so requiring one spelling would only push authors to reformat
+    # documented output to satisfy a checker.
+    for request in module.REQUESTS:
+        expected_body = request.get("body")
+        if expected_body is None:
+            continue
+        spellings = [
+            json.dumps(expected_body, separators=(",", ":")),
+            json.dumps(expected_body),
+        ]
+        if any(spelling in fence for spelling in spellings for fence in fenced):
+            continue
+        problems.append(
+            f"{where}: expected response body {expected_body!r} for "
+            f"{request['method']} {request['path']} does not appear inside a "
+            "fenced block in the README. An exact-body assertion must be "
+            "documented as output; tried both "
+            f"{spellings[0]!r} and {spellings[1]!r}."
+        )
+
     for marker in [r["log_marker"] for r in module.REQUESTS if r.get("log_marker")]:
         if not any(marker in body for body in fenced):
             if marker in markdown:
