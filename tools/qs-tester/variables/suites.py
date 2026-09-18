@@ -100,6 +100,55 @@ SUITES = (
         "secrets": (),
     },
     {
+        "suite": "agents/microsoft-dotnet/enterprise-identity/tests/quickstart.robot",
+        "family": "agent",
+        # 26 characters, which is exactly `project_name_budget()` -- so it passes
+        # the validator and still needs the explicit `leg` below. Measured against
+        # the worst-case (`local` + 10-digit epoch) run id: the CI project
+        # qs-ci-agents-enterprise-identity-csharp-local0000000000 is 55 of the 55
+        # characters allowed, and the second project verify-live.sh derives for the
+        # mutation run appends `-mut`, which is 59 and over. project_name_budget()
+        # does not account for that suffix, so the budget alone does not catch it.
+        "name": "enterprise-identity-csharp",
+        # Short enough that the `-mut` project fits too:
+        # qs-ci-agents-ei-csharp-mut-local0000000000 is 42 of the 55 characters.
+        "leg": "ei-csharp",
+        "data": "agents_enterprise_identity_csharp",
+        "language": "csharp",
+        "runtime": "dotnet",
+        # False: neither half of the bar is met. No live run against a real
+        # Catalyst project and no mutation check, so nothing here is known to
+        # pass, or to fail when what it checks breaks. Registering True without
+        # both would fail the scheduled build nightly for everyone and leak a
+        # project each time until reap-orphans.sh collects it. The suite still
+        # runs on workflow_dispatch, which is the intended path for a first run.
+        #
+        # Worth knowing before that run: this suite's assertions are the plumbing
+        # plus a 401 on each documented route. The 200, the 403 and the subject
+        # substitution the README documents are unreachable from the harness -- no
+        # keyword takes headers and nothing here can mint a
+        # dataplane-Sentry-signed token -- so a green run here will NOT mean
+        # identity propagation is proven. Those are covered by
+        # agents/microsoft-dotnet/enterprise-identity/unit-tests instead, which
+        # runs in .github/workflows/agents_enterprise_identity_csharp.yaml and
+        # exercises no Catalyst. See UNCOVERED in
+        # agents_enterprise_identity_csharp.py.
+        #
+        # What IS measured, offline, on 2026-09-17: the app builds, serves on 8006,
+        # and answers both documented routes 401 {"error":"oauth.missing_token"}
+        # with Cache-Control: no-store. That is this suite's whole HTTP assertion,
+        # so its request loop is known to be asserting a real outcome -- just not
+        # against Catalyst yet.
+        "nightly": False,
+        # Empty: the quickstart ships a canned offline model
+        # (agent/CannedChatClient.cs) and reaches a real provider only when
+        # DIAGRID_QUICKSTART_MODEL=openai, which this suite does not set. Both
+        # documented requests are refused before the agent runs anyway. Keep in
+        # step with SECRETS in agents_enterprise_identity_csharp.py -- one without
+        # the other is a declaration that lies.
+        "secrets": (),
+    },
+    {
         "suite": "agents/microsoft-dotnet/tests/quickstart.robot",
         "family": "agent",
         "name": "microsoft-dotnet",

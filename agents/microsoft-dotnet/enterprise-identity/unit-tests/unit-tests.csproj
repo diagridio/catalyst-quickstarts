@@ -1,0 +1,41 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+    <RootNamespace>EnterpriseIdentity.Tests</RootNamespace>
+    <!-- The agent's own acknowledgement, repeated: the tests drive Diagrid.AI.Identity directly. -->
+    <NoWarn>$(NoWarn);DGRDID001</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.0" />
+    <!-- Drives the re-assembled app in-process, the way starlette's TestClient does for the python
+         sibling: no port to bind and no server to race. -->
+    <PackageReference Include="Microsoft.AspNetCore.TestHost" Version="10.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The tests assemble a real WebApplication around the app's handlers, so they need ASP.NET
+         itself and not only the TestHost package. -->
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- A project reference rather than a <Compile Include> of the files under test. Pulling in the
+         whole web app costs nothing at test time and is what keeps the versions honest: the app
+         resolves Microsoft.Extensions.AI transitively through Microsoft.Agents.AI, so a separate
+         pin here would let the tests compile against a different version than the app runs, and
+         agree right up until they did not.
+
+         It is also what makes the assertions meaningful. These tests drive the app's OWN handlers,
+         its own agent, its own canned model and its own local issuer, so drift in any of them fails
+         here rather than sliding past. -->
+    <ProjectReference Include="../agent/agent.csproj" />
+  </ItemGroup>
+
+</Project>

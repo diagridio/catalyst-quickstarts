@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>EnterpriseIdentity.Crm</RootNamespace>
+    <AssemblyName>crm-mcp</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- No Diagrid dependency at all, and that is the point: the CRM verifies nothing. Catalyst has
+         already verified the signature by the time the call arrives, so this server only decodes
+         the claims in order to show them. -->
+    <PackageReference Include="ModelContextProtocol.AspNetCore" Version="2.2.0" />
+  </ItemGroup>
+
+</Project>

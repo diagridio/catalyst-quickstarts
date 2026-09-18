@@ -1,8 +1,10 @@
 # qs-tester
 
 End-to-end tests for the `workflow`, `state`, `pubsub` and `invocation`
-quickstarts, and for three agent-family ones (`agents/langgraph`,
-`agents/microsoft-dotnet`, `agents/spring-ai/event-planner`), built on
+quickstarts, and for the agent-family ones registered in
+`variables/suites.py` (`agents/langgraph`, `agents/microsoft-dotnet`,
+`agents/microsoft-dotnet/enterprise-identity`,
+`agents/spring-ai/crash-recovery`, `agents/spring-ai/event-planner`), built on
 [Robot Framework](https://robotframework.org/). The tests run the *actual*
 commands each quickstart's README documents and assert the responses and log output
 that README promises, so drift between the docs, the code, and Catalyst is caught
@@ -455,7 +457,7 @@ config, not a typo.
   mapping was verified. Note that `dev stop` also kills the local `diagrid dev run`
   process, which is harmless in teardown (the process tree is already stopped by
   then) but will end a session you are still using.
-- **`agents/langgraph` is `nightly: True`; the other three are not.** The bar for
+- **`agents/langgraph` is `nightly: True`; the other four are not.** The bar for
   that flag is a green live run *plus* a mutation check the verdict tool accepts,
   and only langgraph has cleared both (2026-08-28). Where the others stand:
   - `agents/microsoft-dotnet` has the first half. Its first green live run was
@@ -465,6 +467,13 @@ config, not a typo.
     2026-09-02, offline, covering the crash and the recovery. No mutation check.
   - `agents/spring-ai/event-planner` **cannot reach the first half**, and no
     amount of suite work changes that; see its own bullet below.
+  - `agents/microsoft-dotnet/enterprise-identity` has **neither** half: no live
+    run and no mutation check. What it does have is an offline measurement
+    (2026-09-17) that its one HTTP assertion is real — the app builds, serves on
+    8006, and answers both documented routes 401
+    `{"error":"oauth.missing_token"}` — so the request loop is known to assert a
+    genuine outcome, just not against Catalyst. See its own bullet below for what
+    a green live run there would and would not mean.
   The bullets that follow are what the missing halves cost.
 - **`agents/langgraph` has run against real Catalyst three times and not yet
   passed**, but each run has failed further along than the last. 2026-08-27:
@@ -574,13 +583,39 @@ config, not a typo.
       both fire and the client sees `RemoteDisconnected`. A red suite is only
       worth keeping if it is red for the documented reason — otherwise it is a
       race dressed up as a finding.
-- **None of the three agent READMEs documents a status code**, so
+- **`agents/microsoft-dotnet/enterprise-identity` proves that the middleware
+  refuses, not that identity works**, and the gap is structural rather than a
+  suite that needs finishing. The quickstart's whole subject is the
+  *authenticated* path: a verified caller reaching the agent, and the agent
+  carrying that caller onward to an MCP tool. No keyword in this harness takes
+  headers, and nothing here can mint a token dataplane Sentry has signed, so
+  every documented outcome that carries a credential — the 200, the 403, the
+  on-behalf-of call the CRM answers — is in `UNCOVERED` rather than asserted.
+  What the suite asserts is the two documented 401s, and one property of that
+  branch is the sharpest edge: the middleware's missing-token check runs *before*
+  the verifier is built, so the same 401 comes back from a project on which
+  inbound identity was never enabled. This suite therefore cannot tell that
+  project from a correctly federated one, while every credential-bearing request
+  to the first would answer 503. Those outcomes are covered instead by
+  `agents/microsoft-dotnet/enterprise-identity/unit-tests`, which stands the
+  identity plane up in-process (a throwaway RS256 issuer serving JWKS on
+  loopback) and asserts the 200, the 403, the expired 401, the malformed-token
+  401 and the subject substitution — but exercises no Catalyst at all. The two
+  are complements; neither alone proves the live inbound path. Do not add an
+  assertion to the Robot suite that implies otherwise.
+- **None of the three original agent READMEs documents a status code**, so
   `REQUESTS[...]["status"] = 200` in `variables/agents_langgraph.py`,
   `variables/agents_microsoft_dotnet.py` and
   `variables/agents_spring_ai_event_planner.py` is an assumption in every case,
   not something transcribed. For `agents/langgraph` a 200 is at least plausible
   — the endpoint returns normally — but it is still unverified. For the other
   two it is worse than unverified; see the bullet above.
+  `agents/microsoft-dotnet/enterprise-identity` is the exception: its README
+  prints `HTTP/1.1 401 Unauthorized` and the body beneath the documented `curl`,
+  so both statuses in `variables/agents_enterprise_identity_csharp.py` are
+  transcribed rather than assumed — and both were measured offline against the
+  shipped middleware. If that README ever stops showing the status, they become
+  assumptions and the data module's comment has to say so.
 - **The connection line for an agent app is now observed, not inferred.** It
   began as an inference in every agent data module — read from the quickstart's
   dev config via the appPort rule ("Readiness markers are not uniform per API"

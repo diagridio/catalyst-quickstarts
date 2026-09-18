@@ -1,0 +1,42 @@
+name: csharp microsoft agent framework identity agent quickstart
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/agents_enterprise_identity_csharp.yaml
+      - agents/microsoft-dotnet/enterprise-identity/**
+  pull_request:
+    branches:
+      - main
+    paths:
+      - .github/workflows/agents_enterprise_identity_csharp.yaml
+      - agents/microsoft-dotnet/enterprise-identity/**
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: "read"
+    if: github.repository_owner == 'diagridio'
+    steps:
+      - uses: actions/checkout@v3
+
+      # 10.0.x, because every project in this quickstart targets net10.0.
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      # No credentials and no network: the tests stand the Catalyst identity
+      # plane up in-process (LocalIdentity.BuildLocalIssuer) and drive the app
+      # under Microsoft.AspNetCore.TestHost, so the 200, the 403 and the subject
+      # substitution the Robot suite cannot reach are covered here instead.
+      #
+      # The test project is named because it has to be: this quickstart ships no
+      # solution file (the repository's .gitignore excludes `*.sln`), so a bare
+      # `dotnet test` in the quickstart directory finds no project. The project
+      # reference to `agent/` pulls the app in, so this builds and tests both.
+      - name: inbound identity tests
+        run: |
+          cd agents/microsoft-dotnet/enterprise-identity && dotnet test unit-tests --verbosity normal

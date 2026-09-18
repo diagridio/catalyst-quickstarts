@@ -1,0 +1,49 @@
+# Paste the credential the offline issuer logs under `200`, and NOT a token from
+# your own identity provider. These requests reach the app directly on port
+# 8006, which bypasses Catalyst -- so the app is verifying against whichever
+# issuer it was configured with, and a token signed by anyone else is refused
+# 401 oauth.invalid_signature. Under `diagrid dev run` that issuer is Catalyst,
+# and nothing you can paste here will satisfy it; the credential-bearing
+# requests below therefore need the offline issuer:
+#
+#   DIAGRID_QUICKSTART_IDENTITY=local dotnet run --project agent --urls http://localhost:8006
+#
+# See "## Run Offline Without a Catalyst Project" in README.md. The two requests
+# that send no credential at all answer 401 in either mode.
+#
+# Leave the placeholder unedited and the credential-bearing requests answer
+# 401 {"error": "oauth.decode_error"}: the literal text below is not a
+# well-formed JWT, so it is rejected before any signature check happens.
+@token = <THE_CREDENTIAL_LOGGED_UNDER_200>
+
+### Who is calling, with no credential: 401 {"error": "oauth.missing_token"}
+### The middleware rejects this before the agent, the model, or any app code runs.
+GET http://localhost:8006/whoami
+
+### Who is calling, with a credential: 200 and the verified caller
+### subject, tenant and issuer_id are read off the token the app verified, never
+### off the request. Against real Catalyst they come from a Catalyst-signed
+### identity the sidecar produced from your identity provider's token, and the
+### app never sees that original; offline they come from LocalIdentity.cs.
+GET http://localhost:8006/whoami
+X-Diagrid-User-Token: Bearer {{token}}
+
+### Run the agent as that user: 200
+### The reply names the caller because the verified subject reached the tool as
+### per-run configuration, not because the tool read a header.
+POST http://localhost:8006/agent/run
+X-Diagrid-User-Token: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "task": "What bookings do I have?"
+}
+
+### Run the agent with no credential: 401 {"error": "oauth.missing_token"}
+### Same rejection on every route. RequireAuth is app-wide, not per-path.
+POST http://localhost:8006/agent/run
+Content-Type: application/json
+
+{
+    "task": "What bookings do I have?"
+}
