@@ -296,7 +296,7 @@ The workflow instance `trip-42` is unaffected. It lives in Catalyst, not in the 
 Start the application again with the same command as step 5:
 
 ```bash
-diagrid dev run --project workflow-quickstart --app-id durable-workflow --approve -- mvn spring-boot:run
+diagrid dev run --project workflow-quickstart --id durable-workflow --approve -- mvn spring-boot:run
 ```
 
 **That is the whole recovery. You do not have to send anything.** The run is not waiting on you: Catalyst has been retrying the interrupted activity the entire time the app was down, and it hands the pending work back the moment the restarted app's worker reconnects. That happens before Spring Boot has even finished starting Tomcat, so the log below is usually scrolling before you can type.
