@@ -14,7 +14,7 @@ title: Order Workflow App connected to Catalyst
 flowchart LR
   APP(Order Workflow App)
   subgraph Catalyst
-    APPID(ID: order-workflow)
+    APPID(ID: durable-workflow)
     WF(Workflow Engine)
     STATE[(State Store)]
   end
@@ -247,8 +247,8 @@ Invoke-RestMethod -Method Post -Uri "http://localhost:5001/crash/run" -ContentTy
 In the terminal running `diagrid dev run`, the fast activity completes and the slow one announces its window:
 
 ```text
-== APP - order-workflow == Reservation trip-42 received for ABC123
-== APP - order-workflow == Committing reservation ABC123 over ~10s. KILL THE APP NOW to test crash recovery (POST /crash/kill, or kill -9). It resumes on restart.
+== APP - durable-workflow == Reservation trip-42 received for ABC123
+== APP - durable-workflow == Committing reservation ABC123 over ~10s. KILL THE APP NOW to test crash recovery (POST /crash/kill, or kill -9). It resumes on restart.
 ```
 
 **Two terminals instead of three.** The request takes an optional `kill_after_seconds`. Send it and the app halts *itself* that many seconds into the run, at a known point inside the window, so you never have to aim a kill at a moving target:
@@ -303,9 +303,9 @@ diagrid dev run -f workflow-quickstart.yaml --project workflow-quickstart --appr
 **Read the app log carefully, because this is the whole proof:**
 
 ```text
-== APP - order-workflow == Committing reservation ABC123 over ~10s. KILL THE APP NOW to test crash recovery (POST /crash/kill, or kill -9). It resumes on restart.
-== APP - order-workflow == Committed reservation ABC123. Confirmation code: BK-E0BEBD22
-== APP - order-workflow == Reservation trip-42 has completed! Reservation ABC123 confirmed. Confirmation code: BK-E0BEBD22
+== APP - durable-workflow == Committing reservation ABC123 over ~10s. KILL THE APP NOW to test crash recovery (POST /crash/kill, or kill -9). It resumes on restart.
+== APP - durable-workflow == Committed reservation ABC123. Confirmation code: BK-E0BEBD22
+== APP - durable-workflow == Reservation trip-42 has completed! Reservation ABC123 confirmed. Confirmation code: BK-E0BEBD22
 ```
 
 `Reservation trip-42 received for ABC123` does **not** appear again. That activity had already completed and Catalyst had recorded its result, so the replay took the recorded value instead of re-running it. Only the activity that was interrupted runs a second time.

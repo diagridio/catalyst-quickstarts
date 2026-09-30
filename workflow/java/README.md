@@ -14,7 +14,7 @@ title: Order Workflow App connected to Catalyst
 flowchart LR
   APP(Order Workflow App)
   subgraph Catalyst
-    APPID(ID: order-workflow)
+    APPID(ID: durable-workflow)
     WF(Workflow Engine)
     STATE[(State Store)]
   end
@@ -87,7 +87,7 @@ mvn clean install
 The `diagrid dev run` command creates your Catalyst project, provisions resources (apps, workflow engine, managed state store), configures environment variables, and launches your application connected to Catalyst Cloud.
 
 ```bash
-diagrid dev run --project workflow-quickstart --id order-workflow --approve -- mvn spring-boot:run
+diagrid dev run --project workflow-quickstart --id durable-workflow --approve -- mvn spring-boot:run
 ```
 
 > **Tip:** Wait a few seconds until you see application logs in the terminal to ensure the application is up and running and connected to Catalyst.
@@ -248,8 +248,8 @@ Invoke-RestMethod -Method Post -Uri "http://localhost:5001/crash/run" -ContentTy
 In the terminal running `diagrid dev run`, the fast activity completes and the slow one announces its window:
 
 ```text
-== APP - order-workflow == Notification: Reservation trip-42 received for ABC123
-== APP - order-workflow == Committing reservation ABC123 over ~10s. KILL THE APP NOW to test crash recovery (POST /crash/kill, or kill -9). It resumes on restart.
+== APP - durable-workflow == Notification: Reservation trip-42 received for ABC123
+== APP - durable-workflow == Committing reservation ABC123 over ~10s. KILL THE APP NOW to test crash recovery (POST /crash/kill, or kill -9). It resumes on restart.
 ```
 
 **Two terminals instead of three.** The request takes an optional `kill_after_seconds`. Send it and the app halts *itself* that many seconds into the run, at a known point inside the window, so you never have to aim a kill at a moving target:
@@ -296,7 +296,7 @@ The workflow instance `trip-42` is unaffected. It lives in Catalyst, not in the 
 Start the application again with the same command as step 5:
 
 ```bash
-diagrid dev run --project workflow-quickstart --app-id order-workflow --approve -- mvn spring-boot:run
+diagrid dev run --project workflow-quickstart --app-id durable-workflow --approve -- mvn spring-boot:run
 ```
 
 **That is the whole recovery. You do not have to send anything.** The run is not waiting on you: Catalyst has been retrying the interrupted activity the entire time the app was down, and it hands the pending work back the moment the restarted app's worker reconnects. That happens before Spring Boot has even finished starting Tomcat, so the log below is usually scrolling before you can type.
@@ -304,9 +304,9 @@ diagrid dev run --project workflow-quickstart --app-id order-workflow --approve 
 **Read the app log carefully, because this is the whole proof:**
 
 ```text
-== APP - order-workflow == Committing reservation ABC123 over ~10s. KILL THE APP NOW to test crash recovery (POST /crash/kill, or kill -9). It resumes on restart.
-== APP - order-workflow == Committed reservation ABC123. Confirmation code: BK-E0BEBD22
-== APP - order-workflow == Notification: Reservation trip-42 has completed! Reservation ABC123 confirmed. Confirmation code: BK-E0BEBD22
+== APP - durable-workflow == Committing reservation ABC123 over ~10s. KILL THE APP NOW to test crash recovery (POST /crash/kill, or kill -9). It resumes on restart.
+== APP - durable-workflow == Committed reservation ABC123. Confirmation code: BK-E0BEBD22
+== APP - durable-workflow == Notification: Reservation trip-42 has completed! Reservation ABC123 confirmed. Confirmation code: BK-E0BEBD22
 ```
 
 `Notification: Reservation trip-42 received for ABC123` does **not** appear again. That activity had already completed and Catalyst had recorded its result, so the replay took the recorded value instead of re-running it. Only the activity that was interrupted runs a second time.
