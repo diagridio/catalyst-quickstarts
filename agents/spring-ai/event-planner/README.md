@@ -20,9 +20,10 @@ There is no durability code anywhere in it: adding the starter to the classpath 
 
 ## Prerequisites
 
-1. [Diagrid CLI](https://docs.diagrid.io/catalyst/references/cli-reference/overview) installed
-2. [JDK 21](https://adoptium.net/) or later, and [Maven 3.9+](https://maven.apache.org/download.cgi)
-3. *(Optional)* An [OpenAI API key](https://platform.openai.com/api-keys), only if you want to run
+1. A [Diagrid Catalyst account](https://catalyst.diagrid.io/)
+2. [Diagrid CLI](https://docs.diagrid.io/getting-started/install-cli) installed
+3. [JDK 21](https://adoptium.net/) or later, and [Maven 3.9+](https://maven.apache.org/download.cgi)
+4. *(Optional)* An [OpenAI API key](https://platform.openai.com/api-keys), only if you want to run
    against a real model provider instead of the offline one
 
 ## Setup
@@ -109,9 +110,9 @@ The agent will:
 You'll see:
 
 ```text
-== APP == >>> TOOL 1: Searching venues in 'Austin'...
-== APP == >>> TOOL 1 COMPLETE: Found 3 venues
-== APP == >>> TOOL 2: Comparing venues...
+== APP - spring-ai-event-planner == >>> TOOL 1: Searching venues in 'Austin'...
+== APP - spring-ai-event-planner == >>> TOOL 1 COMPLETE: Found 3 venues
+== APP - spring-ai-event-planner == >>> TOOL 2: Comparing venues...
 ```
 
 The process exits — this is expected. (The `curl` call does not return a result: the app died
@@ -136,10 +137,10 @@ You do **not** need to trigger the endpoint again — the existing workflow resu
 and execution continues from `step_two_compare`:
 
 ```text
-== APP == >>> TOOL 2: Comparing venues...
-== APP == >>> TOOL 2 COMPLETE: Grand Ballroom is the best option
-== APP == >>> TOOL 3: Confirming booking...
-== APP == >>> TOOL 3 COMPLETE: Booking confirmed for Grand Ballroom
+== APP - spring-ai-event-planner == >>> TOOL 2: Comparing venues...
+== APP - spring-ai-event-planner == >>> TOOL 2 COMPLETE: Grand Ballroom is the best option
+== APP - spring-ai-event-planner == >>> TOOL 3: Confirming booking...
+== APP - spring-ai-event-planner == >>> TOOL 3 COMPLETE: Booking confirmed for Grand Ballroom
 ```
 
 ## How It Works

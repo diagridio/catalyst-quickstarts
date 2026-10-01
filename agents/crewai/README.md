@@ -12,10 +12,11 @@ This quickstart demonstrates how to run a CrewAI agent as a durable Dapr Workflo
 
 ## Prerequisites
 
-1. [Diagrid CLI](https://docs.diagrid.io/references/catalyst/catalyst-cli-intro/) installed
-2. [Python 3.11–3.13](https://www.python.org/downloads/)
-3. [uv](https://docs.astral.sh/uv/getting-started/installation/) installed
-4. An [OpenAI API key](https://platform.openai.com/api-keys)
+1. A [Diagrid Catalyst account](https://catalyst.diagrid.io/)
+2. [Diagrid CLI](https://docs.diagrid.io/getting-started/install-cli) installed
+3. [Python 3.11–3.13](https://www.python.org/downloads/)
+4. [uv](https://docs.astral.sh/uv/getting-started/installation/) installed
+5. An [OpenAI API key](https://platform.openai.com/api-keys)
 
 ## Setup
 
@@ -137,7 +138,15 @@ Invoke-RestMethod -Method Post -Uri 'http://localhost:8001/run' -ContentType 'ap
 
 **VS Code REST Client (any OS):** Open [`test.http`](./test.http) and click *Send Request* above the request. Requires the [REST Client](https://marketplace.visualstudio.com/items?itemName=humao.rest-client) extension.
 
-You'll see tool 1 complete and the process crash at tool 2.
+You'll see tool 1 complete, then the process crashes at tool 2:
+
+```text
+== APP - venue-scout == >>> TOOL 1: Searching venues in 'Austin'...
+== APP - venue-scout == >>> TOOL 1 COMPLETE: Found 3 venues in Austin
+== APP - venue-scout == >>> TOOL 2: Comparing venues...
+```
+
+The process exits — this is expected.
 
 ### Fix and resume
 
@@ -153,7 +162,14 @@ Restart the application:
 uv run diagrid dev run -f dev-crash-test.yaml
 ```
 
-The workflow **resumes from tool 2** — tool 1 is not re-executed. The Dapr workflow engine replays the saved result from Catalyst instead of re-running the tool.
+You do **not** need to send the request again — the existing workflow resumes automatically. The workflow **resumes from tool 2** — tool 1 is not re-executed. The Dapr workflow engine replays the saved result from Catalyst instead of re-running the tool:
+
+```text
+== APP - venue-scout == >>> TOOL 2: Comparing venues...
+== APP - venue-scout == >>> TOOL 2 COMPLETE: Grand Ballroom is the best option
+== APP - venue-scout == >>> TOOL 3: Confirming booking...
+== APP - venue-scout == >>> TOOL 3 COMPLETE: Booking confirmed for Grand Ballroom
+```
 
 ## Part of the Event Planning Team
 
