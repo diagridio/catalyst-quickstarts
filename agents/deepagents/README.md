@@ -25,10 +25,11 @@ This quickstart demonstrates how to run a Deep Agents agent as a durable Dapr Wo
 
 ## Prerequisites
 
-1. [Diagrid CLI](https://docs.diagrid.io/references/catalyst/catalyst-cli-intro/) installed
-2. [Python 3.12–3.13](https://www.python.org/downloads/)
-3. [uv](https://docs.astral.sh/uv/getting-started/installation/) installed
-4. An [OpenAI API key](https://platform.openai.com/api-keys)
+1. A [Diagrid Catalyst account](https://catalyst.diagrid.io/)
+2. [Diagrid CLI](https://docs.diagrid.io/getting-started/install-cli) installed
+3. [Python 3.12–3.13](https://www.python.org/downloads/)
+4. [uv](https://docs.astral.sh/uv/getting-started/installation/) installed
+5. An [OpenAI API key](https://platform.openai.com/api-keys)
 
 ## Setup
 
@@ -143,7 +144,15 @@ Invoke-RestMethod -Method Post -Uri 'http://localhost:8001/run' -ContentType 'ap
 
 **VS Code REST Client (any OS):** Open [`test.http`](./test.http) and click *Send Request* above the request. Requires the [REST Client](https://marketplace.visualstudio.com/items?itemName=humao.rest-client) extension.
 
-You'll see tool 1 complete and the process crash at tool 2.
+You'll see tool 1 complete, then the process crashes at tool 2:
+
+```text
+== APP - transportation-planner == >>> TOOL 1: Searching transportation for '...'...
+== APP - transportation-planner == >>> TOOL 1 COMPLETE: Found 3 transportation options for ...
+== APP - transportation-planner == >>> TOOL 2: Comparing options...
+```
+
+The process exits — this is expected.
 
 ### 2. Fix and resume
 
@@ -159,7 +168,14 @@ Restart the application:
 uv run diagrid dev run -f dev-crash-test.yaml --approve
 ```
 
-The workflow **resumes from tool 2** — tool 1 is not re-executed. The Dapr workflow engine replays the saved result from Catalyst instead of re-running the tool.
+You do **not** need to send the request again — the existing workflow resumes automatically. The workflow **resumes from tool 2** — tool 1 is not re-executed. The Dapr workflow engine replays the saved result from Catalyst instead of re-running the tool:
+
+```text
+== APP - transportation-planner == >>> TOOL 2: Comparing options...
+== APP - transportation-planner == >>> TOOL 2 COMPLETE: Premier Shuttle Co. is the best value
+== APP - transportation-planner == >>> TOOL 3: Confirming selection...
+== APP - transportation-planner == >>> TOOL 3 COMPLETE: Transportation confirmed with Premier Shuttle Co.
+```
 
 ## Sub-Agent Workflows
 
@@ -189,3 +205,11 @@ This starts three processes:
 - `supervisor` which delegates to the other two
 
 The supervisor automatically runs the research and analysis pipeline on startup and prints the final synthesized response.
+
+## Clean Up
+
+Stop the running application with `Ctrl+C`, then delete the Catalyst project:
+
+```bash
+diagrid project delete deepagents-quickstart
+```

@@ -21,9 +21,10 @@ This quickstart demonstrates how to run a [Mastra](https://mastra.ai) agent as a
 
 ## Prerequisites
 
-1. [Diagrid CLI](https://docs.diagrid.io/references/catalyst/catalyst-cli-intro/) installed
-2. [Node.js 22.13 or newer](https://nodejs.org/en/)
-3. An [OpenAI API key](https://platform.openai.com/api-keys)
+1. A [Diagrid Catalyst account](https://catalyst.diagrid.io/)
+2. [Diagrid CLI](https://docs.diagrid.io/getting-started/install-cli) installed
+3. [Node.js 22.13 or newer](https://nodejs.org/en/)
+4. An [OpenAI API key](https://platform.openai.com/api-keys)
 
 ## Setup
 
@@ -134,18 +135,18 @@ diagrid dev run -f dev-crash-test.yaml --approve
 ```
 
 ```text
-============================================================
-RUN #1
-State file:      /tmp/diagrid-mastra-crash-state.json
-Model calls:     0 so far
-Tool runs:       0 so far
-Already crashed: false
-============================================================
->>> Model call 1 (total across runs)
->>> checkIncidentStatus ran (total across runs: 1)
-
->>> Killing the process during model call 2, before it returns.
->>> Run "npm run crash-test" again — Catalyst will resume this workflow.
+== APP - sre-agent == ============================================================
+== APP - sre-agent == RUN #1
+== APP - sre-agent == State file:      /tmp/diagrid-mastra-crash-state.json
+== APP - sre-agent == Model calls:     0 so far
+== APP - sre-agent == Tool runs:       0 so far
+== APP - sre-agent == Already crashed: false
+== APP - sre-agent == ============================================================
+== APP - sre-agent == >>> Model call 1 (total across runs)
+== APP - sre-agent == >>> checkIncidentStatus ran (total across runs: 1)
+== APP - sre-agent ==
+== APP - sre-agent == >>> Killing the process during model call 2, before it returns.
+== APP - sre-agent == >>> Run "npm run crash-test" again — Catalyst will resume this workflow.
 ```
 
 The workflow instance is unaffected — it lives in Catalyst, not in the process that just died.
@@ -159,25 +160,32 @@ diagrid dev run -f dev-crash-test.yaml --approve
 ```
 
 ```text
-============================================================
-RUN #2
-State file:      /tmp/diagrid-mastra-crash-state.json
-Model calls:     1 so far
-Tool runs:       1 so far
-Already crashed: true
-============================================================
->>> Model call 2 (total across runs)
-
-============================================================
-Status:      completed
-Answer:      The status of incident INC-4471 is mitigated and currently
-under monitoring for recurrence.
-Model calls: 2 (across all runs)
-Tool runs:   1 (across all runs)
-
-✅ Recovery confirmed: checkIncidentStatus ran exactly once across both runs.
-   Its result was replayed from Catalyst workflow history, not recomputed.
-============================================================
+== APP - sre-agent == ============================================================
+== APP - sre-agent == RUN #2
+== APP - sre-agent == State file:      /tmp/diagrid-mastra-crash-state.json
+== APP - sre-agent == Model calls:     1 so far
+== APP - sre-agent == Tool runs:       1 so far
+== APP - sre-agent == Already crashed: true
+== APP - sre-agent == ============================================================
+== APP - sre-agent == >>> Model call 2 (total across runs)
+== APP - sre-agent ==
+== APP - sre-agent == ============================================================
+== APP - sre-agent == Status:      completed
+== APP - sre-agent == Answer:      The status of incident INC-4471 is mitigated and currently under monitoring for recurrence.
+== APP - sre-agent == Model calls: 2 (across all runs)
+== APP - sre-agent == Tool runs:   1 (across all runs)
+== APP - sre-agent ==
+== APP - sre-agent == ✅ Recovery confirmed: checkIncidentStatus ran exactly once across both runs.
+== APP - sre-agent ==    Its result was replayed from Catalyst workflow history, not recomputed.
+== APP - sre-agent == ============================================================
 ```
 
 No request has to be re-sent and no workflow ID has to be tracked by hand: `crash_test.ts` reuses the same thread ID and workflow ID on both runs, so the second run automatically reattaches to the interrupted instance and waits for it, rather than starting a new one. Catalyst redelivers the pending work the moment this process's worker reconnects — that redelivery is what "resume on restart" means here, and `checkIncidentStatus`'s count staying at 1 is what proves it replayed rather than reran.
+
+## Clean Up
+
+Stop the running application with `Ctrl+C`, then delete the Catalyst project:
+
+```bash
+diagrid project delete mastra-quickstart
+```

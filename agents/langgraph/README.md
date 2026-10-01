@@ -13,9 +13,10 @@ This quickstart demonstrates how to run a LangGraph graph as a durable Dapr Work
 
 ## Prerequisites
 
-1. [Diagrid CLI](https://docs.diagrid.io/references/catalyst/catalyst-cli-intro/) installed
-2. [Python 3.11–3.13](https://www.python.org/downloads/)
-3. [uv](https://docs.astral.sh/uv/getting-started/installation/) installed
+1. A [Diagrid Catalyst account](https://catalyst.diagrid.io/)
+2. [Diagrid CLI](https://docs.diagrid.io/getting-started/install-cli) installed
+3. [Python 3.11–3.13](https://www.python.org/downloads/)
+4. [uv](https://docs.astral.sh/uv/getting-started/installation/) installed
 
 ## Setup
 
@@ -211,6 +212,15 @@ Invoke-RestMethod -Method Post -Uri 'http://localhost:8001/crash/run' -ContentTy
 ```
 
 Send this instead of the request above and skip step 6: the app crashes on its own. Leave the field out and nothing changes, and you crash the app yourself. Either way the rest of the walkthrough is identical.
+
+With the field set, step 2 announces the self-kill instead of asking you to kill the app, and the process exits 8 seconds into `compare_options`. The request then reports a connection reset, which is exactly what a real crash looks like:
+
+```text
+== APP - schedule-planner == >>> STEP 1: Checking venue availability for 'company gala on March 15'...
+== APP - schedule-planner == >>> STEP 1 COMPLETE: Grand Ballroom available on March 15 (2PM-6PM, 6PM-11PM)
+== APP - schedule-planner == >>> STEP 2: Comparing venue options over ~10s, but this process kills itself 8s into the run, as asked by kill_after_seconds. It resumes on restart.
+== APP - schedule-planner == >>> crash: killing this process 8s into the run, as asked by kill_after_seconds
+```
 
 Keep the value below `CRASH_DELAY_SECONDS` (10 by default) so the crash lands inside `compare_options` rather than after the graph has finished. The clock starts when `compare_options` starts, not when the request arrives, so the budget is measured against that node's own sleep and does not have to cover the model turn and `check_venues` ahead of it. That is also why the field is safe to send on the re-issue in step 8: the timer only starts when the node actually runs, and a call that attaches to an existing run replays the recorded result instead of re-invoking it.
 
