@@ -16,7 +16,7 @@
   <description>Catalyst State Quickstart</description>
   <properties>
     <java.version>17</java.version>
-    <dapr.version>1.17.0</dapr.version>
+    <dapr.version>1.19.0-rc-1</dapr.version>
   </properties>
   <dependencies>
     <dependency>
