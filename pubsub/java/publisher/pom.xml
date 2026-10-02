@@ -6,7 +6,7 @@
   <parent>
     <groupId>org.springframework.boot</groupId>
     <artifactId>spring-boot-starter-parent</artifactId>
-    <version>3.5.7</version>
+    <version>4.0.8</version>
     <relativePath /> <!-- lookup parent from repository -->
   </parent>
   <groupId>com.service</groupId>
@@ -16,7 +16,7 @@
   <description> Catalyst Pubsub Quickstart: Publisher</description>
   <properties>
     <java.version>17</java.version>
-    <dapr.version>1.17.0</dapr.version>
+    <dapr.version>1.19.0-rc-1</dapr.version>
   </properties>
   <dependencies>
     <dependency>
