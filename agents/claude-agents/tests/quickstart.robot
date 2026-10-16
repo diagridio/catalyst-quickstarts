@@ -137,9 +137,9 @@ Clean Up Quickstart
     ...    documents. `Stop Quickstart` also calls `diagrid dev stop`, which
     ...    releases the local app connections.
     ...
-    ...    This README documents `diagrid project delete` under "## Clean Up", so
-    ...    TEARDOWN carries it and the loop runs it; ci/teardown-project.sh remains the
-    ...    safety net if it fails.
+    ...    TEARDOWN is empty here: the README's `diagrid project delete` stops at
+    ...    an interactive prompt, so it is in UNCOVERED and ci/teardown-project.sh
+    ...    deletes the ephemeral project (with --yes).
     ...    `Run Keyword And Ignore Error` guards both calls: this suite kills the
     ...    app mid-test, so the process tree may already be gone, and a failed
     ...    stop must not prevent whatever cleanup is documented from running.

@@ -29,9 +29,12 @@ INSTALL = "dotnet build"
 
 RUN = "diagrid dev run -f dev-dotnet-agent.yaml --approve"
 
-# README "## Clean Up". Unlike langgraph, this quickstart documents its cleanup,
-# so the suite runs it.
-TEARDOWN = ("diagrid project delete {project}",)
+# Empty on purpose. The README documents `diagrid project delete <name>`
+# ("## Clean Up"), but the command stops at an interactive confirmation prompt, so
+# running it as a documented step waits out Run Process's 10 minute timeout
+# without deleting anything. Deleting the ephemeral project is infrastructure:
+# ci/teardown-project.sh owns it (it passes --yes). The command is in UNCOVERED.
+TEARDOWN = ()
 
 # README: "Wait until the output shows `Established gRPC bidirectional stream with
 # Dapr sidecar`." Not a Uvicorn line: the marker is a property of the framework,
@@ -158,6 +161,13 @@ CRASH_REQUESTS = (
 
 # Documented commands this suite deliberately does not run, each with its reason.
 UNCOVERED = (
+    (
+        "diagrid project delete dotnet-quickstart",
+        "README '## Clean Up'. It prompts \"Are you sure you want to proceed? "
+        "(Y/N)\" and so hangs for the Run Process timeout when run "
+        "non-interactively or from a terminal; ci/teardown-project.sh deletes the "
+        "ephemeral project with --yes instead.",
+    ),
     (
         "curl -X POST http://localhost:5050/crash/kill",
         "README '### 3' documents this as the two-terminal variant, and the "

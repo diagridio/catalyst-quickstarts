@@ -37,9 +37,12 @@ INSTALL = "uv sync"
 # README "### 1. Start the app".
 RUN = "uv run diagrid dev run -f dev-crash-test.yaml --approve"
 
-# README "## Clean Up", verbatim. ci/teardown-project.sh stays the safety net if
-# this fails or the run is aborted before it.
-TEARDOWN = ("diagrid project delete {project}",)
+# Empty on purpose. The README documents `diagrid project delete <name>`
+# ("## Clean Up"), but the command stops at an interactive confirmation prompt, so
+# running it as a documented step waits out Run Process's 10 minute timeout
+# without deleting anything. Deleting the ephemeral project is infrastructure:
+# ci/teardown-project.sh owns it (it passes --yes). The command is in UNCOVERED.
+TEARDOWN = ()
 
 # README "### 1. Start the app": "Wait for `Uvicorn running on http://0.0.0.0:8001`".
 READY_MARKERS = ("Uvicorn running on",)
@@ -91,6 +94,13 @@ REQUESTS = (
 
 # Documented commands this suite does not run, each with its reason.
 UNCOVERED = (
+    (
+        "diagrid project delete deepagents-quickstart",
+        "README '## Clean Up'. It prompts \"Are you sure you want to proceed? "
+        "(Y/N)\" and so hangs for the Run Process timeout when run "
+        "non-interactively or from a terminal; ci/teardown-project.sh deletes the "
+        "ephemeral project with --yes instead.",
+    ),
     (
         "uv run diagrid dev run -f dev-python-deepagents.yaml --approve",
         "this suite covers the crash-recovery flow; the happy-path /agent/run "

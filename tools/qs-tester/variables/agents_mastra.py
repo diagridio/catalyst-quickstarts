@@ -40,8 +40,12 @@ INSTALL = "npm install"
 # README "### 3. Start the app".
 RUN = "diagrid dev run -f dev-crash-test.yaml --approve"
 
-# README "## Clean Up". This quickstart documents its cleanup, so the suite runs it.
-TEARDOWN = ("diagrid project delete {project}",)
+# Empty on purpose. The README documents `diagrid project delete <name>`
+# ("## Clean Up"), but the command stops at an interactive confirmation prompt, so
+# running it as a documented step waits out Run Process's 10 minute timeout
+# without deleting anything. Deleting the ephemeral project is infrastructure:
+# ci/teardown-project.sh owns it (it passes --yes). The command is in UNCOVERED.
+TEARDOWN = ()
 
 # README "### 3. Start the app": "Wait for `Crash demo listening on http://0.0.0.0:8001`".
 READY_MARKERS = ("Crash demo listening on",)
@@ -105,6 +109,13 @@ REQUESTS = (
 
 # Documented commands this suite does not run, each with its reason.
 UNCOVERED = (
+    (
+        "diagrid project delete mastra-quickstart",
+        "README '## Clean Up'. It prompts \"Are you sure you want to proceed? "
+        "(Y/N)\" and so hangs for the Run Process timeout when run "
+        "non-interactively or from a terminal; ci/teardown-project.sh deletes the "
+        "ephemeral project with --yes instead.",
+    ),
     (
         "diagrid dev run -f dev-mastra.yaml --approve",
         "this suite covers the crash-recovery flow; the happy-path main.ts turn "

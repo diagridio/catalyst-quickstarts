@@ -4,7 +4,8 @@ quickstart has one implementation, unlike the canonical four-language APIs).
 
 Mirrors agents/microsoft-dotnet/README.md: "## Setup" installs, "## Run with
 Catalyst" provisions and runs, "### 2. Trigger the Agent" triggers, and
-"## Clean Up" documents the project delete this suite's teardown runs. The
+"## Clean Up" documents a project delete that prompts, so it is in UNCOVERED and
+ci/teardown-project.sh deletes the project. The
 second test case covers "### 3. Crash Recovery with Catalyst" (see CRASH_* names
 in variables/agents_microsoft_dotnet.py); the two-terminal POST /crash/kill
 variant is in UNCOVERED there.
@@ -138,18 +139,17 @@ Csharp Microsoft-Dotnet Crash Recovery
     # `dotnet build` is incremental and near-instant when the first case has already
     # built.
     #
-    # The first live run showed that the first case's teardown does NOT delete the
-    # project here: the documented `diagrid project delete` stops at an interactive
-    # "Are you sure you want to proceed? (Y/N)" prompt (CI's ci/teardown-project.sh
-    # passes --yes), waits out Run Process's 10 minute timeout, and the failure is
-    # ignored. So the project usually survives into this case and re-running SETUP
-    # fails with 'A project named "..." already exists'. Decide from state instead,
-    # the way the langgraph suite does: if `diagrid project get` succeeds, skip SETUP;
-    # otherwise run it and let any failure fail the test.
+    # The project survives the first case BY DESIGN: TEARDOWN is empty (the
+    # documented `diagrid project delete` prompts for confirmation, so it is in
+    # UNCOVERED) and ci/teardown-project.sh deletes the project after the suite.
+    # So re-running SETUP here would fail with 'A project named "..." already
+    # exists'. Decide from state, the way the langgraph suite does: if
+    # `diagrid project get` succeeds, skip SETUP; otherwise run it and let any
+    # failure fail the test.
     #
-    # When the project does survive, the first case also ran `diagrid dev stop --id`
-    # moments ago, and a `dev run` for the same app ID started within ~1-2s of that
-    # fails with "local app connection not found with the given id" (reproduced for
+    # In the normal path the first case also ran `diagrid dev stop --id` moments
+    # ago, and a `dev run` for the same app ID started within ~1-2s of that fails
+    # with "local app connection not found with the given id" (reproduced for
     # langgraph, not yet for this app), so wait out the release first.
     Build Quickstart            ${qs}
     ${exists}=    Project Exists    ${PROJECT}
@@ -275,11 +275,13 @@ Clean Up Quickstart
     ...    documents. `Stop Quickstart` also calls `diagrid dev stop`, which
     ...    releases the local app connections.
     ...
-    ...    microsoft-dotnet's TEARDOWN documents `diagrid project delete`
-    ...    ("## Clean Up"), so this loop really deletes the ephemeral project.
-    ...    `Run Keyword And Ignore Error` guards both calls: `Stop Process Tree`
-    ...    is not idempotent against a process that has already exited, and a
-    ...    failed stop must not prevent the documented delete from running.
+    ...    microsoft-dotnet's TEARDOWN is empty: the README's `diagrid project
+    ...    delete` ("## Clean Up") stops at an interactive prompt, so it is in
+    ...    UNCOVERED and ci/teardown-project.sh deletes the ephemeral project
+    ...    (with --yes). `Run Keyword And Ignore Error` guards both calls:
+    ...    `Stop Process Tree` is not idempotent against a process that has
+    ...    already exited, and a failed stop must not prevent whatever cleanup
+    ...    TEARDOWN holds from running.
     Run Keyword And Ignore Error    Stop Quickstart    ${PROJECT}
     ${qs}=    Get Quickstart
     Run Keyword And Ignore Error
