@@ -53,6 +53,18 @@ Login to Diagrid Catalyst using the following command:
 diagrid login
 ```
 
+Create a Catalyst project for the quickstart:
+
+```bash
+diagrid project create durable-agent-quickstart --enable-managed-workflow --deploy-managed-kv --deploy-managed-pubsub --wait
+```
+
+Create an Agent resource for each app in `dapr.yaml`. `diagrid dev run` refuses to start without them:
+
+```bash
+diagrid agent create travel-assistant-agent --project durable-agent-quickstart --wait
+```
+
 Deploy the agent to Catalyst with managed infrastructure:
 
 ```bash

@@ -33,12 +33,13 @@ them apart so that what each one buys is legible.
 
 ## Prerequisites
 
-1. [Diagrid CLI](https://docs.diagrid.io/catalyst/references/cli-reference/overview) installed
-2. [JDK 21](https://adoptium.net/) or later, and [Maven 3.9+](https://maven.apache.org/download.cgi)
-3. An [OpenAI API key](https://platform.openai.com/api-keys), for **event-planner** and
-   **durable-memory**. **crash-recovery** and **enterprise-identity** ship an offline model and need
-   no account; set `DIAGRID_QUICKSTART_MODEL=openai` in either to run it against a real provider
-   instead.
+1. A [Diagrid Catalyst account](https://catalyst.diagrid.io/)
+2. [Diagrid CLI](https://docs.diagrid.io/getting-started/install-cli) installed
+3. [JDK 21](https://adoptium.net/) or later, and [Maven 3.9+](https://maven.apache.org/download.cgi)
+4. An [OpenAI API key](https://platform.openai.com/api-keys), for **durable-memory** only.
+   **event-planner**, **crash-recovery** and **enterprise-identity** ship an offline model and need
+   no account; set `DIAGRID_QUICKSTART_MODEL=openai` in any of them to run it against a real
+   provider instead.
 
 Each quickstart has its own README with the full run steps.
 

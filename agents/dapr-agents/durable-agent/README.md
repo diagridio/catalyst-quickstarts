@@ -13,10 +13,11 @@ This quickstart demonstrates how to build a durable agent using [Dapr Agents](ht
 
 ## Prerequisites
 
-1. [Diagrid CLI](https://docs.diagrid.io/references/catalyst/catalyst-cli-intro/) installed
-2. [Python 3.11–3.13](https://www.python.org/downloads/)
-3. [uv](https://docs.astral.sh/uv/getting-started/installation/) installed
-4. An [OpenAI API key](https://platform.openai.com/api-keys)
+1. A [Diagrid Catalyst account](https://catalyst.diagrid.io/)
+2. [Diagrid CLI](https://docs.diagrid.io/getting-started/install-cli) installed
+3. [Python 3.11–3.13](https://www.python.org/downloads/)
+4. [uv](https://docs.astral.sh/uv/getting-started/installation/) installed
+5. An [OpenAI API key](https://platform.openai.com/api-keys)
 
 ## Setup
 
