@@ -178,6 +178,21 @@ SUITES = (
         "secrets": ("OPENAI_API_KEY",),
     },
     {
+        "suite": "agents/pydantic-ai/tests/quickstart.robot",
+        "family": "agent",
+        "name": "pydantic-ai",
+        "data": "agents_pydantic_ai",
+        "language": "python",
+        "runtime": "python",
+        # False: no live run and no mutation check has happened yet. Only the
+        # dry run and doc-sync have passed. Flip to True after a green live run
+        # and a mutation check.
+        "nightly": False,
+        # pydantic-ai calls a real model through OpenAI. Keep in step with
+        # SECRETS in agents_pydantic_ai.py.
+        "secrets": ("OPENAI_API_KEY",),
+    },
+    {
         "suite": "agents/langgraph/enterprise-identity/tests/quickstart.robot",
         "family": "agent",
         # 19 characters, inside `project_name_budget()` (26), so no explicit
