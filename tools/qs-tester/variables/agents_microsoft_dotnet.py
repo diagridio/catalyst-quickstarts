@@ -116,8 +116,56 @@ REQUESTS = (
     },
 )
 
+# README "### 3. Crash Recovery with Catalyst". The crash case reuses RUN,
+# APP_PORT, CONNECTED_APPS and SERVING_MARKER above: the README restarts the app
+# with "the same `diagrid dev run` command you used in step 1", and /crash/run is
+# served by the same Program.cs on the same port.
+#
+# The quickstart's offline model is canned, so nothing here depends on model prose
+# and the case needs no secret.
+
+# README "### 3": the id and prompt the documented requests use.
+CRASH_ID = "gala-42"
+CRASH_PROMPT = "Find a venue in Austin for a company gala"
+
+# README "### 3.", "Two terminals instead of three": the self-kill variant, kept
+# below CRASH_DELAY_SECONDS (10).
+KILL_AFTER_SECONDS = 8
+
+# Log markers read from Program.cs. Each is a fixed prefix that no model output
+# enters.
+STEP1_MARKER = ">>> TOOL 1 COMPLETE:"
+STEP2_ARMED_MARKER = ">>> TOOL 2: Comparing venues over ~"
+SELF_KILL_MARKER = ">>> crash: "
+STEP2_DONE_MARKER = ">>> TOOL 2 COMPLETE:"
+# Logged through ILogger, not Console.WriteLine, so it has no ">>> " prefix. The
+# README documents it as `Attaching to the existing run gala-42`.
+ATTACH_MARKER = "Attaching to the existing run"
+
+# README "### 3.", "Collect the answer": the identical request without
+# kill_after_seconds. 200 with `result` set and `message` null.
+CRASH_REQUESTS = (
+    {
+        "method": "POST",
+        "port": APP_PORT,
+        "path": "/crash/run",
+        "payload": {"id": CRASH_ID, "prompt": CRASH_PROMPT},
+        "status": 200,
+        "field": "result",
+        "log_marker": ATTACH_MARKER,
+    },
+)
+
 # Documented commands this suite deliberately does not run, each with its reason.
 UNCOVERED = (
+    (
+        "curl -X POST http://localhost:5050/crash/kill",
+        "README '### 3' documents this as the two-terminal variant, and the "
+        "README itself says to skip it when kill_after_seconds is sent. The "
+        "Crash Recovery test case sends it, so the self-crash path is what runs. "
+        "Covering both would mean racing a kill against a live window for no "
+        "extra assertion.",
+    ),
     (
         "dotnet test unit-tests",
         "unit tests for the offline model. This suite drives the running "

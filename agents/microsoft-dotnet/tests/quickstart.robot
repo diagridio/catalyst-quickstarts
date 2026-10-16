@@ -5,8 +5,9 @@ quickstart has one implementation, unlike the canonical four-language APIs).
 Mirrors agents/microsoft-dotnet/README.md: "## Setup" installs, "## Run with
 Catalyst" provisions and runs, "### 2. Trigger the Agent" triggers, and
 "## Clean Up" documents the project delete this suite's teardown runs. The
-crash-recovery flow ("### 3. Crash Recovery with Catalyst") is deliberately
-absent; see UNCOVERED in variables/agents_microsoft_dotnet.py for why.
+second test case covers "### 3. Crash Recovery with Catalyst" (see CRASH_* names
+in variables/agents_microsoft_dotnet.py); the two-terminal POST /crash/kill
+variant is in UNCOVERED there.
 
 The request loop below is the shape every agent-family suite uses, including ones
 whose documented flow interleaves CLI commands with HTTP calls: a request may
@@ -111,6 +112,101 @@ Csharp Microsoft-Dotnet Quickstart
             Wait Until Log Contains    ${log}    ${marker}
         END
     END
+
+Csharp Microsoft-Dotnet Crash Recovery
+    [Documentation]    README "### 3. Crash Recovery with Catalyst": run under an id
+    ...    you own with kill_after_seconds, restart with the same run command, then
+    ...    re-issue the same request to collect the answer. The two-terminal
+    ...    POST /crash/kill variant is in UNCOVERED in the data module.
+    ...
+    ...    The quickstart ships a canned offline model, so this asserts only on log
+    ...    markers the tools print and on framework-generated fields, and needs no key.
+    ...
+    ...    NOT YET RUN LIVE: no Catalyst project was available when this was written,
+    ...    so only the dry run and doc-sync have passed.
+    [Tags]    csharp    microsoft-dotnet    agents    crash-recovery
+    ${qs}=      Get Quickstart
+    ${log}=     Suite Log File    agents-microsoft-dotnet    csharp-crash
+
+    # The first case's teardown deleted the project (TEARDOWN is the documented
+    # `project delete`), so provisioning starts clean here. `dotnet build` is
+    # incremental and near-instant when the first case has already built.
+    Build Quickstart            ${qs}
+    Run Documented Commands     ${qs}[setup]    ${PROJECT}    cwd=${qs}[dir]
+    Start Quickstart            ${qs}    ${PROJECT}    ${log}
+
+    Wait Until Apps Connected   ${qs}    ${log}
+    FOR    ${marker}    IN    @{READY_MARKERS}
+        Wait Until Ready Marker    ${log}    ${marker}
+    END
+    Wait Until Apps Healthy     ${qs}
+    # Kestrel binds after the Dapr marker; see SERVING_MARKER in the data module.
+    Wait Until Log Contains     ${log}    ${SERVING_MARKER}    timeout=180s
+    FOR    ${marker}    IN    @{qs}[catalyst_probe_markers]
+        Wait Until Catalyst Attached    ${log}    ${marker}
+    END
+
+    # A missing id is a 400 in the shared {id, result, message} shape. Checked here
+    # because it needs a started app and a second start is expensive. It schedules
+    # nothing, so it cannot disturb the crash below.
+    ${empty}=   Create Dictionary
+    ${bad}=     POST And Expect    ${APP_PORT}    /crash/run    ${empty}    400
+    FOR    ${key}    IN    id    result    message
+        Dictionary Should Contain Key    ${bad}    ${key}
+        ...    msg=400 body is missing "${key}": ${bad}
+    END
+    Should Be Equal    ${bad}[result]    ${NONE}
+    Should Not Be Empty    ${bad}[message]
+
+    # README "### 3", the kill_after_seconds variant. The process halts itself, so
+    # this call never gets a response and its outcome proves nothing; the port check
+    # below is the crash assertion.
+    ${payload}=    Create Dictionary
+    ...    id=${CRASH_ID}    prompt=${CRASH_PROMPT}    kill_after_seconds=${KILL_AFTER_SECONDS}
+    Run Keyword And Ignore Error
+    ...    POST    http://localhost:${APP_PORT}/crash/run    json=${payload}    timeout=120
+
+    # Tool 1 completed before the crash, so there is something to resume.
+    Wait Until Log Contains     ${log}    ${STEP1_MARKER}          timeout=120s
+    Wait Until Log Contains     ${log}    ${STEP2_ARMED_MARKER}    timeout=60s
+    # The app halted itself for the documented reason, not something else.
+    Wait Until Log Contains     ${log}    ${SELF_KILL_MARKER}      timeout=60s
+
+    # THE assertion that the crash happened. Stop Process Tree below would
+    # otherwise substitute for a kill that never fired. It also gates on the port
+    # being free before the relaunch.
+    Wait Until Keyword Succeeds    30s    2s    App Port Is Closed    ${APP_PORT}
+
+    # The CLI parent is still up; take the tree down so the alias can be rebound.
+    Run Keyword And Ignore Error    Stop Process Tree    apps
+
+    # README "### 3", "Restart the app": the same run command, nothing else.
+    ${log_again}=    Suite Log File    agents-microsoft-dotnet    csharp-crash-recovery
+    Start Quickstart            ${qs}    ${PROJECT}    ${log_again}
+    Wait Until Apps Connected   ${qs}    ${log_again}
+    Wait Until Log Contains     ${log_again}    ${SERVING_MARKER}    timeout=180s
+
+    # "You do not have to send anything": Catalyst hands the run back on reconnect
+    # and the interrupted tool finishes on its own, about 10s after it restarts.
+    Wait Until Log Contains     ${log_again}    ${STEP2_DONE_MARKER}    timeout=180s
+
+    # README "### 3", "Collect the answer": the same call with the same id attaches
+    # to the finished run. 200, `result` set, `message` null.
+    FOR    ${request}    IN    @{CRASH_REQUESTS}
+        Should Be Equal    ${request}[method]    POST
+        ...    msg=Only POST requests are handled here; use GET And Expect for a documented GET.
+        ${body}=    POST And Expect Field
+        ...    ${request}[port]    ${request}[path]    ${request}[payload]
+        ...    ${request}[status]    ${request}[field]
+        Should Not Be Equal    ${body}[result]    ${NONE}
+        ...    msg=Re-issued /crash/run returned no result
+        Should Be Equal    ${body}[message]    ${NONE}
+        ...    msg=A 200 must carry no attach instruction
+        Wait Until Log Contains    ${log_again}    ${request}[log_marker]    timeout=30s
+    END
+
+    # "TOOL 1 does not appear again": its line must not be in the recovery run's log.
+    Log Should Not Contain    ${log_again}    ${STEP1_MARKER}
 
 *** Keywords ***
 Clean Up Quickstart
