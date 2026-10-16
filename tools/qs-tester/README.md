@@ -2,7 +2,10 @@
 
 End-to-end tests for the `workflow`, `state`, `pubsub` and `invocation`
 quickstarts, and for the agent-family ones registered in `variables/suites.py`
-(`agents/langgraph`, `agents/langchaingo/enterprise-identity`,
+(`agents/langgraph`, `agents/crewai`, `agents/deepagents`,
+`agents/claude-agents`, `agents/adk`, `agents/openai-agents`,
+`agents/pydantic-ai`, `agents/strands`, `agents/mastra`,
+`agents/langchaingo/enterprise-identity`,
 `agents/langgraph/enterprise-identity`, `agents/langgraphjs/enterprise-identity`,
 `agents/microsoft-dotnet`, `agents/microsoft-dotnet/enterprise-identity`,
 `agents/spring-ai/crash-recovery`, `agents/spring-ai/enterprise-identity`,
@@ -70,8 +73,9 @@ automatically.
 Each suite lives next to the quickstarts it tests: `state/tests/quickstart.robot`,
 `pubsub/tests/quickstart.robot`, and so on. Each canonical suite has four tests
 tagged `csharp`, `java`, `javascript`, `python`. Agent-family suites (see "Two
-kinds of quickstart" below) have exactly one test each, at
-`<quickstart-dir>/tests/quickstart.robot` — wherever the quickstart itself
+kinds of quickstart" below) have one test each, except `agents/langgraph` and
+`agents/microsoft-dotnet`, which have a second, crash-recovery test. Each lives
+in `<quickstart-dir>/tests/quickstart.robot` — wherever the quickstart itself
 lives. That is not a fixed depth: `agents/langgraph/tests/quickstart.robot` is
 two segments below the repository root and
 `agents/spring-ai/event-planner/tests/quickstart.robot` is three.
@@ -182,7 +186,7 @@ differ and are worth knowing before you touch one:
    three shapes). `ci/setup-project.sh` is for the canonical suites, whose
    READMEs document no provisioning at all, and for an agent quickstart whose
    README documents none either.
-2. **The `dev run` command can be bare.** All six agent suites here follow a
+2. **The `dev run` command can be bare.** All twelve non-`enterprise-identity` agent suites here follow a
    documented `project create ... --use` with a `dev run` carrying no
    `--project`. The suite reproduces that exactly, so a regression in `--use`
    fails here. (`mcp-auth/python` documents the opposite — an explicit

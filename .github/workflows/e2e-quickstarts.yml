@@ -382,7 +382,7 @@ jobs:
             // them so the issue names exact failures. Two shapes, because the
             // two jobs differ: a canonical leg writes "python: pubsub state"
             // (language, then the APIs that failed), an agent leg writes
-            // "agents/langgraph" (the suite, which has one language and one test).
+            // "agents/langgraph" (the suite, which has one language).
             const lines = [];
             const walk = (dir) => {
               for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
