@@ -129,12 +129,15 @@ Python Langgraph Crash Recovery
     Build Quickstart            ${qs}
     # README "## Run with Catalyst" steps 2-3. When the happy-path case ran first
     # the project and the agent already exist (this README documents no cleanup,
-    # so its teardown leaves them), and these commands fail as already-exists. That
-    # is expected and ignored; a real provisioning failure surfaces at
-    # `Wait Until Apps Connected` below.
+    # so its teardown leaves them), and these commands then fail as already-exists.
+    # Only that failure is tolerated; anything else (auth, quota, bad flags) fails
+    # the test. See `Run Setup Command Tolerating Existing`.
+    #
+    # This case's UNCOVERED entry for CRASH_RUN in the data module claims this case
+    # runs that command. If this case is ever removed, that entry becomes a false
+    # claim and must go with it (doc-sync will then demand a real decision).
     FOR    ${command}    IN    @{qs}[setup]
-        Run Keyword And Ignore Error
-        ...    Run Documented Commands    ${{[$command]}}    ${PROJECT}    cwd=${qs}[dir]
+        Run Setup Command Tolerating Existing    ${command}    ${PROJECT}    ${qs}[dir]
     END
     Start Quickstart            ${qs}    ${PROJECT}    ${log}
 
@@ -175,9 +178,12 @@ Python Langgraph Crash Recovery
     # The app halted itself for the documented reason, not something else.
     Wait Until Log Contains     ${log}    ${SELF_KILL_MARKER}      timeout=60s
 
-    # THE assertion that the crash happened. Stop Process Tree below would
+    # The assertion that the process really died. Stop Process Tree below would
     # otherwise substitute for a kill that never fired. It also gates on the port
-    # being free before the relaunch.
+    # being free before the relaunch. The shared keyword is meaningful here only
+    # because crash_test.py serves `GET /` with 200: a live app passes the GET, so
+    # the keyword fails until the process is gone. (It would be vacuous for an app
+    # whose GET / is a 404, which is why the dotnet suite uses a TCP check.)
     Wait Until Keyword Succeeds    30s    2s    App Port Is Closed    ${CRASH_APP_PORT}
 
     # The CLI parent is still up; take the tree down so the alias can be rebound.
@@ -213,6 +219,27 @@ Python Langgraph Crash Recovery
     Log Should Not Contain    ${log_again}    ${STEP1_MARKER}
 
 *** Keywords ***
+Run Setup Command Tolerating Existing
+    [Documentation]    Run one documented setup command; tolerate ONLY a failure
+    ...    that says the thing already exists, fail on anything else.
+    ...
+    ...    ASSUMED AND UNVERIFIED: the diagrid CLI's wording for an existing project
+    ...    or agent is not recorded anywhere in this repo (ci scripts, resources,
+    ...    READMEs, other suites), so the match below is the narrowest one that can
+    ...    be justified: the case-insensitive phrase "already exist" in the failure
+    ...    text (covers "already exists" and "already exist"). If the CLI words it
+    ...    differently, a full run fails loudly here on the second case instead of
+    ...    silently passing; fix the pattern from the real message, which this
+    ...    keyword puts in the failure output.
+    [Arguments]    ${command}    ${project}    ${cwd}
+    ${status}    ${message}=    Run Keyword And Ignore Error
+    ...    Run Documented Commands    ${{[$command]}}    ${project}    cwd=${cwd}
+    IF    '${status}' == 'PASS'    RETURN
+    ${lowered}=    Convert To Lower Case    ${message}
+    Should Contain    ${lowered}    already exist
+    ...    msg=Setup command failed with something other than "already exists": ${message}
+    Log    Tolerated, already provisioned: ${command}    console=True
+
 Clean Up Quickstart
     [Documentation]    Stop the apps, then run whatever cleanup the README
     ...    documents. `Stop Quickstart` also calls `diagrid dev stop`, which
