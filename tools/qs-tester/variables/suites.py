@@ -208,6 +208,23 @@ SUITES = (
         "secrets": ("OPENAI_API_KEY",),
     },
     {
+        "suite": "agents/mastra/tests/quickstart.robot",
+        "family": "agent",
+        "name": "mastra",
+        "data": "agents_mastra",
+        "language": "javascript",
+        # The e2e-agents job's `Set up Node` step (setup-node, lts/*) covers
+        # mastra's `engines` floor of Node >=22.13.
+        "runtime": "javascript",
+        # False: no live run and no mutation check has happened yet. Only the
+        # dry run and doc-sync have passed. Flip to True after a green live run
+        # and a mutation check.
+        "nightly": False,
+        # mastra calls a real model through OpenAI. Keep in step with SECRETS in
+        # agents_mastra.py.
+        "secrets": ("OPENAI_API_KEY",),
+    },
+    {
         "suite": "agents/langgraph/enterprise-identity/tests/quickstart.robot",
         "family": "agent",
         # 19 characters, inside `project_name_budget()` (26), so no explicit
