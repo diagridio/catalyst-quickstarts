@@ -98,7 +98,7 @@ UNCOVERED = (
         "flow is not covered here",
     ),
     (
-        'curl -i -X POST http://localhost:8002/agent/run -H "Content-Type: application/json" -d \'{"task": "Find decorations for a garden wedding at a medium venue"}\'',
+        'curl -X POST http://localhost:8008/agent/run -H "Content-Type: application/json" -d \'{"task": "Find decorations for a garden wedding at a medium venue"}\'',
         "this suite covers the crash-recovery flow; the happy-path /agent/run "
         "flow is not covered here",
     ),
