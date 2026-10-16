@@ -193,6 +193,21 @@ SUITES = (
         "secrets": ("OPENAI_API_KEY",),
     },
     {
+        "suite": "agents/strands/tests/quickstart.robot",
+        "family": "agent",
+        "name": "strands",
+        "data": "agents_strands",
+        "language": "python",
+        "runtime": "python",
+        # False: no live run and no mutation check has happened yet. Only the
+        # dry run and doc-sync have passed. Flip to True after a green live run
+        # and a mutation check.
+        "nightly": False,
+        # strands calls a real model through OpenAI. Keep in step with SECRETS in
+        # agents_strands.py.
+        "secrets": ("OPENAI_API_KEY",),
+    },
+    {
         "suite": "agents/langgraph/enterprise-identity/tests/quickstart.robot",
         "family": "agent",
         # 19 characters, inside `project_name_budget()` (26), so no explicit
