@@ -118,6 +118,21 @@ SUITES = (
         "secrets": ("OPENAI_API_KEY",),
     },
     {
+        "suite": "agents/deepagents/tests/quickstart.robot",
+        "family": "agent",
+        "name": "deepagents",
+        "data": "agents_deepagents",
+        "language": "python",
+        "runtime": "python",
+        # False: no live run and no mutation check has happened yet. Only the
+        # dry run and doc-sync have passed. Flip to True after a green live run
+        # and a mutation check.
+        "nightly": False,
+        # deepagents calls a real model through OpenAI. Keep in step with SECRETS in
+        # agents_deepagents.py.
+        "secrets": ("OPENAI_API_KEY",),
+    },
+    {
         "suite": "agents/claude-agents/tests/quickstart.robot",
         "family": "agent",
         "name": "claude-agents",
