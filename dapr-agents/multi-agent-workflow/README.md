@@ -56,6 +56,20 @@ Login to Diagrid Catalyst using the following command:
 diagrid login
 ```
 
+Create a Catalyst project for the quickstart:
+
+```bash
+diagrid project create multi-agent-workflow-quickstart --enable-managed-workflow --deploy-managed-kv --deploy-managed-pubsub --wait
+```
+
+Create an Agent resource for each app in `dapr.yaml`. `diagrid dev run` refuses to start without them:
+
+```bash
+diagrid agent create customer-support-system --project multi-agent-workflow-quickstart --wait
+diagrid agent create triage-agent --project multi-agent-workflow-quickstart --wait
+diagrid agent create expert-agent --project multi-agent-workflow-quickstart --wait
+```
+
 Deploy the workflow app to Catalyst with managed infrastructure:
 
 ```bash
