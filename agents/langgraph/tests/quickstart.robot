@@ -36,6 +36,10 @@ Test Teardown   Clean Up Quickstart
 
 *** Variables ***
 ${PROJECT}      ${EMPTY}
+# How long the crash case waits after the happy-path case released its app connection
+# before running the same app ID again. A guess that fixes a reproduced race, not a
+# measured value: see the comment above the call in the crash case.
+${APP_CONNECTION_SETTLE}    20s
 
 *** Test Cases ***
 Python Langgraph Quickstart
@@ -133,9 +137,14 @@ Python Langgraph Crash Recovery
     # Otherwise SETUP runs normally and ANY failure fails the test. The check is
     # `diagrid project get`'s exit code, not any CLI message wording.
     #
-    # UNVERIFIED against a live run: the project-exists branch has only been
-    # dry-run, so `diagrid project get` returning 0 for a project left by the
-    # previous case is assumed from ci/teardown-project.sh's use of it.
+    # Verified live (2026-10-16): `diagrid project get` returned 0 for the project the
+    # happy-path case left behind, so this branch is taken. Skipping SETUP is not
+    # enough on its own, though: that case's teardown ran `diagrid dev stop --id`, and
+    # a `dev run` for the same app ID started within ~1-2s of it fails with "local app
+    # connection not found with the given id" (reproduced by hand with stop && run back
+    # to back; a run minutes later connects fine). So this branch also waits out the
+    # release. The wait is a fixed ${APP_CONNECTION_SETTLE}, not measured: the race
+    # window has not been timed, so tune the variable if a run still fails there.
     #
     # This case's UNCOVERED entry for CRASH_RUN in the data module claims this case
     # runs that command. If this case is ever removed, that entry becomes a false
@@ -145,6 +154,7 @@ Python Langgraph Crash Recovery
         Run Documented Commands     ${qs}[setup]    ${PROJECT}    cwd=${qs}[dir]
     ELSE
         Log    Project ${PROJECT} already exists, skipping SETUP    console=True
+        Wait For Released App Connection
     END
     Start Quickstart            ${qs}    ${PROJECT}    ${log}
 
@@ -237,6 +247,16 @@ Project Exists
     ${result}=    Run Process    diagrid project get ${project}    shell=True
     ...    stderr=STDOUT    timeout=120s
     RETURN    ${result.rc == 0}
+
+Wait For Released App Connection
+    [Documentation]    Sleep ${APP_CONNECTION_SETTLE} so the app connection released
+    ...    by the previous case's `diagrid dev stop --id` is really gone before the
+    ...    same app ID is run again. `diagrid dev status` was not used as the signal:
+    ...    nothing yet shows that it lags the same way `dev run` does, so a fixed wait
+    ...    is the only thing the reproduction supports. Override on the command line
+    ...    with --variable APP_CONNECTION_SETTLE:<seconds>s to tune it.
+    Log    Waiting ${APP_CONNECTION_SETTLE} for the previous app connection to be released    console=True
+    Sleep    ${APP_CONNECTION_SETTLE}
 
 Clean Up Quickstart
     [Documentation]    Stop the apps, then run whatever cleanup the README
