@@ -126,8 +126,10 @@ CRASH_WAIT_SECONDS = int(os.environ.get("CRASH_WAIT_SECONDS", "120"))
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     runner.start()
+    # The runner registers with Catalyst on a background thread. Give it a moment before
+    # announcing readiness, so the first request cannot arrive at an unregistered worker.
     await asyncio.sleep(1)
-    print("Runner started — ready to accept requests", flush=True)
+    print("Runner started, ready to accept requests", flush=True)
     yield
     runner.shutdown()
 
@@ -243,6 +245,8 @@ async def crash_run(req: CrashRunRequest):
             )
             await anext(stream)
             await stream.aclose()
+            # Runs after scheduling, which is safe: step 2 only starts after a model turn, so
+            # the note is always in place before anything reads it.
             # Recorded here and nowhere else: only on the branch that actually scheduled a run,
             # so an attaching call cannot even leave a note behind. Recording only, though. The
             # timer starts inside step 2, which is the one place that runs on a first execution
@@ -288,12 +292,23 @@ async def crash_run(req: CrashRunRequest):
             req.id, message=f"run {req.id} ended as {status_str}", status_code=500
         )
 
+    # The workflow itself COMPLETED, but the agent may have failed inside it: an LLM error
+    # gives status "error", and running out of iterations gives "max_iterations_reached",
+    # both with `error` set and no final_response. Surface that instead of a 200 with a
+    # null result.
+    payload = json.loads(state.serialized_output)
+    if payload.get("status") != "completed" or payload.get("error"):
+        reason = payload.get("error") or payload.get("status")
+        print(f">>> Crash-recovery run {req.id} failed: {reason}", flush=True)
+        return crash_response(
+            req.id, message=f"run {req.id} failed: {reason}", status_code=500
+        )
+
     # `result` carries whatever the runner returns as the final agent output, which is the
     # `final_response` text of the serialized AgentWorkflowOutput, matching the `result` field
     # of the crash demos in the workflow quickstarts. The other keys (messages, iterations,
     # status) are bookkeeping inside that payload and are not part of this endpoint's contract.
-    payload = json.loads(state.serialized_output)
-    return crash_response(req.id, result=payload.get("final_response", payload))
+    return crash_response(req.id, result=payload.get("final_response"))
 
 
 # Simulate a crash: kill this process outright, like SIGKILL. Demo only.
