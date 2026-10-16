@@ -128,6 +128,10 @@ Csharp Microsoft-Dotnet Crash Recovery
     ${qs}=      Get Quickstart
     ${log}=     Suite Log File    agents-microsoft-dotnet    csharp-crash
 
+    # The UNCOVERED entry for POST /crash/kill in the data module claims this case
+    # sends kill_after_seconds instead. If this case is removed, that entry becomes
+    # a false claim and must go with it.
+    #
     # The first case's teardown deleted the project (TEARDOWN is the documented
     # `project delete`), so provisioning starts clean here. `dotnet build` is
     # incremental and near-instant when the first case has already built.
@@ -172,10 +176,13 @@ Csharp Microsoft-Dotnet Crash Recovery
     # The app halted itself for the documented reason, not something else.
     Wait Until Log Contains     ${log}    ${SELF_KILL_MARKER}      timeout=60s
 
-    # THE assertion that the crash happened. Stop Process Tree below would
-    # otherwise substitute for a kill that never fired. It also gates on the port
-    # being free before the relaunch.
-    Wait Until Keyword Succeeds    30s    2s    App Port Is Closed    ${APP_PORT}
+    # The assertion that the process really died, so Stop Process Tree below cannot
+    # substitute for a kill that never fired. It also gates on the port being free
+    # before the relaunch. Not the shared `App Port Is Closed`: that does GET / and
+    # passes on any non-2xx, and this app maps no GET route, so a live app answers
+    # 404 and the shared keyword would pass at once. `Port Refuses Connections` only
+    # succeeds on a refused TCP connect.
+    Wait Until Keyword Succeeds    30s    2s    Port Refuses Connections    ${APP_PORT}
 
     # The CLI parent is still up; take the tree down so the alias can be rebound.
     Run Keyword And Ignore Error    Stop Process Tree    apps
@@ -209,6 +216,18 @@ Csharp Microsoft-Dotnet Crash Recovery
     Log Should Not Contain    ${log_again}    ${STEP1_MARKER}
 
 *** Keywords ***
+Port Refuses Connections
+    [Documentation]    Succeed only when a TCP connect to ${port} is REFUSED, which is
+    ...    what a port with no listener does. A timeout or any other error fails, so
+    ...    the gate cannot pass on something other than a dead process.
+    [Arguments]    ${port}
+    ${status}    ${message}=    Run Keyword And Ignore Error
+    ...    Evaluate    socket.create_connection(('localhost', ${port}), timeout=3).close()    modules=socket
+    Should Be Equal    ${status}    FAIL
+    ...    msg=Port ${port} accepted a connection, so the app did not die
+    Should Contain    ${message}    ConnectionRefusedError
+    ...    msg=Port ${port} did not refuse the connection (needed a refusal, got: ${message})
+
 Clean Up Quickstart
     [Documentation]    Stop the apps, then run whatever cleanup the README
     ...    documents. `Stop Quickstart` also calls `diagrid dev stop`, which
