@@ -37,6 +37,9 @@ Test Teardown   Clean Up Quickstart
 
 *** Variables ***
 ${PROJECT}      ${EMPTY}
+# Wait before the crash case runs the app ID again after the first case's `dev stop`.
+# A guess, not a measured value: see the comment in the crash case.
+${APP_CONNECTION_SETTLE}    20s
 
 *** Test Cases ***
 Csharp Microsoft-Dotnet Quickstart
@@ -132,11 +135,30 @@ Csharp Microsoft-Dotnet Crash Recovery
     # sends kill_after_seconds instead. If this case is removed, that entry becomes
     # a false claim and must go with it.
     #
-    # The first case's teardown deleted the project (TEARDOWN is the documented
-    # `project delete`), so provisioning starts clean here. `dotnet build` is
-    # incremental and near-instant when the first case has already built.
+    # `dotnet build` is incremental and near-instant when the first case has already
+    # built.
+    #
+    # The first live run showed that the first case's teardown does NOT delete the
+    # project here: the documented `diagrid project delete` stops at an interactive
+    # "Are you sure you want to proceed? (Y/N)" prompt (CI's ci/teardown-project.sh
+    # passes --yes), waits out Run Process's 10 minute timeout, and the failure is
+    # ignored. So the project usually survives into this case and re-running SETUP
+    # fails with 'A project named "..." already exists'. Decide from state instead,
+    # the way the langgraph suite does: if `diagrid project get` succeeds, skip SETUP;
+    # otherwise run it and let any failure fail the test.
+    #
+    # When the project does survive, the first case also ran `diagrid dev stop --id`
+    # moments ago, and a `dev run` for the same app ID started within ~1-2s of that
+    # fails with "local app connection not found with the given id" (reproduced for
+    # langgraph, not yet for this app), so wait out the release first.
     Build Quickstart            ${qs}
-    Run Documented Commands     ${qs}[setup]    ${PROJECT}    cwd=${qs}[dir]
+    ${exists}=    Project Exists    ${PROJECT}
+    IF    not ${exists}
+        Run Documented Commands     ${qs}[setup]    ${PROJECT}    cwd=${qs}[dir]
+    ELSE
+        Log    Project ${PROJECT} already exists, skipping SETUP    console=True
+        Wait For Released App Connection
+    END
     Start Quickstart            ${qs}    ${PROJECT}    ${log}
 
     Wait Until Apps Connected   ${qs}    ${log}
@@ -216,6 +238,26 @@ Csharp Microsoft-Dotnet Crash Recovery
     Log Should Not Contain    ${log_again}    ${STEP1_MARKER}
 
 *** Keywords ***
+Project Exists
+    [Documentation]    True when `diagrid project get ${project}` exits 0, the same
+    ...    test ci/teardown-project.sh uses. A non-zero exit counts as "does not
+    ...    exist", so a failed lookup (auth, network) falls through to running SETUP,
+    ...    where any failure fails the test. No dependence on CLI message wording.
+    ...    (Same keyword as in agents/langgraph/tests/quickstart.robot.)
+    [Arguments]    ${project}
+    ${result}=    Run Process    diagrid project get ${project}    shell=True
+    ...    stderr=STDOUT    timeout=120s
+    RETURN    ${result.rc == 0}
+
+Wait For Released App Connection
+    [Documentation]    Sleep ${APP_CONNECTION_SETTLE} so the app connection released
+    ...    by the previous case's `diagrid dev stop --id` is really gone before the
+    ...    same app ID is run again. A fixed, unmeasured wait: tune it with
+    ...    --variable APP_CONNECTION_SETTLE:<seconds>s. (Same keyword as in
+    ...    agents/langgraph/tests/quickstart.robot.)
+    Log    Waiting ${APP_CONNECTION_SETTLE} for the previous app connection to be released    console=True
+    Sleep    ${APP_CONNECTION_SETTLE}
+
 Port Refuses Connections
     [Documentation]    Succeed only when a TCP connect to ${port} is REFUSED, which is
     ...    what a port with no listener does. A timeout or any other error fails, so
