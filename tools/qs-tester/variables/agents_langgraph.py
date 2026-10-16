@@ -193,18 +193,80 @@ REQUESTS = (
     },
 )
 
-# Documented commands this suite deliberately does not run, each with its reason.
-# doc-sync fails if a documented command is in neither this tuple nor the suite,
-# so a new documented step forces a decision instead of being quietly ignored.
+# ---------------------------------------------------------------------------
+# Crash-recovery flow. README "## Crash Recovery Test With Catalyst".
+#
+# This is a second run file (dev-crash-test.yaml, crash_test.py) on a different
+# port, so it gets its own constants rather than overloading RUN,
+# CONNECTED_APPS and HEALTH_PROBES above, which the happy-path case keeps using
+# unchanged. The crash test case builds its `qs` dict from get_quickstart() and
+# overrides `run`, `connected_apps` and `health_probes` with the CRASH_* values.
+#
+# langgraph is a graph with no model, so nothing here depends on model prose and
+# the crash case needs no secret.
+# ---------------------------------------------------------------------------
+
+# README "### 4. Start the app" and "### 7. Restart the app", verbatim.
+CRASH_RUN = "uv run diagrid dev run -f dev-crash-test.yaml --approve"
+
+# README "### 4": "Wait for `Uvicorn running on http://0.0.0.0:8001`". Pinned in
+# dev-crash-test.yaml (appPort 8001 and APP_PORT "8001").
+CRASH_APP_PORT = 8001
+
+# appID and appPort from dev-crash-test.yaml. The appID is the same as the happy
+# path's (schedule-planner): the README says to stop the first run before
+# starting this one, because both dev-run files use that app ID.
+CRASH_CONNECTED_APPS = (("schedule-planner", CRASH_APP_PORT),)
+
+# crash_test.py serves `GET /` once the runner has registered, unlike main.py,
+# which serves no `/`.
+CRASH_HEALTH_PROBES = ((CRASH_APP_PORT, "/"),)
+
+# README "### 5. Run under an ID you own" uses this id and topic.
+CRASH_ID = "gala-42"
+CRASH_TOPIC = "company gala on March 15"
+
+# README "### 5.": the self-kill variant, kept below CRASH_DELAY_SECONDS (10).
+KILL_AFTER_SECONDS = 8
+
+# Log markers read from crash_test.py. Each is a fixed prefix that no model
+# output enters.
+STEP1_MARKER = ">>> STEP 1 COMPLETE:"
+STEP2_ARMED_MARKER = ">>> STEP 2: Comparing venue options over ~"
+SELF_KILL_MARKER = ">>> crash: "
+STEP2_DONE_MARKER = ">>> STEP 2 COMPLETE:"
+ATTACH_MARKER = ">>> Attaching to the existing run"
+
+# README "### 8. Collect the answer": the identical request without
+# kill_after_seconds. 200 with `result` set and `message` null.
+CRASH_REQUESTS = (
+    {
+        "method": "POST",
+        "port": CRASH_APP_PORT,
+        "path": "/crash/run",
+        "payload": {"id": CRASH_ID, "topic": CRASH_TOPIC},
+        "status": 200,
+        "field": "result",
+        "log_marker": ATTACH_MARKER,
+    },
+)
+
+# Documented commands this suite does not run through RUN or REQUESTS, each with
+# its reason. doc-sync fails if a documented command is in neither this tuple nor
+# the suite, so a new documented step forces a decision instead of being quietly
+# ignored.
 UNCOVERED = (
     (
         "uv run diagrid dev run -f dev-crash-test.yaml --approve",
-        "crash-recovery flow requires editing crash_test.py to comment out "
-        "os._exit(1); source edits are out of scope",
+        "run by the Crash Recovery test case through CRASH_RUN. doc-sync only "
+        "reads RUN and REQUESTS, so it cannot see a second run command; this "
+        "entry is the accounting for it, not a coverage gap",
     ),
     (
-        "uv run diagrid dev run -f dev-crash-test.yaml",
-        "the second half of the same crash-recovery flow",
+        "curl -X POST http://localhost:8001/crash/kill",
+        "README '### 6. Crash the app' is the two-terminal variant, and the "
+        "README itself says to skip it when kill_after_seconds is sent. The "
+        "Crash Recovery test case sends it, so the self-crash path is what runs",
     ),
 )
 
