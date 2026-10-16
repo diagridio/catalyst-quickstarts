@@ -118,6 +118,21 @@ SUITES = (
         "secrets": ("OPENAI_API_KEY",),
     },
     {
+        "suite": "agents/claude-agents/tests/quickstart.robot",
+        "family": "agent",
+        "name": "claude-agents",
+        "data": "agents_claude_agents",
+        "language": "python",
+        "runtime": "python",
+        # False: no live run and no mutation check has happened yet. Only the
+        # dry run and doc-sync have passed. Flip to True after a green live run
+        # and a mutation check.
+        "nightly": False,
+        # claude-agents calls a real model through Anthropic. Keep in step with
+        # SECRETS in agents_claude_agents.py.
+        "secrets": ("ANTHROPIC_API_KEY",),
+    },
+    {
         "suite": "agents/adk/tests/quickstart.robot",
         "family": "agent",
         "name": "adk",
