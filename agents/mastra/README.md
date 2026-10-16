@@ -133,7 +133,7 @@ This is a second app (`crash_test.ts`, not `main.ts`), so stop the run from step
 diagrid dev run -f dev-crash-test.yaml --approve
 ```
 
-Wait for `Crash demo listening on http://0.0.0.0:8001`. The requests below use port 8001, the default of `crash_test.ts`.
+Wait for `Crash demo listening on http://0.0.0.0:8001`. The port is pinned in `dev-crash-test.yaml`, so the `localhost:8001` requests below always work as written.
 
 ### 4. Run under an ID you own
 

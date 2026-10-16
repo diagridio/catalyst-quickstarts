@@ -125,7 +125,7 @@ This is a second app (`crash_test.py`, not `main.py`), so stop the run from step
 uv run diagrid dev run -f dev-crash-test.yaml --approve
 ```
 
-Wait for `Uvicorn running on http://0.0.0.0:8001`. The requests below use port 8001, the default of `crash_test.py`.
+Wait for `Uvicorn running on http://0.0.0.0:8001`. The port is pinned in `dev-crash-test.yaml`, so the `localhost:8001` requests below always work as written.
 
 ### 5. Run under an ID you own
 
