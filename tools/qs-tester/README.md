@@ -133,7 +133,8 @@ shows it.
 ### Selecting languages and APIs
 
 Each canonical suite has four tests tagged by language; each agent-family suite
-has one, tagged with its language, its own name and `agents`. Filter with
+has one (`agents/langgraph` and `agents/microsoft-dotnet` have a second, tagged
+`crash-recovery`), each tagged with its language, its own name and `agents`. Filter with
 `--include` / `--exclude` (repeatable, `--include` ORs):
 
 ```bash
@@ -470,7 +471,7 @@ config, not a typo.
   mapping was verified. Note that `dev stop` also kills the local `diagrid dev run`
   process, which is harmless in teardown (the process tree is already stopped by
   then) but will end a session you are still using.
-- **`agents/langgraph` is `nightly: True`; the other four are not.** The bar for
+- **`agents/langgraph` is the only `nightly: True` row; every other agent row is `nightly: False`.** The bar for
   that flag is a green live run *plus* a mutation check the verdict tool accepts,
   and only langgraph has cleared both (2026-08-28). Where the others stand:
   - `agents/microsoft-dotnet` has the first half. Its first green live run was
@@ -651,10 +652,9 @@ config, not a typo.
   `agents/spring-ai/crash-recovery` and `agents/spring-ai/event-planner`
   (2026-09-02). That closes the risk this bullet used to carry for
   `agents/spring-ai/event-planner`, whose entire readiness gate it is.
-- **Ten of the fourteen `agents/*` quickstarts have no suite at all** (adk,
-  claude-agents, crewai, dapr-agents/durable-agent, dapr-agents/orchestrator,
-  deepagents, openai-agents, pydantic-ai, spring-ai/durable-memory, strands),
-  and neither do `dapr-agents/*` or `mcp-auth/*`. Nothing detects drift in them beyond
+- **Three `agents/*` quickstarts have no suite at all**
+  (`agents/dapr-agents/durable-agent`, `agents/dapr-agents/orchestrator`,
+  `agents/spring-ai/durable-memory`), and neither do the top-level `dapr-agents/*` or `mcp-auth/*`. Nothing detects drift in them beyond
   `docsync/check_skill_docs.py`, which only sees the commands the skill itself
   quotes. Adding a suite is what the `add-quickstart-e2e-test` skill is for.
 - **The CI workflow itself has never been executed.** Everything wired for
