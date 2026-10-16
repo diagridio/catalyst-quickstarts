@@ -148,9 +148,14 @@ Require Env Var
     ...    rather than as an opaque 401 from the provider several keywords later.
     ...    An empty value fails too: that is what a misconfigured GitHub secret
     ...    looks like, and a bare existence check would wave it through.
+    ...
+    ...    The value is deliberately never held in a Robot variable. Robot logs
+    ...    every assignment, so `${value}= Get Environment Variable` wrote the whole
+    ...    API key into output.xml and log.html, which CI uploads as artifacts and
+    ...    GitHub's secret masking does not cover. Only a boolean leaves Python.
     [Arguments]    ${name}    ${quickstart}
-    ${value}=    Get Environment Variable    ${name}    default=${EMPTY}
-    Should Not Be Empty    ${value}
+    ${is_set}=    Evaluate    bool(os.environ.get($name, ''))    modules=os
+    Should Be True    ${is_set}
     ...    msg=${name} is not set, and the ${quickstart} quickstart needs it. Export it before running this suite; in CI it comes from the job's env block.
 
 POST And Expect Field

@@ -53,6 +53,24 @@ Require Env Var Fails When The Variable Is Set But Empty
     ...    Require Env Var    QS_TESTER_FAKE_KEY    fake
     [Teardown]    Remove Environment Variable    QS_TESTER_FAKE_KEY
 
+Require Env Var Does Not Write The Secret To The Robot Output
+    # Robot logs every keyword assignment, so `${value}= Get Environment Variable`
+    # put the whole API key into output.xml and log.html (found on the first live
+    # crewai run). CI uploads those files as artifacts, and GitHub's secret masking
+    # only covers job logs, not artifact files. The keyword must therefore never
+    # hold the value in a Robot variable. TRACE is the most verbose level, so a
+    # clean output.xml at TRACE is clean at any level.
+    Set Environment Variable    QS_TESTER_FAKE_KEY    sk-leak-canary-7c1d9e
+    ${out}=    Set Variable    ${TEMPDIR}${/}qs-tester-leak-probe
+    ${result}=    Run Process    robot    --loglevel    TRACE    --outputdir    ${out}
+    ...    ${CURDIR}${/}_leak_probe.robot
+    Should Be Equal As Integers    ${result.rc}    0
+    ...    msg=The probe suite failed, so the check below proved nothing: ${result.stdout}
+    ${xml}=    Get File    ${out}${/}output.xml
+    Should Not Contain    ${xml}    sk-leak-canary-7c1d9e
+    [Teardown]    Run Keywords    Remove Environment Variable    QS_TESTER_FAKE_KEY
+    ...    AND    Remove Directory    ${out}    recursive=${TRUE}
+
 POST And Expect Field Passes On A Present Non-Empty Field
     ${body}=    POST And Expect Field    ${ECHO_PORT}    /full    ${{ {'task': 'x'} }}    200    result
     Should Be Equal    ${body}[result]    some text
