@@ -206,7 +206,11 @@ Csharp Microsoft-Dotnet Crash Recovery
     # succeeds on a refused TCP connect.
     Wait Until Keyword Succeeds    30s    2s    Port Refuses Connections    ${APP_PORT}
 
-    # The CLI parent is still up; take the tree down so the alias can be rebound.
+    # Let the first `diagrid dev run` finish shutting itself down after the crash. Signalling it
+    # mid-shutdown interrupted its cleanup and left ~/.diagrid/tuns/<project>:<app id> behind, so the
+    # restart failed with "file ... already exists for App ID" (seen on the first live mastra run).
+    # Stop Process Tree below then only mops up anything still alive.
+    Wait For Process    apps    timeout=30s    on_timeout=continue
     Run Keyword And Ignore Error    Stop Process Tree    apps
 
     # README "### 3", "Restart the app": the same run command, nothing else.
