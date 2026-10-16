@@ -128,16 +128,23 @@ Python Langgraph Crash Recovery
 
     Build Quickstart            ${qs}
     # README "## Run with Catalyst" steps 2-3. When the happy-path case ran first
-    # the project and the agent already exist (this README documents no cleanup,
-    # so its teardown leaves them), and these commands then fail as already-exists.
-    # Only that failure is tolerated; anything else (auth, quota, bad flags) fails
-    # the test. See `Run Setup Command Tolerating Existing`.
+    # in this suite the project and the agent already exist (this README documents
+    # no cleanup, so its teardown leaves them), and the whole SETUP list is skipped.
+    # Otherwise SETUP runs normally and ANY failure fails the test. The check is
+    # `diagrid project get`'s exit code, not any CLI message wording.
+    #
+    # UNVERIFIED against a live run: the project-exists branch has only been
+    # dry-run, so `diagrid project get` returning 0 for a project left by the
+    # previous case is assumed from ci/teardown-project.sh's use of it.
     #
     # This case's UNCOVERED entry for CRASH_RUN in the data module claims this case
     # runs that command. If this case is ever removed, that entry becomes a false
     # claim and must go with it (doc-sync will then demand a real decision).
-    FOR    ${command}    IN    @{qs}[setup]
-        Run Setup Command Tolerating Existing    ${command}    ${PROJECT}    ${qs}[dir]
+    ${exists}=    Project Exists    ${PROJECT}
+    IF    not ${exists}
+        Run Documented Commands     ${qs}[setup]    ${PROJECT}    cwd=${qs}[dir]
+    ELSE
+        Log    Project ${PROJECT} already exists, skipping SETUP    console=True
     END
     Start Quickstart            ${qs}    ${PROJECT}    ${log}
 
@@ -219,26 +226,17 @@ Python Langgraph Crash Recovery
     Log Should Not Contain    ${log_again}    ${STEP1_MARKER}
 
 *** Keywords ***
-Run Setup Command Tolerating Existing
-    [Documentation]    Run one documented setup command; tolerate ONLY a failure
-    ...    that says the thing already exists, fail on anything else.
+Project Exists
+    [Documentation]    True when `diagrid project get ${project}` exits 0, the same
+    ...    test ci/teardown-project.sh uses (`if ! diagrid project get ... `). A
+    ...    non-zero exit counts as "does not exist", so a failed lookup (auth, network)
+    ...    falls through to running SETUP, where any failure fails the test.
     ...
-    ...    ASSUMED AND UNVERIFIED: the diagrid CLI's wording for an existing project
-    ...    or agent is not recorded anywhere in this repo (ci scripts, resources,
-    ...    READMEs, other suites), so the match below is the narrowest one that can
-    ...    be justified: the case-insensitive phrase "already exist" in the failure
-    ...    text (covers "already exists" and "already exist"). If the CLI words it
-    ...    differently, a full run fails loudly here on the second case instead of
-    ...    silently passing; fix the pattern from the real message, which this
-    ...    keyword puts in the failure output.
-    [Arguments]    ${command}    ${project}    ${cwd}
-    ${status}    ${message}=    Run Keyword And Ignore Error
-    ...    Run Documented Commands    ${{[$command]}}    ${project}    cwd=${cwd}
-    IF    '${status}' == 'PASS'    RETURN
-    ${lowered}=    Convert To Lower Case    ${message}
-    Should Contain    ${lowered}    already exist
-    ...    msg=Setup command failed with something other than "already exists": ${message}
-    Log    Tolerated, already provisioned: ${command}    console=True
+    ...    No dependence on any CLI message wording, only on the exit code.
+    [Arguments]    ${project}
+    ${result}=    Run Process    diagrid project get ${project}    shell=True
+    ...    stderr=STDOUT    timeout=120s
+    RETURN    ${result.rc == 0}
 
 Clean Up Quickstart
     [Documentation]    Stop the apps, then run whatever cleanup the README
