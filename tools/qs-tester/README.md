@@ -149,7 +149,7 @@ uv run robot --include python --variable PROJECT:$PROJECT --name "Quickstarts (p
 
 Only one language at a time per project: all four languages of a given quickstart
 share appIDs (`order-app`, `publisher`/`subscriber`, `client`/`server`,
-`order-workflow`) and ports 5001/5002, so two languages cannot run concurrently in
+`durable-workflow`) and ports 5001/5002, so two languages cannot run concurrently in
 one project or on one machine.
 
 ### Two kinds of quickstart

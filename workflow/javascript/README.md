@@ -13,7 +13,7 @@ title: Order Workflow App connected to Catalyst
 flowchart LR
   APP(Order Workflow App)
   subgraph Catalyst
-    APPID(ID: order-workflow)
+    APPID(ID: durable-workflow)
     WF(Workflow Engine)
     STATE[(State Store)]
   end
