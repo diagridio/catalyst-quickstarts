@@ -97,7 +97,13 @@ agent = create_deep_agent(
 )
 
 # ── Durable workflow runner ──────────────────────────────────
-runner = DaprWorkflowDeepAgentRunner(agent=agent, name="transportation-planner", max_steps=10)
+# max_steps counts graph NODES, not model turns, and a deep agent runs three of them per
+# tool call (model, TodoListMiddleware.after_model, tools) plus one up front. Three tools
+# therefore reach step 10 before the final model turn that writes the answer, and the run
+# ends as "max_steps_reached". This used to be 10 and nobody noticed, because the old
+# POST /run returned as soon as the workflow started and never looked at the result. The
+# first live run of POST /crash/run surfaced it as a 500 on the re-issued request.
+runner = DaprWorkflowDeepAgentRunner(agent=agent, name="transportation-planner", max_steps=30)
 
 
 # Used to wait on a run by its instance ID, which is what lets a re-issued request
