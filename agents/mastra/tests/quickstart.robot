@@ -10,8 +10,14 @@ yourself" POST /crash/kill variant are in UNCOVERED in the data module.
 mastra calls a real model, so this suite asserts only on log markers the app
 prints and on framework-generated fields, never on model prose.
 
-NOT YET RUN LIVE: no Catalyst project and no OPENAI_API_KEY were available when
-this was written, so only the dry run and doc-sync have passed.
+Run live on 2026-10-16: PASS 1/1 in 130s, real model (OpenAI). The first run
+failed on restart with a stale ~/.diagrid/tuns/<project>:sre-agent lock file; the
+re-run passed after the first dev run was made to exit by itself before being
+stopped. That pass does not prove the fix, because the CLI had already exited that
+time. The logs showed the app self-killed at kill_after_seconds, the restarted app
+did not repeat step 1, the interrupted step 2 resumed, and the re-issued POST
+/crash/run returned 200 with a result. No mutation check has been run
+(ci/check_mutation.py), so the suite stays nightly False.
 
 Run it:
   export DIAGRID_API_KEY=...

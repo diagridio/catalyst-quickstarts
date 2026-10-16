@@ -81,8 +81,8 @@ SUITES = (
         # Catalyst project AND a mutation check that `ci/check_mutation.py`
         # accepted — READY_MARKERS overridden to "__mutation_check__" made
         # `Wait Until Ready Marker` FAIL, naming the sentinel, with the enclosing
-        # test failing too. That is the bar; the two other agent suites have met
-        # neither half and stay False.
+        # test failing too. That is the bar; the other agent suites have not met
+        # the mutation half and stay False.
         #
         # What this does NOT cover: the mutation targeted READY_MARKERS only, so
         # the two assertions added while getting this suite green — the
@@ -109,9 +109,9 @@ SUITES = (
         "data": "agents_crewai",
         "language": "python",
         "runtime": "python",
-        # False: no live run and no mutation check has happened yet. Only the
-        # dry run and doc-sync have passed. Flip to True after a green live run
-        # and a mutation check.
+        # False: no mutation check has been run, though the suite passed a live
+        # run on 2026-10-16 (PASS 1/1, 156s). Flip to True after a mutation check
+        # (ci/check_mutation.py).
         "nightly": False,
         # crewai calls a real model through OpenAI. Keep in step with SECRETS in
         # agents_crewai.py.
@@ -124,9 +124,9 @@ SUITES = (
         "data": "agents_deepagents",
         "language": "python",
         "runtime": "python",
-        # False: no live run and no mutation check has happened yet. Only the
-        # dry run and doc-sync have passed. Flip to True after a green live run
-        # and a mutation check.
+        # False: no mutation check has been run, though the suite passed a live
+        # run on 2026-10-16 (PASS 1/1, 152s). Flip to True after a mutation check
+        # (ci/check_mutation.py).
         "nightly": False,
         # deepagents calls a real model through OpenAI. Keep in step with SECRETS in
         # agents_deepagents.py.
@@ -139,9 +139,9 @@ SUITES = (
         "data": "agents_claude_agents",
         "language": "python",
         "runtime": "python",
-        # False: no live run and no mutation check has happened yet. Only the
-        # dry run and doc-sync have passed. Flip to True after a green live run
-        # and a mutation check.
+        # False: no mutation check has been run, though the suite passed a live
+        # run on 2026-10-16 (PASS 1/1, 134s). Flip to True after a mutation check
+        # (ci/check_mutation.py).
         "nightly": False,
         # claude-agents calls a real model through Anthropic. Keep in step with
         # SECRETS in agents_claude_agents.py.
@@ -154,9 +154,9 @@ SUITES = (
         "data": "agents_adk",
         "language": "python",
         "runtime": "python",
-        # False: no live run and no mutation check has happened yet. Only the
-        # dry run and doc-sync have passed. Flip to True after a green live run
-        # and a mutation check.
+        # False: no mutation check has been run, though the suite passed a live
+        # run on 2026-10-16 (PASS 1/1, 150s). Flip to True after a mutation check
+        # (ci/check_mutation.py).
         "nightly": False,
         # adk calls a real model through OpenAI. Keep in step with SECRETS in
         # agents_adk.py.
@@ -169,9 +169,9 @@ SUITES = (
         "data": "agents_openai_agents",
         "language": "python",
         "runtime": "python",
-        # False: no live run and no mutation check has happened yet. Only the
-        # dry run and doc-sync have passed. Flip to True after a green live run
-        # and a mutation check.
+        # False: no mutation check has been run, though the suite passed a live
+        # run on 2026-10-16 (PASS 1/1, 144s). Flip to True after a mutation check
+        # (ci/check_mutation.py).
         "nightly": False,
         # openai-agents calls a real model through OpenAI. Keep in step with
         # SECRETS in agents_openai_agents.py.
@@ -184,9 +184,9 @@ SUITES = (
         "data": "agents_pydantic_ai",
         "language": "python",
         "runtime": "python",
-        # False: no live run and no mutation check has happened yet. Only the
-        # dry run and doc-sync have passed. Flip to True after a green live run
-        # and a mutation check.
+        # False: no mutation check has been run, though the suite passed a live
+        # run on 2026-10-16 (PASS 1/1, 137s). Flip to True after a mutation check
+        # (ci/check_mutation.py).
         "nightly": False,
         # pydantic-ai calls a real model through OpenAI. Keep in step with
         # SECRETS in agents_pydantic_ai.py.
@@ -199,9 +199,9 @@ SUITES = (
         "data": "agents_strands",
         "language": "python",
         "runtime": "python",
-        # False: no live run and no mutation check has happened yet. Only the
-        # dry run and doc-sync have passed. Flip to True after a green live run
-        # and a mutation check.
+        # False: no mutation check has been run, though the suite passed a live
+        # run on 2026-10-16 (PASS 1/1, 135s). Flip to True after a mutation check
+        # (ci/check_mutation.py).
         "nightly": False,
         # strands calls a real model through OpenAI. Keep in step with SECRETS in
         # agents_strands.py.
@@ -216,9 +216,9 @@ SUITES = (
         # The e2e-agents job's `Set up Node` step (setup-node, lts/*) covers
         # mastra's `engines` floor of Node >=22.13.
         "runtime": "javascript",
-        # False: no live run and no mutation check has happened yet. Only the
-        # dry run and doc-sync have passed. Flip to True after a green live run
-        # and a mutation check.
+        # False: no mutation check has been run, though the suite passed a live
+        # run on 2026-10-16 (PASS 1/1, 130s). Flip to True after a mutation check
+        # (ci/check_mutation.py).
         "nightly": False,
         # mastra calls a real model through OpenAI. Keep in step with SECRETS in
         # agents_mastra.py.
@@ -363,6 +363,8 @@ SUITES = (
         # a closed port, and the teardown's SIGTERM then cancelled BindAsync, which
         # surfaced as "Hosting failed to start" and a gRPC cancellation — three
         # symptoms, none of them the cause. SERVING_MARKER now gates it.
+        #
+        # The Crash Recovery case also passed live on 2026-10-16 (121s).
         #
         # The mutation check has NOT been run, so this stays False.
         "nightly": False,

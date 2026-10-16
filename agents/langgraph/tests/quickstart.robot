@@ -118,8 +118,13 @@ Python Langgraph Crash Recovery
     ...    langgraph is a graph with no model, so this asserts only on log markers
     ...    the nodes print and on framework-generated fields, and needs no key.
     ...
-    ...    NOT YET RUN LIVE: no Catalyst project was available when this was written,
-    ...    so only the dry run and doc-sync have passed.
+    ...    Run live on 2026-10-16: PASS 2/2 (happy path 66s, this case 121s), canned
+    ...    offline model, no key. This case first failed with "local app connection not
+    ...    found with the given id" (the first case's `diagrid dev stop`, then an
+    ...    immediate `dev run` of the same app ID); it passed after the 20s
+    ...    APP_CONNECTION_SETTLE wait. `diagrid project get` also returned 0 live for
+    ...    the project the first case leaves behind. No mutation check has been run
+    ...    (ci/check_mutation.py) for this case.
     [Tags]    python    langgraph    agents    crash-recovery
     # The happy-path case's run file, connections and health probe belong to
     # main.py on 8005. This case runs crash_test.py on 8001, so override them.

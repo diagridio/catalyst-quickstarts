@@ -126,8 +126,14 @@ Csharp Microsoft-Dotnet Crash Recovery
     ...    The quickstart ships a canned offline model, so this asserts only on log
     ...    markers the tools print and on framework-generated fields, and needs no key.
     ...
-    ...    NOT YET RUN LIVE: no Catalyst project was available when this was written,
-    ...    so only the dry run and doc-sync have passed.
+    ...    Run live on 2026-10-16: PASS 2/2 (happy path 58s, this case 121s), canned
+    ...    offline model, no key. This case first failed at `project create` ("already
+    ...    exists") because the README's `diagrid project delete` stops at an
+    ...    interactive Y/N prompt and never deleted the project; it passed after the
+    ...    case decided from `diagrid project get` (skip SETUP, wait
+    ...    APP_CONNECTION_SETTLE). The 20s settle wait was not shown to be necessary
+    ...    for this app. No mutation check has been run (ci/check_mutation.py) for
+    ...    this case.
     [Tags]    csharp    microsoft-dotnet    agents    crash-recovery
     ${qs}=      Get Quickstart
     ${log}=     Suite Log File    agents-microsoft-dotnet    csharp-crash
