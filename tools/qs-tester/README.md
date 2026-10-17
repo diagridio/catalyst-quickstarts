@@ -344,6 +344,31 @@ invocations by hand with `--include <language>` and finish with the same
 `check_mutation.py` call, naming the keyword your mutation targets
 (`POST And Expect`, say, if you broke `STATE_STORE_BODY`).
 
+**The crash-recovery suites have their own mutation, and a script for it.** Their
+claim is that the restarted app does not re-run step 1, which is the assertion
+`Log Should Not Contain ${log_again} ${STEP1_MARKER}`, and that fails at the *end* of
+the suite, so the readiness-gate mutation above would prove nothing about it.
+`ci/verify-replay-mutation.sh` swaps `STEP1_MARKER` for a string that does appear in
+the recovery log (a prefix of step 2's start line, shared by its armed and un-armed
+variants, and present in the crash log too so the pre-crash wait still passes) and
+requires `Log Should Not Contain` to fail naming it. It runs
+`verify-live.sh` underneath, with `MUTATED_RUN_ARGS` emptied so the post-restart waits
+keep their own timeouts.
+
+```bash
+# Premises only: no keys, no Catalyst. Run this first.
+bash tools/qs-tester/ci/verify-replay-mutation.sh --dry-run \
+  crewai adk openai-agents pydantic-ai strands deepagents mastra
+
+# The real thing: two full runs per suite (about 5 minutes) and model tokens for both.
+export DIAGRID_API_KEY=... OPENAI_API_KEY=...
+bash tools/qs-tester/ci/verify-replay-mutation.sh crewai
+```
+
+It covers the seven crash suites that call OpenAI. `claude-agents` needs
+`ANTHROPIC_API_KEY`, and `langgraph` and `microsoft-dotnet` use a canned model, so
+pass those to `verify-live.sh` directly with the same mutation if you want them covered.
+
 ### Checks that need no Catalyst project
 
 ```bash
