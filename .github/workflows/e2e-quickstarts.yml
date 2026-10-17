@@ -17,6 +17,18 @@ on:
         type: choice
         default: 'all'
         options: [all, workflow, state, pubsub, invocation]
+      suites:
+        description: >-
+          Agent suites to run, as comma-separated names with no spaces, for
+          example "crewai,adk". Empty (the default) keeps today's behaviour: the
+          canonical matrix plus every registered agent suite. When set, ONLY the
+          named agent suites run and the canonical matrix is skipped, so a check
+          of one or two suites does not provision a project per language and per
+          unrelated suite. The names are the `name` column of
+          tools/qs-tester/variables/suites.py.
+        required: false
+        type: string
+        default: ''
   pull_request:
     # The `lint` job's two doc-sync checkers only run when this workflow does,
     # so every input they read has to appear here: the harness, the suites, the
@@ -107,21 +119,48 @@ jobs:
         run: (cd tools/qs-tester && uv sync)
       - id: list
         name: List agent suites
+        env:
+          # Through the environment, never interpolated into the script below: a
+          # dispatch input is free text, and ${{ }} inside `run:` would paste it
+          # into the shell. Empty for every event except a dispatch that set it.
+          SUITES: ${{ github.event_name == 'workflow_dispatch' && inputs.suites || '' }}
         run: |
           cd tools/qs-tester
           # A scheduled run takes only the suites opted into `nightly`, because
           # each one costs a project with agent infrastructure plus real model
-          # tokens. A manual dispatch runs every registered agent suite.
+          # tokens. A manual dispatch runs every registered agent suite, unless
+          # the `suites` input names a subset.
           nightly=""
           if [ "${{ github.event_name }}" = "schedule" ]; then
             nightly="--nightly"
           fi
           agents="$(uv run python ci/list-suites.py --matrix agent $nightly)"
+          if [ -n "$SUITES" ]; then
+            if ! printf '%s' "$SUITES" | grep -Eq '^[a-z0-9-]+(,[a-z0-9-]+)*$'; then
+              echo "::error::The suites input must be comma-separated suite names with no spaces, e.g. crewai,adk (got: $SUITES)"
+              exit 1
+            fi
+            registered="$(jq -r 'map(.name) | join(", ")' <<<"$agents")"
+            unknown="$(jq -nr --argjson all "$agents" --arg want "$SUITES" \
+              '($want | split(",")) - ($all | map(.name)) | join(", ")')"
+            if [ -n "$unknown" ]; then
+              echo "::error::Unknown agent suite(s): $unknown. Registered: $registered"
+              exit 1
+            fi
+            agents="$(jq -c --arg want "$SUITES" \
+              '[.[] | select(.name as $n | ($want | split(",")) | index($n))]' <<<"$agents")"
+          fi
           echo "agents=$agents" >> "$GITHUB_OUTPUT"
           echo "Agent suites for this run: $agents"
 
   e2e:
-    if: github.event_name != 'pull_request' && github.repository_owner == 'diagridio'
+    # Skipped when a dispatch names agent suites: that run is a check of those
+    # suites, not of the canonical APIs. `e2e-agents` keeps going because its own
+    # condition uses always() and only requires `discover` to have succeeded.
+    if: >-
+      github.event_name != 'pull_request'
+      && github.repository_owner == 'diagridio'
+      && !(github.event_name == 'workflow_dispatch' && inputs.suites != '')
     runs-on: ubuntu-latest
     environment: shared-production
     timeout-minutes: 90

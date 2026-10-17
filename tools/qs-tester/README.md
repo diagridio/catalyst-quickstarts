@@ -252,6 +252,18 @@ only for agent-family rows — canonical scheduling stays the business of the
 with managed services plus real model tokens, so suites left at
 `nightly: False` run only on `workflow_dispatch`.
 
+A plain `workflow_dispatch` runs the canonical matrix and **every** registered
+agent suite, which is a project per language plus a project per suite, in the
+`shared-production` environment, and any failure files the `e2e-failure` issue.
+To check only some suites, give the `suites` input comma-separated suite names
+(the `name` column of `suites.py`, no spaces). That skips the canonical matrix and
+runs just those agent suites. An unknown name fails the `discover` job before
+anything is provisioned.
+
+```bash
+gh workflow run e2e-quickstarts.yml --ref <branch> -f suites=crewai,adk
+```
+
 ### Running an agent-family suite locally
 
 Every suite's log-marker and readiness waits read from three variables defined
