@@ -9,6 +9,14 @@
 #   expected-keyword   the keyword the mutation must make FAIL.
 #                      Default: Wait Until Ready Marker
 #
+# Optional environment overrides, both for mutations that cannot use the defaults:
+#   MUTATION_NEEDLE    text the failing keyword's message must contain, when it
+#                      is not the default `__mutation_check__` sentinel.
+#   MUTATED_RUN_ARGS   robot options for the mutated run. Default shortens
+#                      READINESS_TIMEOUT and MARKER_TIMEOUT to 20s; set it to an
+#                      empty string to keep the suite's own timeouts, which a
+#                      mutation that fails at the END of the suite needs.
+#
 # The leg is not a parameter here: it is read from `ci/list-suites.py --row`
 # (which reads `suites.leg_id()`), the same field the nightly workflow's matrix
 # now carries. A leg typed by hand as `agents-<name>` would silently ignore a
@@ -40,6 +48,19 @@ NEEDLE=""
 case "$MUTATION" in
   *__mutation_check__*) NEEDLE="__mutation_check__" ;;
 esac
+# A mutation whose failure message names something other than the sentinel can
+# say so here (ci/verify-replay-mutation.sh does), and still get the stronger
+# message check instead of the keyword name alone.
+NEEDLE="${MUTATION_NEEDLE:-$NEEDLE}"
+
+# Timeouts for the mutated run. The default keeps a run that is EXPECTED to fail
+# at the readiness gate from waiting out the full window. A mutation that must let
+# the suite run to its end (the crash suites' replay check fails on the last
+# assertion, after the restart) cannot use them: the post-restart waits take
+# 10-20s and would time out for the wrong reason. Set MUTATED_RUN_ARGS to an empty
+# string to leave the suite's own timeouts alone. `${VAR-default}`, not
+# `${VAR:-default}`, so an explicit empty value is honoured.
+MUTATED_RUN_ARGS="${MUTATED_RUN_ARGS---variable READINESS_TIMEOUT:20s --variable MARKER_TIMEOUT:20s}"
 
 ROOT="$(git rev-parse --show-toplevel)"
 HARNESS="$ROOT/tools/qs-tester"
@@ -151,9 +172,10 @@ printf '%s\n' "$MUTATION" > "results/$LEG-mutated/mutate.py"
 # The short timeouts keep a run we expect to fail from waiting out the full
 # readiness window. They do not shorten SETUP: Run Documented Commands has its
 # own 600s timeout, which `project create --wait` needs.
+# shellcheck disable=SC2086  # MUTATED_RUN_ARGS is deliberately word-split into robot options
 if uv run robot --variable "PROJECT:$PROJECT_MUTATED" \
      --variablefile "results/$LEG-mutated/mutate.py" \
-     --variable READINESS_TIMEOUT:20s --variable MARKER_TIMEOUT:20s \
+     $MUTATED_RUN_ARGS \
      --outputdir "results/$LEG-mutated" "../../$SUITE"; then
   echo "::error::The suite PASSED with $MUTATION applied, so that assertion is vacuous:"
   echo "  it cannot fail, which means a broken quickstart would ship green."

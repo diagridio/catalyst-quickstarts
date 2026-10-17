@@ -2,7 +2,10 @@
 
 End-to-end tests for the `workflow`, `state`, `pubsub` and `invocation`
 quickstarts, and for the agent-family ones registered in `variables/suites.py`
-(`agents/langgraph`, `agents/langchaingo/enterprise-identity`,
+(`agents/langgraph`, `agents/crewai`, `agents/deepagents`,
+`agents/claude-agents`, `agents/adk`, `agents/openai-agents`,
+`agents/pydantic-ai`, `agents/strands`, `agents/mastra`,
+`agents/langchaingo/enterprise-identity`,
 `agents/langgraph/enterprise-identity`, `agents/langgraphjs/enterprise-identity`,
 `agents/microsoft-dotnet`, `agents/microsoft-dotnet/enterprise-identity`,
 `agents/spring-ai/crash-recovery`, `agents/spring-ai/enterprise-identity`,
@@ -70,8 +73,9 @@ automatically.
 Each suite lives next to the quickstarts it tests: `state/tests/quickstart.robot`,
 `pubsub/tests/quickstart.robot`, and so on. Each canonical suite has four tests
 tagged `csharp`, `java`, `javascript`, `python`. Agent-family suites (see "Two
-kinds of quickstart" below) have exactly one test each, at
-`<quickstart-dir>/tests/quickstart.robot` — wherever the quickstart itself
+kinds of quickstart" below) have one test each, except `agents/langgraph` and
+`agents/microsoft-dotnet`, which have a second, crash-recovery test. Each lives
+in `<quickstart-dir>/tests/quickstart.robot` — wherever the quickstart itself
 lives. That is not a fixed depth: `agents/langgraph/tests/quickstart.robot` is
 two segments below the repository root and
 `agents/spring-ai/event-planner/tests/quickstart.robot` is three.
@@ -129,7 +133,8 @@ shows it.
 ### Selecting languages and APIs
 
 Each canonical suite has four tests tagged by language; each agent-family suite
-has one, tagged with its language, its own name and `agents`. Filter with
+has one (`agents/langgraph` and `agents/microsoft-dotnet` have a second, tagged
+`crash-recovery`), each tagged with its language, its own name and `agents`. Filter with
 `--include` / `--exclude` (repeatable, `--include` ORs):
 
 ```bash
@@ -182,7 +187,7 @@ differ and are worth knowing before you touch one:
    three shapes). `ci/setup-project.sh` is for the canonical suites, whose
    READMEs document no provisioning at all, and for an agent quickstart whose
    README documents none either.
-2. **The `dev run` command can be bare.** All six agent suites here follow a
+2. **The `dev run` command can be bare.** All twelve non-`enterprise-identity` agent suites here follow a
    documented `project create ... --use` with a `dev run` carrying no
    `--project`. The suite reproduces that exactly, so a regression in `--use`
    fails here. (`mcp-auth/python` documents the opposite — an explicit
@@ -246,6 +251,18 @@ only for agent-family rows — canonical scheduling stays the business of the
 `e2e` job's own hand-written language matrix. Each agent leg costs a project
 with managed services plus real model tokens, so suites left at
 `nightly: False` run only on `workflow_dispatch`.
+
+A plain `workflow_dispatch` runs the canonical matrix and **every** registered
+agent suite, which is a project per language plus a project per suite, in the
+`shared-production` environment, and any failure files the `e2e-failure` issue.
+To check only some suites, give the `suites` input comma-separated suite names
+(the `name` column of `suites.py`, no spaces). That skips the canonical matrix and
+runs just those agent suites. An unknown name fails the `discover` job before
+anything is provisioned.
+
+```bash
+gh workflow run e2e-quickstarts.yml --ref <branch> -f suites=crewai,adk
+```
 
 ### Running an agent-family suite locally
 
@@ -338,6 +355,31 @@ canonical suites, which need `ci/setup-project.sh` and one language at a time
 invocations by hand with `--include <language>` and finish with the same
 `check_mutation.py` call, naming the keyword your mutation targets
 (`POST And Expect`, say, if you broke `STATE_STORE_BODY`).
+
+**The crash-recovery suites have their own mutation, and a script for it.** Their
+claim is that the restarted app does not re-run step 1, which is the assertion
+`Log Should Not Contain ${log_again} ${STEP1_MARKER}`, and that fails at the *end* of
+the suite, so the readiness-gate mutation above would prove nothing about it.
+`ci/verify-replay-mutation.sh` swaps `STEP1_MARKER` for a string that does appear in
+the recovery log (a prefix of step 2's start line, shared by its armed and un-armed
+variants, and present in the crash log too so the pre-crash wait still passes) and
+requires `Log Should Not Contain` to fail naming it. It runs
+`verify-live.sh` underneath, with `MUTATED_RUN_ARGS` emptied so the post-restart waits
+keep their own timeouts.
+
+```bash
+# Premises only: no keys, no Catalyst. Run this first.
+bash tools/qs-tester/ci/verify-replay-mutation.sh --dry-run \
+  crewai adk openai-agents pydantic-ai strands deepagents mastra
+
+# The real thing: two full runs per suite (about 5 minutes) and model tokens for both.
+export DIAGRID_API_KEY=... OPENAI_API_KEY=...
+bash tools/qs-tester/ci/verify-replay-mutation.sh crewai
+```
+
+It covers the seven crash suites that call OpenAI. `claude-agents` needs
+`ANTHROPIC_API_KEY`, and `langgraph` and `microsoft-dotnet` use a canned model, so
+pass those to `verify-live.sh` directly with the same mutation if you want them covered.
 
 ### Checks that need no Catalyst project
 
@@ -466,9 +508,15 @@ config, not a typo.
   mapping was verified. Note that `dev stop` also kills the local `diagrid dev run`
   process, which is harmless in teardown (the process tree is already stopped by
   then) but will end a session you are still using.
-- **`agents/langgraph` is `nightly: True`; the other four are not.** The bar for
-  that flag is a green live run *plus* a mutation check the verdict tool accepts,
-  and only langgraph has cleared both (2026-08-28). Where the others stand:
+- **Nine agent rows are `nightly: True`: `agents/langgraph`, the seven OpenAI crash suites (`crewai`,
+  `deepagents`, `adk`, `openai-agents`, `pydantic-ai`, `strands`, `mastra`) and `agents/claude-agents`;
+  every other agent row is `nightly: False`.** The bar for that flag is a green live run *plus* a mutation
+  check the verdict tool accepts. langgraph cleared both on 2026-08-28; the seven
+  crash suites cleared both on 2026-10-17, where the mutation check
+  (`ci/verify-replay-mutation.sh`) proves one assertion each, that step 1 is not
+  re-run after the restart. `agents/claude-agents` is `True` on a green live run alone, with
+  no mutation check yet: `verify-replay-mutation.sh` does not cover it, so run
+  `verify-live.sh` directly. Where the others stand:
   - `agents/microsoft-dotnet` has the first half. Its first green live run was
     2026-09-02, with no model key, after the readiness fix recorded in its
     `suites.py` row. No mutation check, so it stays `False`.
@@ -647,10 +695,9 @@ config, not a typo.
   `agents/spring-ai/crash-recovery` and `agents/spring-ai/event-planner`
   (2026-09-02). That closes the risk this bullet used to carry for
   `agents/spring-ai/event-planner`, whose entire readiness gate it is.
-- **Ten of the fourteen `agents/*` quickstarts have no suite at all** (adk,
-  claude-agents, crewai, dapr-agents/durable-agent, dapr-agents/orchestrator,
-  deepagents, openai-agents, pydantic-ai, spring-ai/durable-memory, strands),
-  and neither do `dapr-agents/*` or `mcp-auth/*`. Nothing detects drift in them beyond
+- **Three `agents/*` quickstarts have no suite at all**
+  (`agents/dapr-agents/durable-agent`, `agents/dapr-agents/orchestrator`,
+  `agents/spring-ai/durable-memory`), and neither do the top-level `dapr-agents/*` or `mcp-auth/*`. Nothing detects drift in them beyond
   `docsync/check_skill_docs.py`, which only sees the commands the skill itself
   quotes. Adding a suite is what the `add-quickstart-e2e-test` skill is for.
 - **The CI workflow itself has never been executed.** Everything wired for

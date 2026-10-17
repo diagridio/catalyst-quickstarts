@@ -5,7 +5,8 @@ this quickstart has one implementation, unlike the canonical four-language APIs)
 Mirrors agents/spring-ai/crash-recovery/README.md: "## Setup" installs,
 "### 1. Deploy and Run" provisions and runs, "### 2. Book under an id you own"
 triggers and crashes, "## Recovery: restart the app" restarts, "## Collect the
-answer" attaches to the recovered run, "## Clean Up" deletes the project.
+answer" attaches to the recovered run, "## Clean Up" documents a project delete that is
+in UNCOVERED (it prompts), so ci/teardown-project.sh deletes the project.
 
 Unlike the other two agent-family suites this one covers the crash flow, because
 this README documents a way to crash without a source edit: `kill_after_seconds`
@@ -159,13 +160,14 @@ Clean Up Quickstart
     ...    documents. `Stop Quickstart` also calls `diagrid dev stop`, which
     ...    releases the local app connections.
     ...
-    ...    This quickstart's TEARDOWN documents `diagrid project delete`
-    ...    ("## Clean Up"), so this loop really deletes the ephemeral project.
+    ...    TEARDOWN is empty here: the README's `diagrid project delete`
+    ...    ("## Clean Up") stops at an interactive prompt, so it is in UNCOVERED
+    ...    and ci/teardown-project.sh deletes the ephemeral project (with --yes).
     ...    `Run Keyword And Ignore Error` guards both calls: `Stop Process Tree`
     ...    is not idempotent against a process that has already exited, and this
     ...    suite deliberately kills the app mid-test, so by the time teardown runs
-    ...    the tree may already be gone. A failed stop must not prevent the
-    ...    documented delete from running.
+    ...    the tree may already be gone. A failed stop must not prevent whatever
+    ...    cleanup TEARDOWN holds from running.
     Run Keyword And Ignore Error    Stop Quickstart    ${PROJECT}
     ${qs}=    Get Quickstart
     Run Keyword And Ignore Error

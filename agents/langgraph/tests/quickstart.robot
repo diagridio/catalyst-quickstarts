@@ -4,9 +4,9 @@ quickstart has one implementation, unlike the canonical four-language APIs).
 
 Mirrors agents/langgraph/README.md: "## Setup" installs, "## Run with Catalyst"
 provisions and runs, "### 2. Trigger a Workflow" triggers. This README documents
-no cleanup command, so deleting the project is infrastructure here. The
-crash-recovery flow is deliberately absent; see UNCOVERED in
-variables/agents_langgraph.py for why.
+no cleanup command, so deleting the project is infrastructure here. The second
+test case covers "## Crash Recovery Test With Catalyst" (see CRASH_* in
+variables/agents_langgraph.py).
 
 The request loop below is the shape every agent-family suite uses, including ones
 whose documented flow interleaves CLI commands with HTTP calls: a request may
@@ -36,6 +36,10 @@ Test Teardown   Clean Up Quickstart
 
 *** Variables ***
 ${PROJECT}      ${EMPTY}
+# How long the crash case waits after the happy-path case released its app connection
+# before running the same app ID again. A guess that fixes a reproduced race, not a
+# measured value: see the comment above the call in the crash case.
+${APP_CONNECTION_SETTLE}    20s
 
 *** Test Cases ***
 Python Langgraph Quickstart
@@ -105,7 +109,164 @@ Python Langgraph Quickstart
         END
     END
 
+Python Langgraph Crash Recovery
+    [Documentation]    README "## Crash Recovery Test With Catalyst": "### 4" starts
+    ...    the crash app, "### 5" runs under an id you own with kill_after_seconds,
+    ...    "### 7" restarts, "### 8" collects the answer. The two-terminal
+    ...    POST /crash/kill variant ("### 6") is in UNCOVERED in the data module.
+    ...
+    ...    langgraph is a graph with no model, so this asserts only on log markers
+    ...    the nodes print and on framework-generated fields, and needs no key.
+    ...
+    ...    Run live on 2026-10-16: PASS 2/2 (happy path 66s, this case 121s), canned
+    ...    offline model, no key. This case first failed with "local app connection not
+    ...    found with the given id" (the first case's `diagrid dev stop`, then an
+    ...    immediate `dev run` of the same app ID); it passed after the 20s
+    ...    APP_CONNECTION_SETTLE wait. `diagrid project get` also returned 0 live for
+    ...    the project the first case leaves behind. No mutation check has been run
+    ...    (ci/check_mutation.py) for this case.
+    [Tags]    python    langgraph    agents    crash-recovery
+    # The happy-path case's run file, connections and health probe belong to
+    # main.py on 8005. This case runs crash_test.py on 8001, so override them.
+    ${qs}=      Get Quickstart
+    ${apps}=    Evaluate    [list(app) for app in $CRASH_CONNECTED_APPS]
+    ${probes}=  Evaluate    [list(probe) for probe in $CRASH_HEALTH_PROBES]
+    Set To Dictionary    ${qs}    run=${CRASH_RUN}    connected_apps=${apps}
+    ...    health_probes=${probes}
+    ${log}=     Suite Log File    agents-langgraph    python-crash
+
+    Build Quickstart            ${qs}
+    # README "## Run with Catalyst" steps 2-3. When the happy-path case ran first
+    # in this suite the project and the agent already exist (this README documents
+    # no cleanup, so its teardown leaves them), and the whole SETUP list is skipped.
+    # Otherwise SETUP runs normally and ANY failure fails the test. The check is
+    # `diagrid project get`'s exit code, not any CLI message wording.
+    #
+    # Verified live (2026-10-16): `diagrid project get` returned 0 for the project the
+    # happy-path case left behind, so this branch is taken. Skipping SETUP is not
+    # enough on its own, though: that case's teardown ran `diagrid dev stop --id`, and
+    # a `dev run` for the same app ID started within ~1-2s of it fails with "local app
+    # connection not found with the given id" (reproduced by hand with stop && run back
+    # to back; a run minutes later connects fine). So this branch also waits out the
+    # release. The wait is a fixed ${APP_CONNECTION_SETTLE}, not measured: the race
+    # window has not been timed, so tune the variable if a run still fails there.
+    #
+    # This case's UNCOVERED entry for CRASH_RUN in the data module claims this case
+    # runs that command. If this case is ever removed, that entry becomes a false
+    # claim and must go with it (doc-sync will then demand a real decision).
+    ${exists}=    Project Exists    ${PROJECT}
+    IF    not ${exists}
+        Run Documented Commands     ${qs}[setup]    ${PROJECT}    cwd=${qs}[dir]
+    ELSE
+        Log    Project ${PROJECT} already exists, skipping SETUP    console=True
+        Wait For Released App Connection
+    END
+    Start Quickstart            ${qs}    ${PROJECT}    ${log}
+
+    Wait Until Apps Connected   ${qs}    ${log}
+    FOR    ${marker}    IN    @{READY_MARKERS}
+        Wait Until Ready Marker    ${log}    ${marker}
+    END
+    Wait Until Apps Healthy     ${qs}
+
+    # A workflow call made before Catalyst has attached hangs for good.
+    FOR    ${marker}    IN    @{qs}[catalyst_probe_markers]
+        Wait Until Catalyst Attached    ${log}    ${marker}
+    END
+
+    # A missing id is a 400 in the shared {id, result, message} shape. Checked here
+    # because it needs a started app and a second start is expensive. It schedules
+    # nothing, so it cannot disturb the crash below.
+    ${empty}=   Create Dictionary
+    ${bad}=     POST And Expect    ${CRASH_APP_PORT}    /crash/run    ${empty}    400
+    FOR    ${key}    IN    id    result    message
+        Dictionary Should Contain Key    ${bad}    ${key}
+        ...    msg=400 body is missing "${key}": ${bad}
+    END
+    Should Be Equal    ${bad}[result]    ${NONE}
+    Should Not Be Empty    ${bad}[message]
+
+    # README "### 5", the kill_after_seconds variant. The process halts itself, so
+    # this call never gets a response and its outcome proves nothing; the port check
+    # below is the crash assertion.
+    ${payload}=    Create Dictionary
+    ...    id=${CRASH_ID}    topic=${CRASH_TOPIC}    kill_after_seconds=${KILL_AFTER_SECONDS}
+    Run Keyword And Ignore Error
+    ...    POST    http://localhost:${CRASH_APP_PORT}/crash/run    json=${payload}    timeout=120
+
+    # Step 1 completed before the crash, so there is something to resume.
+    Wait Until Log Contains     ${log}    ${STEP1_MARKER}          timeout=120s
+    Wait Until Log Contains     ${log}    ${STEP2_ARMED_MARKER}    timeout=60s
+    # The app halted itself for the documented reason, not something else.
+    Wait Until Log Contains     ${log}    ${SELF_KILL_MARKER}      timeout=60s
+
+    # The assertion that the process really died. Stop Process Tree below would
+    # otherwise substitute for a kill that never fired. It also gates on the port
+    # being free before the relaunch. The shared keyword is meaningful here only
+    # because crash_test.py serves `GET /` with 200: a live app passes the GET, so
+    # the keyword fails until the process is gone. (It would be vacuous for an app
+    # whose GET / is a 404, which is why the dotnet suite uses a TCP check.)
+    Wait Until Keyword Succeeds    30s    2s    App Port Is Closed    ${CRASH_APP_PORT}
+
+    # Let the first `diagrid dev run` finish shutting itself down after the crash. Signalling it
+    # mid-shutdown interrupted its cleanup and left ~/.diagrid/tuns/<project>:<app id> behind, so the
+    # restart failed with "file ... already exists for App ID" (seen on the first live mastra run).
+    # Stop Process Tree below then only mops up anything still alive.
+    Wait For Process    apps    timeout=30s    on_timeout=continue
+    Run Keyword And Ignore Error    Stop Process Tree    apps
+
+    # README "### 7. Restart the app": the same run command, nothing else.
+    ${log_again}=    Suite Log File    agents-langgraph    python-crash-recovery
+    Start Quickstart            ${qs}    ${PROJECT}    ${log_again}
+    Wait Until Apps Connected   ${qs}    ${log_again}
+    Wait Until Apps Healthy     ${qs}
+
+    # "You do not have to send anything": Catalyst hands the run back on reconnect
+    # and the interrupted node finishes on its own, about 10s after it restarts.
+    Wait Until Log Contains     ${log_again}    ${STEP2_DONE_MARKER}    timeout=180s
+
+    # README "### 8. Collect the answer": the same call with the same id attaches to
+    # the finished run. 200, `result` set, `message` null.
+    FOR    ${request}    IN    @{CRASH_REQUESTS}
+        Should Be Equal    ${request}[method]    POST
+        ...    msg=Only POST requests are handled here; use GET And Expect for a documented GET.
+        ${body}=    POST And Expect Field
+        ...    ${request}[port]    ${request}[path]    ${request}[payload]
+        ...    ${request}[status]    ${request}[field]
+        Should Not Be Equal    ${body}[result]    ${NONE}
+        ...    msg=Re-issued /crash/run returned no result
+        Should Be Equal    ${body}[message]    ${NONE}
+        ...    msg=A 200 must carry no attach instruction
+        Wait Until Log Contains    ${log_again}    ${request}[log_marker]    timeout=30s
+    END
+
+    # "check_venues is not re-executed": its STEP 1 line must not appear a second
+    # time in the recovery run's log.
+    Log Should Not Contain    ${log_again}    ${STEP1_MARKER}
+
 *** Keywords ***
+Project Exists
+    [Documentation]    True when `diagrid project get ${project}` exits 0, the same
+    ...    test ci/teardown-project.sh uses (`if ! diagrid project get ... `). A
+    ...    non-zero exit counts as "does not exist", so a failed lookup (auth, network)
+    ...    falls through to running SETUP, where any failure fails the test.
+    ...
+    ...    No dependence on any CLI message wording, only on the exit code.
+    [Arguments]    ${project}
+    ${result}=    Run Process    diagrid project get ${project}    shell=True
+    ...    stderr=STDOUT    timeout=120s
+    RETURN    ${result.rc == 0}
+
+Wait For Released App Connection
+    [Documentation]    Sleep ${APP_CONNECTION_SETTLE} so the app connection released
+    ...    by the previous case's `diagrid dev stop --id` is really gone before the
+    ...    same app ID is run again. `diagrid dev status` was not used as the signal:
+    ...    nothing yet shows that it lags the same way `dev run` does, so a fixed wait
+    ...    is the only thing the reproduction supports. Override on the command line
+    ...    with --variable APP_CONNECTION_SETTLE:<seconds>s to tune it.
+    Log    Waiting ${APP_CONNECTION_SETTLE} for the previous app connection to be released    console=True
+    Sleep    ${APP_CONNECTION_SETTLE}
+
 Clean Up Quickstart
     [Documentation]    Stop the apps, then run whatever cleanup the README
     ...    documents. `Stop Quickstart` also calls `diagrid dev stop`, which

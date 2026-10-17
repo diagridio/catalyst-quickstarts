@@ -35,7 +35,12 @@ INSTALL = "mvn package -DskipTests"
 
 RUN = "diagrid dev run -f dev-spring-ai-crash-recovery.yaml --approve"
 
-TEARDOWN = ("diagrid project delete {project}",)
+# Empty on purpose. The README documents `diagrid project delete <name>`
+# ("## Clean Up"), but the command stops at an interactive confirmation prompt, so
+# running it as a documented step waits out Run Process's 10 minute timeout
+# without deleting anything. Deleting the ephemeral project is infrastructure:
+# ci/teardown-project.sh owns it (it passes --yes). The command is in UNCOVERED.
+TEARDOWN = ()
 
 # EMPTY ON PURPOSE, for the same reason as the event-planner sibling: this README
 # documents no readiness wording. Readiness rests on the connection gate below.
@@ -133,6 +138,13 @@ KILL_AFTER_SECONDS = 8
 
 # Documented commands this suite deliberately does not run, each with its reason.
 UNCOVERED = (
+    (
+        "diagrid project delete spring-ai-crash-recovery",
+        "README '## Clean Up'. It prompts \"Are you sure you want to proceed? "
+        "(Y/N)\" and so hangs for the Run Process timeout when run "
+        "non-interactively or from a terminal; ci/teardown-project.sh deletes the "
+        "ephemeral project with --yes instead.",
+    ),
     (
         'curl -X POST "http://localhost:8080/crash/kill"',
         "README '### 3. Crash the app mid-call' is the two-terminal variant, and "

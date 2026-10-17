@@ -81,8 +81,8 @@ SUITES = (
         # Catalyst project AND a mutation check that `ci/check_mutation.py`
         # accepted — READY_MARKERS overridden to "__mutation_check__" made
         # `Wait Until Ready Marker` FAIL, naming the sentinel, with the enclosing
-        # test failing too. That is the bar; the two other agent suites have met
-        # neither half and stay False.
+        # test failing too. That is the bar; the other agent suites have not met
+        # the mutation half and stay False.
         #
         # What this does NOT cover: the mutation targeted READY_MARKERS only, so
         # the two assertions added while getting this suite green — the
@@ -101,6 +101,151 @@ SUITES = (
         # notes "REQUEST ARRIVING is the signal, not the response"), none of which
         # depend on model output. The 2026-08-28 mutation evidence below stands.
         "secrets": (),
+    },
+    {
+        "suite": "agents/crewai/tests/quickstart.robot",
+        "family": "agent",
+        "name": "crewai",
+        "data": "agents_crewai",
+        "language": "python",
+        "runtime": "python",
+        # True as of 2026-10-17: a green live run (PASS, 133s) AND a mutation check
+        # that ci/check_mutation.py accepted (ci/verify-replay-mutation.sh). With
+        # STEP1_MARKER replaced by a string the recovery log contains, `Log Should Not
+        # Contain` FAILED naming it (141s), so the "step 1 is not re-run after
+        # the restart" assertion can fail. That is the one assertion proven; the
+        # others are not.
+        "nightly": True,
+        # crewai calls a real model through OpenAI. Keep in step with SECRETS in
+        # agents_crewai.py.
+        "secrets": ("OPENAI_API_KEY",),
+    },
+    {
+        "suite": "agents/deepagents/tests/quickstart.robot",
+        "family": "agent",
+        "name": "deepagents",
+        "data": "agents_deepagents",
+        "language": "python",
+        "runtime": "python",
+        # True as of 2026-10-17: a green live run (PASS, 134s) AND a mutation check
+        # that ci/check_mutation.py accepted (ci/verify-replay-mutation.sh). With
+        # STEP1_MARKER replaced by a string the recovery log contains, `Log Should Not
+        # Contain` FAILED naming it (140s), so the "step 1 is not re-run after
+        # the restart" assertion can fail. That is the one assertion proven; the
+        # others are not.
+        "nightly": True,
+        # deepagents calls a real model through OpenAI. Keep in step with SECRETS in
+        # agents_deepagents.py.
+        "secrets": ("OPENAI_API_KEY",),
+    },
+    {
+        "suite": "agents/claude-agents/tests/quickstart.robot",
+        "family": "agent",
+        "name": "claude-agents",
+        "data": "agents_claude_agents",
+        "language": "python",
+        "runtime": "python",
+        # True as of 2026-10-17, set without a mutation check: the suite passed a live
+        # run locally on 2026-10-16 (PASS 1/1, 134s) and in CI on 2026-10-17, but the
+        # replay assertion has not been seen failing (ci/verify-replay-mutation.sh does
+        # not cover claude-agents; run verify-live.sh directly). Unlike the seven OpenAI
+        # crash suites, this row has not cleared the usual bar.
+        "nightly": True,
+        # claude-agents calls a real model through Anthropic. Keep in step with
+        # SECRETS in agents_claude_agents.py.
+        "secrets": ("ANTHROPIC_API_KEY",),
+    },
+    {
+        "suite": "agents/adk/tests/quickstart.robot",
+        "family": "agent",
+        "name": "adk",
+        "data": "agents_adk",
+        "language": "python",
+        "runtime": "python",
+        # True as of 2026-10-17: a green live run (PASS, 132s) AND a mutation check
+        # that ci/check_mutation.py accepted (ci/verify-replay-mutation.sh). With
+        # STEP1_MARKER replaced by a string the recovery log contains, `Log Should Not
+        # Contain` FAILED naming it (134s), so the "step 1 is not re-run after
+        # the restart" assertion can fail. That is the one assertion proven; the
+        # others are not.
+        "nightly": True,
+        # adk calls a real model through OpenAI. Keep in step with SECRETS in
+        # agents_adk.py.
+        "secrets": ("OPENAI_API_KEY",),
+    },
+    {
+        "suite": "agents/openai-agents/tests/quickstart.robot",
+        "family": "agent",
+        "name": "openai-agents",
+        "data": "agents_openai_agents",
+        "language": "python",
+        "runtime": "python",
+        # True as of 2026-10-17: a green live run (PASS, 138s) AND a mutation check
+        # that ci/check_mutation.py accepted (ci/verify-replay-mutation.sh). With
+        # STEP1_MARKER replaced by a string the recovery log contains, `Log Should Not
+        # Contain` FAILED naming it (136s), so the "step 1 is not re-run after
+        # the restart" assertion can fail. That is the one assertion proven; the
+        # others are not.
+        "nightly": True,
+        # openai-agents calls a real model through OpenAI. Keep in step with
+        # SECRETS in agents_openai_agents.py.
+        "secrets": ("OPENAI_API_KEY",),
+    },
+    {
+        "suite": "agents/pydantic-ai/tests/quickstart.robot",
+        "family": "agent",
+        "name": "pydantic-ai",
+        "data": "agents_pydantic_ai",
+        "language": "python",
+        "runtime": "python",
+        # True as of 2026-10-17: a green live run (PASS, 126s) AND a mutation check
+        # that ci/check_mutation.py accepted (ci/verify-replay-mutation.sh). With
+        # STEP1_MARKER replaced by a string the recovery log contains, `Log Should Not
+        # Contain` FAILED naming it (134s), so the "step 1 is not re-run after
+        # the restart" assertion can fail. That is the one assertion proven; the
+        # others are not.
+        "nightly": True,
+        # pydantic-ai calls a real model through OpenAI. Keep in step with
+        # SECRETS in agents_pydantic_ai.py.
+        "secrets": ("OPENAI_API_KEY",),
+    },
+    {
+        "suite": "agents/strands/tests/quickstart.robot",
+        "family": "agent",
+        "name": "strands",
+        "data": "agents_strands",
+        "language": "python",
+        "runtime": "python",
+        # True as of 2026-10-17: a green live run (PASS, 135s) AND a mutation check
+        # that ci/check_mutation.py accepted (ci/verify-replay-mutation.sh). With
+        # STEP1_MARKER replaced by a string the recovery log contains, `Log Should Not
+        # Contain` FAILED naming it (131s), so the "step 1 is not re-run after
+        # the restart" assertion can fail. That is the one assertion proven; the
+        # others are not.
+        "nightly": True,
+        # strands calls a real model through OpenAI. Keep in step with SECRETS in
+        # agents_strands.py.
+        "secrets": ("OPENAI_API_KEY",),
+    },
+    {
+        "suite": "agents/mastra/tests/quickstart.robot",
+        "family": "agent",
+        "name": "mastra",
+        "data": "agents_mastra",
+        "language": "javascript",
+        # The e2e-agents job's `Set up Node` step (setup-node, lts/*) covers
+        # mastra's `engines` floor of Node >=22.13.
+        "runtime": "javascript",
+        # True as of 2026-10-17: a green live run (PASS, 122s) AND a mutation check
+        # that ci/check_mutation.py accepted (ci/verify-replay-mutation.sh). With
+        # STEP1_MARKER replaced by a string the recovery log contains, `Log Should Not
+        # Contain` FAILED naming it (124s), so the "step 1 is not re-run after
+        # the restart" assertion can fail. That is the one assertion proven; the
+        # others are not.
+        "nightly": True,
+        # mastra calls a real model through OpenAI. Keep in step with SECRETS in
+        # agents_mastra.py.
+        "secrets": ("OPENAI_API_KEY",),
     },
     {
         "suite": "agents/langgraph/enterprise-identity/tests/quickstart.robot",
@@ -241,6 +386,8 @@ SUITES = (
         # a closed port, and the teardown's SIGTERM then cancelled BindAsync, which
         # surfaced as "Hosting failed to start" and a gRPC cancellation — three
         # symptoms, none of them the cause. SERVING_MARKER now gates it.
+        #
+        # The Crash Recovery case also passed live on 2026-10-16 (121s).
         #
         # The mutation check has NOT been run, so this stays False.
         "nightly": False,

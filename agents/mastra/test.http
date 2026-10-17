@@ -1,0 +1,19 @@
+### Crash Recovery: run the agent under an ID you own
+### Start the app first: diagrid dev run -f dev-crash-test.yaml --approve
+### "kill_after_seconds": 8 makes the app halt itself 8s into checkIncidentStatus,
+### so you do not need the kill request below. Restarting the app is what recovers
+### the run; send this exact request again only to read back its answer, because
+### the crash killed the connection that was waiting for one.
+### Remove "kill_after_seconds" (and use a new id) to crash the app yourself with
+### the request below while checkIncidentStatus runs (~10s).
+POST http://localhost:8001/crash/run
+Content-Type: application/json
+
+{
+    "id": "inc-4471",
+    "prompt": "What is the status of incident INC-4471?",
+    "kill_after_seconds": 8
+}
+
+### Crash Recovery: kill the app while the run above is in flight
+POST http://localhost:8001/crash/kill
