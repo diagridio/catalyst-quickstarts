@@ -15,8 +15,7 @@ failed: the re-issued /crash/run returned 500 "Max steps (10) reached" because
 crash_test.py had max_steps=10; it passed after max_steps=30. The logs showed the
 app self-killed at kill_after_seconds, the restarted app did not repeat step 1,
 the interrupted step 2 resumed, and the re-issued POST /crash/run returned 200
-with a result. No mutation check has been run (ci/check_mutation.py), so the suite
-stays nightly False.
+with a result. Mutation check passed on 2026-10-17 (ci/verify-replay-mutation.sh): with STEP1_MARKER replaced by a string the recovery log contains, Log Should Not Contain failed naming it, so the step-1-not-re-run assertion can fail; the other assertions are unproven. The suite is nightly True.
 
 Run it:
   export DIAGRID_API_KEY=...

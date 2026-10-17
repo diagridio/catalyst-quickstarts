@@ -109,10 +109,13 @@ SUITES = (
         "data": "agents_crewai",
         "language": "python",
         "runtime": "python",
-        # False: no mutation check has been run, though the suite passed a live
-        # run on 2026-10-16 (PASS 1/1, 156s). Flip to True after a mutation check
-        # (ci/check_mutation.py).
-        "nightly": False,
+        # True as of 2026-10-17: a green live run (PASS, 133s) AND a mutation check
+        # that ci/check_mutation.py accepted (ci/verify-replay-mutation.sh). With
+        # STEP1_MARKER replaced by a string the recovery log contains, `Log Should Not
+        # Contain` FAILED naming it (141s), so the "step 1 is not re-run after
+        # the restart" assertion can fail. That is the one assertion proven; the
+        # others are not.
+        "nightly": True,
         # crewai calls a real model through OpenAI. Keep in step with SECRETS in
         # agents_crewai.py.
         "secrets": ("OPENAI_API_KEY",),
@@ -124,10 +127,13 @@ SUITES = (
         "data": "agents_deepagents",
         "language": "python",
         "runtime": "python",
-        # False: no mutation check has been run, though the suite passed a live
-        # run on 2026-10-16 (PASS 1/1, 152s). Flip to True after a mutation check
-        # (ci/check_mutation.py).
-        "nightly": False,
+        # True as of 2026-10-17: a green live run (PASS, 134s) AND a mutation check
+        # that ci/check_mutation.py accepted (ci/verify-replay-mutation.sh). With
+        # STEP1_MARKER replaced by a string the recovery log contains, `Log Should Not
+        # Contain` FAILED naming it (140s), so the "step 1 is not re-run after
+        # the restart" assertion can fail. That is the one assertion proven; the
+        # others are not.
+        "nightly": True,
         # deepagents calls a real model through OpenAI. Keep in step with SECRETS in
         # agents_deepagents.py.
         "secrets": ("OPENAI_API_KEY",),
@@ -154,10 +160,13 @@ SUITES = (
         "data": "agents_adk",
         "language": "python",
         "runtime": "python",
-        # False: no mutation check has been run, though the suite passed a live
-        # run on 2026-10-16 (PASS 1/1, 150s). Flip to True after a mutation check
-        # (ci/check_mutation.py).
-        "nightly": False,
+        # True as of 2026-10-17: a green live run (PASS, 132s) AND a mutation check
+        # that ci/check_mutation.py accepted (ci/verify-replay-mutation.sh). With
+        # STEP1_MARKER replaced by a string the recovery log contains, `Log Should Not
+        # Contain` FAILED naming it (134s), so the "step 1 is not re-run after
+        # the restart" assertion can fail. That is the one assertion proven; the
+        # others are not.
+        "nightly": True,
         # adk calls a real model through OpenAI. Keep in step with SECRETS in
         # agents_adk.py.
         "secrets": ("OPENAI_API_KEY",),
@@ -169,10 +178,13 @@ SUITES = (
         "data": "agents_openai_agents",
         "language": "python",
         "runtime": "python",
-        # False: no mutation check has been run, though the suite passed a live
-        # run on 2026-10-16 (PASS 1/1, 144s). Flip to True after a mutation check
-        # (ci/check_mutation.py).
-        "nightly": False,
+        # True as of 2026-10-17: a green live run (PASS, 138s) AND a mutation check
+        # that ci/check_mutation.py accepted (ci/verify-replay-mutation.sh). With
+        # STEP1_MARKER replaced by a string the recovery log contains, `Log Should Not
+        # Contain` FAILED naming it (136s), so the "step 1 is not re-run after
+        # the restart" assertion can fail. That is the one assertion proven; the
+        # others are not.
+        "nightly": True,
         # openai-agents calls a real model through OpenAI. Keep in step with
         # SECRETS in agents_openai_agents.py.
         "secrets": ("OPENAI_API_KEY",),
@@ -184,10 +196,13 @@ SUITES = (
         "data": "agents_pydantic_ai",
         "language": "python",
         "runtime": "python",
-        # False: no mutation check has been run, though the suite passed a live
-        # run on 2026-10-16 (PASS 1/1, 137s). Flip to True after a mutation check
-        # (ci/check_mutation.py).
-        "nightly": False,
+        # True as of 2026-10-17: a green live run (PASS, 126s) AND a mutation check
+        # that ci/check_mutation.py accepted (ci/verify-replay-mutation.sh). With
+        # STEP1_MARKER replaced by a string the recovery log contains, `Log Should Not
+        # Contain` FAILED naming it (134s), so the "step 1 is not re-run after
+        # the restart" assertion can fail. That is the one assertion proven; the
+        # others are not.
+        "nightly": True,
         # pydantic-ai calls a real model through OpenAI. Keep in step with
         # SECRETS in agents_pydantic_ai.py.
         "secrets": ("OPENAI_API_KEY",),
@@ -199,10 +214,13 @@ SUITES = (
         "data": "agents_strands",
         "language": "python",
         "runtime": "python",
-        # False: no mutation check has been run, though the suite passed a live
-        # run on 2026-10-16 (PASS 1/1, 135s). Flip to True after a mutation check
-        # (ci/check_mutation.py).
-        "nightly": False,
+        # True as of 2026-10-17: a green live run (PASS, 135s) AND a mutation check
+        # that ci/check_mutation.py accepted (ci/verify-replay-mutation.sh). With
+        # STEP1_MARKER replaced by a string the recovery log contains, `Log Should Not
+        # Contain` FAILED naming it (131s), so the "step 1 is not re-run after
+        # the restart" assertion can fail. That is the one assertion proven; the
+        # others are not.
+        "nightly": True,
         # strands calls a real model through OpenAI. Keep in step with SECRETS in
         # agents_strands.py.
         "secrets": ("OPENAI_API_KEY",),
@@ -216,10 +234,13 @@ SUITES = (
         # The e2e-agents job's `Set up Node` step (setup-node, lts/*) covers
         # mastra's `engines` floor of Node >=22.13.
         "runtime": "javascript",
-        # False: no mutation check has been run, though the suite passed a live
-        # run on 2026-10-16 (PASS 1/1, 130s). Flip to True after a mutation check
-        # (ci/check_mutation.py).
-        "nightly": False,
+        # True as of 2026-10-17: a green live run (PASS, 122s) AND a mutation check
+        # that ci/check_mutation.py accepted (ci/verify-replay-mutation.sh). With
+        # STEP1_MARKER replaced by a string the recovery log contains, `Log Should Not
+        # Contain` FAILED naming it (124s), so the "step 1 is not re-run after
+        # the restart" assertion can fail. That is the one assertion proven; the
+        # others are not.
+        "nightly": True,
         # mastra calls a real model through OpenAI. Keep in step with SECRETS in
         # agents_mastra.py.
         "secrets": ("OPENAI_API_KEY",),
