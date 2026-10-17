@@ -145,10 +145,12 @@ SUITES = (
         "data": "agents_claude_agents",
         "language": "python",
         "runtime": "python",
-        # False: no mutation check has been run, though the suite passed a live
-        # run on 2026-10-16 (PASS 1/1, 134s). Flip to True after a mutation check
-        # (ci/check_mutation.py).
-        "nightly": False,
+        # True as of 2026-10-17, set without a mutation check: the suite passed a live
+        # run locally on 2026-10-16 (PASS 1/1, 134s) and in CI on 2026-10-17, but the
+        # replay assertion has not been seen failing (ci/verify-replay-mutation.sh does
+        # not cover claude-agents; run verify-live.sh directly). Unlike the seven OpenAI
+        # crash suites, this row has not cleared the usual bar.
+        "nightly": True,
         # claude-agents calls a real model through Anthropic. Keep in step with
         # SECRETS in agents_claude_agents.py.
         "secrets": ("ANTHROPIC_API_KEY",),

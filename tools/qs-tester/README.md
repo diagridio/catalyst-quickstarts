@@ -508,14 +508,15 @@ config, not a typo.
   mapping was verified. Note that `dev stop` also kills the local `diagrid dev run`
   process, which is harmless in teardown (the process tree is already stopped by
   then) but will end a session you are still using.
-- **Eight agent rows are `nightly: True`: `agents/langgraph`, and the seven OpenAI crash suites (`crewai`,
-  `deepagents`, `adk`, `openai-agents`, `pydantic-ai`, `strands`, `mastra`); every other agent row is
-  `nightly: False`.** The bar for that flag is a green live run *plus* a mutation
+- **Nine agent rows are `nightly: True`: `agents/langgraph`, the seven OpenAI crash suites (`crewai`,
+  `deepagents`, `adk`, `openai-agents`, `pydantic-ai`, `strands`, `mastra`) and `agents/claude-agents`;
+  every other agent row is `nightly: False`.** The bar for that flag is a green live run *plus* a mutation
   check the verdict tool accepts. langgraph cleared both on 2026-08-28; the seven
   crash suites cleared both on 2026-10-17, where the mutation check
   (`ci/verify-replay-mutation.sh`) proves one assertion each, that step 1 is not
-  re-run after the restart. `agents/claude-agents` is left `False` because it needs
-  `ANTHROPIC_API_KEY`, which GitHub does not have. Where the others stand:
+  re-run after the restart. `agents/claude-agents` is `True` on a green live run alone, with
+  no mutation check yet: `verify-replay-mutation.sh` does not cover it, so run
+  `verify-live.sh` directly. Where the others stand:
   - `agents/microsoft-dotnet` has the first half. Its first green live run was
     2026-09-02, with no model key, after the readiness fix recorded in its
     `suites.py` row. No mutation check, so it stays `False`.
