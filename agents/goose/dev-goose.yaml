@@ -1,0 +1,7 @@
+version: 1
+common:
+  appLogDestination: console
+apps:
+  - appID: release-manager
+    appDirPath: ./
+    command: ["cargo", "run", "--quiet"]

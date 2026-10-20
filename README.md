@@ -25,6 +25,7 @@ Catalyst works with the following agent frameworks:
 | [Pydantic AI](agents/pydantic-ai/) | Type-safe agent framework with structured outputs, made durable with Catalyst |
 | [Deep Agents](agents/deepagents/) | Type-safe agent harness with conditional routing, made durable with Catalyst |
 | [Claude Agents](agents/claude-agents/) | Anthropic's Claude Agent SDK with tool calling, made durable with Catalyst |
+| [Goose](agents/goose/) | The open-source Goose agent with its built-in developer tools, run unmodified from Rust and made durable with Catalyst |
 
 ## MCP Quickstarts
 
