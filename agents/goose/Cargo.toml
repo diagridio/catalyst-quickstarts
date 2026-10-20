@@ -1,0 +1,22 @@
+[package]
+name = "goose-release-manager"
+version = "0.1.0"
+edition = "2021"
+# dapr 0.19.0, tonic 0.14 and agent-client-protocol 2.2 all require 1.88.
+rust-version = "1.88"
+description = "Goose release manager made durable with Diagrid Catalyst"
+publish = false
+# src/main.rs is the quickstart; src/bin/crash_test.rs is the crash demo.
+default-run = "goose-release-manager"
+
+[dependencies]
+diagrid-goose = "=0.1.1"
+dapr = { version = "=0.19.0", features = ["workflow"] }
+tokio = { version = "1", features = ["full"] }
+serde_json = "1"
+anyhow = "1"
+env_logger = "0.11"
+axum = "0.8"
+# The SDK's workflow errors carry a tonic::Status, and src/bin/crash_test.rs
+# reads its code to tell "no such run" apart from a real failure.
+tonic = { version = "0.14", default-features = false }

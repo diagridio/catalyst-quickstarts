@@ -22,7 +22,8 @@ matrix; these rows exist here for the dryrun and doc-sync only.
 `runtime` selects which CI runtime-setup step the suite needs, and is the reason
 language is a per-suite property for agent-family quickstarts rather than a
 matrix dimension: agents/microsoft-dotnet is .NET, agents/spring-ai is Java,
-agents/langchaingo is Go, agents/langgraphjs is Node, and the rest are Python.
+agents/langchaingo is Go, agents/langgraphjs is Node, agents/goose is Rust, and
+the rest are Python.
 Adding a runtime here means adding the matching conditional setup step to the
 `e2e-agents` job in `.github/workflows/e2e-quickstarts.yml`; a runtime this table
 allows and that workflow has no step for produces a leg that cannot build.
@@ -35,7 +36,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
 FAMILIES = ("canonical", "agent")
-RUNTIMES = ("python", "dotnet", "java", "javascript", "go")
+RUNTIMES = ("python", "dotnet", "java", "javascript", "go", "rust")
 
 SUITES = (
     {
@@ -245,6 +246,25 @@ SUITES = (
         "nightly": True,
         # mastra calls a real model through OpenAI. Keep in step with SECRETS in
         # agents_mastra.py.
+        "secrets": ("OPENAI_API_KEY",),
+    },
+    {
+        "suite": "agents/goose/tests/quickstart.robot",
+        "family": "agent",
+        "name": "goose",
+        "data": "agents_goose",
+        "language": "rust",
+        # The first `rust` row in this table, which is why RUNTIMES had to grow one
+        # and why the e2e-agents job needed `Set up Rust` and `Install Goose` steps.
+        "runtime": "rust",
+        # False: the suite has not had a live Robot run or a mutation check. The
+        # org's project quota blocked the two ephemeral projects verify-live.sh
+        # needs. The README flow it mirrors passed when run by hand against
+        # Catalyst on 2026-10-20, with a local stand-in for the model, on
+        # diagrid-goose 0.1.0 and again on 0.1.1.
+        "nightly": False,
+        # goose calls a real model through OpenAI. Keep in step with SECRETS in
+        # agents_goose.py.
         "secrets": ("OPENAI_API_KEY",),
     },
     {

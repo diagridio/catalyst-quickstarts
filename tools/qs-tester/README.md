@@ -4,7 +4,7 @@ End-to-end tests for the `workflow`, `state`, `pubsub` and `invocation`
 quickstarts, and for the agent-family ones registered in `variables/suites.py`
 (`agents/langgraph`, `agents/crewai`, `agents/deepagents`,
 `agents/claude-agents`, `agents/adk`, `agents/openai-agents`,
-`agents/pydantic-ai`, `agents/strands`, `agents/mastra`,
+`agents/pydantic-ai`, `agents/strands`, `agents/mastra`, `agents/goose`,
 `agents/langchaingo/enterprise-identity`,
 `agents/langgraph/enterprise-identity`, `agents/langgraphjs/enterprise-identity`,
 `agents/microsoft-dotnet`, `agents/microsoft-dotnet/enterprise-identity`,

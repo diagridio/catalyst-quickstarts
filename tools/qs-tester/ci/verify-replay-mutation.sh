@@ -4,7 +4,7 @@
 #
 # Usage: verify-replay-mutation.sh [--dry-run] <name>...
 #   name   an agent suite under agents/ that runs the crash demo and calls a real model:
-#          crewai adk openai-agents pydantic-ai strands deepagents mastra
+#          crewai adk openai-agents pydantic-ai strands deepagents mastra goose
 #   --dry-run  print what would run for each name and check the premises, without
 #              touching Catalyst. Needs no keys. Run this first.
 #
@@ -72,8 +72,14 @@ probe_for() {
       src="$ROOT/agents/mastra/crash_test.ts"
       marker='>>> STEP 2 checkIncidentStatus: Checking '
       ;;
+    goose)
+      # Same shape as mastra: STEP2_ARMED_MARKER is armed-only, so use the shared start
+      # of turn 2's two lines, copied from agents/goose/src/bin/crash_test.rs.
+      src="$ROOT/agents/goose/src/bin/crash_test.rs"
+      marker='>>> TURN 2: Goose is running the release checks over ~'
+      ;;
     *)
-      echo "::error::'$name' is not a crash suite this script covers (crewai adk openai-agents pydantic-ai strands deepagents mastra)." >&2
+      echo "::error::'$name' is not a crash suite this script covers (crewai adk openai-agents pydantic-ai strands deepagents mastra goose)." >&2
       return 1
       ;;
   esac

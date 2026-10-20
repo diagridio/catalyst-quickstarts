@@ -1,0 +1,12 @@
+version: 1
+common:
+  appLogDestination: console
+apps:
+  - appID: release-manager
+    appDirPath: ./
+    command: ["cargo", "run", "--quiet", "--bin", "crash_test"]
+    # Pinned in both places so the port the README documents is true by construction,
+    # rather than resting on the crash app's APP_PORT fallback.
+    appPort: 8001
+    env:
+      APP_PORT: "8001"
