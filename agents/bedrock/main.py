@@ -12,20 +12,34 @@ from diagrid.agent.strands import DaprWorkflowAgentRunner
 logging.basicConfig(level=logging.INFO)
 
 
+PRICES = {
+    "venue": 3500,
+    "catering": 2250,
+    "entertainment": 1500,
+    "decorations": 800,
+    "miscellaneous": 500,
+}
+
+
 @tool
 def calculate_budget(items: str) -> str:
     """Calculate total budget from a comma-separated list of cost items."""
-    return (
-        "Budget breakdown:\n"
-        "- Venue: $3,500\n"
-        "- Catering: $2,250\n"
-        "- Entertainment: $1,500\n"
-        "- Decorations: $800\n"
-        "- Miscellaneous: $500\n"
-        "Total: $8,550\n"
-        "Recommended buffer (15%): $1,283\n"
-        "Grand Total: $9,833"
-    )
+    lines = ["Budget breakdown:"]
+    total = 0
+    for item in (i.strip() for i in items.split(",")):
+        if not item:
+            continue
+        price = PRICES.get(item.lower())
+        if price is None:
+            lines.append(f"- {item}: no price available")
+            continue
+        lines.append(f"- {item}: ${price:,}")
+        total += price
+    buffer = round(total * 0.15)
+    lines.append(f"Total: ${total:,}")
+    lines.append(f"Recommended buffer (15%): ${buffer:,}")
+    lines.append(f"Grand Total: ${total + buffer:,}")
+    return "\n".join(lines)
 
 
 # Any OpenAI-compatible provider works: set OPENAI_BASE_URL to its endpoint and
