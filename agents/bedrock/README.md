@@ -9,6 +9,11 @@ This quickstart deploys the [Strands Budget Analyst](../strands/) to [Amazon Bed
 - **Credentials kept out of the runtime definition**: The Catalyst App ID token and the OpenAI key live in AWS Secrets Manager. Only the container's execution role can read them
 - **Same code locally and on AWS**: `diagrid dev run` runs the same `main.py` before you deploy it
 
+## How the Code Is Organized
+
+- `main.py` holds what is specific to this agent: its tool, its model and its prompt. It builds the Strands `DaprWorkflowAgentRunner` as any Catalyst agent does, passes it to `BedrockRunner`, and calls `runner.serve()`.
+- `bedrock_runner.py` holds what AgentCore needs. `BedrockRunner` takes the agent's workflow runner and serves it on `POST /invocations` and `GET /ping`, port 8080. What it needs to know about the framework, such as where a run stores its task and its answer, is in an adapter for that runner type. Only Strands has one (`StrandsAdapter`). Another framework's runner, such as LangGraph's, needs its own adapter in `ADAPTERS`. Importing the module loads the secrets, so `main.py` imports it before anything that imports the Dapr SDK.
+
 ## How the Agent Connects to Catalyst
 
 The agent reads these variables. Locally, `diagrid dev run` sets the three Catalyst ones and you set the model ones:
@@ -23,7 +28,7 @@ The agent reads these variables. Locally, `diagrid dev run` sets the three Catal
 | `OPENAI_MODEL` | A model the provider serves. Defaults to `gpt-4o-mini` | Runtime environment variable. It is not a secret |
 To use another OpenAI-compatible provider, set `OPENAI_BASE_URL` to its endpoint, `OPENAI_MODEL` to one of its models, and `OPENAI_API_KEY` to its key. The model must support tool calling, because the agent calls `calculate_budget`.
 
-The runtime gets a single environment variable that points at the secret, `AGENT_SECRET_ARN`. At startup, `main.py` reads the secret with the runtime's execution role and loads its keys into the environment. It does this before the Dapr SDK is imported, because the SDK reads its variables on import. The execution role may read that one secret and nothing else, and the secret values never appear in the runtime definition, in the AgentCore console or in the CLI history.
+The runtime gets a single environment variable that points at the secret, `AGENT_SECRET_ARN`. At startup, `bedrock_runner.py` reads the secret with the runtime's execution role and loads its keys into the environment. It does this before the Dapr SDK is imported, because the SDK reads its variables on import. The execution role may read that one secret and nothing else, and the secret values never appear in the runtime definition, in the AgentCore console or in the CLI history.
 
 Your Diagrid API key (`DIAGRID_API_KEY`) stays with you or your CI pipeline. You use it to create the Catalyst resources and to read the App ID token. The container does not need it: the App ID token can only act as `budget-planner` in this one project, while an API key can manage the project.
 
@@ -308,7 +313,7 @@ aws bedrock-agentcore invoke-agent-runtime \
   response.json && jq . response.json
 ```
 
-The response has the workflow `instance_id`, the agent's `result` and the `tool_calls` it made.
+The response has the workflow `instance_id`, its `status` and the agent's `result`.
 
 To collect the result of the task, send an empty payload with the same `SESSION_ID`. `--payload ''` sends a request with an empty body:
 
@@ -330,17 +335,13 @@ Open the [Catalyst dashboard](https://catalyst.diagrid.io/agents) and navigate t
 
 ## Conversation History
 
-> **This is a workaround.** It should be replaced by a fix in the diagrid SDK, described below.
+Tasks sent with the same session ID share one conversation. The agent carries it in the task text. Before starting a task, it reads the session's last run from Catalyst, which is the workflow instance named after the session ID. That run's task is already the conversation up to that run, written as lines starting with `User:` and `Assistant:`. The agent adds that run's answer and the new request to it, and starts the new run with the result. The system prompt tells the model to answer the last `User:` line. Because each run's task holds the whole conversation, and Catalyst stores it with the run, the history survives a crash or a new container without a separate store.
 
-The diagrid 0.5.0 Strands runner (`DaprWorkflowAgentRunner`) starts every run with only the new task as its message list. On its own, the agent remembers nothing from one task to the next. `DaprStateSessionManager`, which looks like it stores the conversation, has no effect with this runner: its hooks run only when the code calls the Strands agent directly, and the runner calls the model and the tools from workflow activities instead. The [Strands quickstart](../strands/) has the same limitation.
+What the model sees:
 
-**What this agent does instead.** It carries the conversation in the task text. Before starting a task, it reads the session's last run from Catalyst, which is the workflow instance named after the session ID. That run's task is already the conversation up to that run, written as lines starting with `User:` and `Assistant:`. The agent adds that run's answer and the new request to it, and starts the new run with the result. The system prompt tells the model to answer the last `User:` line. Because each run's task holds the whole conversation, and Catalyst stores it with the run, the history survives a crash or a new container without a separate store. The limits:
-
-- The model gets the history as one block of text, not as separate turns.
-- Tool calls and tool results from earlier tasks are not included, only requests and answers.
-- The transcript is capped at its newest 20,000 characters (`MAX_HISTORY_CHARS` in `main.py`).
-
-**The proposed fix in the SDK.** The Strands runner should load the session's messages from the state store in an activity at the start of the workflow, and save the updated messages in an activity at the end. Both must be activities, so that replaying the workflow after a crash reuses their recorded results instead of running them again. The session ID is already passed to `run_async`. With that fix, the model gets real conversation turns, including earlier tool calls, and `with_history` in `main.py` can be removed.
+- The history as one block of text, not as separate turns.
+- Earlier requests and answers, without the tool calls and tool results of earlier tasks.
+- At most the newest 20,000 characters of the conversation (`MAX_HISTORY_CHARS` in `bedrock_runner.py`).
 
 ## Update the Image
 
@@ -393,6 +394,7 @@ shred -u secret.json
 - **The workflow worker runs only while an AgentCore session is running.** Each session runs in its own microVM, and each microVM's container connects to Catalyst as a worker for `budget-planner`. AgentCore [stops a session](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/runtime-sessions.html#session-lifecycle) after 15 minutes without activity, or 8 hours after it started, by default. While the session's workflow is running, `/ping` answers [`HealthyBusy`](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/runtime-http-protocol-contract.html#ping-endpoint), which AgentCore counts as activity, so the idle timeout does not stop a run even when no request is waiting for it. The 8-hour limit still applies. A run that is interrupted keeps its state in Catalyst. It resumes when the next invocation starts a container, not before.
 - **`/invocations` waits for the run to finish.** AgentCore [allows a synchronous request 15 minutes](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/bedrock-agentcore-limits.html#invocation-limits), and the limit cannot be raised. A run that takes longer keeps running in Catalyst, but the caller gets no answer. A request with an empty payload collects its result afterwards.
 - **There is no pub/sub subscription.** The [Strands quickstart](../strands/) receives tasks from a topic, which Catalyst delivers by calling the app. An AgentCore container has no address Catalyst can call, so this agent receives tasks only through `/invocations`.
+- **The diagrid SDK sends one anonymous usage event per process.** On AgentCore that is one event for each session's container. It holds versions, the platform and the agent framework, and no prompts, app IDs or hostnames. To turn it off, add `DO_NOT_TRACK: "1"` to the runtime's environment variables. The [diagrid package description](https://pypi.org/project/diagrid/0.5.3/) lists what is sent and the other opt-out variables.
 
 ## Clean Up
 

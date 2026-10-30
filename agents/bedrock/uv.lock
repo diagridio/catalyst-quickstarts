@@ -207,7 +207,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "boto3", specifier = "==1.43.53" },
-    { name = "diagrid", extras = ["strands"], specifier = "==0.5.0" },
+    { name = "diagrid", extras = ["strands"], specifier = "==0.5.3" },
     { name = "fastapi", specifier = "==0.136.1" },
     { name = "uvicorn", extras = ["standard"], specifier = "==0.46.0" },
 ]
@@ -582,16 +582,16 @@ wheels = [
 
 [[package]]
 name = "diagrid"
-version = "0.5.0"
+version = "0.5.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "dapr" },
     { name = "dapr-ext-workflow" },
     { name = "diagrid-cli" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/dd/84/f82839c938aa45a7b339a55af79d8cf3c4f23589389c9226edb2127ed05c/diagrid-0.5.0.tar.gz", hash = "sha256:c0ae712ff8a6154a70a23c7428567259df17eaa55b682080d12cd7635e7957da", size = 185119, upload-time = "2026-09-16T21:15:56.428Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/e2/6b/eb5932ddfdef94809af5861e04b33a41c1632164bbfa454150e47d5068a3/diagrid-0.5.3.tar.gz", hash = "sha256:e556ca781ff0e859c89238a21c0a94335ec1f85baeba5dbdde09bae41716d50a", size = 187168, upload-time = "2026-10-02T20:42:01.943Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/81/2a/3823d9b33092739a5380792341bb1664ea1936045afa7467885efb862cd1/diagrid-0.5.0-py3-none-any.whl", hash = "sha256:0404b2ab51e97faa9529b5e3d09f14e5a3f39e6162e3b2f3647117306bd5741d", size = 241203, upload-time = "2026-09-16T21:15:54.594Z" },
+    { url = "https://files.pythonhosted.org/packages/e9/da/dfc00253c347619098e465eca65306edc048730e5c3d992e9252703bdfec/diagrid-0.5.3-py3-none-any.whl", hash = "sha256:a2a90b4a6d4900c83bea987ec44e2eb8733f8b0cdcf9831bd721bd752123b6fe", size = 242614, upload-time = "2026-10-02T20:42:00.267Z" },
 ]
 
 [package.optional-dependencies]

@@ -2,3 +2,6 @@
 __pycache__
 .env*
 secret.json
+response.json
+trust-policy.json
+permissions.json
