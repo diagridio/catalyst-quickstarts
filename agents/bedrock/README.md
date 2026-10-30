@@ -303,6 +303,9 @@ Dapr refuses to start a workflow whose instance ID is still running, which is ho
 
 The runtime session ID must be at least 33 characters long. Invocations with the same session ID go to the same AgentCore session, and they share one conversation, so a task can follow up on an earlier one. See [Conversation History](#conversation-history).
 
+The response has the workflow `instance_id`, its `status` and the agent's `result`.
+
+
 ```bash
 export SESSION_ID="budget-planner-$(uuidgen)"
 aws bedrock-agentcore invoke-agent-runtime \
@@ -314,9 +317,43 @@ aws bedrock-agentcore invoke-agent-runtime \
   --cli-binary-format raw-in-base64-out \
   --payload '{"task": "Calculate the budget for a corporate event with venue, catering, and entertainment"}' \
   response.json && jq . response.json
+
+{
+    "runtimeSessionId": "budget-planner-50e0376b-0d63-438d-bb5d-e6c44f6360a1",
+    "contentType": "application/json",
+    "statusCode": 200
+}
+{
+  "instance_id": "budget-planner-50e0376b-0d63-438d-bb5d-e6c44f6360a1",
+  "status": "COMPLETED",
+  "result": "Here's the budget breakdown for your corporate event:\n\n- **Venue**: $3,500\n- **Catering**: $2,250\n- **Entertainment**: $1,500\n\n**Total**: $7,250  \n**Recommended buffer (15%)**: $1,088  \n**Grand Total**: $8,338\n\nLet me know if you need any further assistance!"
+}
 ```
 
-The response has the workflow `instance_id`, its `status` and the agent's `result`.
+Continue the conversation using the same session id:
+
+```bash
+aws bedrock-agentcore invoke-agent-runtime \
+  --region "$AWS_REGION" \
+  --agent-runtime-arn "$RUNTIME_ARN" \
+  --runtime-session-id "$SESSION_ID" \
+  --content-type application/json \
+  --accept application/json \
+  --cli-binary-format raw-in-base64-out \
+  --payload '{"task": "Recalculate without entertainment"}' \
+  response.json && jq . response.json
+
+{
+    "runtimeSessionId": "budget-planner-50e0376b-0d63-438d-bb5d-e6c44f6360a1",
+    "contentType": "application/json",
+    "statusCode": 200
+}
+{
+  "instance_id": "budget-planner-50e0376b-0d63-438d-bb5d-e6c44f6360a1",
+  "status": "COMPLETED",
+  "result": "Here's the updated budget breakdown for your corporate event without entertainment:\n\n- **Venue**: $3,500  \n- **Catering**: $2,250  \n\n**Total**: $5,750  \n**Recommended buffer (15%)**: $862  \n**Grand Total**: $6,612  \n\nIf you need anything else, feel free to ask!"
+}
+```
 
 ## 9. Inspect the Run in Catalyst
 
