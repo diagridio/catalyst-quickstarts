@@ -128,12 +128,17 @@ If you do not have an ECR repository yet, create one:
 aws ecr create-repository --repository-name "$ECR_REPO_NAME" --region "$AWS_REGION"
 ```
 
-Log in to ECR, then build for `linux/arm64` and push. `docker buildx create --use` is needed once, so `buildx` can build for another architecture. Tag the image with the current git commit, so that each runtime version points to the code it was built from:
+Log in to ECR:
+
+```bash
+aws ecr get-login-password --region "$AWS_REGION" \
+  | docker login --username AWS --password-stdin "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com"
+```
+
+Then build for `linux/arm64` and push. `docker buildx create --use` is needed once, so `buildx` can build for another architecture. Tag the image with the current git commit, so that each runtime version points to the code it was built from:
 
 ```bash
 export IMAGE_TAG="$(git rev-parse --short HEAD)"
-aws ecr get-login-password --region "$AWS_REGION" \
-  | docker login --username AWS --password-stdin "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com"
 docker buildx create --use
 docker buildx build --platform linux/arm64 -t "$ECR_REPO:$IMAGE_TAG" --push .
 ```
@@ -348,6 +353,14 @@ What the model sees:
 Pushing a new image does not change the runtime. [Each update to the runtime creates a new version](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/agent-runtime-versioning.html), and the `DEFAULT` endpoint that `invoke-agent-runtime` uses moves to it. A session that started before the update keeps running the version it started with, so invoke with a new `SESSION_ID` to reach the new image.
 
 Commit your changes first: the tag is the commit, so building again without a new commit reuses the previous tag. Then build and push the new image. The ECR login from step 4 is [valid for 12 hours](https://docs.aws.amazon.com/AmazonECR/latest/userguide/docker-push-ecr-image.html), so log in again if it has expired:
+
+
+Log in to ECR:
+
+```bash
+aws ecr get-login-password --region "$AWS_REGION" \
+  | docker login --username AWS --password-stdin "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com"
+```
 
 ```bash
 export IMAGE_TAG="$(git rev-parse --short HEAD)"
