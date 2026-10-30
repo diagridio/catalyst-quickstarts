@@ -292,16 +292,14 @@ aws bedrock-agentcore-control get-agent-runtime --region "$AWS_REGION" \
 
 ## 8. Invoke the Agent
 
-A session runs one task at a time, and the workflow instance ID is the session ID. The agent does not read the payload's fields: the whole payload is the task. Only whether a payload is present matters, and every request waits until the run ends:
+A session runs one task at a time, and the workflow instance ID is the session ID. The agent does not read the payload's fields: the whole payload is the task. Every request waits until the run ends:
 
 | Request | Answer |
 |---------|--------|
-| A payload, no run in progress | `200` with the result, once the run ends |
-| A payload, a run in progress | `409`. The task is not started |
-| No payload | `200` with the result of the current run once it ends, or of the last one |
-| No payload, no task has run in this session | `200` with an empty body |
+| No run in progress | `200` with the result, once the run ends |
+| A run in progress | `409`. The task is not started |
 
-Dapr refuses to start a workflow whose instance ID is still running, which is how a second task is detected. It keeps a finished run's output until the next task in the session replaces it, so the last result survives a restart of the container. AgentCore [returns a container's 4xx or 5xx answer to the caller](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/runtime-http-protocol-contract.html#http-error-handling) as a `424 RuntimeClientError`, so `409` and `500` reach the AWS CLI as that error.
+Dapr refuses to start a workflow whose instance ID is still running, which is how a second task is detected. AgentCore [returns a container's 4xx or 5xx answer to the caller](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/runtime-http-protocol-contract.html#http-error-handling) as a `424 RuntimeClientError`, so `409` and `500` reach the AWS CLI as that error.
 
 The runtime session ID must be at least 33 characters long. Invocations with the same session ID go to the same AgentCore session, and they share one conversation, so a task can follow up on an earlier one. See [Conversation History](#conversation-history).
 
@@ -319,20 +317,6 @@ aws bedrock-agentcore invoke-agent-runtime \
 ```
 
 The response has the workflow `instance_id`, its `status` and the agent's `result`.
-
-To collect the result of the task, send an empty payload with the same `SESSION_ID`. `--payload ''` sends a request with an empty body:
-
-```bash
-aws bedrock-agentcore invoke-agent-runtime \
-  --region "$AWS_REGION" \
-  --agent-runtime-arn "$RUNTIME_ARN" \
-  --runtime-session-id "$SESSION_ID" \
-  --content-type application/json \
-  --accept application/json \
-  --cli-binary-format raw-in-base64-out \
-  --payload '' \
-  response.json && cat response.json
-```
 
 ## 9. Inspect the Run in Catalyst
 
@@ -405,7 +389,7 @@ shred -u secret.json
 ## Good to Know
 
 - **The workflow worker runs only while an AgentCore session is running.** Each session runs in its own microVM, and each microVM's container connects to Catalyst as a worker for `budget-planner`. AgentCore [stops a session](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/runtime-sessions.html#session-lifecycle) after 15 minutes without activity, or 8 hours after it started, by default. While the session's workflow is running, `/ping` answers [`HealthyBusy`](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/runtime-http-protocol-contract.html#ping-endpoint), which AgentCore counts as activity, so the idle timeout does not stop a run even when no request is waiting for it. The 8-hour limit still applies. A run that is interrupted keeps its state in Catalyst. It resumes when the next invocation starts a container, not before.
-- **`/invocations` waits for the run to finish.** AgentCore [allows a synchronous request 15 minutes](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/bedrock-agentcore-limits.html#invocation-limits), and the limit cannot be raised. A run that takes longer keeps running in Catalyst, but the caller gets no answer. A request with an empty payload collects its result afterwards.
+- **`/invocations` waits for the run to finish.** AgentCore [allows a synchronous request 15 minutes](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/bedrock-agentcore-limits.html#invocation-limits), and the limit cannot be raised. A run that takes longer keeps running in Catalyst, but the caller gets no answer. The result is in the run's output in Catalyst.
 - **There is no pub/sub subscription.** The [Strands quickstart](../strands/) receives tasks from a topic, which Catalyst delivers by calling the app. An AgentCore container has no address Catalyst can call, so this agent receives tasks only through `/invocations`.
 - **The diagrid SDK sends one anonymous usage event per process.** On AgentCore that is one event for each session's container. It holds versions, the platform and the agent framework, and no prompts, app IDs or hostnames. To turn it off, add `DO_NOT_TRACK: "1"` to the runtime's environment variables. The [diagrid package description](https://pypi.org/project/diagrid/0.5.3/) lists what is sent and the other opt-out variables.
 

@@ -11,7 +11,3 @@ X-Amzn-Bedrock-AgentCore-Runtime-Session-Id: local-session-0123456789abcdef0123
 {
     "task": "Calculate the budget for a corporate event with venue, catering, and entertainment"
 }
-
-### No payload: wait for the session's current run, or return its last result
-POST http://localhost:8080/invocations
-X-Amzn-Bedrock-AgentCore-Runtime-Session-Id: local-session-0123456789abcdef0123

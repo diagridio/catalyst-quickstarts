@@ -40,7 +40,7 @@ from contextlib import asynccontextmanager
 import grpc
 import uvicorn
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse, Response
+from fastapi.responses import JSONResponse
 from diagrid.agent.core.workflow.runner import BaseWorkflowRunner
 from diagrid.agent.strands import DaprWorkflowAgentRunner as StrandsRunner
 
@@ -121,9 +121,9 @@ class BedrockRunner:
 
     Each session runs one task at a time, as the workflow instance named after the
     session ID. Dapr refuses to start an instance whose ID is still running, which
-    is what makes a second task busy, and it keeps a finished instance's output
-    until the next task with that ID replaces it. That stored output is the
-    session's last result, so it survives a restart of this process.
+    is what makes a second task busy, and it keeps a finished instance until the
+    next task with that ID replaces it. with_history builds the next task from
+    that stored run, so the conversation survives a restart of this process.
     """
 
     def __init__(self, runner: BaseWorkflowRunner) -> None:
@@ -178,30 +178,25 @@ class BedrockRunner:
         return {"status": "Healthy"}
 
     async def invocations(self, request: Request):
-        """Run the payload as the agent's task, or, with an empty payload, return the
-        result of the session's current or last run. Either way, wait for the run to end."""
+        """Run the payload as the agent's task and wait for the run to end."""
         payload = (await request.body()).decode().strip()
         session_id = request.headers.get(SESSION_HEADER)
         if not session_id:
             return reply(session_id, 400, message="a session ID is required")
         self._session_id = session_id
 
-        if payload:
-            previous = await asyncio.to_thread(self._client.get_workflow_state, session_id)
-            task = with_history(self._adapter, previous, payload)
-            try:
-                # The run is scheduled on the stream's first step. The wait below
-                # is shared with requests that only collect the result.
-                stream = self._adapter.start(self._runner, task, session_id)
-                await anext(stream)
-                await stream.aclose()
-            except grpc.RpcError as e:
-                if e.code() == grpc.StatusCode.ALREADY_EXISTS:
-                    return reply(session_id, 409, message="busy: a task is still running in this session")
-                raise
-        elif await asyncio.to_thread(self._client.get_workflow_state, session_id) is None:
-            # Nothing has run in this session, so there is no result to return.
-            return Response()
+        previous = await asyncio.to_thread(self._client.get_workflow_state, session_id)
+        task = with_history(self._adapter, previous, payload)
+        try:
+            # The run is scheduled on the stream's first step. The wait below
+            # follows it to the end.
+            stream = self._adapter.start(self._runner, task, session_id)
+            await anext(stream)
+            await stream.aclose()
+        except grpc.RpcError as e:
+            if e.code() == grpc.StatusCode.ALREADY_EXISTS:
+                return reply(session_id, 409, message="busy: a task is still running in this session")
+            raise
 
         state = await asyncio.to_thread(self._client.wait_for_workflow_completion, session_id)
 
