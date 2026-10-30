@@ -107,9 +107,9 @@ def with_history(previous, payload: str) -> str:
     request = f"User: {payload}"
     if previous is None:
         return request
-    transcript = json.loads(previous.serialized_input or "{}").get("task", "")
+    transcript = json.loads(previous.serialized_input).get("task", "")
     if previous.runtime_status.name == "COMPLETED":
-        answer = json.loads(previous.serialized_output or "{}").get("result")
+        answer = json.loads(previous.serialized_output).get("result")
         if answer:
             transcript += f"\nAssistant: {answer}"
     transcript = f"{transcript}\n{request}"
@@ -134,8 +134,23 @@ async def lifespan(_app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 
 
+# The session this container serves, from the last /invocations request. AgentCore
+# runs each session in its own microVM, so there is only one.
+current_session_id = None
+
+
 @app.get("/ping")
 async def ping() -> dict:
+    # HealthyBusy keeps the AgentCore session alive while its workflow runs, even
+    # when no request is waiting for it, so the idle timeout cannot stop the
+    # worker in the middle of a run.
+    if current_session_id:
+        try:
+            state = await asyncio.to_thread(workflow_client.get_workflow_state, current_session_id)
+            if state is not None and state.runtime_status.name in ("RUNNING", "PENDING"):
+                return {"status": "HealthyBusy"}
+        except Exception:
+            logging.exception("ping: could not read the workflow state of %s", current_session_id)
     return {"status": "Healthy"}
 
 
@@ -152,6 +167,8 @@ async def invocations(request: Request):
     session_id = request.headers.get("x-amzn-bedrock-agentcore-runtime-session-id")
     if not session_id:
         return reply(session_id, 400, message="a session ID is required")
+    global current_session_id
+    current_session_id = session_id
 
     if payload:
         previous = await asyncio.to_thread(workflow_client.get_workflow_state, session_id)
