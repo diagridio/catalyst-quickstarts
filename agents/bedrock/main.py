@@ -49,10 +49,19 @@ model = OpenAIModel(
     model_id=os.environ.get("OPENAI_MODEL") or "gpt-4o-mini",
 )
 
+system_prompt ="""
+    You are a budget analyst specializing in event planning.
+    When asked to estimate costs, use the calculate_budget tool with a comma-separated list of cost items.
+    Allowed items are {0}.
+    Correct spelling of items in user request if needed.
+    Return the full budget breakdown with line items, totals, and recommended buffer.
+    Always call the tool before responding.
+    """.format(",".join(PRICES.keys()))
+
 agent = Agent(
     model=model,
     tools=[calculate_budget],
-    system_prompt="You are a budget analyst specializing in event planning. When asked to estimate costs, use the calculate_budget tool with a comma-separated list of cost items. Return the full budget breakdown with line items, totals, and recommended buffer. Always call the tool before responding.",
+    system_prompt=system_prompt
 )
 
 runner = BedrockRunner(
