@@ -1,0 +1,81 @@
+# Plain Dapr OSS resources, the starting point the quickstart migrates from.
+# There are no catalyst.diagrid.io annotations here; the migration adds them.
+#
+# Render with envsubst so REDIS_HOST and REDIS_PASSWORD come from your shell.
+# The Redis has to be reachable from the internet: after the migration the Dapr
+# server runs in Catalyst, which cannot resolve *.svc.cluster.local addresses.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: dapr-oss-demo
+---
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: statestore
+  namespace: dapr-oss-demo
+spec:
+  type: state.redis
+  version: v1
+  metadata:
+    - name: redisHost
+      value: "${REDIS_HOST}"
+    - name: redisUsername
+      value: "default"
+    - name: redisPassword
+      value: "${REDIS_PASSWORD}"
+    - name: actorStateStore
+      value: "true"
+---
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: orderpubsub
+  namespace: dapr-oss-demo
+spec:
+  type: pubsub.redis
+  version: v1
+  metadata:
+    - name: redisHost
+      value: "${REDIS_HOST}"
+    - name: redisUsername
+      value: "default"
+    - name: redisPassword
+      value: "${REDIS_PASSWORD}"
+---
+apiVersion: dapr.io/v1alpha1
+kind: Subscription
+metadata:
+  name: order-updates
+  namespace: dapr-oss-demo
+spec:
+  topic: orders
+  route: /orders
+  pubsubname: orderpubsub
+scopes:
+  - checkout
+---
+apiVersion: dapr.io/v1alpha1
+kind: Configuration
+metadata:
+  name: appconfig
+  namespace: dapr-oss-demo
+spec:
+  tracing:
+    samplingRate: "1"
+---
+apiVersion: dapr.io/v1alpha1
+kind: Resiliency
+metadata:
+  name: order-resiliency
+  namespace: dapr-oss-demo
+spec:
+  policies:
+    retries:
+      orderRetry:
+        policy: exponential
+        maxRetries: 3
+  targets:
+    apps:
+      inventory:
+        retry: orderRetry

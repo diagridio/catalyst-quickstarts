@@ -1,0 +1,73 @@
+# Plain Dapr OSS workloads — dapr.io annotations only. The migration is what
+# adds catalyst.diagrid.io annotations, so nothing Catalyst-shaped belongs here.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: checkout
+  namespace: dapr-oss-demo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: checkout
+  template:
+    metadata:
+      labels:
+        app: checkout
+      annotations:
+        dapr.io/enabled: "true"
+        dapr.io/app-id: "checkout"
+        dapr.io/app-port: "8080"
+        dapr.io/config: "appconfig"
+        dapr.io/enable-api-logging: "true"
+    spec:
+      containers:
+        - name: checkout
+          image: migration-quickstart:local
+          imagePullPolicy: Never
+          env:
+            - name: ROLE
+              value: checkout
+            - name: APP_PORT
+              value: "8080"
+          ports:
+            - containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 3
+            periodSeconds: 5
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: inventory
+  namespace: dapr-oss-demo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: inventory
+  template:
+    metadata:
+      labels:
+        app: inventory
+      annotations:
+        dapr.io/enabled: "true"
+        dapr.io/app-id: "inventory"
+        dapr.io/app-port: "8080"
+        dapr.io/config: "appconfig"
+        dapr.io/enable-api-logging: "true"
+    spec:
+      containers:
+        - name: inventory
+          image: migration-quickstart:local
+          imagePullPolicy: Never
+          env:
+            - name: ROLE
+              value: inventory
+            - name: APP_PORT
+              value: "8080"
+          ports:
+            - containerPort: 8080
