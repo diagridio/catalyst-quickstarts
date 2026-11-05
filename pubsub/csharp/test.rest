@@ -1,5 +1,5 @@
 ### PubSub API Test Suite
-### Based on Diagrid Catalyst PubSub Quickstart
+### Based on Diagrid PubSub Quickstart
 ### https://docs.diagrid.io/catalyst/quickstart/pubsub
 
 ### Health Check

@@ -3,7 +3,7 @@ End-to-end test for the agents/langgraph/enterprise-identity quickstart (python 
 quickstart has one implementation).
 
 Mirrors agents/langgraph/enterprise-identity/README.md: "## Setup" installs, "## Run with
-Catalyst" provisions and runs, "### 4. See It Fail Closed" is the pair of
+Diagrid" provisions and runs, "### 4. See It Fail Closed" is the pair of
 documented requests this suite asserts. This README documents no cleanup
 command, so deleting the project is infrastructure here.
 
@@ -35,7 +35,7 @@ Variables       ../../../../tools/qs-tester/variables/agents_enterprise_identity
 Library         ../../../../tools/qs-tester/variables/agents_enterprise_identity.py
 Library         Collections
 Suite Setup     Should Not Be Empty    ${PROJECT}
-...             msg=Pass --variable PROJECT:<catalyst-project-name>
+...             msg=Pass --variable PROJECT:<diagrid-project-name>
 Test Teardown   Clean Up Quickstart
 
 *** Variables ***
@@ -55,7 +55,7 @@ Python Langgraph Identity Quickstart
     END
 
     Build Quickstart            ${qs}
-    # README "## Run with Catalyst" step 2, run verbatim.
+    # README "## Run with Diagrid" step 2, run verbatim.
     Run Documented Commands     ${qs}[setup]    ${PROJECT}    cwd=${qs}[dir]
     Start Quickstart            ${qs}    ${PROJECT}    ${log}
 

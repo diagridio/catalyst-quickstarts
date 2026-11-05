@@ -4,7 +4,7 @@
 #
 #   DIAGRID_QUICKSTART_IDENTITY=local APP_PORT=8006 uv run python main.py
 #
-# See "## Run Offline Without a Catalyst Project" in README.md. The two requests
+# See "## Run Offline Without a Diagrid Project" in README.md. The two requests
 # that send no credential at all answer 401 in either mode. Left unedited, the
 # placeholder below is not a well-formed JWT, so the credential-bearing requests
 # answer 401 {"error": "oauth.decode_error"}.
@@ -16,7 +16,7 @@ GET http://localhost:8006/whoami
 
 ### Who is calling, with a credential: 200 and the verified caller
 ### subject, tenant and issuer_id are read off the credential the app verified,
-### never off the request. Against real Catalyst that is a Catalyst-signed
+### never off the request. Against real Diagrid that is a Diagrid-signed
 ### identity, and the app never sees your identity provider's original token.
 GET http://localhost:8006/whoami
 X-Diagrid-User-Token: Bearer {{token}}

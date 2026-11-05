@@ -15,7 +15,7 @@ import (
 // This file holds the agent's tools, and the two trust stories they tell.
 // my_bookings runs in-process and is handed the caller's subject as an
 // argument. account_summary leaves the process, and carries the caller in a
-// token Catalyst mints for that one call.
+// token Diagrid mints for that one call.
 
 const (
 	toolMyBookings     = "my_bookings"
@@ -31,7 +31,7 @@ const (
 	// resources/crm-mcp.yaml.
 	mcpServerName = "crm-mcp"
 
-	// mcpProxyPath is Catalyst's MCP proxy. Reaching a tool through this path
+	// mcpProxyPath is Diagrid's MCP proxy. Reaching a tool through this path
 	// is what attaches the calling user; calling the CRM directly would not.
 	mcpProxyPath = "/v1.0/diagrid/mcp/"
 
@@ -80,7 +80,7 @@ func (t tool) declares(name string) bool {
 	return declared
 }
 
-// localTools is the offline tool set, used when there is no Catalyst project
+// localTools is the offline tool set, used when there is no Diagrid project
 // behind the app and therefore no MCP server to reach.
 func localTools() map[string]tool {
 	return map[string]tool{
@@ -108,7 +108,7 @@ func localTools() map[string]tool {
 	}
 }
 
-// catalystTools is the tool set used against a Catalyst project: the one tool
+// catalystTools is the tool set used against a Diagrid project: the one tool
 // that leaves the process and carries the caller with it.
 func catalystTools() map[string]tool {
 	// Safe to share across requests: the caller is read off the request context
@@ -151,7 +151,7 @@ func myBookings(subject string) string {
 
 // --- The outbound half: calling a tool as the user -------------------------
 // accountSummary takes no subject at all. The calling user travels in a token
-// Catalyst mints for this one call, so the CRM establishes who is asking for
+// Diagrid mints for this one call, so the CRM establishes who is asking for
 // itself rather than believing the agent.
 
 // accountSummary summarises a CRM account, running as the user who invoked the
@@ -187,7 +187,7 @@ func accountSummary(ctx context.Context, client *http.Client, accountID string) 
 	return textContent(result)
 }
 
-// mcpURL is the tool's address on Catalyst's MCP proxy, resolved per call so a
+// mcpURL is the tool's address on Diagrid's MCP proxy, resolved per call so a
 // test can point the tool at a stand-in server.
 func mcpURL() string {
 	endpoint := os.Getenv(envDaprHTTPEndpoint)

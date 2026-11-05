@@ -1,13 +1,13 @@
 # Spring AI Quickstarts
 
-Build **durable [Spring AI](https://docs.spring.io/spring-ai/reference/) agents** on Diagrid Catalyst
+Build **durable [Spring AI](https://docs.spring.io/spring-ai/reference/) agents** on Diagrid
 using the `io.diagrid:diagrid-spring-ai-starter` package.
 
 The key idea: an ordinary Spring AI app — a `ChatClient` plus `@Tool` beans — becomes **durable across
 restarts purely by adding the starter to the classpath**. There is no durability code in your app. With
 the starter present, every `ChatClient.call()` runs as a Dapr Workflow: the model turns and each tool
 call execute as **checkpointed activities**, so a crash resumes from the last completed step instead of
-starting over. On Catalyst the workflow state store is managed for you — no component YAML needed.
+starting over. On Diagrid the workflow state store is managed for you — no component YAML needed.
 
 ## Quickstarts
 
@@ -16,7 +16,7 @@ starting over. On Catalyst the workflow state store is managed for you — no co
 | [event-planner](event-planner/) | The drop-in basics: a 3-tool Event Planner agent. Tool 2 crashes the process; on restart the workflow **auto-resumes** from the checkpoint — completed steps are replayed, not re-run. Mirrors the [Microsoft Agent Framework](../microsoft-dotnet/) quickstart. |
 | [crash-recovery](crash-recovery/) | The idempotency story: schedules under a **caller-owned instance id**. Kill the app mid-booking and restart it, and the run recovers on its own. Calling again with the same id then **attaches** to that run and returns the same confirmation code instead of booking twice. |
 | [durable-memory](durable-memory/) | Where the durability boundary sits: durable chat with a `MessageChatMemoryAdvisor`. Spring AI runs advisors **synchronously**, so the memory advisor's response phase (saving the answer) runs only **after a successful call** — a crash keeps the workflow but not the answer, until you re-attach. |
-| [enterprise-identity](enterprise-identity/) | **The one member with no starter.** End-user identity, end to end: `OAuthFilter` verifies the caller's Catalyst-signed credential on every request, and the agent's outbound MCP tool call carries that same caller to a stand-in CRM on their behalf. Plain synchronous `ChatClient.call()`, no workflow — see the note below. |
+| [enterprise-identity](enterprise-identity/) | **The one member with no starter.** End-user identity, end to end: `OAuthFilter` verifies the caller's Diagrid-signed credential on every request, and the agent's outbound MCP tool call carries that same caller to a stand-in CRM on their behalf. Plain synchronous `ChatClient.call()`, no workflow — see the note below. |
 
 Start with **event-planner** for the "add the starter, get durability" experience, then
 **crash-recovery** to make a side-effecting tool safe to retry, then **durable-memory** to see where
@@ -33,7 +33,7 @@ them apart so that what each one buys is legible.
 
 ## Prerequisites
 
-1. A [Diagrid Catalyst account](https://catalyst.diagrid.io/)
+1. A [Diagrid account](https://catalyst.diagrid.io/)
 2. [Diagrid CLI](https://docs.diagrid.io/getting-started/install-cli) installed
 3. [JDK 21](https://adoptium.net/) or later, and [Maven 3.9+](https://maven.apache.org/download.cgi)
 4. An [OpenAI API key](https://platform.openai.com/api-keys), for **durable-memory** only.
@@ -66,10 +66,10 @@ Each quickstart has its own README with the full run steps.
 ## Agent registration
 
 Durability and registration are separate packages. The starter makes an agent durable; a second
-dependency, `io.diagrid:diagrid-spring-ai-agent-registry`, is what records it as a Catalyst agent.
+dependency, `io.diagrid:diagrid-spring-ai-agent-registry`, is what records it as a Diagrid agent.
 
 The registry records one agent per `ChatClient` **bean**, named after the bean, filed under
-`diagrid.spring-ai.registry.app-id`. That app id must match the app's Dapr app id, or Catalyst drops
+`diagrid.spring-ai.registry.app-id`. That app id must match the app's Dapr app id, or Diagrid drops
 the record with no error logged. A client built from the injected `ChatClient.Builder` is not a bean
 and so is never registered.
 

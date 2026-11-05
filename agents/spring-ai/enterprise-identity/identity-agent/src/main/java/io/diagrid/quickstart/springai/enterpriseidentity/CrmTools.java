@@ -11,7 +11,7 @@ import org.springframework.stereotype.Component;
  * The outbound half: calling a tool as the user.
  *
  * <p>Unlike {@link BookingTools#myBookings}, this tool leaves the process, and <b>takes no subject
- * at all</b>: the calling user travels in a credential Catalyst mints for this one call, so the CRM
+ * at all</b>: the calling user travels in a credential Diagrid mints for this one call, so the CRM
  * establishes who is asking for itself rather than believing the agent.
  */
 @Component

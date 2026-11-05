@@ -7,9 +7,9 @@ from starlette.responses import JSONResponse
 
 mcp = FastMCP("mcp-auth-demo", host="0.0.0.0", port=8000, stateless_http=True)
 
-# The header + value Catalyst must present on every request it proxies to this
+# The header + value Diagrid must present on every request it proxies to this
 # server. Configured on the MCPServer resource (see resources/mcp-server.yaml)
-# as a static header credential, Catalyst attaches it automatically on every
+# as a static header credential, Diagrid attaches it automatically on every
 # call — the mcp-client never sees or sends it.
 SHARED_SECRET_HEADER = "x-mcp-shared-secret"
 SERVER_SHARED_SECRET = os.getenv("SERVER_SHARED_SECRET", "local-dev-shared-secret")
@@ -28,13 +28,13 @@ def get_account_balance(account_id: str) -> str:
 
 
 class RequireUpstreamCredential:
-    """Rejects any request that doesn't carry Catalyst's upstream credential.
+    """Rejects any request that doesn't carry Diagrid's upstream credential.
 
     Plain ASGI middleware (rather than Starlette's BaseHTTPMiddleware) so it
     doesn't interfere with the streamable-http transport's chunked responses.
-    This models the Catalyst-to-upstream-server authentication hop described
+    This models the Diagrid-to-upstream-server authentication hop described
     in https://docs.diagrid.io/develop/mcp/mcp-authentication: it is
-    independent of, and enforced before, Catalyst's per-tool access policy.
+    independent of, and enforced before, Diagrid's per-tool access policy.
     """
 
     def __init__(self, app):

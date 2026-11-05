@@ -77,7 +77,7 @@ SERVING_MARKER = f"Tomcat started on port {APP_PORT}"
 OFFLINE_MODEL_MARKER = ">>> Using the canned offline model"
 
 # EMPTY, NOT VERIFIED. `Wait Until Catalyst Attached` waits for the first inbound
-# request Catalyst makes back through the dev tunnel, which is the point at which
+# request Diagrid makes back through the dev tunnel, which is the point at which
 # workflow calls stop hanging. Measured on agents/langgraph 2026-08-27: a call
 # made before that hangs forever and twelve retries over 181s never recovered it,
 # while the same call gated on the marker answered in ~1s three runs running.
@@ -89,7 +89,7 @@ OFFLINE_MODEL_MARKER = ">>> Using the canned offline model"
 # checked. A marker that never appears makes the gate time out (loud, and the
 # suite fails); a marker matched from the wrong line would let the suite through
 # early (silent, and the run hangs). Fill this in by running the quickstart once
-# and reading what the app logs when Catalyst probes it.
+# and reading what the app logs when Diagrid probes it.
 CATALYST_PROBE_MARKERS = ()
 
 # Empty: the quickstart ships a canned offline model (CannedChatModel.java) and

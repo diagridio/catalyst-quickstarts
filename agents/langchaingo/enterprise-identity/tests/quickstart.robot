@@ -3,7 +3,7 @@ End-to-end test for the agents/langchaingo/enterprise-identity quickstart (go on
 this quickstart has one implementation).
 
 Mirrors agents/langchaingo/enterprise-identity/README.md: "## Setup" installs, "## Run
-with Catalyst" provisions and runs, "### 4. See It Fail Closed" is the pair of
+with Diagrid" provisions and runs, "### 4. See It Fail Closed" is the pair of
 documented requests this suite asserts. This README documents no cleanup
 command, so deleting the project is infrastructure here.
 
@@ -36,7 +36,7 @@ Variables       ../../../../tools/qs-tester/variables/agents_enterprise_identity
 Library         ../../../../tools/qs-tester/variables/agents_enterprise_identity_go.py
 Library         Collections
 Suite Setup     Should Not Be Empty    ${PROJECT}
-...             msg=Pass --variable PROJECT:<catalyst-project-name>
+...             msg=Pass --variable PROJECT:<diagrid-project-name>
 Test Teardown   Clean Up Quickstart
 
 *** Variables ***
@@ -59,7 +59,7 @@ Go Langchaingo Identity Quickstart
     # it the readiness marker below waits on `go run` compiling from cold --
     # and on a runner with no Go 1.26 toolchain, on downloading one.
     Build Quickstart            ${qs}
-    # README "## Run with Catalyst" step 1, items 2 and 3, run verbatim.
+    # README "## Run with Diagrid" step 1, items 2 and 3, run verbatim.
     Run Documented Commands     ${qs}[setup]    ${PROJECT}    cwd=${qs}[dir]
     Start Quickstart            ${qs}    ${PROJECT}    ${log}
 

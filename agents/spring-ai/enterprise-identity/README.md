@@ -1,6 +1,6 @@
 # Spring AI Quickstart - End-User Identity, End to End
 
-This quickstart demonstrates a [Spring AI](https://docs.spring.io/spring-ai/reference/) agent running on **Diagrid Catalyst** that knows *who is calling it* and calls its tools as that person. The caller presents a credential from an identity provider. Catalyst verifies it and hands the agent a verified user. The agent handles no password, API key or token of its own.
+This quickstart demonstrates a [Spring AI](https://docs.spring.io/spring-ai/reference/) agent running on **Diagrid** that knows *who is calling it* and calls its tools as that person. The caller presents a credential from an identity provider. Diagrid verifies it and hands the agent a verified user. The agent handles no password, API key or token of its own.
 
 One bean buys the inbound half. Look at `identity-agent/src/main/java/.../EnterpriseIdentityApplication.java` and note what is absent: no `io.diagrid` import in the controller, in the agent configuration or in either tool, and nothing in the application reads a header or a credential.
 
@@ -14,8 +14,8 @@ OAuthFilter diagridOAuthFilter() {
 ## What This Quickstart Demonstrates
 
 - **Verified inbound identity**: `OAuthFilter` verifies the `X-Diagrid-User-Token` header on every request and publishes a `VerifiedUser`, carrying `subject`, `tenant`, `scopes`, `claims` and `issuerId`, which handlers read with `OAuthFilter.verifiedUser(request)`
-- **Nothing to configure**: `new OAuthConfig()` discovers the issuer, audience and JWKS URI from Catalyst, so the app hardcodes no identity coordinates and no provider URLs
-- **The caller reaches the tool too**: the agent's outbound call goes through Catalyst's MCP proxy, which mints a token naming both the user and the agent acting for them, so the CRM establishes who is asking rather than trusting the agent
+- **Nothing to configure**: `new OAuthConfig()` discovers the issuer, audience and JWKS URI from Diagrid, so the app hardcodes no identity coordinates and no provider URLs
+- **The caller reaches the tool too**: the agent's outbound call goes through Diagrid's MCP proxy, which mints a token naming both the user and the agent acting for them, so the CRM establishes who is asking rather than trusting the agent
 - **Fail closed, before your code**: a missing credential is a `401` and an insufficient one is a `403`, decided in the filter before the agent, the model, or any application code runs
 - **A plain Spring AI agent, on the synchronous path**: a `ChatClient` and two `@Tool` methods, called from a `@RestController`, so you can see exactly where identity enters and how little of the agent knows about it
 - **The verified subject, not the model's guess**: the canned model asks for `someone@example.com`, who is nobody. The tool answers for the verified subject instead, so the reply names the real caller
@@ -65,17 +65,17 @@ $env:OPENAI_API_KEY = "your-key-here"
 
 The identity behavior is the same either way: the model is never consulted on who is calling.
 
-## Run with Catalyst
+## Run with Diagrid
 
 ### 1. Login and Run
 
-1. Login to Catalyst using the Diagrid CLI:
+1. Login to Diagrid using the Diagrid CLI:
 
 ```bash
 diagrid login
 ```
 
-2. Create a new Catalyst project for the quickstart and use it as the default project for the current session:
+2. Create a new Diagrid project for the quickstart and use it as the default project for the current session:
 
 ```bash
 diagrid project create enterprise-identity-quickstart --use --wait
@@ -89,7 +89,7 @@ diagrid apply -f resources/crm-mcp.yaml
 diagrid apply -f resources/crm-mcp-access.yaml
 ```
 
-`crm-mcp.yaml` registers the CRM as an MCP server, so the agent reaches it through Catalyst rather than calling it directly. `crm-mcp-access.yaml` then grants the agent access. The `identity-agent` App ID is created first because the CRM is scoped to it; the CRM's own App ID is created by registering the MCP server.
+`crm-mcp.yaml` registers the CRM as an MCP server, so the agent reaches it through Diagrid rather than calling it directly. `crm-mcp-access.yaml` then grants the agent access. The `identity-agent` App ID is created first because the CRM is scoped to it; the CRM's own App ID is created by registering the MCP server.
 
 ```yaml
 rules:
@@ -103,9 +103,9 @@ auth:
     requireUser: true
 ```
 
-`requireUser: true` is what turns on on-behalf-of. With it set, Catalyst mints a token carrying the calling user before forwarding to the CRM, and refuses the call outright when there is no user to act for. Leave it off and the CRM is reached by the agent alone, with no user attached.
+`requireUser: true` is what turns on on-behalf-of. With it set, Diagrid mints a token carrying the calling user before forwarding to the CRM, and refuses the call outright when there is no user to act for. Leave it off and the CRM is reached by the agent alone, with no user attached.
 
-4. Run both applications with Catalyst:
+4. Run both applications with Diagrid:
 
 ```bash
 diagrid dev run -f dev-enterprise-identity.yaml --approve --skip-managed-kv --skip-managed-pubsub --skip-managed-workflow
@@ -138,7 +138,7 @@ scopes      the scopes the verified credential carried
 
 The full decoded credential is available as `user.claims()`. This app does not return it: those values are the caller's identity data.
 
-> **On scopes.** `new OAuthConfig()` here requires a *verified* caller and nothing more. You can also demand a scope -- `new OAuthConfig(Set.of("reports.read"))` answers `403 {"error": "oauth.missing_scope"}` for any verified caller without it. The walkthrough does not, because scopes come from your identity provider and no Catalyst command can add them: a Diagrid login carries `openid profile email offline_access` and nothing else, so requiring one would answer 403 for everybody. [Run Offline Without a Catalyst Project](#run-offline-without-a-catalyst-project) demonstrates the 403 against an issuer that does mint the scope.
+> **On scopes.** `new OAuthConfig()` here requires a *verified* caller and nothing more. You can also demand a scope -- `new OAuthConfig(Set.of("reports.read"))` answers `403 {"error": "oauth.missing_scope"}` for any verified caller without it. The walkthrough does not, because scopes come from your identity provider and no Diagrid command can add them: a Diagrid login carries `openid profile email offline_access` and nothing else, so requiring one would answer 403 for everybody. [Run Offline Without a Diagrid Project](#run-offline-without-a-diagrid-project) demonstrates the 403 against an issuer that does mint the scope.
 
 ### 3. Run the Agent as Yourself
 
@@ -155,7 +155,7 @@ Account ACME-1: 3 open opportunities, $120k pipeline.
 Served to user=...oidc-user/auth0-...  via agent=...ns/prj-.../identity-agent
 ```
 
-Two identities in one call. `user` is you; `agent` is the thing that asked on your behalf. The CRM was never told who you are -- it read both off the token Catalyst minted for that single call, which is why it could also apply your permissions if it had any.
+Two identities in one call. `user` is you; `agent` is the thing that asked on your behalf. The CRM was never told who you are -- it read both off the token Diagrid minted for that single call, which is why it could also apply your permissions if it had any.
 
 Note what `CrmTools.accountSummary` does *not* take: a subject argument. It cannot be told who is calling, so it cannot be lied to.
 
@@ -166,11 +166,11 @@ You can watch both hops in the terminal running `diagrid dev run`:
 == APP - crm-mcp        == account_summary(ACME-1) for user=... via agent=...
 ```
 
-The first line is Catalyst's verdict on your credential. The second is the CRM, one network hop later, independently establishing the same person.
+The first line is Diagrid's verdict on your credential. The second is the CRM, one network hop later, independently establishing the same person.
 
 ### 4. See It Fail Closed
 
-`diagrid dev run` connects Catalyst to `localhost:8006`, so you can also reach the app directly. Doing so bypasses Catalyst, which means the request arrives with no credential attached at all:
+`diagrid dev run` connects Diagrid to `localhost:8006`, so you can also reach the app directly. Doing so bypasses Diagrid, which means the request arrives with no credential attached at all:
 
 ```bash
 curl -i http://localhost:8006/whoami
@@ -198,14 +198,14 @@ That app-wide rule is also why this quickstart exposes no health endpoint and wh
 
 To stop, press CTRL+C in the terminal running `diagrid dev run`.
 
-## Run Offline Without a Catalyst Project
+## Run Offline Without a Diagrid Project
 
 **What this is for.** Two things, and it is opt-in for both:
 
-1. **Try the quickstart with no Catalyst project at all** -- no login, no project, no identity provider.
+1. **Try the quickstart with no Diagrid project at all** -- no login, no project, no identity provider.
 2. **See the `403`**, which the walkthrough above cannot show you. It needs a credential that verifies but lacks a required scope. Here the issuer is yours, so it can mint one deliberately missing the scope.
 
-Two limits worth knowing. This shows the **inbound** half only: with no Catalyst project there is no MCP server to reach, so the agent is given the in-process tool and the on-behalf-of leg does not appear. And only the agent runs, so nothing binds port 8007. The offline issuer is opt-in via `DIAGRID_QUICKSTART_IDENTITY=local` and is not intended for any deployed image.
+Two limits worth knowing. This shows the **inbound** half only: with no Diagrid project there is no MCP server to reach, so the agent is given the in-process tool and the on-behalf-of leg does not appear. And only the agent runs, so nothing binds port 8007. The offline issuer is opt-in via `DIAGRID_QUICKSTART_IDENTITY=local` and is not intended for any deployed image.
 
 ### 1. Start the Local Issuer
 
@@ -310,9 +310,9 @@ The verifier allows 120 seconds of clock skew, so this credential is five minute
 
 ## How It Works
 
-The credential the app verifies is **not** the one the caller sent. Catalyst verifies the caller's identity-provider token and passes a Catalyst-signed identity to the app in `X-Diagrid-User-Token`. Your application never sees the original token and never talks to your identity provider.
+The credential the app verifies is **not** the one the caller sent. Diagrid verifies the caller's identity-provider token and passes a Diagrid-signed identity to the app in `X-Diagrid-User-Token`. Your application never sees the original token and never talks to your identity provider.
 
-That is what makes the app's configuration so small. `new OAuthConfig()` names a policy and nothing else -- here, "a verified caller is required". The issuer, audience and JWKS URI are read from Catalyst at first use, so changing identity providers changes nothing in the app.
+That is what makes the app's configuration so small. `new OAuthConfig()` names a policy and nothing else -- here, "a verified caller is required". The issuer, audience and JWKS URI are read from Diagrid at first use, so changing identity providers changes nothing in the app.
 
 The filter then does five things in order, and stops at the first failure:
 
@@ -324,23 +324,23 @@ The filter then does five things in order, and stops at the first failure:
 
 Only after step 5 does any of this repository's code run. Both handlers in `IdentityController` call `OAuthFilter.verifiedUser(request).orElseThrow()` and can treat the result as trustworthy, because an untrustworthy request never reached them.
 
-Inside the agent, identity is deliberately ordinary. `POST /agent/run` passes the verified subject in `.toolContext(...)`, and the tool reads it from there. The tool context belongs to the application: unlike a message or a tool argument, the model never sees it and cannot rewrite it. Nothing about the agent is Diagrid-specific, which is the point -- the same agent runs unchanged off Catalyst, just without a verified caller to run it for.
+Inside the agent, identity is deliberately ordinary. `POST /agent/run` passes the verified subject in `.toolContext(...)`, and the tool reads it from there. The tool context belongs to the application: unlike a message or a tool argument, the model never sees it and cannot rewrite it. Nothing about the agent is Diagrid-specific, which is the point -- the same agent runs unchanged off Diagrid, just without a verified caller to run it for.
 
 ## Files
 
 | File | Purpose |
 |------|---------|
 | `pom.xml` | The aggregator over both modules, so one `mvn package` builds the agent and the CRM |
-| `identity-agent/.../EnterpriseIdentityApplication.java` | The one-bean identity install, and the choice between Catalyst's identity plane and the offline issuer |
+| `identity-agent/.../EnterpriseIdentityApplication.java` | The one-bean identity install, and the choice between Diagrid's identity plane and the offline issuer |
 | `identity-agent/.../IdentityController.java` | `GET /whoami` and `POST /agent/run`, and the only place this app touches identity |
 | `identity-agent/.../AgentConfig.java` | The `ChatClient` and the tool it is given. Every hop happens on the request thread |
 | `identity-agent/.../BookingTools.java` | `my_bookings(subject)`, which runs in-process and answers for the verified subject rather than the one the model asked for |
-| `identity-agent/.../CrmTools.java` | `account_summary(accountId)`, which takes no subject at all and goes out through Catalyst's MCP proxy |
+| `identity-agent/.../CrmTools.java` | `account_summary(accountId)`, which takes no subject at all and goes out through Diagrid's MCP proxy |
 | `identity-agent/.../CatalystMcpClient.java` | The MCP client, and the hand-off that carries the caller onto the thread the transport sends from |
 | `identity-agent/.../AgentToolContext.java` | The tool context: the verified subject and the tool transcript, both owned by the application |
 | `identity-agent/.../CannedChatModel.java` | The deterministic canned model, so the quickstart needs no API key |
 | `identity-agent/.../LocalIdentityIssuer.java` | The opt-in throwaway issuer used by the offline section and by the tests. Never part of a deployment |
-| `crm-mcp/.../CrmTools.java` | The stand-in CRM's one tool. It reports the user and the agent it was called for, and verifies nothing -- Catalyst already did |
+| `crm-mcp/.../CrmTools.java` | The stand-in CRM's one tool. It reports the user and the agent it was called for, and verifies nothing -- Diagrid already did |
 | `resources/` | The `MCPServer` registration and the access policy whose `requireUser: true` turns on on-behalf-of |
 | `dev-enterprise-identity.yaml` | The `diagrid dev run` file: `identity-agent` on port 8006, `crm-mcp` on 8007 |
 | `identity-agent/src/test/java/...` | The offline tests: `401`, `403`, `200`, the verified subject reaching the tool, and the outbound hand-off. `mvn test` |

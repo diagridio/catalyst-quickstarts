@@ -12,7 +12,7 @@ Change the README, change this file, and `docsync/check_readme_sync.py --all`
 will tell you if you changed only one.
 
 What this suite covers. The quickstart demonstrates inbound end-user identity:
-Catalyst verifies the caller and passes a verified identity to the app in
+Diagrid verifies the caller and passes a verified identity to the app in
 `X-Diagrid-User-Token`. The suite asserts the plumbing -- build, documented
 provisioning, the app serving -- plus the one HTTP outcome that is deterministic
 without a credential: an unauthenticated request is refused 401 on both
@@ -33,7 +33,7 @@ FAMILY = "agents"
 NAME = "enterprise-identity-js"
 LANGUAGE = "javascript"
 
-# README "## Run with Catalyst", step 1. Replaced by an ephemeral qs-ci-* name at
+# README "## Run with Diagrid", step 1. Replaced by an ephemeral qs-ci-* name at
 # run time; also what doc-sync maps onto `{project}` when comparing.
 #
 # Deliberately NOT the Python quickstart's `enterprise-identity-quickstart`: the
@@ -56,7 +56,7 @@ APP_ID = "identity-agent"
 APP_PORT = 8006
 
 # `identity-agent` is created before the MCPServer on purpose: crm-mcp.yaml
-# scopes the CRM to that App ID, and Catalyst rejects a scope naming an App ID
+# scopes the CRM to that App ID, and Diagrid rejects a scope naming an App ID
 # that does not exist yet. The CRM's own App ID must NOT be created here --
 # registering the MCP server creates it, and a hand-made one collides by name.
 
@@ -83,7 +83,7 @@ SETUP = (
 # a no-op on the lockfile.
 INSTALL = "npm install"
 
-# README "## Run with Catalyst", step 1, item 4. Bare of `--project` on purpose:
+# README "## Run with Diagrid", step 1, item 4. Bare of `--project` on purpose:
 # the documented `project create` carries `--use`, and reproducing that
 # dependency is deliberate, so a regression in `--use` breaks this suite instead
 # of silently breaking readers.
@@ -107,7 +107,7 @@ RUN = (
 # documented command, and doc-sync would correctly reject it.
 TEARDOWN = ()
 
-# README "## Run with Catalyst", step 1, item 4: "Wait until the output shows
+# README "## Run with Diagrid", step 1, item 4: "Wait until the output shows
 # `Listening on http://0.0.0.0:8006`". Transcribed complete rather than
 # truncated at `Listening on`: main.ts really binds host 0.0.0.0 on APP_PORT,
 # which dev-enterprise-identity.yaml sets to 8006, and the README prints the
@@ -164,9 +164,9 @@ CONNECTED_APPS = ((APP_ID, APP_PORT),)
 # exists for is not one this suite enters.
 #
 # Left empty rather than guessed for the ordinary reason too: the marker is
-# whatever THIS app's logging makes visible for an inbound request from Catalyst,
+# whatever THIS app's logging makes visible for an inbound request from Diagrid,
 # and nobody has watched this app's dev-run output yet. express has no access log
-# at all by default -- unlike uvicorn in the Python sibling, where Catalyst's
+# at all by default -- unlike uvicorn in the Python sibling, where Diagrid's
 # `GET /dapr/config` probe would at least appear -- so there may be no candidate
 # line to fill in. A marker that never appears makes the gate time out loudly; a
 # marker matched from the wrong line lets the suite through early and silently.
@@ -210,7 +210,7 @@ SECRETS = ()
 #
 # The four outcomes below were MEASURED, not reasoned, against
 # @diagrid/agent-core 0.2.0 in this quickstart's own node_modules -- main.ts's
-# `buildApp` over its two real routes, with the offline issuer and no Catalyst:
+# `buildApp` over its two real routes, with the offline issuer and no Diagrid:
 #
 #     GET  /whoami    no header             -> 401 {"error": "oauth.missing_token"}
 #                                              Cache-Control: no-store
@@ -232,7 +232,7 @@ SECRETS = ()
 # live in a test that can present a credential:
 # agents/langgraphjs/enterprise-identity/identity.test.ts, which mints one
 # offline. That test cannot substitute for this suite either -- it exercises no
-# Catalyst at all -- so the two are complements, and neither alone proves the
+# Diagrid at all -- so the two are complements, and neither alone proves the
 # live inbound path.
 #
 # The status is a TRANSCRIPTION here, unlike most agent suites: the README prints
@@ -311,11 +311,11 @@ UNCOVERED = (
     ),
     (
         "DIAGRID_QUICKSTART_IDENTITY=local APP_PORT=8006 npm start",
-        "README '## Run Offline Without a Catalyst Project'. It replaces Catalyst "
+        "README '## Run Offline Without a Diagrid Project'. It replaces Diagrid "
         "with a throwaway in-process issuer to make the 200, 403 and 401 reachable "
         "with no project at all, and it binds the same port 8006 as `dev run`. That "
         "makes it an alternative to this suite's entire flow rather than a step "
-        "inside it: it exercises no Catalyst, and running it here would collide "
+        "inside it: it exercises no Diagrid, and running it here would collide "
         "with the app this suite already has serving. The 200 and 403 paths this "
         "suite cannot reach are covered instead by "
         "agents/langgraphjs/enterprise-identity/identity.test.ts, which drives the "

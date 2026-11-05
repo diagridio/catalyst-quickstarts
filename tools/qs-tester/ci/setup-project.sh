@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Create the ephemeral Catalyst project for one matrix leg.
+# Create the ephemeral Diagrid project for one matrix leg.
 #
 # Reads:  DIAGRID_API_KEY (required), LANG_ID (required), GITHUB_RUN_ID (optional)
 # Writes: PROJECT to $GITHUB_ENV when running under Actions; always echoes it.

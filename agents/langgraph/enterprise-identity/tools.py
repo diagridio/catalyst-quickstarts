@@ -2,7 +2,7 @@
 
 `my_bookings` runs in-process and is handed the caller's subject as an argument.
 `account_summary` leaves the process and takes no subject at all: the caller
-travels in a token Catalyst mints for that one call, so the CRM establishes who
+travels in a token Diagrid mints for that one call, so the CRM establishes who
 is asking for itself rather than believing the agent.
 """
 
@@ -26,7 +26,7 @@ def my_bookings(subject: str) -> str:
 
 MCP_SERVER_NAME = "crm-mcp"
 
-# Catalyst's MCP proxy: reaching the tool through this path is what attaches the
+# Diagrid's MCP proxy: reaching the tool through this path is what attaches the
 # calling user. Calling the CRM directly would not.
 MCP_URL = (
     f"{os.environ.get('DAPR_HTTP_ENDPOINT', 'http://localhost:3500')}"

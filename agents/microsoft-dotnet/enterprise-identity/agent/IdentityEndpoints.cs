@@ -18,7 +18,7 @@ public sealed class IdentityEndpoints
     {
     }
 
-    /// <summary>Who Catalyst says is calling. No model turn, so the 401/200 contrast is free.</summary>
+    /// <summary>Who Diagrid says is calling. No model turn, so the 401/200 contrast is free.</summary>
     public static IResult WhoAmI(HttpContext context)
     {
         ArgumentNullException.ThrowIfNull(context);

@@ -176,7 +176,7 @@ public class CannedChatClientTests
     [Fact]
     public void KeepsTheTypeNameTheAgentRegistryDisplays()
     {
-        // The Catalyst agent registry reports the concrete type's name verbatim as this agent's LLM
+        // The Diagrid agent registry reports the concrete type's name verbatim as this agent's LLM
         // client, so renaming this class silently changes what a user sees on the agent page and
         // nothing else here would notice.
         Assert.Equal("CannedChatClient", typeof(CannedChatClient).Name);

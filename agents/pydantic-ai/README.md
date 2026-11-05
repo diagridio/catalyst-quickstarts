@@ -9,7 +9,7 @@ This quickstart demonstrates how to run a Pydantic AI agent as a durable Dapr Wo
 - **Tool Integration**: Decoration search tool with mock results
 - **Pub/Sub Messaging**: Subscribe to a request topic and publish results for event-driven orchestration
 - **REST API**: Trigger agent workflows via HTTP endpoints
-- **Durable Crash Recovery**: Resume a workflow from the last completed step after a crash (see [Crash Recovery Test With Catalyst](#crash-recovery-test-with-catalyst))
+- **Durable Crash Recovery**: Resume a workflow from the last completed step after a crash (see [Crash Recovery Test With Diagrid](#crash-recovery-test-with-diagrid))
 
 ### Role
 
@@ -24,7 +24,7 @@ This quickstart demonstrates how to run a Pydantic AI agent as a durable Dapr Wo
 
 ## Prerequisites
 
-1. A [Diagrid Catalyst account](https://catalyst.diagrid.io/)
+1. A [Diagrid account](https://catalyst.diagrid.io/)
 2. [Diagrid CLI](https://docs.diagrid.io/getting-started/install-cli) installed
 3. [Python 3.12–3.13](https://www.python.org/downloads/)
 4. [uv](https://docs.astral.sh/uv/getting-started/installation/) installed
@@ -55,17 +55,17 @@ export OPENAI_API_KEY="your-key-here"
 $env:OPENAI_API_KEY = "your-key-here"
 ```
 
-## Run with Catalyst
+## Run with Diagrid
 
 ### 1. Login and Run
 
-1. Login to Catalyst using the Diagrid CLI:
+1. Login to Diagrid using the Diagrid CLI:
 
 ```bash
 diagrid login
 ```
 
-2. Create a new Catalyst project for the quickstart and use it as the default project for the current session:
+2. Create a new Diagrid project for the quickstart and use it as the default project for the current session:
 
 ```bash
 diagrid project create pydantic-ai-quickstart --deploy-managed-kv --deploy-managed-pubsub --wait --use
@@ -77,7 +77,7 @@ diagrid project create pydantic-ai-quickstart --deploy-managed-kv --deploy-manag
 diagrid agent create decoration-planner --wait
 ```
 
-4. Run the agent with Catalyst:
+4. Run the agent with Diagrid:
 
 ```bash
 uv run diagrid dev run -f dev-python-pydantic-ai.yaml --approve
@@ -105,11 +105,11 @@ Invoke-RestMethod -Method Post -Uri 'http://localhost:8008/agent/run' -ContentTy
 
 **VS Code REST Client (any OS):** Open [`test.http`](./test.http) and click *Send Request* above the request. Requires the [REST Client](https://marketplace.visualstudio.com/items?itemName=humao.rest-client) extension.
 
-### 3. Inspecting the Results in Catalyst
+### 3. Inspecting the Results in Diagrid
 
-Open the [Catalyst dashboard](https://catalyst.diagrid.io/agents) in your browser and navigate to Agents > decoration-planner. Then select the most recent agent workflow run to view output.
+Open the [Diagrid Console](https://catalyst.diagrid.io/agents) in your browser and navigate to Agents > decoration-planner. Then select the most recent agent workflow run to view output.
 
-## Crash Recovery Test With Catalyst
+## Crash Recovery Test With Diagrid
 
 The `crash_test.py` file demonstrates durable crash recovery, a capability not offered by Pydantic AI natively. It defines 3 tools, where tool 2 deliberately takes about 10 seconds, and a `POST /crash/kill` endpoint that kills the process outright. Nothing is armed: the crash is a request you make, so there is no source edit, no environment variable to unset, and no second run file.
 
@@ -117,9 +117,9 @@ The `crash_test.py` file demonstrates durable crash recovery, a capability not o
 2. **step_two_compare**: compares packages over ~10 seconds. Kill the app during this
 3. **step_three_confirm**: confirms the booking. Instant
 
-The tool order is the point. `step_one_search` completes and Catalyst records its result before `step_two_compare` starts, so the crash lands between two known points and the restart can show that only the interrupted tool ran again. Each tool logs itself as `TOOL 1`, `TOOL 2` and `TOOL 3`, which is how you follow it in the app log.
+The tool order is the point. `step_one_search` completes and Diagrid records its result before `step_two_compare` starts, so the crash lands between two known points and the restart can show that only the interrupted tool ran again. Each tool logs itself as `TOOL 1`, `TOOL 2` and `TOOL 3`, which is how you follow it in the app log.
 
-You also choose the workflow instance ID, so you can find the same run again from a second request or in the Catalyst console.
+You also choose the workflow instance ID, so you can find the same run again from a second request or in the Diagrid Console.
 
 ### 4. Start the app
 
@@ -219,7 +219,7 @@ The endpoint calls `os._exit(1)`, so the process is gone before it can answer an
 == APP - decoration-planner == >>> /crash/kill: killing this process to simulate a worker crash
 ```
 
-The workflow instance `gala-42` is unaffected. It lives in Catalyst, not in the process you just killed.
+The workflow instance `gala-42` is unaffected. It lives in Diagrid, not in the process you just killed.
 
 ### 7. Restart the app
 
@@ -229,7 +229,7 @@ Restart with the same command as step 4:
 uv run diagrid dev run -f dev-crash-test.yaml --approve
 ```
 
-**That is the whole recovery. You do not have to send anything.** The run resumes by itself, and no HTTP request is involved: as soon as the restarted app's worker reconnects, Catalyst hands `gala-42` back to it, `step_two_compare` starts over from the beginning, and about 10 seconds later the agent finishes. Watch the app log, where all of this happens before you send anything:
+**That is the whole recovery. You do not have to send anything.** The run resumes by itself, and no HTTP request is involved: as soon as the restarted app's worker reconnects, Diagrid hands `gala-42` back to it, `step_two_compare` starts over from the beginning, and about 10 seconds later the agent finishes. Watch the app log, where all of this happens before you send anything:
 
 ```text
 == APP - decoration-planner == >>> TOOL 2: Comparing packages over ~10s. KILL THE APP NOW to test crash recovery (POST /crash/kill, or kill -9). It resumes on restart.
@@ -238,7 +238,7 @@ uv run diagrid dev run -f dev-crash-test.yaml --approve
 == APP - decoration-planner == >>> TOOL 3 COMPLETE: Decorations confirmed with Elegant Events Decor
 ```
 
-`step_one_search` is **not** re-executed: its `TOOL 1` lines do not appear a second time. That tool had completed and Catalyst had recorded its result, so the Dapr workflow engine replayed the saved value instead of running the tool again. Only the tool that was interrupted runs twice.
+`step_one_search` is **not** re-executed: its `TOOL 1` lines do not appear a second time. That tool had completed and Diagrid had recorded its result, so the Dapr workflow engine replayed the saved value instead of running the tool again. Only the tool that was interrupted runs twice.
 
 ### 8. Collect the answer
 

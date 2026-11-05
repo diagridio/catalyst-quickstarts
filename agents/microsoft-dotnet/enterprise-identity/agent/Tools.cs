@@ -7,7 +7,7 @@ namespace EnterpriseIdentity;
 /// <summary>
 /// The two ways an agent can act for someone. <see cref="MyBookings(string)"/> runs in-process and
 /// is built around the caller's verified subject; <see cref="AccountSummary(HttpClient,
-/// ILoggerFactory)"/> leaves the process, carrying the caller in a token Catalyst mints per call.
+/// ILoggerFactory)"/> leaves the process, carrying the caller in a token Diagrid mints per call.
 /// </summary>
 public static class Tools
 {
@@ -15,7 +15,7 @@ public static class Tools
 
     public const string AccountSummaryToolName = "account_summary";
 
-    /// <summary>The MCP server as registered with Catalyst in <c>resources/crm-mcp.yaml</c>.</summary>
+    /// <summary>The MCP server as registered with Diagrid in <c>resources/crm-mcp.yaml</c>.</summary>
     private const string McpServerName = "crm-mcp";
 
     private const string DefaultDaprHttpEndpoint = "http://localhost:3500";
@@ -75,7 +75,7 @@ public static class Tools
             "Summarise a CRM account. Runs as the user who invoked the agent.");
 
     /// <summary>
-    /// Catalyst's MCP proxy for the CRM. Reaching a tool through this path is what attaches the
+    /// Diagrid's MCP proxy for the CRM. Reaching a tool through this path is what attaches the
     /// calling user; calling the CRM directly would not.
     /// </summary>
     private static string McpUrl()

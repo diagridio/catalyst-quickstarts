@@ -7,7 +7,7 @@ Run from this directory with:
 pytest is an ephemeral dependency on purpose. It is not in pyproject.toml and
 not in uv.lock, so nothing here forces a lock regeneration.
 
-No Catalyst, no Dapr, no network and no API key: these assertions all sit at the
+No Diagrid, no Dapr, no network and no API key: these assertions all sit at the
 model boundary. Nothing here is a copy of production data. The canned turns come
 from fake_model.build_canned_model(), which is what main.py's build_model()
 returns, and the tool comes from tools.py, which is what main.py wires into the
@@ -176,7 +176,7 @@ def test_bind_tools_returns_the_same_model(model):
 
 
 def test_console_can_read_the_model_name(model):
-    # The Catalyst agent registry finds the model by scanning the graph node's
+    # The Diagrid agent registry finds the model by scanning the graph node's
     # globals for a type whose name contains "chat" and which exposes
     # model_name or model. Both halves are load-bearing: drop either and the
     # console reports this agent's model as "unknown" on the page the README

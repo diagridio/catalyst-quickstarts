@@ -15,7 +15,7 @@
   <description>A stand-in CRM behind MCP, which reports the user and the agent a call arrived for</description>
 
   <dependencies>
-    <!-- The MCP streamable-HTTP endpoint resources/crm-mcp.yaml registers with Catalyst,
+    <!-- The MCP streamable-HTTP endpoint resources/crm-mcp.yaml registers with Diagrid,
          auto-configured rather than hand-rolled. -->
     <dependency>
       <groupId>org.springframework.ai</groupId>
@@ -24,7 +24,7 @@
   </dependencies>
 
   <!-- NO identity dependency, and that is the point of the module rather than an omission. The CRM
-       verifies nothing: Catalyst verified the caller before this process was reached, and minted the
+       verifies nothing: Diagrid verified the caller before this process was reached, and minted the
        on-behalf-of token that arrives here. This app only decodes it in order to show it. -->
 
   <build>

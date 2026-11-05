@@ -31,7 +31,7 @@ jobs:
           distribution: temurin
           cache: maven
 
-      # No credentials and no network: the tests stand the Catalyst identity
+      # No credentials and no network: the tests stand the Diagrid identity
       # plane up in-process (LocalIdentityIssuer generates a throwaway RSA key
       # and serves JWKS on a loopback port) and drive the real OAuthFilter in a
       # real filter chain through MockMvc. So the 200 and the 403 the Robot suite

@@ -32,7 +32,7 @@ jobs:
       # No filename: pyproject.toml pins python_files to test_*.py, so every test
       # file in the directory runs and a new one needs no edit here.
       #
-      # No credentials and no network: the tests stand the Catalyst identity
+      # No credentials and no network: the tests stand the Diagrid identity
       # plane up in-process (local_identity.build_local_issuer) and drive the
       # app under starlette's TestClient, so the 200 and 403 paths the Robot
       # suite cannot reach are covered here instead.

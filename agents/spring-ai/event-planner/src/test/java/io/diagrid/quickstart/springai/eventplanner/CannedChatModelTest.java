@@ -23,7 +23,7 @@ import org.springframework.ai.model.tool.ToolCallingChatOptions;
  *
  * <p>Every case here stands for something outside this file that would otherwise break silently:
  * the three tool names and their parameter names in {@link EventPlannerTools}, the durability
- * layer's tool-callback wiring, and the string the Catalyst console displays as this agent's model.
+ * layer's tool-callback wiring, and the string the Diagrid Console displays as this agent's model.
  *
  * <p>The case that matters most is {@link #asksForStepTwoAgainWhenItsResultIsMissing()}: it is the
  * conversation the durability layer replays after the crash this quickstart is built around, and
@@ -205,7 +205,7 @@ class CannedChatModelTest {
 
   @Test
   void exposesToolCallingOptionsCarryingTheModelName() {
-    // The model string is what the agent registry reads for the Catalyst console, and the inherited
+    // The model string is what the agent registry reads for the Diagrid Console, and the inherited
     // default would leave it null. The ToolCallingChatOptions type is what lets the durability layer
     // attach the workflow's tool callbacks, which the registry reads back as this agent's
     // per-request tool list.
@@ -221,7 +221,7 @@ class CannedChatModelTest {
   @Test
   void keepsTheClassNameTheAgentRegistryDerivesTheProviderFrom() {
     // The registry strips a trailing "ChatModel" from this type's simple name and lowercases the
-    // rest to get the provider string on the Catalyst agent page. Renaming this class silently
+    // rest to get the provider string on the Diagrid agent page. Renaming this class silently
     // changes what a user sees there, and nothing else here would notice. Pinned as the whole name
     // rather than by re-implementing the derivation, which lives in the library.
     assertEquals("CannedChatModel", CannedChatModel.class.getSimpleName());

@@ -40,7 +40,7 @@ const BODY_PARSE_FAILED = 'entity.parse.failed';
 const DEFAULT_APP_PORT = 8006;
 const HOST = '0.0.0.0';
 
-// The offline issuer has no Catalyst project behind it, and so no MCP server to
+// The offline issuer has no Diagrid project behind it, and so no MCP server to
 // reach: that mode runs the in-process tool instead.
 const OFFLINE_IDENTITY = process.env['DIAGRID_QUICKSTART_IDENTITY'] === 'local';
 const tools = OFFLINE_IDENTITY ? localTools : catalystTools;
@@ -129,7 +129,7 @@ export const compiled = new StateGraph(MessagesAnnotation)
 /**
  * The identity policy the middleware enforces on every request.
  *
- * Against Catalyst this is one empty object: issuer, audience and JWKS URI are
+ * Against Diagrid this is one empty object: issuer, audience and JWKS URI are
  * all discovered, so the app configures none of them.
  *
  * The dynamic import is load-bearing: .dockerignore keeps local_identity.ts out
@@ -185,7 +185,7 @@ export function buildApp(config: OAuthConfig): express.Express {
   // cache to store one person's identity.
   app.disable('etag');
 
-  // --- The entire Catalyst identity integration ----------------------------
+  // --- The entire Diagrid identity integration ----------------------------
   app.use(oauthMiddleware(config));
   // -------------------------------------------------------------------------
 
@@ -193,7 +193,7 @@ export function buildApp(config: OAuthConfig): express.Express {
   // before the app spends anything on its body. `type` parses any Content-Type.
   const parseJsonBody = express.json({ type: () => true });
 
-  /** Who Catalyst says is calling. */
+  /** Who Diagrid says is calling. */
   app.get('/whoami', (req, res) => {
     const user = requireUser(req, res);
     if (!user) {

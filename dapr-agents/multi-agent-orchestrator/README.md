@@ -50,13 +50,13 @@ metadata:
 
 ### 1. Deploy and Run the Agents
 
-Login to Diagrid Catalyst using the following command:
+Login to Diagrid using the following command:
 
 ```bash
 diagrid login
 ```
 
-Create a Catalyst project for the quickstart:
+Create a Diagrid project for the quickstart:
 
 ```bash
 diagrid project create multi-agent-orchestrator-quickstart --deploy-managed-kv --deploy-managed-pubsub --wait
@@ -70,7 +70,7 @@ diagrid agent create triage-agent --project multi-agent-orchestrator-quickstart 
 diagrid agent create expert-agent --project multi-agent-orchestrator-quickstart --wait
 ```
 
-Deploy the agents to Catalyst with managed infrastructure:
+Deploy the agents to Diagrid with managed infrastructure:
 
 ```bash
 diagrid dev run -f dapr.yaml --project multi-agent-orchestrator-quickstart --approve
@@ -120,11 +120,11 @@ In the **multi-agent workflow** example, the sequence (triage then expert) is ha
 
 ---
 
-## Monitoring in Catalyst
+## Monitoring in Diagrid
 
 ### Check Workflow Execution
 
-* Navigate to Catalyst dashboard → **Workflows**
+* Navigate to Diagrid Console → **Workflows**
 * View real-time execution progress and detailed logs
 * Inspect how the orchestrator delegates to child agents
 
@@ -137,7 +137,7 @@ The agents use shared state stores:
 
 ### View Application Architecture
 
-* In Catalyst dashboard → **Application Map**
+* In Diagrid Console → **Application Map**
 * See the `support-multi-agent-orchestrator`, `triage-agent`, and `expert-agent` services
 * Observe pub/sub connections and state store dependencies
 

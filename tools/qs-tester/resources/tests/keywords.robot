@@ -1,5 +1,5 @@
 *** Comments ***
-Tests for the keywords the agent-family suites depend on. Needs no Catalyst
+Tests for the keywords the agent-family suites depend on. Needs no Diagrid
 project, no credentials and no network: the HTTP assertions run against
 echo_server.py on localhost. Runs in CI's lint job alongside smoke.robot.
 
@@ -210,7 +210,7 @@ Wait Until Ready Marker Fails When The Marker Never Arrives
 
 Wait Until Catalyst Attached Finds A Probe That Arrives Late
     [Documentation]    The gate's whole job is to keep the suite from triggering
-    ...    before Catalyst has attached to the app, so it has to wait rather than
+    ...    before Diagrid has attached to the app, so it has to wait rather than
     ...    read the log once and give up.
     Start Background Process
     ...    bash -c 'echo "Uvicorn running on"; sleep 2; echo "INFO: 10.0.85.58:0 - \\"GET /dapr/config HTTP/1.1\\" 404 Not Found"'
@@ -218,8 +218,8 @@ Wait Until Catalyst Attached Finds A Probe That Arrives Late
     Wait Until Catalyst Attached    ${TEMPDIR}/attached.log    GET /dapr/config
     [Teardown]    Run Keyword And Ignore Error    Stop Process Tree    attachtest
 
-Wait Until Catalyst Attached Fails When Catalyst Never Probes
-    [Documentation]    An app that is up locally but that Catalyst never attaches
+Wait Until Catalyst Attached Fails When Diagrid Never Probes
+    [Documentation]    An app that is up locally but that Diagrid never attaches
     ...    to must fail here, not sail through into the window. Passing vacuously
     ...    is unrecoverable: the first workflow call made too early hangs forever,
     ...    and no retry gets it back — measured 2026-08-27, 12 retries over 181s.
@@ -228,17 +228,17 @@ Wait Until Catalyst Attached Fails When Catalyst Never Probes
     # Match the gate's own message, not a status flag: `Run Keyword And Return
     # Status` returns False for a keyword that does not exist either, so a
     # status-only assertion passes against a gate nobody has written yet.
-    Run Keyword And Expect Error    *Catalyst never probed the app*
+    Run Keyword And Expect Error    *Diagrid never probed the app*
     ...    Wait Until Catalyst Attached    ${TEMPDIR}/unattached.log    GET /dapr/config
 
 Wait Until Apps Connected Is Bounded By CONNECT_TIMEOUT Not READINESS_TIMEOUT
     [Documentation]    The connection gate needs its own budget. It legitimately
-    ...    takes 32-36s against real Catalyst, while the two waits that follow it
+    ...    takes 32-36s against real Diagrid, while the two waits that follow it
     ...    take about five seconds each — so a mutation run that shortens
     ...    ${READINESS_TIMEOUT} to make a mutated assertion give up quickly used to
     ...    starve this gate instead, and the run died here having never reached the
     ...    mutation. `check_mutation.py` correctly rejected the result (the target
-    ...    keyword was NOT RUN), but only after a Catalyst project had been spent.
+    ...    keyword was NOT RUN), but only after a Diagrid project had been spent.
     ...
     ...    So: shortening READINESS_TIMEOUT must NOT shorten this keyword.
     Set Test Variable    ${READINESS_TIMEOUT}    2s

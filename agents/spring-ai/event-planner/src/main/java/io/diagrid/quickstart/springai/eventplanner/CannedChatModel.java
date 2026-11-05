@@ -42,7 +42,7 @@ import org.springframework.ai.model.tool.ToolCallingChatOptions;
  * first. The sibling {@code crash-recovery} quickstart is the same idea with the crash requested
  * over HTTP instead of edited into the source.
  *
- * <p><b>The class name is load-bearing.</b> The agent registry derives what the Catalyst console
+ * <p><b>The class name is load-bearing.</b> The agent registry derives what the Diagrid Console
  * displays from this type: the simple name becomes the LLM client, and the same name with a trailing
  * {@code ChatModel} stripped and lowercased becomes the provider. So this registers as client
  * {@code CannedChatModel}, provider {@code canned}. Renaming it silently changes what a user sees on
@@ -108,7 +108,7 @@ public class CannedChatModel implements ChatModel {
    * Not the inherited default, which returns a plain {@link ChatOptions} whose model is null.
    *
    * <p>The model string is the reason this override exists: the agent registry reads
-   * {@code getDefaultOptions().getModel()} for what the Catalyst console shows, and the inherited
+   * {@code getDefaultOptions().getModel()} for what the Diagrid Console shows, and the inherited
    * default would leave it blank.
    *
    * <p>It is a {@link ToolCallingChatOptions} rather than a plain {@code ChatOptions} because the

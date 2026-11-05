@@ -1,5 +1,5 @@
 ### Invocation API Test Suite
-### Based on Diagrid Catalyst Invocation Quickstart
+### Based on Diagrid Invocation Quickstart
 ### https://docs.diagrid.io/catalyst/quickstart/invocation
 
 ### Health Check

@@ -24,8 +24,8 @@ A new agent-family suite gets its own module,
 | `TEARDOWN` | `tuple[str, ...]` | The README's own cleanup commands. Empty if the README documents none. |
 | `READY_MARKERS` | `tuple[str, ...]` | One string per app that announces itself in the `diagrid dev run` output. |
 | `HEALTH_PROBES` | `tuple[tuple[int, str], ...]` | `(port, path)` pairs `Wait Until Apps Healthy` polls for a 200 before any assertion runs. The path is per app and must be a route the app actually serves — see "Probe a path the app really serves" below. |
-| `CATALYST_PROBE_MARKERS` | `tuple[str, ...]` | Strings that appear in the captured `diagrid dev run` output once Catalyst has attached to the app and probes it back through the tunnel — `Wait Until Catalyst Attached` waits for each before any documented request runs. Guards the window in which a workflow call **hangs unrecoverably**. Like `READY_MARKERS`, this is whatever the app's own logging makes visible for an *inbound* request, so it is a property of the framework, not of Catalyst. Empty is legal and means "not observed for this quickstart"; see "The Catalyst-attach gate" below. |
-| `CONNECTED_APPS` | `tuple[tuple[str, int], ...]` | `(appID, port)` pairs `diagrid dev run` reports as `Connected App ID "<id>" to http://localhost:<port>`. Required: `Start Quickstart` records these so `Stop Quickstart` can release each local app connection, and a run that skips this leaves a `trust.diagrid.io` endpoint pointing at a dead tunnel, which makes the next run's 500s ambiguous. See `variables/agents_langgraph.py`'s `CONNECTED_APPS` for the worked example, read from the dev config and confirmed against the 2026-08-27 live run — `diagrid dev run` does print the line for an agent app. Note what it does not prove: the line means the local dev tunnel is up, not that Catalyst can route the app's workflow calls, which is what `CATALYST_PROBE_MARKERS` is for. |
+| `CATALYST_PROBE_MARKERS` | `tuple[str, ...]` | Strings that appear in the captured `diagrid dev run` output once Diagrid has attached to the app and probes it back through the tunnel — `Wait Until Catalyst Attached` waits for each before any documented request runs. Guards the window in which a workflow call **hangs unrecoverably**. Like `READY_MARKERS`, this is whatever the app's own logging makes visible for an *inbound* request, so it is a property of the framework, not of Diagrid. Empty is legal and means "not observed for this quickstart"; see "The Diagrid-attach gate" below. |
+| `CONNECTED_APPS` | `tuple[tuple[str, int], ...]` | `(appID, port)` pairs `diagrid dev run` reports as `Connected App ID "<id>" to http://localhost:<port>`. Required: `Start Quickstart` records these so `Stop Quickstart` can release each local app connection, and a run that skips this leaves a `trust.diagrid.io` endpoint pointing at a dead tunnel, which makes the next run's 500s ambiguous. See `variables/agents_langgraph.py`'s `CONNECTED_APPS` for the worked example, read from the dev config and confirmed against the 2026-08-27 live run — `diagrid dev run` does print the line for an agent app. Note what it does not prove: the line means the local dev tunnel is up, not that Diagrid can route the app's workflow calls, which is what `CATALYST_PROBE_MARKERS` is for. |
 | `SECRETS` | `tuple[str, ...]` | Environment variable names the suite's `Require Env Var` loop checks before doing anything else — the model provider keys. |
 | `REQUESTS` | `tuple[dict, ...]` | The documented trigger calls, in documented order. Keys below. |
 | `UNCOVERED` | `tuple[tuple[str, str], ...]` | `(documented command, reason)` pairs for commands the suite deliberately does not run. |
@@ -170,7 +170,7 @@ enforces that. A prose mention is not evidence the app prints anything: this
 suite shipped `check_availability` as its marker because the README says "Use the
 `check_availability` tool" and `main.py` defines that tool — but `call_tools`
 invokes it without logging, so the marker could never match and the suite timed
-out against real Catalyst. Pick a string the app really prints, and document it
+out against real Diagrid. Pick a string the app really prints, and document it
 in a block of that app's output (any fence language: `text`, `console` or
 untagged). `READY_MARKERS` is deliberately exempt — `agents/langgraph` documents
 `Uvicorn running on` as inline code in a sentence, which is a fine way to
@@ -371,7 +371,7 @@ reader following the README will hit and you will not.
 
 So: leave `SETUP` empty, write a comment in the data module that provisioning is
 undocumented, and ask which flags the project actually needs before running
-anything against Catalyst. State what you know (the quickstart's `dev run`
+anything against Diagrid. State what you know (the quickstart's `dev run`
 passes no `--project` at all; the README documents no command that creates one;
 the flags every other agent quickstart documents are these) and what needs a
 decision.
@@ -415,12 +415,12 @@ route `/` (`state/python/main.py`, `state/csharp/Program.cs`,
 `workflow`, `pubsub` and `invocation`), so
 `quickstarts.get_quickstart` pairs every port with `/`.
 
-## The Catalyst-attach gate
+## The Diagrid-attach gate
 
 Every readiness signal above is satisfied by the **local process**. The
 `Connected App ID` line means the dev tunnel is up. `Uvicorn running on` means
 the app's own server is listening. A 200 from `HEALTH_PROBES` means the app
-routes that path. None of them means Catalyst has attached to the app — and
+routes that path. None of them means Diagrid has attached to the app — and
 until it has, a workflow call does not fail, it **hangs and never recovers**.
 
 Measured on `agents/langgraph` against a real project, 2026-08-27:
@@ -448,24 +448,24 @@ cannot work here. There is nothing to poll: the first poll is the damage.
 | Probe | Behaviour at readiness+0 | Why it fails |
 |---|---|---|
 | app's own `GET /agent/run/{workflow_id}` | 404 in 71 ms, while the POST beside it hung | same gRPC channel, but a different RPC — `GetInstance` (read) is live long before `StartInstance` (write) |
-| Catalyst's workflow HTTP API `POST .../start` | 202 in ~100 ms, and the worker executed the instance at t+1 s | the backend's create path and work-item dispatch are both live in the window; neither distinguishes it |
+| Diagrid's workflow HTTP API `POST .../start` | 202 in ~100 ms, and the worker executed the instance at t+1 s | the backend's create path and work-item dispatch are both live in the window; neither distinguishes it |
 
 The first of these actually shipped, and the next suite run caught it: the gate
 passed in 76 ms and the POST hung anyway. That is what a vacuous gate looks like
 in practice — green, fast, and worthless.
 
-What does work is watching for an **inbound** request from Catalyst in the app's
-own captured output. Catalyst fetches `/dapr/config` (and probes `/`) through the
+What does work is watching for an **inbound** request from Diagrid in the app's
+own captured output. Diagrid fetches `/dapr/config` (and probes `/`) through the
 tunnel once it attaches, and the app logs those like any other request. That is
 `CATALYST_PROBE_MARKERS`, and like `READY_MARKERS` it is per quickstart: it
-depends on what that app's request logging prints, not on Catalyst.
+depends on what that app's request logging prints, not on Diagrid.
 
 Choosing one for a new quickstart:
 
 1. Run the quickstart by hand and watch the `diagrid dev run` output after the
    readiness marker. Look for a request the app did not make itself.
 2. Pick a substring stable across runs. `GET /dapr/config` is good: it is a fixed
-   path Catalyst always fetches. A client IP or port is not — those vary.
+   path Diagrid always fetches. A client IP or port is not — those vary.
 3. Confirm it lands *after* local readiness and *before* the trigger works. If
    the marker is already present when the readiness marker arrives, it is not
    gating anything.
@@ -478,7 +478,7 @@ Choosing one for a new quickstart:
 
 `resources/tests/keywords.robot` tests the gate credential-free: that it waits
 for a marker that arrives late, and that it fails — naming the gate — when
-Catalyst never probes.
+Diagrid never probes.
 
 ## Readiness markers are a framework property, not a language property
 
@@ -585,7 +585,7 @@ rows. Every agent leg provisions a project with agent infrastructure and spends
 real model tokens, so it is not free the way the canonical dryrun-verified
 suites are. `agents/langgraph` is registered `nightly: False` today, and the
 reason is concrete, not cautious-by-default: it has never had a green live run
-or a mutation check against real Catalyst, so registering it `nightly: True`
+or a mutation check against real Diagrid, so registering it `nightly: True`
 would fail the scheduled build every night for everyone (and leak a project
 each time, until `reap-orphans.sh` collects it).
 
@@ -621,7 +621,7 @@ an explicit, shorter `leg`.
 
 The leg id has its own, tighter limit: `suites.validate()` also rejects a row
 whose leg is over `suites.project_name_budget()` characters (26 today), because
-the full ephemeral name (`qs-ci-agents-<leg>-<run-id>`) has to fit Catalyst's
+the full ephemeral name (`qs-ci-agents-<leg>-<run-id>`) has to fit Diagrid's
 55-character ceiling even on a local run, where the run-id fallback is longest.
 A deep suite path can produce a `name` over that budget — this is why the row
 schema also accepts an explicit `leg`, shorter than `name`, used for the

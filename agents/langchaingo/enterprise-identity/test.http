@@ -1,12 +1,12 @@
 # Paste the credential the offline issuer logs under `200`. These requests reach
-# the app directly on port 8006, bypassing Catalyst, so a token signed by anyone
+# the app directly on port 8006, bypassing Diagrid, so a token signed by anyone
 # but the configured issuer is refused 401 oauth.invalid_signature. Start the
 # offline issuer with:
 #
 #   DIAGRID_QUICKSTART_IDENTITY=local APP_PORT=8006 go run -tags offline .
 #
 # The `-tags offline` is not optional: without it the app refuses to start.
-# See "## Run Offline Without a Catalyst Project" in README.md. The two requests
+# See "## Run Offline Without a Diagrid Project" in README.md. The two requests
 # that send no credential answer 401 in either mode.
 #
 # Leave the placeholder unedited and the credential-bearing requests answer

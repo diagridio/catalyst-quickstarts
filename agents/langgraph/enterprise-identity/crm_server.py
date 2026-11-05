@@ -20,9 +20,9 @@ USER_TOKEN_HEADER = "x-diagrid-user-token"
 
 
 def _calling_user() -> dict:
-    """Read the calling user from the token Catalyst minted for this request.
+    """Read the calling user from the token Diagrid minted for this request.
 
-    Catalyst verifies the signature before the request arrives, so this only
+    Diagrid verifies the signature before the request arrives, so this only
     decodes the claims in order to show them.
     """
     raw = get_http_headers().get(USER_TOKEN_HEADER, "")

@@ -2,7 +2,7 @@
 
 The READMEs are the source of truth for the end-to-end suites, so a README edit
 that the suites have not followed is drift. This catches that on every PR, with no
-credentials and no Catalyst project.
+credentials and no Diagrid project.
 
 The check runs one way only: every documented command must be covered by the
 harness. The suites legitimately do things no README describes — poll a health
@@ -157,7 +157,7 @@ def all_bash_lines(markdown):
     """Every command line in every ```bash block, anywhere in the file.
 
     Agent-family READMEs have named sections ("## Setup", "## Run with
-    Catalyst"), not the numbered ones `_section_span` needs, so loose mode reads
+    Diagrid"), not the numbered ones `_section_span` needs, so loose mode reads
     the whole file. Backslash continuations are joined first: the documented curl
     spans three lines, and comparing fragments would match nothing.
     """
@@ -315,7 +315,7 @@ def check_agent(row, repo_root, module=None):
     # `agents/langgraph` shipped `check_availability` as its log marker because
     # the README says "Use the `check_availability` tool" and main.py defines that
     # tool — but `call_tools` invokes it without logging, so the marker could never
-    # match. The suite passed this check and then timed out against real Catalyst.
+    # match. The suite passed this check and then timed out against real Diagrid.
     # Requiring a fenced block ties the marker to documented OUTPUT.
     #
     # READY_MARKERS deliberately does NOT get this rule: `agents/langgraph`

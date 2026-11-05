@@ -50,13 +50,13 @@ metadata:
 
 ### 1. Deploy and Run the Agent
 
-Login to Diagrid Catalyst using the following command:
+Login to Diagrid using the following command:
 
 ```bash
 diagrid login
 ```
 
-Create a Catalyst project for the quickstart:
+Create a Diagrid project for the quickstart:
 
 ```bash
 diagrid project create multi-agent-workflow-quickstart --deploy-managed-kv --deploy-managed-pubsub --wait
@@ -70,7 +70,7 @@ diagrid agent create triage-agent --project multi-agent-workflow-quickstart --wa
 diagrid agent create expert-agent --project multi-agent-workflow-quickstart --wait
 ```
 
-Deploy the workflow app to Catalyst with managed infrastructure:
+Deploy the workflow app to Diagrid with managed infrastructure:
 
 ```bash
 diagrid dev run -f dapr.yaml --project multi-agent-workflow-quickstart --approve
@@ -113,11 +113,11 @@ The workflow will:
  
 ---
 
-## Monitoring in Catalyst
+## Monitoring in Diagrid
 
 ### Check Workflow Execution
 
-* Navigate to Catalyst dashboard → **Workflows**
+* Navigate to Diagrid Console → **Workflows**
 * View real-time execution progress and detailed logs
 * Inspect the sequential flow from triage to expert resolution
 
@@ -137,7 +137,7 @@ The workflow uses multiple state stores:
 
 ### View Application Architecture
 
-* In Catalyst dashboard → **Application Map**
+* In Diagrid Console → **Application Map**
 * See the `customer-support-system` service and its dependencies
 * Observe connections to state stores and OpenAI component
 

@@ -2,7 +2,7 @@
  * The agent's tools, showing the two ways an agent can act for someone.
  * `my_bookings` runs in-process and is handed the caller's subject;
  * `account_summary` leaves the process and carries the caller in a token
- * Catalyst mints for that one call.
+ * Diagrid mints for that one call.
  */
 
 import { createIdentityFetch } from '@diagrid/agent-core';
@@ -26,7 +26,7 @@ export const myBookings = tool(
 
 // --- The outbound half: calling a tool as the user -------------------------
 // `account_summary` takes no subject at all. The calling user travels in a
-// token Catalyst mints for this one call, so the CRM establishes who is asking
+// token Diagrid mints for this one call, so the CRM establishes who is asking
 // for itself rather than believing the agent.
 
 const MCP_SERVER_NAME = 'crm-mcp';
@@ -34,7 +34,7 @@ const MCP_SERVER_NAME = 'crm-mcp';
 const MCP_CLIENT_NAME = 'identity-agent';
 const MCP_CLIENT_VERSION = '1.0.0';
 
-// Catalyst's MCP proxy. Reaching a tool through this path is what attaches the
+// Diagrid's MCP proxy. Reaching a tool through this path is what attaches the
 // calling user; calling the CRM directly would not.
 const MCP_URL =
   `${process.env['DAPR_HTTP_ENDPOINT'] ?? 'http://localhost:3500'}` +
@@ -85,7 +85,7 @@ function byName(
   return Object.fromEntries(tools.map((entry) => [entry.name, entry]));
 }
 
-// The graph gets one tool or the other: offline mode has no Catalyst project
+// The graph gets one tool or the other: offline mode has no Diagrid project
 // behind it and so cannot reach an MCP server.
 export const localTools: readonly StructuredToolInterface[] = [myBookings];
 export const localToolsByName = byName(localTools);

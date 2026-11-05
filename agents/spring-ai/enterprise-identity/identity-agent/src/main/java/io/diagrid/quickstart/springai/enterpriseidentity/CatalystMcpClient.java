@@ -18,7 +18,7 @@ import tools.jackson.databind.ObjectMapper;
 /**
  * The MCP client behind {@link CrmTools}, and the on-behalf-of hand-off it needs.
  *
- * <p>The CRM is reached through <b>Catalyst's MCP proxy</b>, not directly. That path mints a
+ * <p>The CRM is reached through <b>Diagrid's MCP proxy</b>, not directly. That path mints a
  * credential naming both the user and the agent acting for them, so the CRM establishes who is
  * asking for itself rather than believing the agent. Calling the CRM directly would reach the same
  * server with no user attached at all.
@@ -30,13 +30,13 @@ public class CatalystMcpClient {
 
   static final String ACCOUNT_SUMMARY = "account_summary";
 
-  /** Catalyst's MCP proxy path. Reaching the tool through this is what attaches the caller. */
+  /** Diagrid's MCP proxy path. Reaching the tool through this is what attaches the caller. */
   static final String MCP_PROXY_PATH = "/v1.0/diagrid/mcp/" + MCP_SERVER_NAME;
 
   /** The key the caller's token travels under, from the request thread to the sending thread. */
   private static final String USER_TOKEN_CONTEXT_KEY = "diagrid.userToken";
 
-  /** Authenticates the agent itself to Catalyst. Unrelated to the calling user. */
+  /** Authenticates the agent itself to Diagrid. Unrelated to the calling user. */
   private static final String DAPR_API_TOKEN_HEADER = "dapr-api-token";
 
   private static final String DAPR_HTTP_ENDPOINT_VARIABLE = "DAPR_HTTP_ENDPOINT";
@@ -78,7 +78,7 @@ public class CatalystMcpClient {
   }
 
   private McpSyncClient connect() {
-    LOG.info("Connecting to {} through Catalyst's MCP proxy at {}{}",
+    LOG.info("Connecting to {} through Diagrid's MCP proxy at {}{}",
         MCP_SERVER_NAME, baseUrl, MCP_PROXY_PATH);
     HttpClientStreamableHttpTransport transport = HttpClientStreamableHttpTransport.builder(baseUrl)
         .endpoint(MCP_PROXY_PATH)

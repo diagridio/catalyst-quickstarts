@@ -35,7 +35,7 @@ import tools.jackson.databind.ObjectMapper;
  * The inbound-identity behaviour this quickstart demonstrates: fail closed, then let the verified
  * caller through.
  *
- * <p>{@link LocalIdentityIssuer} stands in for the Catalyst identity plane, so a credential that
+ * <p>{@link LocalIdentityIssuer} stands in for the Diagrid identity plane, so a credential that
  * genuinely verifies is available offline and the 200 and 403 are assertable here. The whole
  * application is started rather than the controller alone because what is under test is the
  * filter's <em>position</em>: that it answers before any of this repository's code runs, on every

@@ -3,10 +3,10 @@ End-to-end test for the agents/microsoft-dotnet quickstart (csharp only: this
 quickstart has one implementation, unlike the canonical four-language APIs).
 
 Mirrors agents/microsoft-dotnet/README.md: "## Setup" installs, "## Run with
-Catalyst" provisions and runs, "### 2. Trigger the Agent" triggers, and
+Diagrid" provisions and runs, "### 2. Trigger the Agent" triggers, and
 "## Clean Up" documents a project delete that prompts, so it is in UNCOVERED and
 ci/teardown-project.sh deletes the project. The
-second test case covers "### 3. Crash Recovery with Catalyst" (see CRASH_* names
+second test case covers "### 3. Crash Recovery with Diagrid" (see CRASH_* names
 in variables/agents_microsoft_dotnet.py); the two-terminal POST /crash/kill
 variant is in UNCOVERED there.
 
@@ -33,7 +33,7 @@ Variables       ../../../tools/qs-tester/variables/agents_microsoft_dotnet.py
 Library         ../../../tools/qs-tester/variables/agents_microsoft_dotnet.py
 Library         Collections
 Suite Setup     Should Not Be Empty    ${PROJECT}
-...             msg=Pass --variable PROJECT:<catalyst-project-name>
+...             msg=Pass --variable PROJECT:<diagrid-project-name>
 Test Teardown   Clean Up Quickstart
 
 *** Variables ***
@@ -55,7 +55,7 @@ Csharp Microsoft-Dotnet Quickstart
     END
 
     Build Quickstart            ${qs}
-    # README "## Run with Catalyst" steps 2-3, run verbatim.
+    # README "## Run with Diagrid" steps 2-3, run verbatim.
     Run Documented Commands     ${qs}[setup]    ${PROJECT}    cwd=${qs}[dir]
     Start Quickstart            ${qs}    ${PROJECT}    ${log}
 
@@ -81,7 +81,7 @@ Csharp Microsoft-Dotnet Quickstart
 
     # CATALYST_PROBE_MARKERS is empty for this suite, so this loop is a no-op. It
     # stays because the gap it guards is real here too: every gate above is
-    # satisfied by the local process, and a workflow call made before Catalyst has
+    # satisfied by the local process, and a workflow call made before Diagrid has
     # attached hangs unrecoverably (measured on agents/langgraph, 2026-08-27).
     # Giving this suite the gate is a data change in its variables module, not a
     # change here — see CATALYST_PROBE_MARKERS there for what has to be observed
@@ -118,7 +118,7 @@ Csharp Microsoft-Dotnet Quickstart
     END
 
 Csharp Microsoft-Dotnet Crash Recovery
-    [Documentation]    README "### 3. Crash Recovery with Catalyst": run under an id
+    [Documentation]    README "### 3. Crash Recovery with Diagrid": run under an id
     ...    you own with kill_after_seconds, restart with the same run command, then
     ...    re-issue the same request to collect the answer. The two-terminal
     ...    POST /crash/kill variant is in UNCOVERED in the data module.
@@ -225,7 +225,7 @@ Csharp Microsoft-Dotnet Crash Recovery
     Wait Until Apps Connected   ${qs}    ${log_again}
     Wait Until Log Contains     ${log_again}    ${SERVING_MARKER}    timeout=180s
 
-    # "You do not have to send anything": Catalyst hands the run back on reconnect
+    # "You do not have to send anything": Diagrid hands the run back on reconnect
     # and the interrupted tool finishes on its own, about 10s after it restarts.
     Wait Until Log Contains     ${log_again}    ${STEP2_DONE_MARKER}    timeout=180s
 

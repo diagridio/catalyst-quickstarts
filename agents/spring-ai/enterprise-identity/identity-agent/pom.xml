@@ -30,7 +30,7 @@
 
     <!-- THE ENTIRE INBOUND IDENTITY INTEGRATION. One servlet Filter over
          io.diagrid:diagrid-ai-identity, which arrives transitively and carries the verification,
-         the Catalyst discovery and the outbound propagation. Its own single dependency,
+         the Diagrid discovery and the outbound propagation. Its own single dependency,
          com.nimbusds:nimbus-jose-jwt, arrives with it — which is also what lets
          LocalIdentityIssuer sign RS256 credentials offline without a dependency of its own. -->
     <dependency>
@@ -39,7 +39,7 @@
     </dependency>
 
     <!-- The MCP client for the outbound leg: the agent's tool call to the CRM, made through
-         Catalyst's MCP proxy so that Catalyst can attach the calling user to it. -->
+         Diagrid's MCP proxy so that Diagrid can attach the calling user to it. -->
     <dependency>
       <groupId>io.modelcontextprotocol.sdk</groupId>
       <artifactId>mcp</artifactId>

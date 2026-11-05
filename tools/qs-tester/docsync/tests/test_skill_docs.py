@@ -4,7 +4,7 @@ from check_skill_docs import _SANCTIONED_EXCEPTIONS, check, mask_project_name
 
 READMES = {
     "agents/langgraph/README.md": """\
-## Run with Catalyst
+## Run with Diagrid
 
 ```bash
 diagrid project create langgraph-quickstart --enable-managed-workflow --deploy-managed-kv --deploy-managed-pubsub --wait --use

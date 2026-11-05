@@ -16,7 +16,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 /**
- * The outbound on-behalf-of hand-off, pinned without a Catalyst project.
+ * The outbound on-behalf-of hand-off, pinned without a Diagrid project.
  *
  * <p>What is assertable offline is carrying the caller from the request thread to the thread the
  * MCP transport sends on. The two halves run on two threads on purpose: a test that did both

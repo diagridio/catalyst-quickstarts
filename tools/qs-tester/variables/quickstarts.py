@@ -87,7 +87,7 @@ RUN = {
 # --- Apps, ports, and readiness ---------------------------------------------
 # HEALTH_PORTS: every port that must answer 200 on `GET /` before asserting.
 # Keyed by api only: the apps listen on 5001/5002 regardless of appPort
-# (appPort only tells Catalyst to open an inbound connection), so this stays
+# (appPort only tells Diagrid to open an inbound connection), so this stays
 # uniform across languages even where CONNECTED_APPS below does not.
 #
 # `GET /` is right *here* because all four canonical implementations really do
@@ -224,7 +224,7 @@ WORKFLOW_DONE_MARKER = "Order {id} has completed!"
 CRASH_LANGUAGES = ("csharp", "java", "python")
 
 # The instance id is per-language on purpose: the languages can share one ephemeral
-# Catalyst project, and a single shared id would leave the second language attaching
+# Diagrid project, and a single shared id would leave the second language attaching
 # to the first language's completed run and never crashing anything. The suite also
 # appends a per-run suffix, because a constant id is already COMPLETED the second time
 # this test runs against the same project.

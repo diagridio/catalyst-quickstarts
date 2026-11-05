@@ -34,7 +34,7 @@ Variables       ../../../../tools/qs-tester/variables/agents_spring_ai_crash_rec
 Library         ../../../../tools/qs-tester/variables/agents_spring_ai_crash_recovery.py
 Library         Collections
 Suite Setup     Should Not Be Empty    ${PROJECT}
-...             msg=Pass --variable PROJECT:<catalyst-project-name>
+...             msg=Pass --variable PROJECT:<diagrid-project-name>
 Test Teardown   Clean Up Quickstart
 
 *** Variables ***
@@ -113,7 +113,7 @@ Java Spring Ai Crash Recovery Quickstart
     Wait Until Apps Connected   ${qs}    ${log_again}
     Wait Until Apps Healthy     ${qs}
 
-    # README "## Recovery": "You do not have to send anything." Catalyst hands the
+    # README "## Recovery": "You do not have to send anything." Diagrid hands the
     # pending work back on reconnect and the interrupted tool call finishes on its
     # own. Asserting the completion marker in the RESTARTED app's log is what makes
     # that claim testable — a generous budget because it waits out the remainder of
@@ -142,7 +142,7 @@ Java Spring Ai Crash Recovery Quickstart
     # workflow suite's `Log Should Not Contain ... ${received}` does not hold here:
     # that suite names an activity that COMPLETED before the crash, so a second
     # occurrence would be a real replay bug. The interrupted tool here is the
-    # opposite case — README "## Recovery" says Catalyst "has been retrying the
+    # opposite case — README "## Recovery" says Diagrid "has been retrying the
     # interrupted tool call the entire time the app was down", so it re-runs by
     # design and does log commitReservation again on the restarted app. Asserting
     # its absence fails against correct behaviour, as an earlier version of this

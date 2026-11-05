@@ -1,39 +1,39 @@
-# Catalyst Quickstarts
+# Diagrid Quickstarts
 
-Get started with [Diagrid Catalyst](https://diagrid.ws/catalyst-quickstarts) by following these step-by-step quickstarts. Choose a quickstart based on what you want to build.
+Get started with [Diagrid](https://diagrid.ws/catalyst-quickstarts) by following these step-by-step quickstarts. Choose a quickstart based on what you want to build.
 
 ## Agent Quickstarts
 
-Learn how to build AI-powered durable agents using Catalyst. Create intelligent, stateful agents that maintain conversation memory and execution state across restarts.
+Learn how to build AI-powered durable agents using Diagrid. Create intelligent, stateful agents that maintain conversation memory and execution state across restarts.
 
 ### Agent Frameworks
 
-Catalyst works with the following agent frameworks:
+Diagrid works with the following agent frameworks:
 
 | Framework | Description |
 |-----------|-------------|
 | [Dapr Agents](agents/dapr-agents/) | Native Dapr agent framework with built-in durability, state, and pub/sub for multi-agent orchestration |
-| [Mastra](agents/mastra/) | TypeScript agent framework with tool calling, made durable with Catalyst |
-| [CrewAI](agents/crewai/) | Multi-agent crews with role-based collaboration, made durable with Catalyst |
-| [LangGraph](agents/langgraph/) | Graph-based agent orchestration with conditional routing, made durable with Catalyst |
-| [LangGraph.js](agents/langgraphjs/) | Graph-based agent orchestration for TypeScript, with the end user's verified identity propagated to its tools by Catalyst |
-| [Strands](agents/strands/) | Model-driven agent framework from AWS with tool use, made durable with Catalyst |
-| [Microsoft Agent Framework](agents/microsoft-dotnet/) | Enterprise agent framework from Microsoft, made durable with Catalyst |
-| [Spring AI](agents/spring-ai/) | Spring's AI framework for Java, made durable with Catalyst |
-| [Google ADK](agents/adk/) | Google's Agent Development Kit, running on OpenAI through LiteLLM, made durable with Catalyst |
-| [OpenAI Agents](agents/openai-agents/) | Function tools and agent handoffs from OpenAI, made durable with Catalyst |
-| [Pydantic AI](agents/pydantic-ai/) | Type-safe agent framework with structured outputs, made durable with Catalyst |
-| [Deep Agents](agents/deepagents/) | Type-safe agent harness with conditional routing, made durable with Catalyst |
-| [Claude Agents](agents/claude-agents/) | Anthropic's Claude Agent SDK with tool calling, made durable with Catalyst |
-| [Goose](agents/goose/) | The open-source Goose agent with its built-in developer tools, run unmodified from Rust and made durable with Catalyst |
+| [Mastra](agents/mastra/) | TypeScript agent framework with tool calling, made durable with Diagrid |
+| [CrewAI](agents/crewai/) | Multi-agent crews with role-based collaboration, made durable with Diagrid |
+| [LangGraph](agents/langgraph/) | Graph-based agent orchestration with conditional routing, made durable with Diagrid |
+| [LangGraph.js](agents/langgraphjs/) | Graph-based agent orchestration for TypeScript, with the end user's verified identity propagated to its tools by Diagrid |
+| [Strands](agents/strands/) | Model-driven agent framework from AWS with tool use, made durable with Diagrid |
+| [Microsoft Agent Framework](agents/microsoft-dotnet/) | Enterprise agent framework from Microsoft, made durable with Diagrid |
+| [Spring AI](agents/spring-ai/) | Spring's AI framework for Java, made durable with Diagrid |
+| [Google ADK](agents/adk/) | Google's Agent Development Kit, running on OpenAI through LiteLLM, made durable with Diagrid |
+| [OpenAI Agents](agents/openai-agents/) | Function tools and agent handoffs from OpenAI, made durable with Diagrid |
+| [Pydantic AI](agents/pydantic-ai/) | Type-safe agent framework with structured outputs, made durable with Diagrid |
+| [Deep Agents](agents/deepagents/) | Type-safe agent harness with conditional routing, made durable with Diagrid |
+| [Claude Agents](agents/claude-agents/) | Anthropic's Claude Agent SDK with tool calling, made durable with Diagrid |
+| [Goose](agents/goose/) | The open-source Goose agent with its built-in developer tools, run unmodified from Rust and made durable with Diagrid |
 
 ## MCP Quickstarts
 
-Learn how to register MCP (Model Context Protocol) servers with Catalyst and secure them.
+Learn how to register MCP (Model Context Protocol) servers with Diagrid and secure them.
 
 | Quickstart | Description | Path |
 |------------|--------------|------|
-| MCP Authentication & Authorization | Register a local MCP server, authenticate Catalyst to it, and authorize specific tool calls | [mcp-auth/python](mcp-auth/python/) |
+| MCP Authentication & Authorization | Register a local MCP server, authenticate Diagrid to it, and authorize specific tool calls | [mcp-auth/python](mcp-auth/python/) |
 
 ## Workflow Quickstart
 
@@ -48,7 +48,7 @@ Learn how to build stateful, long-running, reliable workflows using the Dapr Wor
 
 ## Dapr API Quickstarts
 
-Learn how to use Dapr's distributed application APIs with Catalyst. Choose an API and your preferred language to get started.
+Learn how to use Dapr's distributed application APIs with Diagrid. Choose an API and your preferred language to get started.
 
 ### Pub/Sub
 
@@ -85,4 +85,4 @@ Implement the request/reply pattern.
 
 ## Documentation
 
-For full documentation, visit the [Catalyst Quickstarts docs](https://diagrid.ws/catalyst-quickstarts).
+For full documentation, visit the [Diagrid Quickstarts docs](https://diagrid.ws/catalyst-quickstarts).

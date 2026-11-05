@@ -21,7 +21,7 @@ var delaySeconds = int.TryParse(Environment.GetEnvironmentVariable("CRASH_DELAY_
     : 10;
 
 // The TOOL ORDER is the design. Each tool call is a separate Dapr workflow activity, so
-// step_one_search completes and Catalyst records its result before the slow step_two_compare
+// step_one_search completes and Diagrid records its result before the slow step_two_compare
 // starts. The crash therefore lands between two known points, and after the restart
 // step_one_search's lines must NOT appear again: that absence is what proves the replay used
 // the recorded result. Make the FIRST tool the slow one and the crash lands before anything

@@ -23,7 +23,7 @@ const (
 
 	envAppPort = "APP_PORT"
 
-	// mcpPath is the endpoint resources/crm-mcp.yaml registers with Catalyst.
+	// mcpPath is the endpoint resources/crm-mcp.yaml registers with Diagrid.
 	mcpPath = "/mcp"
 
 	// toolAccountSummary is the tool the agent calls, named by the same string
@@ -76,7 +76,7 @@ func newMCPServer() *mcp.Server {
 func newMux() *http.ServeMux {
 	server := newMCPServer()
 	mux := http.NewServeMux()
-	// Requests arrive through Catalyst, whose Host is not loopback.
+	// Requests arrive through Diagrid, whose Host is not loopback.
 	mux.Handle(mcpPath, mcp.NewStreamableHTTPHandler(
 		func(*http.Request) *mcp.Server { return server },
 		&mcp.StreamableHTTPOptions{DisableLocalhostProtection: true}))
@@ -84,7 +84,7 @@ func newMux() *http.ServeMux {
 }
 
 // accountSummary summarises a CRM account, and reports who the CRM is
-// answering. Both identities come off the token Catalyst minted for this one
+// answering. Both identities come off the token Diagrid minted for this one
 // call; the agent was never asked who the user is.
 func accountSummary(
 	_ context.Context,
@@ -107,10 +107,10 @@ func accountSummary(
 	}, nil, nil
 }
 
-// callingUser reads the calling user from the token Catalyst minted for this
+// callingUser reads the calling user from the token Diagrid minted for this
 // request.
 //
-// Catalyst verifies the signature before the request arrives, so this only
+// Diagrid verifies the signature before the request arrives, so this only
 // DECODES the claims in order to show them. A service making an authorization
 // decision on these claims would have to verify the token itself.
 func callingUser(req *mcp.CallToolRequest) map[string]any {

@@ -1,5 +1,5 @@
 /**
- * SRE Agent — one durable Mastra agent turn on Dapr Workflows, via Catalyst.
+ * SRE Agent — one durable Mastra agent turn on Dapr Workflows, via Diagrid.
  *
  * The agent's control loop runs as a Dapr Workflow: every model call and every
  * tool execution is a checkpointed activity, so killing this process mid-turn
@@ -7,7 +7,7 @@
  * re-running the turn (and re-paying for the LLM calls). See crash_test.ts for
  * a demonstration.
  *
- * Run with Catalyst:
+ * Run with Diagrid:
  *   diagrid dev run -f dev-mastra.yaml --approve
  *
  * Expect two iterations for the prompt below: one model call that requests the

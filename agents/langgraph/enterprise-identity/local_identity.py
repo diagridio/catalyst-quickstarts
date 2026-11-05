@@ -1,9 +1,9 @@
-"""An offline stand-in for the Catalyst identity plane.
+"""An offline stand-in for the Diagrid identity plane.
 
 Opt in with DIAGRID_QUICKSTART_IDENTITY=local. It generates a throwaway RSA key,
 serves the public half as JWKS on localhost, and logs three ready-to-paste
 credentials so every response this quickstart describes -- 200, 403 and 401 --
-is reachable with no Catalyst project and no identity provider.
+is reachable with no Diagrid project and no identity provider.
 
 Never a real deployment. The private key lives in this process's memory and the
 credentials it signs are logged in plain text.

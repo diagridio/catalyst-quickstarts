@@ -6,11 +6,11 @@
 #   name   an agent suite under agents/ that runs the crash demo and calls a real model:
 #          crewai adk openai-agents pydantic-ai strands deepagents mastra goose
 #   --dry-run  print what would run for each name and check the premises, without
-#              touching Catalyst. Needs no keys. Run this first.
+#              touching Diagrid. Needs no keys. Run this first.
 #
 # What it proves. Each crash suite ends with `Log Should Not Contain ${log_again}
 # ${STEP1_MARKER}`: the restarted app's log must not contain step 1's completion line,
-# because Catalyst replays step 1 from workflow history instead of running it again. That is
+# because Diagrid replays step 1 from workflow history instead of running it again. That is
 # the claim the whole demo makes, and an assertion that is never seen failing is worth
 # nothing. So this re-runs the suite with STEP1_MARKER replaced by a string that DOES appear
 # in the recovery log, and requires `Log Should Not Contain` to FAIL, naming that string.

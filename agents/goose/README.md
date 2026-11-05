@@ -8,7 +8,7 @@ This quickstart demonstrates how to run a [Goose](https://github.com/aaif-goose/
 - **Unmodified Goose**: Drives the real `goose` CLI over the [Agent Client Protocol](https://agentclientprotocol.com/) (`goose acp`), with no Goose code changes, plugins or forks
 - **Goose's own tools**: Goose writes files and runs shell commands with its built-in developer tools, in a scratch directory of its own
 - **Session continuity**: Every turn runs in a fresh Goose process that reloads the same Goose session, so the conversation carries over from turn to turn, and across a crash
-- **Durable Crash Recovery**: Resume a run from the last completed turn after a crash — a capability not offered by Goose natively (see [Crash Recovery Test With Catalyst](#crash-recovery-test-with-catalyst))
+- **Durable Crash Recovery**: Resume a run from the last completed turn after a crash — a capability not offered by Goose natively (see [Crash Recovery Test With Diagrid](#crash-recovery-test-with-diagrid))
 
 ### Role
 
@@ -20,7 +20,7 @@ There are none to define. Goose ships its own developer tools and decides when t
 
 ## Prerequisites
 
-1. A [Diagrid Catalyst account](https://catalyst.diagrid.io/)
+1. A [Diagrid account](https://catalyst.diagrid.io/)
 2. [Diagrid CLI](https://docs.diagrid.io/getting-started/install-cli) installed
 3. [Rust 1.88 or newer](https://rustup.rs/) (check with `rustc --version`)
 4. The [Goose CLI](https://github.com/aaif-goose/goose), v1.54.0 (see [Install Goose](#install-goose))
@@ -87,17 +87,17 @@ $env:ANTHROPIC_API_KEY = "your-key-here"
 
 The provider and model travel with each run, in the workflow's recorded input. The key never does: Goose reads it from the environment of the process that runs it.
 
-## Run with Catalyst
+## Run with Diagrid
 
 ### 1. Login and Run
 
-1. Login to Catalyst using the Diagrid CLI:
+1. Login to Diagrid using the Diagrid CLI:
 
 ```bash
 diagrid login
 ```
 
-2. Create a new Catalyst project for the quickstart and use it as the default project for the current session:
+2. Create a new Diagrid project for the quickstart and use it as the default project for the current session:
 
 ```bash
 diagrid project create goose-quickstart --wait --use
@@ -109,7 +109,7 @@ diagrid project create goose-quickstart --wait --use
 diagrid agent create release-manager --wait
 ```
 
-4. Run the agent with Catalyst:
+4. Run the agent with Diagrid:
 
 ```bash
 diagrid dev run -f dev-goose.yaml --approve
@@ -148,25 +148,25 @@ Expect output like this:
 == APP - release-manager == Print the whole conversation with: goose session export --session-id 20261020_3
 ```
 
-`Turns: 2, all in Goose session ...` is the proof: each turn ran as its own checkpointed Dapr activity, in a fresh `goose acp` process, and turn 2 still knew which file turn 1 had written because its process reloaded the same Goose session. So a process killed mid-conversation resumes from the last completed turn instead of starting over. See [Crash Recovery Test With Catalyst](#crash-recovery-test-with-catalyst) for a demonstration.
+`Turns: 2, all in Goose session ...` is the proof: each turn ran as its own checkpointed Dapr activity, in a fresh `goose acp` process, and turn 2 still knew which file turn 1 had written because its process reloaded the same Goose session. So a process killed mid-conversation resumes from the last completed turn instead of starting over. See [Crash Recovery Test With Diagrid](#crash-recovery-test-with-diagrid) for a demonstration.
 
 Goose did real work, too: `RELEASE_NOTES.md` is in the `Workspace` directory, and the `goose session export` command on the last line prints the whole conversation, tool calls included.
 
-### 2. Inspecting the Results in Catalyst
+### 2. Inspecting the Results in Diagrid
 
-Open the [Catalyst dashboard](https://catalyst.diagrid.io/agents) in your browser and navigate to Agents > release-manager. Then select the most recent workflow run (`GooseAgentExecution`) to view each turn's input and output.
+Open the [Diagrid Console](https://catalyst.diagrid.io/agents) in your browser and navigate to Agents > release-manager. Then select the most recent workflow run (`GooseAgentExecution`) to view each turn's input and output.
 
-## Crash Recovery Test With Catalyst
+## Crash Recovery Test With Diagrid
 
 The `src/bin/crash_test.rs` app demonstrates durable crash recovery, a capability not offered by Goose natively. It serves the agent over HTTP and runs a release as three Goose turns in one Goose session, each a separate checkpointed Dapr activity:
 
-1. **Turn 1**: Goose writes the release notes. Completes and is checkpointed by Catalyst
+1. **Turn 1**: Goose writes the release notes. Completes and is checkpointed by Diagrid
 2. **Turn 2**: Goose runs the release checks, a shell command that takes ~10 seconds. The crash lands here
 3. **Turn 3**: Goose adds the check results to the release notes
 
-The order is the point. Turn 1 completes and Catalyst records its result before turn 2 starts, so the crash lands between two known points and the restart can show that only the interrupted turn ran again. Each turn logs itself (`>>> TURN 1`, `>>> TURN 2`, `>>> TURN 3`), which is how you follow it in the app log.
+The order is the point. Turn 1 completes and Diagrid records its result before turn 2 starts, so the crash lands between two known points and the restart can show that only the interrupted turn ran again. Each turn logs itself (`>>> TURN 1`, `>>> TURN 2`, `>>> TURN 3`), which is how you follow it in the app log.
 
-You also choose the workflow instance ID, so you can find the same run again from a second request or in the Catalyst console. Nothing is armed in the source: the crash is something you ask for, so there is no source edit and no environment variable to unset.
+You also choose the workflow instance ID, so you can find the same run again from a second request or in the Diagrid Console. Nothing is armed in the source: the crash is something you ask for, so there is no source edit and no environment variable to unset.
 
 ### 3. Start the app
 
@@ -209,7 +209,7 @@ Go to the terminal where you started `diagrid dev run`. Turn 1 completes, turn 2
 == APP - release-manager == >>> crash: killing this process 8s into the run, as asked by kill_after_seconds
 ```
 
-The request then reports a connection reset, which is exactly what a real crash looks like. Goose goes down with the app, in the middle of its shell command. The workflow instance `release-42` is unaffected: it lives in Catalyst, not in the process that just died.
+The request then reports a connection reset, which is exactly what a real crash looks like. Goose goes down with the app, in the middle of its shell command. The workflow instance `release-42` is unaffected: it lives in Diagrid, not in the process that just died.
 
 Keep the value below `CRASH_DELAY_SECONDS` (10 by default) so the crash lands inside turn 2 rather than after it. The clock starts when turn 2 starts, not when the request arrives, so the budget does not have to cover turn 1 ahead of it. That is also why the field is safe to send again in step 6: the timer only starts when turn 2 actually runs, and a call that attaches to an existing run never runs it.
 
@@ -221,7 +221,7 @@ Restart with the same command as step 3:
 diagrid dev run -f dev-crash-test.yaml --approve
 ```
 
-**That is the whole recovery. You do not have to send anything.** As soon as the restarted app's worker reconnects, Catalyst hands `release-42` back to it and turn 2 starts over in a fresh Goose process. That process reloads the Goose session turn 1 started, finds turn 2's message already in it with no finished reply, and asks the model to finish the interrupted turn rather than sending the message a second time. About 10 seconds later turn 3 runs. Watch the app log, where all of this happens before you send anything:
+**That is the whole recovery. You do not have to send anything.** As soon as the restarted app's worker reconnects, Diagrid hands `release-42` back to it and turn 2 starts over in a fresh Goose process. That process reloads the Goose session turn 1 started, finds turn 2's message already in it with no finished reply, and asks the model to finish the interrupted turn rather than sending the message a second time. About 10 seconds later turn 3 runs. Watch the app log, where all of this happens before you send anything:
 
 ```text
 == APP - release-manager == >>> TURN 2: Goose is running the release checks over ~10s. KILL THE APP NOW to test crash recovery (POST /crash/kill, or kill -9). It resumes on restart.
@@ -231,7 +231,7 @@ diagrid dev run -f dev-crash-test.yaml --approve
 == APP - release-manager == >>> TURN 3 COMPLETE: release notes updated, Goose session 20261020_4
 ```
 
-Turn 1 is **not** run again: its `>>> TURN 1` lines do not appear a second time. That turn had completed and Catalyst had recorded its result, so the Dapr workflow engine replayed the saved value instead of running Goose (and paying for the model) again. Only the turn that was interrupted runs twice, and the Goose session is the same one before and after the crash. The restarted process also starts disarmed, so the re-run turn 2 asks you to kill the app rather than killing it again.
+Turn 1 is **not** run again: its `>>> TURN 1` lines do not appear a second time. That turn had completed and Diagrid had recorded its result, so the Dapr workflow engine replayed the saved value instead of running Goose (and paying for the model) again. Only the turn that was interrupted runs twice, and the Goose session is the same one before and after the crash. The restarted process also starts disarmed, so the re-run turn 2 asks you to kill the app rather than killing it again.
 
 ### 6. Collect the answer
 
@@ -309,13 +309,13 @@ The length of turn 2's window is configurable through the `CRASH_DELAY_SECONDS` 
 
 ## Good to know
 
-- **Connect with `diagrid_goose::workflow_client()`, not `WorkflowClient::new()`.** The Dapr Rust SDK (`dapr` 0.19.0) connects to its sidecar in plaintext and sends no API token. That works against a local `dapr run` sidecar, but not against Catalyst, which requires TLS and the app's `DAPR_API_TOKEN` on every call. `diagrid-goose`'s `workflow_client()` adds both when the endpoint needs them, and is the plain SDK client otherwise. Use it in your own apps too.
+- **Connect with `diagrid_goose::workflow_client()`, not `WorkflowClient::new()`.** The Dapr Rust SDK (`dapr` 0.19.0) connects to its sidecar in plaintext and sends no API token. That works against a local `dapr run` sidecar, but not against Diagrid, which requires TLS and the app's `DAPR_API_TOKEN` on every call. `diagrid-goose`'s `workflow_client()` adds both when the endpoint needs them, and is the plain SDK client otherwise. Use it in your own apps too.
 - **Goose runs unattended.** It approves its own tool calls, since nobody is there to ask, so each run gets a scratch directory of its own under your system's temp directory: the `Workspace` line in step 1.
 - **Goose keeps its sessions in its own store**, under `~/.local/share/goose` by default (or `GOOSE_PATH_ROOT`), and a resumed turn reloads its session from there. A worker that restarts on another machine needs that store on a volume both can reach.
 
 ## Clean Up
 
-Stop the running application with `Ctrl+C`, then delete the Catalyst project:
+Stop the running application with `Ctrl+C`, then delete the Diagrid project:
 
 ```bash
 diagrid project delete goose-quickstart

@@ -35,9 +35,9 @@ interface CallingParties {
 }
 
 /**
- * Read the calling user from the token Catalyst minted for this request.
+ * Read the calling user from the token Diagrid minted for this request.
  *
- * Catalyst verifies the signature before the request arrives, so `decodeJwt` is
+ * Diagrid verifies the signature before the request arrives, so `decodeJwt` is
  * jose's decode-only half on purpose: this CRM holds no identity coordinates.
  */
 function callingParties(
@@ -99,7 +99,7 @@ function buildServer(): McpServer {
 const app = express();
 app.use(express.json());
 
-// Stateless mode: Catalyst's MCP proxy opens its own connection for each tool
+// Stateless mode: Diagrid's MCP proxy opens its own connection for each tool
 // call, so there is no session for a CRM to keep.
 app.post(MCP_PATH, async (req, res) => {
   const mcp = buildServer();

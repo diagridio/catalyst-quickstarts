@@ -17,7 +17,7 @@ namespace EnterpriseIdentity.Tests;
 /// The app under test: the quickstart's own handlers, agent, canned model and tool behind its own
 /// middleware. Program.cs fixes its policy at start-up, so the two ASP.NET lines are rebuilt here
 /// against <see cref="LocalIdentity.BuildLocalIssuer"/>, whose offline credentials are what make
-/// the 200 and the 403 assertable with no Catalyst project. The outbound leg needs one.
+/// the 200 and the 403 assertable with no Diagrid project. The outbound leg needs one.
 /// </summary>
 public sealed class IdentityAppFixture : IAsyncLifetime
 {

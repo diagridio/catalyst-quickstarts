@@ -1,5 +1,5 @@
 // Command app is the workload the migration quickstart moves from Dapr OSS to
-// Catalyst.
+// Diagrid.
 //
 // One binary, two roles, selected by the ROLE environment variable. It exercises
 // the Dapr building blocks that the migration has to preserve: service

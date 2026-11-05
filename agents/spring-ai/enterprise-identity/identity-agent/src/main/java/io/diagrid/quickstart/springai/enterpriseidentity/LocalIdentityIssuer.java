@@ -29,10 +29,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * An offline stand-in for the Catalyst identity plane, enabled with
+ * An offline stand-in for the Diagrid identity plane, enabled with
  * {@code DIAGRID_QUICKSTART_IDENTITY=local}. It generates a throwaway RSA key, serves the public
  * half as JWKS on localhost, and logs three credentials, so the 200, 403 and 401 responses are all
- * reachable with no Catalyst project and no identity provider.
+ * reachable with no Diagrid project and no identity provider.
  *
  * <p><b>Never a real deployment.</b> The private key lives in this process's memory and the
  * credentials it signs are logged in plain text.

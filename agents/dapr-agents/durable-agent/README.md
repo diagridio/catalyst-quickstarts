@@ -13,7 +13,7 @@ This quickstart demonstrates how to build a durable agent using [Dapr Agents](ht
 
 ## Prerequisites
 
-1. A [Diagrid Catalyst account](https://catalyst.diagrid.io/)
+1. A [Diagrid account](https://catalyst.diagrid.io/)
 2. [Diagrid CLI](https://docs.diagrid.io/getting-started/install-cli) installed
 3. [Python 3.11–3.13](https://www.python.org/downloads/)
 4. [uv](https://docs.astral.sh/uv/getting-started/installation/) installed
@@ -42,13 +42,13 @@ metadata:
 
 ### 1. Login and Run
 
-1. Login to Catalyst using the Diagrid CLI:
+1. Login to Diagrid using the Diagrid CLI:
 
 ```bash
 diagrid login
 ```
 
-2. Create a new Catalyst project for the quickstart and use it as the default project for the current session:
+2. Create a new Diagrid project for the quickstart and use it as the default project for the current session:
 
 ```bash
 diagrid project create durable-agent-quickstart --deploy-managed-kv --deploy-managed-pubsub --wait --use
@@ -60,7 +60,7 @@ diagrid project create durable-agent-quickstart --deploy-managed-kv --deploy-man
 diagrid agent create invitations-manager --wait
 ```
 
-4. Run the agent with Catalyst:
+4. Run the agent with Diagrid:
 
 ```bash
 uv run diagrid dev run -f dev-python-durable-agent.yaml --approve
@@ -95,9 +95,9 @@ The agent will:
 2. Use the `send_invitations` tool to dispatch invitations
 3. Return a breakdown of invitations sent via email and physical mail
 
-### 3. Inspecting the Results in Catalyst
+### 3. Inspecting the Results in Diagrid
 
-Open the [Catalyst dashboard](https://catalyst.diagrid.io/agents) in your browser and navigate to Agents > invitations-manager. Then select the most recent agent workflow run to view output.
+Open the [Diagrid Console](https://catalyst.diagrid.io/agents) in your browser and navigate to Agents > invitations-manager. Then select the most recent agent workflow run to view output.
 
 ## Part of the Event Planning Team
 

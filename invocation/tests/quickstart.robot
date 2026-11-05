@@ -2,7 +2,7 @@
 End-to-end test for the service invocation quickstart, all four languages.
 
 Mirrors invocation/<language>/README.md: section 6.1 posts an order to the client,
-which invokes the server through Catalyst. The client returns 500 if the server is
+which invokes the server through Diagrid. The client returns 500 if the server is
 unreachable, so a 200 with the documented body already proves the round trip; the
 log markers additionally prove both processes did the work.
 
@@ -21,7 +21,7 @@ Variables       ../../tools/qs-tester/variables/quickstarts.py
 Library         ../../tools/qs-tester/variables/quickstarts.py
 Library         Collections
 Suite Setup     Should Not Be Empty    ${PROJECT}
-...             msg=Pass --variable PROJECT:<catalyst-project-name>
+...             msg=Pass --variable PROJECT:<diagrid-project-name>
 Test Teardown   Stop Quickstart    ${PROJECT}
 
 *** Variables ***
@@ -55,7 +55,7 @@ Run Invocation Quickstart
     # matching the README, which names server and not client.
     Wait Until Apps Connected   ${qs}    ${log}
     Wait Until Apps Healthy     ${qs}
-    # Neither wait above proves Catalyst can route INTO the server app, and for
+    # Neither wait above proves Diagrid can route INTO the server app, and for
     # this API that is the whole test: invocation answers 500 ERR_DIRECT_INVOKE
     # ("app is not in a healthy state") for a stretch after both signals pass.
     # This gate absorbs that window only — see Wait Until Not Server Error — so

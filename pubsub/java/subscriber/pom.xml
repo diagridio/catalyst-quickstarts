@@ -13,7 +13,7 @@
   <artifactId>subscriber</artifactId>
   <version>1.0.0</version>
   <name>subscriber</name>
-  <description>Catalyst Pubsub Quickstart: Subscriber</description>
+  <description>Diagrid Pubsub Quickstart: Subscriber</description>
   <properties>
     <java.version>17</java.version>
   </properties>

@@ -2,10 +2,10 @@
 End-to-end test for the agents/langgraph quickstart (python only: this
 quickstart has one implementation, unlike the canonical four-language APIs).
 
-Mirrors agents/langgraph/README.md: "## Setup" installs, "## Run with Catalyst"
+Mirrors agents/langgraph/README.md: "## Setup" installs, "## Run with Diagrid"
 provisions and runs, "### 2. Trigger a Workflow" triggers. This README documents
 no cleanup command, so deleting the project is infrastructure here. The second
-test case covers "## Crash Recovery Test With Catalyst" (see CRASH_* in
+test case covers "## Crash Recovery Test With Diagrid" (see CRASH_* in
 variables/agents_langgraph.py).
 
 The request loop below is the shape every agent-family suite uses, including ones
@@ -31,7 +31,7 @@ Variables       ../../../tools/qs-tester/variables/agents_langgraph.py
 Library         ../../../tools/qs-tester/variables/agents_langgraph.py
 Library         Collections
 Suite Setup     Should Not Be Empty    ${PROJECT}
-...             msg=Pass --variable PROJECT:<catalyst-project-name>
+...             msg=Pass --variable PROJECT:<diagrid-project-name>
 Test Teardown   Clean Up Quickstart
 
 *** Variables ***
@@ -54,7 +54,7 @@ Python Langgraph Quickstart
     END
 
     Build Quickstart            ${qs}
-    # README "## Run with Catalyst" steps 2-3, run verbatim.
+    # README "## Run with Diagrid" steps 2-3, run verbatim.
     Run Documented Commands     ${qs}[setup]    ${PROJECT}    cwd=${qs}[dir]
     Start Quickstart            ${qs}    ${PROJECT}    ${log}
 
@@ -71,7 +71,7 @@ Python Langgraph Quickstart
 
     # The three gates above are all satisfied by the local process: the tunnel is
     # up, uvicorn is serving, and the app answers its own health route. None of
-    # them means Catalyst has attached, and a workflow call made before it has
+    # them means Diagrid has attached, and a workflow call made before it has
     # HANGS — permanently, not transiently: the 2026-08-27 run died 120s into a
     # documented POST that never created an instance, and twelve retries over 181s
     # never recovered it. Gated on this marker the same POST answered in ~1s.
@@ -110,7 +110,7 @@ Python Langgraph Quickstart
     END
 
 Python Langgraph Crash Recovery
-    [Documentation]    README "## Crash Recovery Test With Catalyst": "### 4" starts
+    [Documentation]    README "## Crash Recovery Test With Diagrid": "### 4" starts
     ...    the crash app, "### 5" runs under an id you own with kill_after_seconds,
     ...    "### 7" restarts, "### 8" collects the answer. The two-terminal
     ...    POST /crash/kill variant ("### 6") is in UNCOVERED in the data module.
@@ -136,7 +136,7 @@ Python Langgraph Crash Recovery
     ${log}=     Suite Log File    agents-langgraph    python-crash
 
     Build Quickstart            ${qs}
-    # README "## Run with Catalyst" steps 2-3. When the happy-path case ran first
+    # README "## Run with Diagrid" steps 2-3. When the happy-path case ran first
     # in this suite the project and the agent already exist (this README documents
     # no cleanup, so its teardown leaves them), and the whole SETUP list is skipped.
     # Otherwise SETUP runs normally and ANY failure fails the test. The check is
@@ -169,7 +169,7 @@ Python Langgraph Crash Recovery
     END
     Wait Until Apps Healthy     ${qs}
 
-    # A workflow call made before Catalyst has attached hangs for good.
+    # A workflow call made before Diagrid has attached hangs for good.
     FOR    ${marker}    IN    @{qs}[catalyst_probe_markers]
         Wait Until Catalyst Attached    ${log}    ${marker}
     END
@@ -221,7 +221,7 @@ Python Langgraph Crash Recovery
     Wait Until Apps Connected   ${qs}    ${log_again}
     Wait Until Apps Healthy     ${qs}
 
-    # "You do not have to send anything": Catalyst hands the run back on reconnect
+    # "You do not have to send anything": Diagrid hands the run back on reconnect
     # and the interrupted node finishes on its own, about 10s after it restarts.
     Wait Until Log Contains     ${log_again}    ${STEP2_DONE_MARKER}    timeout=180s
 

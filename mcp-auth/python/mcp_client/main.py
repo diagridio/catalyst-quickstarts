@@ -28,7 +28,7 @@ async def run():
 
     results = {"tools": [], "add_result": None, "balance_result": None, "errors": []}
 
-    # Discover available MCP tools. Catalyst filters tools/list down to the
+    # Discover available MCP tools. Diagrid filters tools/list down to the
     # tools this caller is granted, so this only ever shows authorized tools.
     try:
         logging.info("Discovering tools")
@@ -86,7 +86,7 @@ def _root_cause(exc):
     """Unwrap a TaskGroup/ExceptionGroup down to its underlying root cause.
 
     The MCP streamable-http transport runs the HTTP exchange inside an anyio
-    task group, so an upstream failure (e.g. a 403 from Catalyst's access
+    task group, so an upstream failure (e.g. a 403 from Diagrid's access
     policy, or a 401 from the MCP server itself) surfaces as a nested
     ExceptionGroup at the ``async with`` boundary rather than at the
     ``call_tool`` await. Drill through the ``exceptions`` chain to recover the
@@ -101,10 +101,10 @@ def _root_cause(exc):
 def _describe_error(exc):
     """Turn an exception into a JSON-serializable error entry.
 
-    Catalyst denies a tools/call for a tool the caller isn't granted with a
+    Diagrid denies a tools/call for a tool the caller isn't granted with a
     clean HTTP 403 (surfaced here with status_code + reason) *if* the MCP
     session was otherwise able to start. A caller with no grants at all, or a
-    server Catalyst can't authenticate to, both tear down the session itself
+    server Diagrid can't authenticate to, both tear down the session itself
     before any per-tool distinction is possible — both surface only as
     "Session terminated", with no status_code. See the README's
     "Telling authentication and authorization failures apart" section.

@@ -2,7 +2,7 @@
 #
 #   DIAGRID_QUICKSTART_IDENTITY=local APP_PORT=8006 npm start
 #
-# See "Run Offline Without a Catalyst Project" in README.md. The two requests
+# See "Run Offline Without a Diagrid Project" in README.md. The two requests
 # that send no credential at all answer 401 in either mode.
 @token = <THE_CREDENTIAL_LOGGED_UNDER_200>
 

@@ -20,7 +20,7 @@ from tools import (
 
 LOCAL_REQUIRED_SCOPES = frozenset({"agent.invoke"})
 
-# The offline issuer has no Catalyst project behind it, so it cannot reach an
+# The offline issuer has no Diagrid project behind it, so it cannot reach an
 # MCP server and the graph calls the in-process tool instead.
 OFFLINE_IDENTITY = os.environ.get("DIAGRID_QUICKSTART_IDENTITY") == "local"
 tools = local_tools if OFFLINE_IDENTITY else catalyst_tools
@@ -89,7 +89,7 @@ compiled = graph.compile()
 def build_oauth_config() -> OAuthConfig:
     """The identity policy the middleware enforces on every request.
 
-    Against Catalyst, issuer, audience and JWKS URI are all discovered, so the
+    Against Diagrid, issuer, audience and JWKS URI are all discovered, so the
     app configures none of them. Pass `OAuthConfig(scopes={"reports.read"})` to
     require a scope as well.
     """
@@ -123,7 +123,7 @@ def _identity(user: VerifiedUser) -> dict:
 
 @app.get("/whoami")
 def whoami(request: Request) -> dict:
-    """Who Catalyst says is calling."""
+    """Who Diagrid says is calling."""
     user: VerifiedUser = verified_user(request)
     return _identity(user)
 

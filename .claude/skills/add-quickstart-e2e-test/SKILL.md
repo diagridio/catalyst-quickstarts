@@ -8,7 +8,7 @@ description: Add a Robot Framework end-to-end test for a quickstart in this repo
 ## What you are building
 
 A suite that runs the commands a quickstart's README documents and asserts what
-that README promises, so drift between the docs, the code and Catalyst is caught
+that README promises, so drift between the docs, the code and Diagrid is caught
 automatically. The harness lives in `tools/qs-tester`; read its README first if
 you have not.
 
@@ -79,7 +79,7 @@ and endpoints no README documents, belong in `UNCOVERED`.
 Some quickstarts need a project but never say how to make one.
 `agents/dapr-agents/orchestrator` is the clearest case: its seven prerequisites
 are the CLI, Python, uv, three model API keys and "all 8 specialist agents
-running" — no Catalyst project among them — and its documented flow is `cd
+running" — no Diagrid project among them — and its documented flow is `cd
 dapr-agents/orchestrator` and `uv sync`, then `diagrid login` and `uv run
 diagrid dev run -f dev-multi-agent-orchestration.yaml`. No `project create`
 anywhere, and no `--project` flag on `dev run` either. Transcribe the install

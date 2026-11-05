@@ -15,7 +15,7 @@ reads specific sections by number (`_section_span`, `_HEADING`):
 | README section | Table entry | Notes |
 |---|---|---|
 | `## 4. Install Dependencies` | `INSTALL[(api, language)]` | A single command string. `npm install` in the README and `npm ci` in the harness are treated as equivalent by doc-sync (see below) — do not "fix" `INSTALL` to say `npm install`. |
-| `## 5. Run the application with Catalyst Cloud` | `RUN[(api, language)]` | `--project <api>-quickstart` in the README becomes `--project {project}` in the harness; `normalise_run_command` collapses both to `--project PROJECT` before comparing, so this is the one substitution doc-sync already tolerates. |
+| `## 5. Run the application with Diagrid Cloud` | `RUN[(api, language)]` | `--project <api>-quickstart` in the README becomes `--project {project}` in the harness; `normalise_run_command` collapses both to `--project PROJECT` before comparing, so this is the one substitution doc-sync already tolerates. |
 | `## 6. Call the <X> API` (and its `6.1`, `6.2` subsections) | the request/assertion keywords in the suite, plus the `*_BODY` dicts | `extract_curl_calls` parses documented curl invocations for method/URL/payload; `extract_json_blocks` parses the documented expected response bodies. |
 
 `check` also verifies documented payloads are one of the harness's known payload
@@ -47,7 +47,7 @@ consistently:
 
 - `INSTALL`, `RUN` — keyed `(api, language)`.
 - `HEALTH_PORTS` — keyed by **`api` only**. The apps always listen on
-  5001/5002 regardless of `appPort` (`appPort` only controls whether Catalyst
+  5001/5002 regardless of `appPort` (`appPort` only controls whether Diagrid
   opens an inbound tunnel to that port, not what the app itself binds to), so
   this stays uniform across languages for a given API. `get_quickstart` turns
   each port into a `(port, "/")` probe for `Wait Until Apps Healthy`, and `/` is

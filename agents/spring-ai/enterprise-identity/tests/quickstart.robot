@@ -3,7 +3,7 @@ End-to-end test for the agents/spring-ai/enterprise-identity quickstart (java
 only: this quickstart has one implementation).
 
 Mirrors agents/spring-ai/enterprise-identity/README.md: "## Setup" installs,
-"## Run with Catalyst" provisions and runs, "### 4. See It Fail Closed" is the
+"## Run with Diagrid" provisions and runs, "### 4. See It Fail Closed" is the
 pair of documented requests this suite asserts. This README documents no cleanup
 command -- like the Python quickstart it was ported from, and unlike the other
 two agents/spring-ai suites -- so deleting the project is infrastructure here.
@@ -39,7 +39,7 @@ Variables       ../../../../tools/qs-tester/variables/agents_spring_ai_enterpris
 Library         ../../../../tools/qs-tester/variables/agents_spring_ai_enterprise_identity.py
 Library         Collections
 Suite Setup     Should Not Be Empty    ${PROJECT}
-...             msg=Pass --variable PROJECT:<catalyst-project-name>
+...             msg=Pass --variable PROJECT:<diagrid-project-name>
 Test Teardown   Clean Up Quickstart
 
 *** Variables ***
@@ -61,7 +61,7 @@ Java Spring-Ai Enterprise Identity Quickstart
     # ONE install command for TWO Maven modules. That is what the aggregator pom
     # in the quickstart directory is for; see INSTALL in the data module.
     Build Quickstart            ${qs}
-    # README "## Run with Catalyst" step 1, run verbatim.
+    # README "## Run with Diagrid" step 1, run verbatim.
     Run Documented Commands     ${qs}[setup]    ${PROJECT}    cwd=${qs}[dir]
     Start Quickstart            ${qs}    ${PROJECT}    ${log}
 

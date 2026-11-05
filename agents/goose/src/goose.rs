@@ -64,7 +64,7 @@ impl Goose {
             program: self.program.clone(),
             args: vec!["acp".to_string()],
             // Provider and model only, never the API key. The workflow input is
-            // recorded in Catalyst, where anyone with access to the project can
+            // recorded in Diagrid, where anyone with access to the project can
             // read it, so Goose inherits the key from this process's
             // environment instead.
             env: vec![

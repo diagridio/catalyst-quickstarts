@@ -1,6 +1,6 @@
 # Who may call which tools, and whether a user identity is required.
 #
-# requireUser is the line that turns on on-behalf-of: Catalyst mints a token
+# requireUser is the line that turns on on-behalf-of: Diagrid mints a token
 # carrying the calling user before forwarding to the CRM, and refuses the call
 # outright when there is no user to act for.
 apiVersion: cra.diagrid.io/v1beta1

@@ -1,5 +1,5 @@
 *** Comments ***
-Process lifecycle keywords. Deliberately knows nothing about Catalyst, HTTP, or
+Process lifecycle keywords. Deliberately knows nothing about Diagrid, HTTP, or
 the quickstarts — it is the piece most likely to need debugging in isolation.
 
 The teardown logic is ported from dapr-university-instruqt's
@@ -18,13 +18,13 @@ Library    OperatingSystem
 ${MARKER_TIMEOUT}       60s
 ${READINESS_TIMEOUT}    180s
 # The connection gate's own budget, deliberately NOT ${READINESS_TIMEOUT}. It
-# waits on Catalyst establishing the dev tunnel, measured at 32-36s against a
+# waits on Diagrid establishing the dev tunnel, measured at 32-36s against a
 # real project, while every other wait governed by ${READINESS_TIMEOUT} finishes
 # in about five seconds. A mutation run shortens ${READINESS_TIMEOUT} so the
 # mutated assertion gives up quickly; when this gate shared that variable, the
 # override starved it instead and the run died before reaching the mutation —
 # `check_mutation.py` rejected the result as proving nothing, but only after a
-# Catalyst project had been spent. Same default as before the split, so no
+# Diagrid project had been spent. Same default as before the split, so no
 # existing suite's timing changes.
 ${CONNECT_TIMEOUT}      180s
 

@@ -19,7 +19,7 @@
         "Every command in the data module's SETUP, INSTALL, RUN and TEARDOWN appears literally in agents/pydantic-ai/README.md, modulo the {project} substitution",
         "Documented commands the suite does not run (at minimum the crash-recovery dev-crash-test.yaml flow, which needs a source edit to crash_test.py) are listed in UNCOVERED with a reason, matching the pattern in variables/agents_langgraph.py",
         "No expected response body was invented: every REQUESTS entry's field is either None with a comment saying no README/framework documents a response shape, or traceable to the README or an explicitly-observed response",
-        "The row sets nightly to False, since the run never reached a live Catalyst project and this quickstart also requires OPENAI_API_KEY like langgraph",
+        "The row sets nightly to False, since the run never reached a live Diagrid project and this quickstart also requires OPENAI_API_KEY like langgraph",
         "The final report is explicitly BLOCKED (not an unqualified success claim) and names the specific missing credential(s), e.g. DIAGRID_API_KEY and/or OPENAI_API_KEY",
         "No workflow YAML under .github/workflows/ was edited, because pydantic-ai is Python and the e2e-agents job's existing steps (astral-sh/setup-uv) already cover Python with no conditional runtime-setup step needed"
       ]
@@ -37,7 +37,7 @@
         "The suite's Require Env Var loop checks the model provider secret(s) the README's Prerequisites section documents, before Build Quickstart or Start Quickstart runs",
         "uv run python ci/list-suites.py --matrix agent includes an entry with \"runtime\":\"dotnet\" for the new suite",
         "The report does not claim actions/setup-dotnet needed to be added to .github/workflows/e2e-quickstarts.yml's e2e-agents job; it states that the existing 'if: matrix.runtime == ...dotnet...' step already covers it, and that only ci/list-suites.py --matrix agent output (consumed by needs.discover.outputs.agents) needed the new row to exist",
-        "The report distinguishes what the static checks (manifest validation, dryrun, doc-sync, unit tests) proved from what only a live run against Catalyst could prove (readiness marker text, response field shape, whether the mutation check can fail an assertion)"
+        "The report distinguishes what the static checks (manifest validation, dryrun, doc-sync, unit tests) proved from what only a live run against Diagrid could prove (readiness marker text, response field shape, whether the mutation check can fail an assertion)"
       ]
     },
     {
@@ -54,7 +54,7 @@
         "Any of revoke, access get, access list, access test, and the 'Appendix: Run Every Process Manually' flow that the suite does not cover is recorded either in UNCOVERED with a reason (if it is a documented command outside a request) or as an explicit gap note added to tools/qs-tester/README.md's Limitations section (for phases, like access test or the appendix, that don't fit Run Documented Commands / POST And Expect Field at all)",
         "No assertion or comment claims the suite verifies an authorization outcome (e.g. 'revoke actually blocks access') that no REQUESTS entry or UNCOVERED-documented gap actually checks",
         "uv run python docsync/check_readme_sync.py --all exits 0",
-        "The final report is exactly BLOCKED or VERIFIED, never an unqualified success claim, since no Catalyst credentials are available to run it live"
+        "The final report is exactly BLOCKED or VERIFIED, never an unqualified success claim, since no Diagrid credentials are available to run it live"
       ]
     },
     {

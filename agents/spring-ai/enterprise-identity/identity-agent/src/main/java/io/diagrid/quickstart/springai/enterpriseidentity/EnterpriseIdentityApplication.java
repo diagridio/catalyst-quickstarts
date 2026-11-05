@@ -8,7 +8,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 
 /**
- * The whole Catalyst identity integration is the one {@code @Bean} below: Spring Boot registers any
+ * The whole Diagrid identity integration is the one {@code @Bean} below: Spring Boot registers any
  * {@code Filter} bean, so every route is authenticated from here on. Note what is absent everywhere
  * else — no {@code io.diagrid} import in the controller, the tools or the agent configuration, and
  * nothing in this application reads the {@code X-Diagrid-User-Token} header.
@@ -37,7 +37,7 @@ public class EnterpriseIdentityApplication {
   }
 
   /**
-   * The identity policy the filter enforces on every request. Against Catalyst this is one
+   * The identity policy the filter enforces on every request. Against Diagrid this is one
    * no-argument constructor: issuer, audience and JWKS URI are all discovered.
    * {@code DIAGRID_QUICKSTART_IDENTITY=local} swaps in a throwaway offline issuer instead.
    */

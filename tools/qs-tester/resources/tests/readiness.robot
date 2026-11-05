@@ -1,6 +1,6 @@
 *** Comments ***
 Tests the readiness gate in quickstart.resource against flaky_server.py, which
-reproduces the shape of Catalyst's startup window without a project or
+reproduces the shape of Diagrid's startup window without a project or
 credentials. Runs in a few seconds; CI's lint job runs it on every PR.
 
 The negative test matters more than the positive one. A gate that never fails is

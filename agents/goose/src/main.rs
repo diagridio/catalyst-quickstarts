@@ -1,16 +1,16 @@
 //! Release Manager: a two-turn Goose conversation run as a durable Dapr
-//! Workflow, via Catalyst.
+//! Workflow, via Diagrid.
 //!
 //! Each turn is one Dapr activity that drives a real, unmodified `goose acp`
 //! process over the Agent Client Protocol. In turn 1 Goose writes the release
 //! notes with its own file tools. Turn 2 runs in a fresh Goose process that
 //! reloads the same Goose session, so it still knows which file it wrote.
-//! Catalyst records each turn as it completes, so killing this process mid-run
+//! Diagrid records each turn as it completes, so killing this process mid-run
 //! and restarting it resumes from the last completed turn instead of starting
 //! over (and re-paying for the model calls). See src/bin/crash_test.rs for a
 //! demonstration.
 //!
-//! Run with Catalyst:
+//! Run with Diagrid:
 //!   diagrid dev run -f dev-goose.yaml --approve
 
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
@@ -37,9 +37,9 @@ async fn main() -> anyhow::Result<()> {
     let goose = Goose::from_env()?;
     println!("Goose:     {}", goose.describe());
 
-    // A local `dapr run` sidecar or a Catalyst project, whichever the
+    // A local `dapr run` sidecar or a Diagrid project, whichever the
     // environment names. Unlike the Dapr SDK's own WorkflowClient::new(), this
-    // adds the TLS and API token Catalyst requires.
+    // adds the TLS and API token Diagrid requires.
     let mut client = diagrid_goose::workflow_client().await?;
     // diagrid_goose's workflow, and the activity that runs one Goose turn.
     diagrid_goose::register(client.registry_mut());

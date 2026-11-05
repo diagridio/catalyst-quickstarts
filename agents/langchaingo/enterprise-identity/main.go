@@ -1,4 +1,4 @@
-// Command identity-agent is a langchaingo agent running on Diagrid Catalyst
+// Command identity-agent is a langchaingo agent running on Diagrid
 // that knows who is calling it and calls its tools as that person.
 package main
 
@@ -29,7 +29,7 @@ const (
 )
 
 // localRequiredScope is demanded by the offline issuer alone. A Diagrid login
-// carries no custom scopes, so requiring one on the Catalyst path would answer
+// carries no custom scopes, so requiring one on the Diagrid path would answer
 // 403 for everybody.
 const localRequiredScope = "agent.invoke"
 
@@ -79,7 +79,7 @@ func main() {
 	}
 }
 
-// --- The entire Catalyst identity integration ------------------------------
+// --- The entire Diagrid identity integration ------------------------------
 
 // newHandler puts the identity middleware in front of the app's routes.
 // RequireAuth stays at its default true, so every route is authenticated.
@@ -88,7 +88,7 @@ func newHandler(oauth identity.OAuthConfig, a *agent) http.Handler {
 }
 
 // buildOAuthConfig is the identity policy the middleware enforces on every
-// request. Against Catalyst this is the zero value: issuer, audience and JWKS
+// request. Against Diagrid this is the zero value: issuer, audience and JWKS
 // URI are all discovered, so the app configures none of them. To require a
 // scope as well, pass `identity.OAuthConfig{Scopes: []string{"reports.read"}}`.
 func buildOAuthConfig(offline bool) (identity.OAuthConfig, error) {
@@ -110,7 +110,7 @@ func newMux(a *agent) *http.ServeMux {
 	return mux
 }
 
-// whoami reports who Catalyst says is calling.
+// whoami reports who Diagrid says is calling.
 func whoami(w http.ResponseWriter, r *http.Request) {
 	user, ok := identity.UserFromContext(r.Context())
 	if !ok {
@@ -189,7 +189,7 @@ func projectIdentity(user *identity.VerifiedUser) identityResponse {
 }
 
 // offlineIdentity reports which identity plane the app trusts, and so which
-// tool the agent can use: the offline issuer has no Catalyst project behind it,
+// tool the agent can use: the offline issuer has no Diagrid project behind it,
 // so there is no MCP server to reach.
 func offlineIdentity() bool {
 	return os.Getenv(envIdentityMode) == identityModeLocal

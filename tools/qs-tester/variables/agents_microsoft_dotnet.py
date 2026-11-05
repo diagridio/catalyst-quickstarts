@@ -17,7 +17,7 @@ LANGUAGE = "csharp"
 DOCUMENTED_PROJECT = "dotnet-quickstart"
 QUICKSTART_DIR = str(REPO_ROOT / "agents" / "microsoft-dotnet")
 
-# README "## Run with Catalyst", steps 2 and 3.
+# README "## Run with Diagrid", steps 2 and 3.
 SETUP = (
     "diagrid project create {project} --deploy-managed-kv --deploy-managed-pubsub --wait --use",
     "diagrid agent create event-planner --wait",
@@ -69,7 +69,7 @@ CONNECTED_APPS = (("event-planner", APP_PORT),)
 SERVING_MARKER = f"Now listening on: http://localhost:{APP_PORT}"
 
 # EMPTY, NOT VERIFIED. `Wait Until Catalyst Attached` waits for the first inbound
-# request Catalyst makes back through the dev tunnel, which is the point at which
+# request Diagrid makes back through the dev tunnel, which is the point at which
 # workflow calls stop hanging. Measured on agents/langgraph 2026-08-27: a call
 # made before that hangs forever and twelve retries over 181s never recovered it,
 # while the same call gated on the marker answered in ~1s three runs running.
@@ -81,7 +81,7 @@ SERVING_MARKER = f"Now listening on: http://localhost:{APP_PORT}"
 # checked. A marker that never appears makes the gate time out (loud, and the
 # suite fails); a marker matched from the wrong line would let the suite through
 # early (silent, and the run hangs). Fill this in by running the quickstart once
-# and reading what the app logs when Catalyst probes it.
+# and reading what the app logs when Diagrid probes it.
 CATALYST_PROBE_MARKERS = ()
 
 # Empty because the quickstart ships a canned offline model and only calls a real
@@ -93,7 +93,7 @@ SECRETS = ()
 
 # README "### 2. Trigger the Agent".
 #
-# OBSERVED, 2026-08-31, against a local OneBox Catalyst project with no model key
+# OBSERVED, 2026-08-31, against a local OneBox Diagrid project with no model key
 # set. `POST /run` returned 200 in ~30s with the body (tool 2's delay has since
 # dropped from 30s to 10s, so the same call now returns in ~10s):
 #
@@ -119,7 +119,7 @@ REQUESTS = (
     },
 )
 
-# README "### 3. Crash Recovery with Catalyst". The crash case reuses RUN,
+# README "### 3. Crash Recovery with Diagrid". The crash case reuses RUN,
 # APP_PORT, CONNECTED_APPS and SERVING_MARKER above: the README restarts the app
 # with "the same `diagrid dev run` command you used in step 1", and /crash/run is
 # served by the same Program.cs on the same port.
@@ -179,7 +179,7 @@ UNCOVERED = (
     (
         "dotnet test unit-tests",
         "unit tests for the offline model. This suite drives the running "
-        "quickstart against Catalyst; the same assertions do not need making "
+        "quickstart against Diagrid; the same assertions do not need making "
         "twice, and the test project is a separate build",
     ),
 )

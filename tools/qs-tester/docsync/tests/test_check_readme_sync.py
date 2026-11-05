@@ -31,7 +31,7 @@ Install dependencies:
 uv sync
 ```
 
-## 5. Run the application with Catalyst Cloud
+## 5. Run the application with Diagrid Cloud
 
 ```bash
 diagrid dev run -f state-quickstart.yaml --project state-quickstart --approve

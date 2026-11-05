@@ -16,7 +16,7 @@
   <version>1.0.0</version>
   <packaging>pom</packaging>
   <name>enterprise-identity</name>
-  <description>Catalyst Spring AI Quickstart — end-user identity, end to end</description>
+  <description>Diagrid Spring AI Quickstart — end-user identity, end to end</description>
 
   <!-- An aggregator so one `mvn package -DskipTests` builds both the agent and the stand-in
        CRM. -->

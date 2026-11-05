@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Run one agent-family suite against a real Catalyst project, then prove one of
+# Run one agent-family suite against a real Diagrid project, then prove one of
 # its assertions is not vacuous, then tear down everything it created.
 #
 # Usage: verify-live.sh <suite-path> [mutation-assignment] [expected-keyword]
@@ -22,7 +22,7 @@
 # now carries. A leg typed by hand as `agents-<name>` would silently ignore a
 # row's explicit `leg` override -- the override exists precisely for suites
 # whose `name` is over `suites.project_name_budget()` -- and this script would
-# then build and try to provision a project name over Catalyst's 55-character
+# then build and try to provision a project name over Diagrid's 55-character
 # ceiling.
 #
 # Agent-family suites only. Canonical suites need a different procedure and this

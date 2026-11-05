@@ -4,7 +4,7 @@ using Microsoft.Extensions.AI;
 using OpenAI;
 
 // Which identity plane the app trusts, and so which tool the agent can use: the offline issuer has
-// no Catalyst project behind it, so there is no MCP server to reach.
+// no Diagrid project behind it, so there is no MCP server to reach.
 var offlineIdentity = string.Equals(
     Environment.GetEnvironmentVariable("DIAGRID_QUICKSTART_IDENTITY"),
     "local",
@@ -17,11 +17,11 @@ var builder = WebApplication.CreateBuilder(args);
 LocalIdentity.LocalIssuer? localIssuer = null;
 #endif
 
-// --- The entire Catalyst identity integration ------------------------------
+// --- The entire Diagrid identity integration ------------------------------
 if (offlineIdentity)
 {
 #if DEBUG
-    // A throwaway offline issuer, so 200, 403 and 401 are all reachable with no Catalyst project.
+    // A throwaway offline issuer, so 200, 403 and 401 are all reachable with no Diagrid project.
     var issuer = LocalIdentity.BuildLocalIssuer(LocalIdentity.RequiredScopes);
     localIssuer = issuer;
     builder.Services.AddDiagridIdentity(config =>
@@ -34,14 +34,14 @@ if (offlineIdentity)
 #else
     // Compiled out of Release builds, so a container cannot trust tokens the app minted itself.
     throw new InvalidOperationException(
-        "DIAGRID_QUICKSTART_IDENTITY=local is a debug-only mode: it replaces the Catalyst identity "
+        "DIAGRID_QUICKSTART_IDENTITY=local is a debug-only mode: it replaces the Diagrid identity "
         + "plane with a throwaway in-process issuer, so it is compiled out of Release builds. "
-        + "Unset the variable to verify against Catalyst.");
+        + "Unset the variable to verify against Diagrid.");
 #endif
 }
 else
 {
-    // Against Catalyst this is the whole configuration: issuer, audience and JWKS URI are all
+    // Against Diagrid this is the whole configuration: issuer, audience and JWKS URI are all
     // discovered, so the app names none of them. Pass config.Scopes to require a scope as well.
     builder.Services.AddDiagridIdentity();
 }
@@ -50,7 +50,7 @@ else
 // under concurrency and the app never assembles an identity header itself.
 builder.Services.AddDiagridIdentityHttpClient(configure: client =>
 {
-    // Catalyst's own API token, a separate concern from the end user's identity: this says the APP
+    // Diagrid's own API token, a separate concern from the end user's identity: this says the APP
     // may talk to its sidecar, the user token says WHO it is talking for.
     var daprApiToken = Environment.GetEnvironmentVariable("DAPR_API_TOKEN");
     if (!string.IsNullOrEmpty(daprApiToken))
@@ -94,7 +94,7 @@ if (offlineIdentity)
 // Built at start-up so a missing OPENAI_API_KEY stops the app rather than failing the first call.
 app.Services.GetRequiredService<IdentityAgent>();
 
-// Who Catalyst says is calling. No model turn, so the 401/200 contrast is free.
+// Who Diagrid says is calling. No model turn, so the 401/200 contrast is free.
 app.MapGet("/whoami", IdentityEndpoints.WhoAmI);
 app.MapPost("/agent/run", IdentityEndpoints.AgentRun);
 
