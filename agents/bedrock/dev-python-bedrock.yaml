@@ -1,0 +1,13 @@
+version: 1
+common:
+  appLogDestination: console
+  enableAppHealthCheck: false
+  logLevel: info
+apps:
+  - appID: budget-planner
+    appDirPath: ./
+    appPort: 8080
+    appProtocol: http
+    command: ["python", "main.py"]
+    env:
+      APP_PORT: "8080"
