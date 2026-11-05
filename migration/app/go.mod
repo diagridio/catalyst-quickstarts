@@ -15,7 +15,7 @@ require (
 	github.com/dapr/dapr v1.16.0 // indirect
 	github.com/dapr/durabletask-go v0.10.0 // indirect
 	github.com/dapr/kit v0.16.1 // indirect
-	github.com/go-chi/chi/v5 v5.2.2 // indirect
+	github.com/go-chi/chi/v5 v5.4.0 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/google/uuid v1.6.0 // indirect
