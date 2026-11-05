@@ -359,7 +359,7 @@ infrastructure the harness must supply, the same as `ci/setup-project.sh`
 already does for the four canonical APIs.
 
 But `ci/setup-project.sh`'s flags (`--deploy-managed-kv
---deploy-managed-pubsub --enable-managed-workflow`) were chosen for the
+--deploy-managed-pubsub`) were chosen for the
 canonical APIs, and an agent quickstart's project may need different ones.
 Every agent quickstart that *does* document its own provisioning agrees on
 `--deploy-managed-kv`, and all but `spring-ai` add

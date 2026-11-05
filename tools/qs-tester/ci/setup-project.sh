@@ -39,7 +39,6 @@ diagrid login --api-key "$DIAGRID_API_KEY"
 diagrid project create "$PROJECT" \
   --deploy-managed-kv \
   --deploy-managed-pubsub \
-  --enable-managed-workflow \
   --wait --use
 
 # --deploy-managed-kv provisions the project's single managed KV store, named
