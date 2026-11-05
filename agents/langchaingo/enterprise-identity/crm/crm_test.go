@@ -1,5 +1,5 @@
 // Tests for the CRM's half of the on-behalf-of story: that it establishes who
-// the call is for from the token Catalyst minted, and reports both parties.
+// the call is for from the token Diagrid minted, and reports both parties.
 // Nothing here needs an issuer, because the CRM never verifies the token.
 package main
 
@@ -60,7 +60,7 @@ func (t headerTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	return http.DefaultTransport.RoundTrip(clone)
 }
 
-// onBehalfOfClaims is the shape Catalyst mints for an agent calling as a user:
+// onBehalfOfClaims is the shape Diagrid mints for an agent calling as a user:
 // `sub` is the user, and `act.sub` is the agent acting for them.
 func onBehalfOfClaims() map[string]any {
 	return map[string]any{

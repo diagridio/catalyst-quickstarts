@@ -12,7 +12,7 @@
 
   <artifactId>workflow-app</artifactId>
   <name>workflow-app</name>
-  <description>Catalyst Workflow Quickstart</description>
+  <description>Diagrid Workflow Quickstart</description>
   <version>1.0.0</version>
 
   <properties>

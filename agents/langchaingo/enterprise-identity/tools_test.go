@@ -43,7 +43,7 @@ func TestSubstitutionFollowsTheDeclaredSchema(t *testing.T) {
 		},
 		{
 			// The outbound tool takes no subject at all: the caller travels in
-			// the token Catalyst mints for the call.
+			// the token Diagrid mints for the call.
 			name:            "catalyst",
 			tools:           catalystTools(),
 			wantSubstituted: "",

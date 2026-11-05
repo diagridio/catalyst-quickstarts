@@ -1,18 +1,18 @@
 # Quickstart: State Management (Python)
 
-In this quickstart, you'll run a stateful order application on [Catalyst Cloud](https://docs.diagrid.io/operate/hosting/catalyst-cloud). You will learn how to:
+In this quickstart, you'll run a stateful order application on [Diagrid Cloud](https://docs.diagrid.io/operate/hosting/catalyst-cloud). You will learn how to:
 
-- Provision a Catalyst project with a managed KV store using the Diagrid CLI.
+- Provision a Diagrid project with a managed KV store using the Diagrid CLI.
 - Save and retrieve state items using the Dapr State API.
-- Inspect stored data in the Catalyst web console.
+- Inspect stored data in the Diagrid web console.
 
 ```mermaid
 ---
-title: Order App connected to Catalyst with KV Store
+title: Order App connected to Diagrid with KV Store
 ---
 flowchart LR
   APP(Order App)
-  subgraph Catalyst
+  subgraph Diagrid
     APPID(ID: order-app)
     STATE[(KV Store)]
   end
@@ -25,20 +25,20 @@ flowchart LR
 
 Before you proceed, ensure you have the following prerequisites installed.
 
-- [Diagrid Catalyst account](https://catalyst.diagrid.io/)
+- [Diagrid account](https://catalyst.diagrid.io/)
 - [Diagrid CLI](https://docs.diagrid.io/getting-started/install-cli)
 - [Git](https://git-scm.com/downloads)
 - [Python 3.12+](https://www.python.org/downloads/) & [uv](https://docs.astral.sh/uv/#installation)
 
-## 2. Log in to Catalyst
+## 2. Log in to Diagrid
 
-Authenticate to Diagrid Catalyst using the following command:
+Authenticate to Diagrid using the following command:
 
 ```bash
 diagrid login
 ```
 
-This command opens a new browser window where you'll be shown a confirmation code that should match the code in your terminal. Confirm the code, and if you're not logged into Catalyst, you'll be redirected to login.
+This command opens a new browser window where you'll be shown a confirmation code that should match the code in your terminal. Confirm the code, and if you're not logged into Diagrid, you'll be redirected to login.
 
 Confirm your user details are correct using the following command:
 
@@ -46,7 +46,7 @@ Confirm your user details are correct using the following command:
 diagrid whoami
 ```
 
-The expected output contains the name of the organization, your user name, and the Catalyst API endpoint.
+The expected output contains the name of the organization, your user name, and the Diagrid API endpoint.
 
 ## 3. Clone Quickstart Code
 
@@ -78,15 +78,15 @@ Install the dependencies for the state management application.
 uv sync --all-packages
 ```
 
-## 5. Run the application with Catalyst Cloud
+## 5. Run the application with Diagrid Cloud
 
-The `diagrid dev run` command creates your Catalyst project, provisions resources (apps, Diagrid KV Store service), configures environment variables, and launches your application connected to Catalyst Cloud.
+The `diagrid dev run` command creates your Diagrid project, provisions resources (apps, Diagrid KV Store service), configures environment variables, and launches your application connected to Diagrid Cloud.
 
 ```bash
 uv run diagrid dev run -f state-quickstart.yaml --project state-quickstart --approve
 ```
 
-> **Tip:** Wait a few seconds until you see application logs in the terminal to ensure the application is up and running and connected to Catalyst.
+> **Tip:** Wait a few seconds until you see application logs in the terminal to ensure the application is up and running and connected to Diagrid.
 
 ## 6. Call the State API
 
@@ -144,13 +144,13 @@ The expected response body is:
 
 This application stores the order as the string form of its model, so the retrieved value reads `orderId=1` rather than a nested JSON object.
 
-### 6.3 View in the Catalyst web console
+### 6.3 View in the Diagrid web console
 
-Open the [KV Store data explorer](https://catalyst.diagrid.io/kv-store/kvstore) in the Catalyst Cloud web console (Resources > Managed KV store) and confirm the key-value pair saved by your application appears.
+Open the [KV Store data explorer](https://catalyst.diagrid.io/kv-store/kvstore) in the Diagrid Cloud web console (Resources > Managed KV store) and confirm the key-value pair saved by your application appears.
 
 ## 7. Clean Up
 
-Press CTRL+C in the terminal that runs `diagrid dev run` to stop the application and disconnect from Catalyst Cloud.
+Press CTRL+C in the terminal that runs `diagrid dev run` to stop the application and disconnect from Diagrid Cloud.
 
 To delete the entire project and all provisioned resources:
 
@@ -162,15 +162,15 @@ diagrid project delete state-quickstart
 
 In this quickstart you:
 
-- Logged in to Catalyst and provisioned a managed state store project with a single CLI command (`diagrid dev run`).
+- Logged in to Diagrid and provisioned a managed state store project with a single CLI command (`diagrid dev run`).
 - Saved and retrieved state items using the Dapr State API.
-- Inspected stored data using the Catalyst KV Store data explorer.
+- Inspected stored data using the Diagrid KV Store data explorer.
 
-Catalyst handled state persistence and key-value storage automatically — no infrastructure to manage.
+Diagrid handled state persistence and key-value storage automatically — no infrastructure to manage.
 
 ## Next steps
 
 - Explore the [Dapr API SDK guides](https://docs.diagrid.io/develop/dapr-apis) to integrate state management into your own applications.
 - Try the [Pub/Sub quickstart](https://docs.diagrid.io/getting-started/quickstarts/dapr-apis/pubsub) to add event-driven messaging to your application.
 - Read the full [State Management quickstart docs](https://docs.diagrid.io/getting-started/quickstarts/dapr-apis/state).
-- Browse all [Catalyst quickstarts](../../README.md) in this repository.
+- Browse all [Diagrid quickstarts](../../README.md) in this repository.

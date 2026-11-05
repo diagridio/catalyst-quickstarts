@@ -8,19 +8,19 @@ the process to demonstrate automatic recovery.
 The app itself is **plain Spring AI** — a `ChatClient` bean + three `@Tool` beans + a REST endpoint.
 There is no durability code anywhere in it: adding the starter to the classpath is what turns every
 `ChatClient.call()` into a checkpointed Dapr Workflow — and, as of 0.2.0, the starter also records the
-`ChatClient` bean as a Catalyst agent (registration ships in the starter, no separate dependency).
+`ChatClient` bean as a Diagrid agent (registration ships in the starter, no separate dependency).
 
 ## What This Quickstart Demonstrates
 
 - **Spring AI + Dapr Workflows**: run a Spring AI agent with durable execution, added by dependency rather than by durability code
 - **No model account needed**: the app ships an offline model, so the whole walkthrough runs without an API key
 - **Spring AI model providers**: the same `ChatClient` talks to OpenAI through `spring-ai-starter-model-openai` when you ask it to
-- **Crash Recovery**: tool 2 crashes the process; on restart, Catalyst resumes the workflow automatically — completed steps are not re-run
+- **Crash Recovery**: tool 2 crashes the process; on restart, Diagrid resumes the workflow automatically — completed steps are not re-run
 - **REST API**: trigger the agent via an HTTP endpoint
 
 ## Prerequisites
 
-1. A [Diagrid Catalyst account](https://catalyst.diagrid.io/)
+1. A [Diagrid account](https://catalyst.diagrid.io/)
 2. [Diagrid CLI](https://docs.diagrid.io/getting-started/install-cli) installed
 3. [JDK 21](https://adoptium.net/) or later, and [Maven 3.9+](https://maven.apache.org/download.cgi)
 4. *(Optional)* An [OpenAI API key](https://platform.openai.com/api-keys), only if you want to run
@@ -67,7 +67,7 @@ times before it surfaces.
 
 ### 1. Deploy and Run
 
-Log in, create the Catalyst project with managed workflow enabled (and set it as the default for this session), register the agent, then run:
+Log in, create the Diagrid project with managed workflow enabled (and set it as the default for this session), register the agent, then run:
 
 ```bash
 diagrid login
@@ -116,7 +116,7 @@ You'll see:
 ```
 
 The process exits — this is expected. (The `curl` call does not return a result: the app died
-mid-request. The workflow itself is safe in Catalyst and will resume in the next step.)
+mid-request. The workflow itself is safe in Diagrid and will resume in the next step.)
 
 ## Crash Recovery
 
@@ -174,7 +174,7 @@ and execution continues from `step_two_compare`:
 
 ## Clean Up
 
-Stop the running application with `Ctrl+C`, then delete the Catalyst project:
+Stop the running application with `Ctrl+C`, then delete the Diagrid project:
 
 ```bash
 diagrid project delete spring-ai-quickstart

@@ -95,7 +95,7 @@ curl -X POST "http://localhost:8080/crash/kill"
 Invoke-RestMethod -Method Post -Uri 'http://localhost:8080/crash/kill'
 ```
 
-The process dies. The workflow is safe in Catalyst — but the memory advisor's `after` phase never
+The process dies. The workflow is safe in Diagrid — but the memory advisor's `after` phase never
 ran, so the answer was never recorded.
 
 ## Recovery — the response advisor only runs on success
@@ -167,7 +167,7 @@ written in the `after` phase, is recorded once — on success.
 - On a crash or a `DurableCallTimeoutException`, the `after` phase never runs. The workflow is durable;
   the caller-side advisor response phase is not. Re-attaching with the same instance id
   (`DurableAdvisor.INSTANCE_ID_KEY`) is what lets the full chain complete.
-- Chat memory is backed by the Catalyst-managed `kvstore` store via `diagrid-spring-ai-memory`
+- Chat memory is backed by the Diagrid-managed `kvstore` store via `diagrid-spring-ai-memory`
   (`diagrid.spring-ai.memory.statestore=kvstore`).
 
 > **Design takeaway.** Put anything that must survive a crash *inside* the workflow — as a `@Tool`
@@ -177,7 +177,7 @@ written in the `after` phase, is recorded once — on success.
 
 ## Clean Up
 
-Stop the app with `Ctrl+C`, then delete the Catalyst project:
+Stop the app with `Ctrl+C`, then delete the Diagrid project:
 
 ```bash
 diagrid project delete spring-ai-durable-memory

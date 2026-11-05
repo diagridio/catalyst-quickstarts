@@ -20,7 +20,7 @@ import org.springframework.ai.model.tool.ToolCallingChatOptions;
  * The offline model's contract, which is what the crash-recovery demo runs on by default.
  *
  * <p>Every case here stands for something outside this file that would otherwise break silently:
- * the agent's tool name, the durability layer's tool-callback wiring, and the string the Catalyst
+ * the agent's tool name, the durability layer's tool-callback wiring, and the string the Diagrid
  * console displays as this agent's model.
  */
 class CannedChatModelTest {
@@ -76,7 +76,7 @@ class CannedChatModelTest {
   void fallsBackToTheSampleReferenceWhenTheMessageCarriesNone() {
     // Anything outside the reference character class lands here rather than being interpolated
     // into the JSON arguments. ABC123 is both the controller's own default and the body the
-    // Catalyst console sends.
+    // Diagrid Console sends.
     AssistantMessage message = output(this.model.call(opening("Please book something for me.")));
 
     assertEquals("{\"reference\":\"ABC123\"}", message.getToolCalls().get(0).arguments());
@@ -152,7 +152,7 @@ class CannedChatModelTest {
 
   @Test
   void exposesToolCallingOptionsCarryingTheModelName() {
-    // The model string is what the agent registry reads for the Catalyst console, and the
+    // The model string is what the agent registry reads for the Diagrid Console, and the
     // inherited default would leave it null. The ToolCallingChatOptions type is what lets the
     // durability layer attach the workflow's tool callbacks, which is what the registry reads back
     // as this agent's per-request tool list.
@@ -168,7 +168,7 @@ class CannedChatModelTest {
   @Test
   void keepsTheClassNameTheAgentRegistryDerivesTheProviderFrom() {
     // The registry strips a trailing "ChatModel" from this type's simple name and lowercases the
-    // rest to get the provider string on the Catalyst agent page. Renaming this class silently
+    // rest to get the provider string on the Diagrid agent page. Renaming this class silently
     // changes what a user sees there, and nothing else here would notice. Pinned as the whole name
     // rather than by re-implementing the derivation, which lives in the library.
     assertEquals("CannedChatModel", CannedChatModel.class.getSimpleName());

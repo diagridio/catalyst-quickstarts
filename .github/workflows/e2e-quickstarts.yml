@@ -47,7 +47,7 @@ on:
       - '.github/workflows/e2e-quickstarts.yml'
 
 # Do not cancel in progress: a cancelled leg never runs teardown and leaks its
-# Catalyst project.
+# Diagrid project.
 concurrency:
   group: e2e-quickstarts
   cancel-in-progress: false
@@ -172,7 +172,7 @@ jobs:
     timeout-minutes: 90
     strategy:
       fail-fast: false
-      # Never more than two concurrent Catalyst projects. Order pairs each
+      # Never more than two concurrent Diagrid projects. Order pairs each
       # build-heavy language with a fast one so both slots stay busy.
       max-parallel: 2
       matrix:
@@ -225,7 +225,7 @@ jobs:
       - name: Sync harness
         run: (cd tools/qs-tester && uv sync)
 
-      - name: Create ephemeral Catalyst project
+      - name: Create ephemeral Diagrid project
         run: bash tools/qs-tester/ci/setup-project.sh
 
       # Pre-warm OUTSIDE the timed Robot build keyword. On a cold ~/.m2 the
@@ -291,12 +291,12 @@ jobs:
           name: robot-${{ matrix.lang }}
           path: tools/qs-tester/results/
 
-      - name: Delete ephemeral Catalyst project
+      - name: Delete ephemeral Diagrid project
         if: always()
         run: bash tools/qs-tester/ci/teardown-project.sh
 
   # Runs AFTER e2e, not alongside it. `max-parallel` is per-job, so two jobs at
-  # 2 would allow four concurrent Catalyst projects and break the two-project
+  # 2 would allow four concurrent Diagrid projects and break the two-project
   # cap this workflow's concurrency comment relies on. `always()` is what still
   # runs these suites when a language leg failed: a nightly run should report
   # every broken quickstart, not stop at the first.
@@ -402,7 +402,7 @@ jobs:
       - name: Compute the ephemeral project name
         run: bash tools/qs-tester/ci/project-name.sh agents-${{ matrix.leg }}
 
-      - name: Log in to Catalyst
+      - name: Log in to Diagrid
         run: bash tools/qs-tester/ci/login.sh
 
       - name: Run the suite
@@ -422,7 +422,7 @@ jobs:
           name: robot-agents-${{ matrix.name }}
           path: tools/qs-tester/results/
 
-      - name: Delete the ephemeral Catalyst project
+      - name: Delete the ephemeral Diagrid project
         if: always()
         run: bash tools/qs-tester/ci/teardown-project.sh
 

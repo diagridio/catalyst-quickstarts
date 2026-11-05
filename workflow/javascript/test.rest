@@ -1,5 +1,5 @@
 ### Workflow API Test Suite
-### Based on Diagrid Catalyst Workflow Quickstart
+### Based on Diagrid Workflow Quickstart
 ### https://docs.diagrid.io/catalyst/quickstart/workflow
 
 ### Health Check

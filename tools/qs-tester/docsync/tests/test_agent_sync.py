@@ -30,7 +30,7 @@ uv sync
 export OPENAI_API_KEY="your-key-here"
 ```
 
-## Run with Catalyst
+## Run with Diagrid
 
 ```bash
 diagrid login
@@ -78,7 +78,7 @@ HTTP/1.1 401 Unauthorized
 {"error":"oauth.missing_token"}
 ```
 
-## Crash Recovery Test With Catalyst
+## Crash Recovery Test With Diagrid
 
 ```bash
 uv run diagrid dev run -f dev-crash-test.yaml --approve
@@ -253,7 +253,7 @@ def test_check_agent_rejects_a_log_marker_that_only_appears_in_prose(tmp_path):
     # main.py really defines that tool, but NOTHING PRINTS IT, so the marker could
     # never match a live run. The old check asked only whether the string appeared
     # somewhere in the markdown, and the prose satisfied it — the suite went green
-    # on a marker that was guaranteed to time out against real Catalyst.
+    # on a marker that was guaranteed to time out against real Diagrid.
     row, root = _fixture(tmp_path)
     module = data_module(
         REQUESTS=({"method": "POST", "port": 8005, "path": "/agent/run",
@@ -310,7 +310,7 @@ def test_check_agent_reports_a_missing_catalyst_probe_markers(tmp_path):
     # inbound-request marker has not been identified" — a decision each module
     # has to state, which is the point of requiring the attribute. Absent is not
     # legal: it would silently drop the gate that keeps a suite from triggering
-    # inside Catalyst's attach window, where the first call hangs unrecoverably.
+    # inside Diagrid's attach window, where the first call hangs unrecoverably.
     row, root = _fixture(tmp_path)
     module = data_module()
     del module.CATALYST_PROBE_MARKERS

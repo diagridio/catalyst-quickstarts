@@ -4,7 +4,7 @@
 #
 #   DIAGRID_QUICKSTART_IDENTITY=local dotnet run --project agent --urls http://localhost:8006
 #
-# See "## Run Offline Without a Catalyst Project" in README.md. The two requests
+# See "## Run Offline Without a Diagrid Project" in README.md. The two requests
 # that send no credential at all answer 401 in either mode.
 #
 # Leave the placeholder unedited and the credential-bearing requests answer

@@ -7,7 +7,7 @@ Change the README, change this file, and `docsync/check_readme_sync.py --all`
 will tell you if you changed only one.
 
 What this suite covers. The quickstart demonstrates inbound end-user identity:
-Catalyst verifies the caller and passes a verified identity to the app in
+Diagrid verifies the caller and passes a verified identity to the app in
 `X-Diagrid-User-Token`. The suite asserts the plumbing -- build, documented
 provisioning, the app serving -- plus the one HTTP outcome that is deterministic
 without a credential: an unauthenticated request is refused 401 on both
@@ -28,7 +28,7 @@ FAMILY = "agents"
 NAME = "spring-ai-enterprise-identity"
 LANGUAGE = "java"
 
-# README "## Run with Catalyst", step 2. Replaced by an ephemeral qs-ci-* name at
+# README "## Run with Diagrid", step 2. Replaced by an ephemeral qs-ci-* name at
 # run time; also what doc-sync maps onto `{project}` when comparing.
 DOCUMENTED_PROJECT = "enterprise-identity-quickstart"
 
@@ -45,7 +45,7 @@ CRM_APP_ID = "crm-mcp"
 CRM_APP_PORT = 8007
 
 # `identity-agent` is created before the MCPServer on purpose: crm-mcp.yaml
-# scopes the CRM to that App ID, and Catalyst rejects a scope naming an App ID
+# scopes the CRM to that App ID, and Diagrid rejects a scope naming an App ID
 # that does not exist yet. The CRM's own App ID must NOT be created here --
 # registering the MCP server creates it, and a hand-made one collides by name.
 
@@ -68,7 +68,7 @@ SETUP = (
 # ${qs}[dir], and both the agent and the stand-in CRM have to be built by it.
 INSTALL = "mvn package -DskipTests"
 
-# README "## Run with Catalyst", step 4. Bare of `--project` on purpose: the
+# README "## Run with Diagrid", step 4. Bare of `--project` on purpose: the
 # documented `project create` carries `--use`, and reproducing that dependency is
 # deliberate, so a regression in `--use` breaks this suite instead of silently
 # breaking readers.
@@ -91,7 +91,7 @@ RUN = (
 # would correctly reject it.
 TEARDOWN = ()
 
-# README "## Run with Catalyst", step 4: "Wait until the output shows
+# README "## Run with Diagrid", step 4: "Wait until the output shows
 # `Tomcat started on port 8006`". Transcribed rather than invented, unlike the
 # other two agents/spring-ai suites, whose READMEs document no readiness wording
 # at all and therefore have READY_MARKERS = ().
@@ -159,7 +159,7 @@ CONNECTED_APPS = ((APP_ID, APP_PORT), (CRM_APP_ID, CRM_APP_PORT))
 # gate exists for is not one this suite enters.
 #
 # Left empty rather than guessed for the ordinary reason too: the marker is
-# whatever THIS app's logging makes visible for an inbound request from Catalyst,
+# whatever THIS app's logging makes visible for an inbound request from Diagrid,
 # and nobody has watched this app's dev-run output yet. A marker that never
 # appears makes the gate time out loudly; a marker matched from the wrong line
 # lets the suite through early and silently. Fill it in from a real run, or leave
@@ -200,7 +200,7 @@ SECRETS = ()
 #     offline issuer, where the verifier is guaranteed to exist.
 #
 # All four outcomes were MEASURED against this quickstart's own jar, offline, with
-# no Catalyst and no network (DIAGRID_QUICKSTART_IDENTITY=local, port 8106):
+# no Diagrid and no network (DIAGRID_QUICKSTART_IDENTITY=local, port 8106):
 #
 #     GET  /whoami    no header             -> 401 {"error": "oauth.missing_token"}
 #                                              Cache-Control: no-store
@@ -221,7 +221,7 @@ SECRETS = ()
 # that can present a credential:
 # agents/spring-ai/enterprise-identity/identity-agent/src/test/java, which mint
 # one offline. Those tests cannot substitute for this suite either -- they
-# exercise no Catalyst at all -- so the two are complements, and neither alone
+# exercise no Diagrid at all -- so the two are complements, and neither alone
 # proves the live inbound path.
 #
 # The status is a TRANSCRIPTION here, unlike the other agents/spring-ai suites:
@@ -300,11 +300,11 @@ UNCOVERED = (
     ),
     (
         "DIAGRID_QUICKSTART_IDENTITY=local mvn -f identity-agent/pom.xml spring-boot:run",
-        "README '## Run Offline Without a Catalyst Project'. It replaces Catalyst "
+        "README '## Run Offline Without a Diagrid Project'. It replaces Diagrid "
         "with a throwaway in-process issuer to make the 200, 403 and 401 reachable "
         "with no project at all, and it binds the same port 8006 as `dev run`. That "
         "makes it an alternative to this suite's entire flow rather than a step "
-        "inside it: it exercises no Catalyst, and running it here would collide "
+        "inside it: it exercises no Diagrid, and running it here would collide "
         "with the app this suite already has serving. The 200 and 403 paths this "
         "suite cannot reach are covered instead by the quickstart's own unit tests "
         "in agents/spring-ai/enterprise-identity/identity-agent/src/test/java, "

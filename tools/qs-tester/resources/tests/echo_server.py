@@ -1,5 +1,5 @@
 """A POST-answering HTTP server, so `POST And Expect Field` can be tested with
-no Catalyst project and no network.
+no Diagrid project and no network.
 
 `python -m http.server` only answers GET, and the keyword under test asserts on
 a POST response body, so a fixture is unavoidable. Kept to the standard library

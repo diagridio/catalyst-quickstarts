@@ -1,14 +1,14 @@
 # Mastra Quickstart - SRE Agent
 
-This quickstart demonstrates how to run a [Mastra](https://mastra.ai) agent as a durable Dapr Workflow using Diagrid Catalyst's TypeScript SDK (`@diagrid/agent-mastra`). The agent acts as an **SRE Agent** that checks service health, calculates error rates, and tracks incident status.
+This quickstart demonstrates how to run a [Mastra](https://mastra.ai) agent as a durable Dapr Workflow using Diagrid's TypeScript SDK (`@diagrid/agent-mastra`). The agent acts as an **SRE Agent** that checks service health, calculates error rates, and tracks incident status.
 
 ## What This Quickstart Demonstrates
 
 - **Mastra + Dapr Workflows**: Run a Mastra `Agent`'s control loop as a durable Dapr Workflow — every model call and every tool call is a checkpointed activity
 - **Direct LLM Integration**: Calls OpenAI directly through Mastra's own model config (a local Ollama model works too — see [Using a local model instead](#using-a-local-model-instead)); no Dapr conversation component needed
 - **Tool Integration**: `checkServiceHealth` and `calculateErrorRate` tools, each executed as its own durable activity
-- **Durable Crash Recovery**: Resume a workflow from the last completed activity after a crash — a capability not offered by Mastra natively (see [Crash Recovery Test With Catalyst](#crash-recovery-test-with-catalyst))
-- **Agent Registry**: Registers as `sre-agent` in Catalyst's agent registry, viewable from the dashboard
+- **Durable Crash Recovery**: Resume a workflow from the last completed activity after a crash — a capability not offered by Mastra natively (see [Crash Recovery Test With Diagrid](#crash-recovery-test-with-diagrid))
+- **Agent Registry**: Registers as `sre-agent` in Diagrid's agent registry, viewable from the dashboard
 
 ### Role
 
@@ -21,7 +21,7 @@ This quickstart demonstrates how to run a [Mastra](https://mastra.ai) agent as a
 
 ## Prerequisites
 
-1. A [Diagrid Catalyst account](https://catalyst.diagrid.io/)
+1. A [Diagrid account](https://catalyst.diagrid.io/)
 2. [Diagrid CLI](https://docs.diagrid.io/getting-started/install-cli) installed
 3. [Node.js 22.13 or newer](https://nodejs.org/en/)
 4. An [OpenAI API key](https://platform.openai.com/api-keys)
@@ -62,17 +62,17 @@ export OLLAMA_ENDPOINT="http://localhost:11434/v1"
 export OLLAMA_MODEL="qwen3:0.6b"   # optional, this is the default
 ```
 
-## Run with Catalyst
+## Run with Diagrid
 
 ### 1. Login and Run
 
-1. Login to Catalyst using the Diagrid CLI:
+1. Login to Diagrid using the Diagrid CLI:
 
 ```bash
 diagrid login
 ```
 
-2. Create a new Catalyst project for the quickstart and use it as the default project for the current session:
+2. Create a new Diagrid project for the quickstart and use it as the default project for the current session:
 
 ```bash
 diagrid project create mastra-quickstart --deploy-managed-kv --wait --use
@@ -84,7 +84,7 @@ diagrid project create mastra-quickstart --deploy-managed-kv --wait --use
 diagrid agent create sre-agent --wait
 ```
 
-4. Run the agent with Catalyst:
+4. Run the agent with Diagrid:
 
 ```bash
 diagrid dev run -f dev-mastra.yaml --approve
@@ -107,23 +107,23 @@ status is degraded, with a latency of 842 ms and an uptime of 99.2%.
 Runtime shut down.
 ```
 
-`Iterations: 2` is the proof: one model call asks for the `checkServiceHealth` and `calculateErrorRate` tools, then a second turns their results into the answer above. Each of those two model calls and two tool calls is a separate checkpointed Dapr activity — so a process killed mid-turn resumes from the last completed one instead of restarting. See [Crash Recovery Test With Catalyst](#crash-recovery-test-with-catalyst) for a demonstration.
+`Iterations: 2` is the proof: one model call asks for the `checkServiceHealth` and `calculateErrorRate` tools, then a second turns their results into the answer above. Each of those two model calls and two tool calls is a separate checkpointed Dapr activity — so a process killed mid-turn resumes from the last completed one instead of restarting. See [Crash Recovery Test With Diagrid](#crash-recovery-test-with-diagrid) for a demonstration.
 
-### 2. Inspecting the Results in Catalyst
+### 2. Inspecting the Results in Diagrid
 
-Open the [Catalyst dashboard](https://catalyst.diagrid.io/agents) in your browser and navigate to Agents > sre-agent. Then select the most recent agent workflow run to view output.
+Open the [Diagrid dashboard](https://catalyst.diagrid.io/agents) in your browser and navigate to Agents > sre-agent. Then select the most recent agent workflow run to view output.
 
-## Crash Recovery Test With Catalyst
+## Crash Recovery Test With Diagrid
 
 The `crash_test.ts` file demonstrates durable crash recovery, a capability not offered by Mastra natively. It serves the agent over HTTP and looks up an incident's status in three steps, each a separate checkpointed Dapr activity:
 
-1. **Model call 1**: asks for the `checkIncidentStatus` tool. Completes and is checkpointed by Catalyst
+1. **Model call 1**: asks for the `checkIncidentStatus` tool. Completes and is checkpointed by Diagrid
 2. **checkIncidentStatus**: looks up the incident over ~10 seconds. The crash lands here
 3. **Model call 2**: turns the tool's result into the answer
 
-The order is the point. Model call 1 completes and Catalyst records its result before `checkIncidentStatus` starts, so the crash lands between two known points and the restart can show that only the interrupted step ran again. Each step logs itself (`>>> Model call 1`, `>>> STEP 2`, `>>> Model call 2`), which is how you follow it in the app log.
+The order is the point. Model call 1 completes and Diagrid records its result before `checkIncidentStatus` starts, so the crash lands between two known points and the restart can show that only the interrupted step ran again. Each step logs itself (`>>> Model call 1`, `>>> STEP 2`, `>>> Model call 2`), which is how you follow it in the app log.
 
-You also choose the workflow instance ID, so you can find the same run again from a second request or in the Catalyst console. Nothing is armed in the source: the crash is something you ask for, so there is no source edit and no environment variable to unset.
+You also choose the workflow instance ID, so you can find the same run again from a second request or in the Diagrid Console. Nothing is armed in the source: the crash is something you ask for, so there is no source edit and no environment variable to unset.
 
 ### 3. Start the app
 
@@ -165,7 +165,7 @@ Go to the terminal where you started `diagrid dev run`. Model call 1 completes, 
 == APP - sre-agent == >>> crash: killing this process 8s into the run, as asked by kill_after_seconds
 ```
 
-The request then reports a connection reset, which is exactly what a real crash looks like. The workflow instance `inc-4471` is unaffected: it lives in Catalyst, not in the process that just died.
+The request then reports a connection reset, which is exactly what a real crash looks like. The workflow instance `inc-4471` is unaffected: it lives in Diagrid, not in the process that just died.
 
 Keep the value below `CRASH_DELAY_SECONDS` (10 by default) so the crash lands inside `checkIncidentStatus` rather than after the agent has finished. The clock starts when `checkIncidentStatus` starts, not when the request arrives, so the budget does not have to cover model call 1 ahead of it. That is also why the field is safe to send again in step 6: the timer only starts when the tool actually runs, and a call that attaches to an existing run never runs it.
 
@@ -177,7 +177,7 @@ Restart with the same command as step 3:
 diagrid dev run -f dev-crash-test.yaml --approve
 ```
 
-**That is the whole recovery. You do not have to send anything.** As soon as the restarted app's worker reconnects, Catalyst hands `inc-4471` back to it, `checkIncidentStatus` starts over from the beginning, and about 10 seconds later model call 2 produces the answer. Watch the app log, where all of this happens before you send anything:
+**That is the whole recovery. You do not have to send anything.** As soon as the restarted app's worker reconnects, Diagrid hands `inc-4471` back to it, `checkIncidentStatus` starts over from the beginning, and about 10 seconds later model call 2 produces the answer. Watch the app log, where all of this happens before you send anything:
 
 ```text
 == APP - sre-agent == >>> STEP 2 checkIncidentStatus: Checking INC-4471 over ~10s. KILL THE APP NOW to test crash recovery (POST /crash/kill, or kill -9). It resumes on restart.
@@ -185,7 +185,7 @@ diagrid dev run -f dev-crash-test.yaml --approve
 == APP - sre-agent == >>> Model call 2 for run inc-4471
 ```
 
-Model call 1 is **not** made again: its `>>> Model call 1` line does not appear a second time. That call had completed and Catalyst had recorded its result, so the Dapr workflow engine replayed the saved value instead of calling the model (and paying for it) again. Only the step that was interrupted runs twice. The restarted process also starts disarmed, so the re-run `checkIncidentStatus` asks you to kill the app rather than killing it again.
+Model call 1 is **not** made again: its `>>> Model call 1` line does not appear a second time. That call had completed and Diagrid had recorded its result, so the Dapr workflow engine replayed the saved value instead of calling the model (and paying for it) again. Only the step that was interrupted runs twice. The restarted process also starts disarmed, so the re-run `checkIncidentStatus` asks you to kill the app rather than killing it again.
 
 ### 6. Collect the answer
 
@@ -263,7 +263,7 @@ The length of `checkIncidentStatus` is configurable through the `CRASH_DELAY_SEC
 
 ## Clean Up
 
-Stop the running application with `Ctrl+C`, then delete the Catalyst project:
+Stop the running application with `Ctrl+C`, then delete the Diagrid project:
 
 ```bash
 diagrid project delete mastra-quickstart

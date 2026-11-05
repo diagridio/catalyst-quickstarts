@@ -47,13 +47,13 @@ metadata:
 
 ### 1. Deploy and Run the Agent
 
-Login to Diagrid Catalyst using the following command:
+Login to Diagrid using the following command:
 
 ```bash
 diagrid login
 ```
 
-Create a Catalyst project for the quickstart:
+Create a Diagrid project for the quickstart:
 
 ```bash
 diagrid project create durable-agent-quickstart --deploy-managed-kv --deploy-managed-pubsub --wait
@@ -65,7 +65,7 @@ Create an Agent resource for each app in `dapr.yaml`. `diagrid dev run` refuses 
 diagrid agent create travel-assistant-agent --project durable-agent-quickstart --wait
 ```
 
-Deploy the agent to Catalyst with managed infrastructure:
+Deploy the agent to Diagrid with managed infrastructure:
 
 ```bash
 diagrid dev run -f dapr.yaml --project durable-agent-quickstart --approve
@@ -108,7 +108,7 @@ At a high-level, the agent will:
 2. Execute the `search_flights` tool in parallel for both cities
 3. Return flight options with pricing to the LLM and plan next steps
 4. Execute the `search_hotels` tool in parallel for both cities
-5. At every step, persist execution state and conversation history to Catalyst
+5. At every step, persist execution state and conversation history to Diagrid
 6. Return flight and hotel options 
 
 
@@ -154,11 +154,11 @@ Invoke-RestMethod -Method Post -Uri 'http://localhost:8001/agent/run' -ContentTy
 
 **VS Code REST Client (any OS):** Open [`test.http`](./test.http) and click *Send Request* above the request. Requires the [REST Client](https://marketplace.visualstudio.com/items?itemName=humao.rest-client) extension.
 
-## Monitoring in Catalyst
+## Monitoring in Diagrid
 
 ### Check Workflow Execution
 
-- Navigate to Catalyst dashboard → Workflows
+- Navigate to Diagrid dashboard → Workflows
 - View real-time execution progress and detailed logs
 - Inspect individual workflow steps and timing
 
@@ -180,7 +180,7 @@ The agent uses three separate state stores:
 
 ### View Application Architecture
 
-- In Catalyst dashboard → Application Map
+- In Diagrid dashboard → Application Map
 - See the `travel-assistant-agent` service and its dependencies
 - Observe state store connections and workflow execution
 

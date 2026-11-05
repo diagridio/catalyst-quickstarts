@@ -9,7 +9,7 @@ using Microsoft.IdentityModel.Tokens;
 namespace EnterpriseIdentity;
 
 /// <summary>
-/// An offline stand-in for the Catalyst identity plane, enabled with
+/// An offline stand-in for the Diagrid identity plane, enabled with
 /// <c>DIAGRID_QUICKSTART_IDENTITY=local</c>. Debug-only, and never a real deployment: the throwaway
 /// private key lives in this process's memory and the credentials it signs are logged in plain text.
 /// </summary>
@@ -23,7 +23,7 @@ public static class LocalIdentity
     public const string KeyId = "local-quickstart-key";
 
     /// <summary>
-    /// The scope the offline issuer demands. On the Catalyst path, require the scopes your own
+    /// The scope the offline issuer demands. On the Diagrid path, require the scopes your own
     /// identity provider issues.
     /// </summary>
     public static readonly string[] RequiredScopes = ["agent.invoke"];

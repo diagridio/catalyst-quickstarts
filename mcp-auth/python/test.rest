@@ -1,5 +1,5 @@
 ### MCP Authentication & Authorization Quickstart
-### Diagrid Catalyst - Authenticating to an MCP server and authorizing tool calls
+### Diagrid - Authenticating to an MCP server and authorizing tool calls
 
 ### Health Check - MCP Client
 GET http://localhost:5001/

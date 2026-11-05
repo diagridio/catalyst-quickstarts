@@ -1,5 +1,5 @@
 /**
- * An offline stand-in for the Catalyst identity plane.
+ * An offline stand-in for the Diagrid identity plane.
  *
  * Opt in with DIAGRID_QUICKSTART_IDENTITY=local. It generates a throwaway RSA
  * key, serves the public half as JWKS on localhost, and logs the three

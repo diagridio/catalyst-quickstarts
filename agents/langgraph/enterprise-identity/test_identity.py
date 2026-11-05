@@ -4,12 +4,12 @@ Run from this directory with:
 
     uv run --with pytest pytest test_identity.py
 
-No Catalyst, no Dapr, no network and no API key: `build_local_issuer` stands in
-for the Catalyst identity plane, signing with a throwaway in-process key and
+No Diagrid, no Dapr, no network and no API key: `build_local_issuer` stands in
+for the Diagrid identity plane, signing with a throwaway in-process key and
 serving the public half as JWKS on a loopback port.
 
 The outbound leg is not tested here -- carrying the caller onward to an MCP tool
-needs a Catalyst project, so the README walkthrough covers it.
+needs a Diagrid project, so the README walkthrough covers it.
 """
 
 import asyncio
@@ -58,7 +58,7 @@ def client(issuer):
 
 
 def auth(token: str) -> dict:
-    """The header Catalyst sets on an inbound request, as the middleware reads it."""
+    """The header Diagrid sets on an inbound request, as the middleware reads it."""
     return {"X-Diagrid-User-Token": f"Bearer {token}"}
 
 

@@ -1,28 +1,28 @@
 # MCP Authentication & Authorization Quickstart
 
 This quickstart shows how to secure a [Model Context Protocol (MCP)](https://modelcontextprotocol.io)
-server with **Diagrid Catalyst**, covering the two security layers Catalyst sits in front of
+server with **Diagrid**, covering the two security layers Diagrid sits in front of
 an MCP server with:
 
-- **Authentication** — the credential Catalyst presents to *your* MCP server on every proxied
-  request, so the server can verify the call really came through Catalyst.
-- **Authorization** — the per-tool, per-caller access policy Catalyst enforces before a
+- **Authentication** — the credential Diagrid presents to *your* MCP server on every proxied
+  request, so the server can verify the call really came through Diagrid.
+- **Authorization** — the per-tool, per-caller access policy Diagrid enforces before a
   `tools/call` (or even `tools/list`) ever reaches your server.
 
 These are independent gates. Fixing one does not fix the other, and this quickstart runs them
-in that order on purpose: authentication first (nothing works at all until Catalyst can reach
+in that order on purpose: authentication first (nothing works at all until Diagrid can reach
 your server), then authorization (the server is reachable, but only approved callers/tools get
 through).
 
 ## What This Quickstart Demonstrates
 
-- **MCP behind Catalyst**: An MCP server reached through Catalyst's MCP proxy endpoint
+- **MCP behind Diagrid**: An MCP server reached through Diagrid's MCP proxy endpoint
   (`/v1.0/diagrid/mcp/<server>`) instead of directly.
 - **A local server, exposed via tunnel**: `mcp-server` declares an `appPort` in
-  `mcp-auth-quickstart.yaml`, so `diagrid dev run` opens a secure tunnel from Catalyst Cloud to
-  `localhost:8000` for it — reachable from your hosted Catalyst project with no public endpoint
+  `mcp-auth-quickstart.yaml`, so `diagrid dev run` opens a secure tunnel from Diagrid Cloud to
+  `localhost:8000` for it — reachable from your hosted Diagrid project with no public endpoint
   or inbound firewall rule required — while also running its process for you.
-- **Authenticating Catalyst to your MCP server**: A static shared-secret header, configured on
+- **Authenticating Diagrid to your MCP server**: A static shared-secret header, configured on
   the `MCPServer` resource, that your server validates on every request.
 - **Deny-by-default authorization**: A newly registered MCP server allows no caller to
   discover or invoke any tool until you explicitly grant access.
@@ -37,13 +37,13 @@ through).
                          enforced here (per-tool, per-caller ACL)
                                     │
                                     ▼
-  mcp-client ───HTTP──▶  Catalyst  ───HTTP + shared secret──▶  mcp-server
+  mcp-client ───HTTP──▶  Diagrid  ───HTTP + shared secret──▶  mcp-server
    (caller)            (MCP proxy endpoint +                    (tools: add,
                         policy ACL)                              get_account_balance)
 ```
 
-- The **mcp-client** reaches the server only through Catalyst's MCP proxy endpoint.
-- **Catalyst** authenticates itself to `mcp-server` with a shared-secret header on every
+- The **mcp-client** reaches the server only through Diagrid's MCP proxy endpoint.
+- **Diagrid** authenticates itself to `mcp-server` with a shared-secret header on every
   request, and enforces the per-tool access policy before any request is proxied.
 - The **mcp-server** exposes two tools: `add` (harmless) and `get_account_balance` (treated as
   sensitive — the kind of tool you'd want to restrict to specific callers).
@@ -52,7 +52,7 @@ through).
 
 | Service | Port | Description |
 |---------|------|-------------|
-| **mcp-client** | 5001 | Discovers and invokes MCP tools through Catalyst's MCP proxy endpoint |
+| **mcp-client** | 5001 | Discovers and invokes MCP tools through Diagrid's MCP proxy endpoint |
 | **mcp-server** | 8000 | Exposes MCP tools (`add`, `get_account_balance`) via FastMCP, guarded by a shared-secret check |
 
 ## Prerequisites
@@ -88,7 +88,7 @@ diagrid app create mcp-client --wait
 ```
 
 A one-off command that returns immediately — no dedicated terminal needed. `mcp-client` is a
-plain caller with no MCP-specific behavior of its own, so a generic Catalyst App is all it needs.
+plain caller with no MCP-specific behavior of its own, so a generic Diagrid App is all it needs.
 
 ### 2. Register the MCP server
 
@@ -120,13 +120,13 @@ re-applies the `mcp-server` resource you just registered — harmlessly, since a
 idempotent — and recognizes its App identity is already managed by that MCPServer resource, so
 it doesn't try to provision it again. It then launches both services locally, `mcp-client` under
 the App you created in step 1. `mcp-server` declares an `appPort`, so it also gets a secure
-tunnel from Catalyst Cloud to `localhost:8000`; `mcp-client` doesn't declare one, since it only
-calls out to Catalyst's MCP proxy endpoint and never receives inbound requests, so no tunnel is
+tunnel from Diagrid Cloud to `localhost:8000`; `mcp-client` doesn't declare one, since it only
+calls out to Diagrid's MCP proxy endpoint and never receives inbound requests, so no tunnel is
 opened for it. No manual token or endpoint copying either — `dev run` wires `DAPR_HTTP_ENDPOINT`
 and `DAPR_API_TOKEN` straight into `mcp-client`'s process. Wait for the log output to show both
 apps started before continuing.
 
-Catalyst also starts periodically probing `mcp-server`'s reachability as soon as its tunnel is
+Diagrid also starts periodically probing `mcp-server`'s reachability as soon as its tunnel is
 up, independent of anything `mcp-client` does — so this terminal may already show rejected
 requests by the time both apps report started, before you ever trigger anything yourself in
 step 4 below.
@@ -136,7 +136,7 @@ step 4 below.
 ### 4. See it fail closed (default state) — Terminal 2
 
 A freshly registered MCP server starts in two "closed" states at once: `mcp-server` requires a
-shared-secret header that Catalyst hasn't been given yet, and the access policy denies every
+shared-secret header that Diagrid hasn't been given yet, and the access policy denies every
 caller and tool by default.
 
 > **Reusing a project from an earlier pass through this quickstart?** The access policy and the
@@ -182,14 +182,14 @@ The real reason is sitting in Terminal 1, in `mcp-client`'s own log lines (label
 INFO:httpx:HTTP Request: POST https://.../v1.0/diagrid/mcp/mcp-server "HTTP/1.1 404 Not Found"
 ```
 
-That `404` is Catalyst's access-policy gate turning the caller away before the request ever
+That `404` is Diagrid's access-policy gate turning the caller away before the request ever
 reaches `mcp-server` — this quickstart never has a case where the MCP server itself doesn't
 exist, so read it as "this caller matches no rule," not "not found." The JSON response above
 doesn't carry that code; only an in-session per-tool denial (see Authorizing Tool Calls below)
 comes back as a clean status the demo can report.
 
 You'll likely also see `mcp-server`'s own lines (`== APP - mcp-server ==`) in Terminal 1 already
-showing `401 Unauthorized` on their own — that's Catalyst periodically checking the upstream
+showing `401 Unauthorized` on their own — that's Diagrid periodically checking the upstream
 credential in the background (see step 3 above), independent of anything you just did. It's a
 real signal, just not about this call: while the access policy denies you, your request never
 reaches `mcp-server` at all.
@@ -198,11 +198,11 @@ reaches `mcp-server` at all.
 
 `mcp_server/main.py` requires every request to carry a `x-mcp-shared-secret` header matching
 `SERVER_SHARED_SECRET` (see the `RequireUpstreamCredential` middleware) — this is the server's
-own defense, independent of Catalyst. Catalyst has to be given that credential before it can
+own defense, independent of Diagrid. Diagrid has to be given that credential before it can
 authenticate itself to your server on the caller's behalf; see
 [MCP Authentication](https://docs.diagrid.io/develop/mcp/mcp-authentication) for the full set of
 options (static headers, OAuth2 client credentials, or secretless SPIFFE JWT). This quickstart
-uses the simplest one — a static header — stored in Catalyst's secret store, never in the
+uses the simplest one — a static header — stored in Diagrid's secret store, never in the
 caller's code.
 
 ### Configure the upstream credential
@@ -249,7 +249,7 @@ The response is unchanged — still `Session terminated` for everything. Fixing 
 credential doesn't unlock the caller; the access policy is a separate gate, and it's still
 deny-all.
 
-Separately — and independent of the client call above — Catalyst has been retrying its own
+Separately — and independent of the client call above — Diagrid has been retrying its own
 connection to `mcp-server` in the background ever since the tunnel came up, so you don't need to
 trigger anything to see it succeed. Check that output whenever you like (Terminal 1 in the
 consolidated flow, Terminal 2 if you ran it manually):
@@ -259,13 +259,13 @@ INFO:     ... "POST /mcp HTTP/1.1" 200 OK
 Processing request of type ListToolsRequest
 ```
 
-Catalyst is now authenticating successfully — the request reaches your tool code. The session
+Diagrid is now authenticating successfully — the request reaches your tool code. The session
 still terminates because `mcp-client` has zero grants on the access policy, which denies
 everyone by default. Authentication is fixed; authorization is next.
 
 ## Authorizing Tool Calls
 
-A Catalyst MCP access policy is an allow-list that decides which caller App IDs may use which
+A Diagrid MCP access policy is an allow-list that decides which caller App IDs may use which
 tools. Like authentication, you change it at runtime — no redeploy.
 
 ### Phase 1 — Allow the "add" tool
@@ -354,12 +354,12 @@ Both tools are now discoverable and succeed:
 
 ### Authentication
 
-Catalyst authenticates itself to your MCP server using whatever credential you configure on
+Diagrid authenticates itself to your MCP server using whatever credential you configure on
 the `MCPServer` resource's `spec.endpoint.streamableHTTP` — a static `headers` entry (this
 quickstart), an OAuth2 client-credentials flow, or a secretless SPIFFE JWT it mints per-request.
-Whichever you choose, the credential lives on the connection config in Catalyst's secret store —
+Whichever you choose, the credential lives on the connection config in Diagrid's secret store —
 never in the caller's code, prompts, or logs. `mcp_client/main.py` never sees the
-`x-mcp-shared-secret` header at all; only Catalyst and your server do. See
+`x-mcp-shared-secret` header at all; only Diagrid and your server do. See
 [MCP Authentication](https://docs.diagrid.io/develop/mcp/mcp-authentication) for the other
 options, and [Register a custom server](https://docs.diagrid.io/develop/mcp/mcpserver-getting-started#register-a-custom-server)
 for registering one via CLI flags (`diagrid mcpserver create --header ...`) instead of YAML.
@@ -395,17 +395,17 @@ diagrid mcpserver access test mcp-server --caller mcp-client --tool get_account_
 ### Telling authentication and authorization failures apart
 
 `Session terminated`, with no status code in the JSON response, specifically means the caller
-matches **no rule at all** in the access policy. Catalyst does send back a real status — a `404`
+matches **no rule at all** in the access policy. Diagrid does send back a real status — a `404`
 from its edge, before the request ever reaches `mcp-server` — but it happens on the request that
 establishes the MCP session, and the Python MCP client library doesn't preserve that code the
 way it preserves one from an in-session tool call, so the demo's own error handling never gets a
 hold of it either. `mcp-client`'s own log shows it plainly, via httpx's request logging:
 `"HTTP/1.1 404 Not Found"`. Read that as "caller matches no rule," not "server doesn't exist" —
-this quickstart has no scenario where the MCP server itself is missing; Catalyst reuses the same
+this quickstart has no scenario where the MCP server itself is missing; Diagrid reuses the same
 generic code for both so a fully unauthorized caller can't tell which one it hit.
 
 While the caller has zero grants, `mcp-server`'s own log is a red herring: none of the caller's
-requests ever reach it, so anything you see there — including a `401` — is Catalyst's own
+requests ever reach it, so anything you see there — including a `401` — is Diagrid's own
 independent, periodic health-check of the credential, updating on its own regardless of what any
 caller does. Once the caller matches at least one rule, that changes: real proxied requests start
 reaching `mcp-server` too, and the two failure modes stop looking alike in the JSON response as
@@ -427,14 +427,14 @@ your server. To tell the two apart when the whole session is failing:
 |------|---------|
 | `mcp-auth-quickstart.yaml` | `diagrid dev run` multi-app file (both services) |
 | `resources/mcp-server.yaml` | The `MCPServer` resource — add the `headers` block here to configure the upstream credential |
-| `mcp_client/main.py` | FastAPI client that discovers and invokes tools through Catalyst |
+| `mcp_client/main.py` | FastAPI client that discovers and invokes tools through Diagrid |
 | `mcp_server/main.py` | FastMCP server exposing `add` and `get_account_balance`, guarded by a shared-secret middleware |
 | `test.rest` | REST-client requests for manual testing |
 
 ## Appendix: Run Every Process Manually
 
 The flow above uses one `diagrid dev run -f` command to launch both services and their tunnel
-together. If you'd rather see every Catalyst resource and every local process as its own
+together. If you'd rather see every Diagrid resource and every local process as its own
 explicit command — useful for understanding exactly what's talking to what, or for attaching a
 debugger to one process without disturbing the other — use the fully manual version below
 instead. It reaches the identical end state, just via more terminals and more individual
@@ -504,7 +504,7 @@ diagrid dev run --id mcp-server --app-port 8000 --project mcp-auth --skip-manage
 ```
 
 With no trailing command, `diagrid dev run` does exactly one thing here: open a secure tunnel
-from Catalyst Cloud to `localhost:8000` for the `mcp-server` App ID. It does not run your code —
+from Diagrid Cloud to `localhost:8000` for the `mcp-server` App ID. It does not run your code —
 that's the next step. Leave it running.
 
 (`--project` has to be explicit here — without it, `dev run` prompts for an interactive
@@ -517,7 +517,7 @@ cd mcp_server
 SERVER_SHARED_SECRET=local-dev-shared-secret uv run main.py
 ```
 
-Leave it running. Catalyst starts periodically probing `mcp-server`'s reachability as soon as it
+Leave it running. Diagrid starts periodically probing `mcp-server`'s reachability as soon as it
 can reach this process, independent of anything `mcp-client` does — so this terminal may already
 show rejected requests before you ever trigger anything yourself in step 7 below.
 
@@ -531,13 +531,13 @@ uv run main.py
 ```
 
 Leave it running. Unlike `mcp-server`, `mcp-client` never receives inbound requests through
-Catalyst — it only calls out to Catalyst's MCP proxy endpoint — so it needs no tunnel, just
+Diagrid — it only calls out to Diagrid's MCP proxy endpoint — so it needs no tunnel, just
 these two environment variables.
 
 ### 7. See it fail closed (default state) — Terminal 4
 
 A freshly registered MCP server starts in two "closed" states at once: `mcp-server` requires a
-shared-secret header that Catalyst hasn't been given yet, and the access policy denies every
+shared-secret header that Diagrid hasn't been given yet, and the access policy denies every
 caller and tool by default.
 
 > **Reusing a project from an earlier pass through this quickstart?** The access policy and the
@@ -583,13 +583,13 @@ actually made:
 INFO:httpx:HTTP Request: POST https://.../v1.0/diagrid/mcp/mcp-server "HTTP/1.1 404 Not Found"
 ```
 
-That `404` is Catalyst's access-policy gate turning the caller away before the request ever
+That `404` is Diagrid's access-policy gate turning the caller away before the request ever
 reaches `mcp-server` — this quickstart never has a case where the MCP server itself doesn't
 exist, so read it as "this caller matches no rule," not "not found." The JSON response above
 doesn't carry that code; only an in-session per-tool denial (see Authorizing Tool Calls below)
 comes back as a clean status the demo can report.
 
 You'll likely also see `mcp-server`'s own log in Terminal 2 already showing `401 Unauthorized`
-on its own — that's Catalyst periodically checking the upstream credential in the background
+on its own — that's Diagrid periodically checking the upstream credential in the background
 (see step 5 above), independent of anything you just did. It's a real signal, just not about
 this call: while the access policy denies you, your request never reaches `mcp-server` at all.

@@ -33,7 +33,7 @@ public sealed class CannedChatClient : IChatClient
     /// its return string and then washes out: tool 2 answers "Grand Ballroom is the best option"
     /// whatever it is handed, and tool 3's text is the final answer. So parsing it would buy a
     /// truthful log line and nothing else. This is the sample's own default prompt and the body the
-    /// Catalyst console sends, so the three stay in agreement.
+    /// Diagrid Console sends, so the three stay in agreement.
     /// </summary>
     private const string City = "Austin";
 
@@ -41,7 +41,7 @@ public sealed class CannedChatClient : IChatClient
     /// The IChatClient convention: implementations describe themselves here, and generic
     /// Microsoft.Extensions.AI middleware (telemetry, caching, logging) reads it.
     ///
-    /// It is NOT what the Catalyst agent registry displays. That reads the concrete type's name for
+    /// It is NOT what the Diagrid agent registry displays. That reads the concrete type's name for
     /// the LLM client, and takes the provider from a Dapr conversation component rather than from
     /// the client at all: it looks for one named after the agent, falls back to the first
     /// conversation component in the project, and reports "unknown" when there is none. This

@@ -1,10 +1,10 @@
 # Paste the credential the offline issuer logs under `200`. These requests reach
-# the app directly on port 8006, bypassing Catalyst, so only that issuer's
+# the app directly on port 8006, bypassing Diagrid, so only that issuer's
 # credentials are accepted here. Start it with:
 #
 #   DIAGRID_QUICKSTART_IDENTITY=local mvn -f identity-agent/pom.xml spring-boot:run
 #
-# See "## Run Offline Without a Catalyst Project" in README.md. The two requests
+# See "## Run Offline Without a Diagrid Project" in README.md. The two requests
 # that send no credential at all answer 401 in either mode.
 #
 # Leave the placeholder unedited and the credential-bearing requests answer

@@ -102,7 +102,7 @@ func (a app) do(t *testing.T, method, path string, body any, headers map[string]
 	return recorder
 }
 
-// auth is the header Catalyst sets on an inbound request.
+// auth is the header Diagrid sets on an inbound request.
 func auth(token string) map[string]string {
 	return map[string]string{identity.UserTokenHeader: identity.BearerPrefix + token}
 }
@@ -392,7 +392,7 @@ func TestOutboundCallCarriesTheCallerOnlyFromTheInboundContext(t *testing.T) {
 	proxy := httptest.NewServer(mux)
 	defer proxy.Close()
 
-	// The tool resolves its address per call, from the variable Catalyst sets.
+	// The tool resolves its address per call, from the variable Diagrid sets.
 	t.Setenv(envDaprHTTPEndpoint, proxy.URL)
 	client := newMCPHTTPClient()
 

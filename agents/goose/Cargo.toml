@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 # dapr 0.19.0, tonic 0.14 and agent-client-protocol 2.2 all require 1.88.
 rust-version = "1.88"
-description = "Goose release manager made durable with Diagrid Catalyst"
+description = "Goose release manager made durable with Diagrid"
 publish = false
 # src/main.rs is the quickstart; src/bin/crash_test.rs is the crash demo.
 default-run = "goose-release-manager"

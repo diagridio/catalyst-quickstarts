@@ -13,7 +13,7 @@ readiness markers, so they cannot share a module the way the canonical suites
 share `quickstarts.py`.
 
 What this suite covers. The quickstart demonstrates inbound end-user identity:
-Catalyst verifies the caller and passes a verified identity to the app in
+Diagrid verifies the caller and passes a verified identity to the app in
 `X-Diagrid-User-Token`. The suite asserts the plumbing -- build, documented
 provisioning, the app serving -- plus the one HTTP outcome that is deterministic
 without a credential: an unauthenticated request is refused 401 on both
@@ -34,7 +34,7 @@ FAMILY = "agents"
 NAME = "enterprise-identity-go"
 LANGUAGE = "go"
 
-# README "## Run with Catalyst", step 1. Replaced by an ephemeral qs-ci-* name at
+# README "## Run with Diagrid", step 1. Replaced by an ephemeral qs-ci-* name at
 # run time; also what doc-sync maps onto `{project}` when comparing.
 DOCUMENTED_PROJECT = "enterprise-identity-quickstart"
 
@@ -53,7 +53,7 @@ APP_ID = "identity-agent"
 APP_PORT = 8006
 
 # `identity-agent` is created before the MCPServer on purpose: crm-mcp.yaml
-# scopes the CRM to that App ID, and Catalyst rejects a scope naming an App ID
+# scopes the CRM to that App ID, and Diagrid rejects a scope naming an App ID
 # that does not exist yet. The CRM's own App ID must NOT be created here --
 # registering the MCP server creates it, and a hand-made one collides by name.
 
@@ -78,7 +78,7 @@ SETUP = (
 # counting down.
 INSTALL = "go build ./..."
 
-# README "## Run with Catalyst", step 1, item 4. Bare of `--project` on purpose:
+# README "## Run with Diagrid", step 1, item 4. Bare of `--project` on purpose:
 # the documented `project create` carries `--use`, and reproducing that
 # dependency is deliberate, so a regression in `--use` breaks this suite instead
 # of silently breaking readers.
@@ -102,7 +102,7 @@ RUN = (
 # be inventing a documented command, and doc-sync would correctly reject it.
 TEARDOWN = ()
 
-# README "## Run with Catalyst", step 1, item 4: "Wait until the output shows
+# README "## Run with Diagrid", step 1, item 4: "Wait until the output shows
 # `listening on http://0.0.0.0:8006`". Transcribed complete rather than
 # truncated at `listening on`: this README documents the concrete line, main.go
 # really binds host 0.0.0.0 on APP_PORT, and dev-enterprise-identity.yaml sets
@@ -162,7 +162,7 @@ CONNECTED_APPS = ((APP_ID, APP_PORT),)
 # exists for is not one this suite enters.
 #
 # Left empty rather than guessed for the ordinary reason too: the marker is
-# whatever THIS app's logging makes visible for an inbound request from Catalyst,
+# whatever THIS app's logging makes visible for an inbound request from Diagrid,
 # and nobody has watched this app's dev-run output yet. It writes no access log
 # at all -- net/http has none and this app adds none -- so unlike the python
 # sibling there is not even a uvicorn line to infer from. A marker that never
@@ -205,7 +205,7 @@ SECRETS = ()
 #     the offline issuer, where the verifier is guaranteed to exist.
 #
 # The four outcomes above were measured on the quickstart's own offline build
-# (`go run -tags offline .`, no Catalyst and no network off loopback) for the two
+# (`go run -tags offline .`, no Diagrid and no network off loopback) for the two
 # below plus the decode_error; the 503 is read from the SDK's
 # read from the SDK rather than observed, since the offline build
 # always has coordinates.
@@ -223,7 +223,7 @@ SECRETS = ()
 # 403 and 200 live in a test that can present a credential:
 # agents/langchaingo/enterprise-identity/identity_test.go, which mints one
 # offline. That test cannot substitute for this suite either -- it exercises no
-# Catalyst at all -- so the two are complements, and neither alone proves the
+# Diagrid at all -- so the two are complements, and neither alone proves the
 # live inbound path.
 #
 # The status is a TRANSCRIPTION here, as in the python sibling: the README prints
@@ -304,11 +304,11 @@ UNCOVERED = (
     ),
     (
         "DIAGRID_QUICKSTART_IDENTITY=local APP_PORT=8006 go run -tags offline .",
-        "README '## Run Offline Without a Catalyst Project'. It replaces Catalyst "
+        "README '## Run Offline Without a Diagrid Project'. It replaces Diagrid "
         "with a throwaway in-process issuer to make the 200, 403 and 401 reachable "
         "with no project at all, and it binds the same port 8006 as `dev run`. That "
         "makes it an alternative to this suite's entire flow rather than a step "
-        "inside it: it exercises no Catalyst, and running it here would collide "
+        "inside it: it exercises no Diagrid, and running it here would collide "
         "with the app this suite already has serving. The 200 and 403 paths this "
         "suite cannot reach are covered instead by "
         "agents/langchaingo/enterprise-identity/identity_test.go, which drives "

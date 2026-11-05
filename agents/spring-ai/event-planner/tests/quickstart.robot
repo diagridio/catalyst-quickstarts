@@ -34,7 +34,7 @@ Variables       ../../../../tools/qs-tester/variables/agents_spring_ai_event_pla
 Library         ../../../../tools/qs-tester/variables/agents_spring_ai_event_planner.py
 Library         Collections
 Suite Setup     Should Not Be Empty    ${PROJECT}
-...             msg=Pass --variable PROJECT:<catalyst-project-name>
+...             msg=Pass --variable PROJECT:<diagrid-project-name>
 Test Teardown   Clean Up Quickstart
 
 *** Variables ***
@@ -77,7 +77,7 @@ Java Spring-Ai-Event-Planner Quickstart
 
     # CATALYST_PROBE_MARKERS is empty for this suite, so this loop is a no-op. It
     # stays because the gap it guards is real here too: every gate above is
-    # satisfied by the local process, and a workflow call made before Catalyst has
+    # satisfied by the local process, and a workflow call made before Diagrid has
     # attached hangs unrecoverably (measured on agents/langgraph, 2026-08-27).
     # Giving this suite the gate is a data change in its variables module, not a
     # change here — see CATALYST_PROBE_MARKERS there for what has to be observed

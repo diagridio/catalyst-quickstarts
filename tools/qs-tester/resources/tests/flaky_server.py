@@ -1,11 +1,11 @@
 """A local endpoint that answers 500 a fixed number of times, then 200.
 
-Stands in for Catalyst's app channel during the startup window. `diagrid dev run`
+Stands in for Diagrid's app channel during the startup window. `diagrid dev run`
 prints `Connected App ID ...` and the app answers `GET /` locally several seconds
-before Catalyst can actually route to it; until then service invocation returns
+before Diagrid can actually route to it; until then service invocation returns
 500 `ERR_DIRECT_INVOKE ... app is not in a healthy state`. That window is what
 `Wait Until Not Server Error` absorbs, and this server reproduces its shape with
-no Catalyst project and no credentials.
+no Diagrid project and no credentials.
 
 Requests to a path other than /order answer 404, so the gate's other required
 property -- that it absorbs 5xx *only*, and lets a 4xx through to the strict

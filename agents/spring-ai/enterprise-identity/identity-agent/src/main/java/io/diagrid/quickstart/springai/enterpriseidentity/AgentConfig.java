@@ -29,7 +29,7 @@ public class AgentConfig {
     return builder.defaultSystem(SYSTEM).defaultTools(tools(bookingTools, crmTools)).build();
   }
 
-  /** The one tool the agent gets: offline there is no Catalyst project, and so no MCP server. */
+  /** The one tool the agent gets: offline there is no Diagrid project, and so no MCP server. */
   private static Object tools(BookingTools bookingTools, CrmTools crmTools) {
     if (EnterpriseIdentityApplication.offlineIdentity()) {
       LOG.info("Offline identity mode: the agent calls the in-process my_bookings tool, so the "

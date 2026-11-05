@@ -43,7 +43,7 @@ jobs:
       # types rather than checking them, so a type error would otherwise ship
       # silently and the tests would still pass.
       #
-      # No credentials and no network: the tests stand the Catalyst identity
+      # No credentials and no network: the tests stand the Diagrid identity
       # plane up in-process (local_identity.buildLocalIssuer) and drive
       # main.ts's own `buildApp` on a loopback port, so the 200 and 403 paths
       # the Robot suite cannot reach are covered here instead.

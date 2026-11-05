@@ -15,7 +15,7 @@
   <artifactId>event-planner</artifactId>
   <version>1.0.0</version>
   <name>event-planner</name>
-  <description>Catalyst Spring AI Quickstart — a durable Event Planner agent with crash recovery</description>
+  <description>Diagrid Spring AI Quickstart — a durable Event Planner agent with crash recovery</description>
 
   <properties>
     <java.version>21</java.version>
@@ -69,7 +69,7 @@
     <!-- WHAT MAKES IT DURABLE (and registers it): add the starter, write no durability code. Every
          ChatClient.call() then runs as a Dapr Workflow whose model turns and tool calls are
          checkpointed activities (so a crash resumes from the last completed step), and each
-         ChatClient bean is recorded in the Catalyst agent registry. As of 0.2.0 the registry ships
+         ChatClient bean is recorded in the Diagrid agent registry. As of 0.2.0 the registry ships
          in the starter — no separate diagrid-spring-ai-agent-registry dependency. -->
     <dependency>
       <groupId>io.diagrid</groupId>

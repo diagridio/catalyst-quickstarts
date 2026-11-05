@@ -12,7 +12,7 @@ quickstarts, and for the agent-family ones registered in `variables/suites.py`
 `agents/spring-ai/event-planner`), built on
 [Robot Framework](https://robotframework.org/). The tests run the *actual*
 commands each quickstart's README documents and assert the responses and log output
-that README promises, so drift between the docs, the code, and Catalyst is caught
+that README promises, so drift between the docs, the code, and Diagrid is caught
 automatically.
 
 ## Layout
@@ -32,7 +32,7 @@ automatically.
   agent-family suites depend on against `echo_server.py`, `readiness.robot`
   covers the invocation readiness gate against `flaky_server.py`, and
   `teardown.robot` covers the two Stop Quickstart paths that release nothing.
-  `keywords.robot` also covers the Catalyst-attach gate. None need credentials, they run in seconds, and
+  `keywords.robot` also covers the Diagrid-attach gate. None need credentials, they run in seconds, and
   CI's `lint` job runs the whole directory on every PR that trips the
   workflow's `paths` filter — run them locally too when you touch
   `process.resource`, `catalyst.resource` or either gate.
@@ -54,7 +54,7 @@ automatically.
   drifts. Needs no credentials, and CI's `lint` job runs it on every PR that
   touches the skill directory, a quickstart README or the harness — all three
   are in the workflow's `paths` filter, so a skill-only PR does trigger a run.
-- `ci/` — Catalyst project lifecycle scripts.
+- `ci/` — Diagrid project lifecycle scripts.
 - `variables/suites.py` — the registry of every suite. The lint dryrun, the CI
   agents matrix and doc-sync all read it, so registering a suite is one row here
   rather than three edits in the workflow.
@@ -88,7 +88,7 @@ suite paths are relative to it (`../../state/tests/quickstart.robot`).
 ### One-time setup
 
 ```bash
-export DIAGRID_API_KEY=...     # a Catalyst API key
+export DIAGRID_API_KEY=...     # a Diagrid API key
 (cd tools/qs-tester && uv sync)
 ```
 
@@ -98,7 +98,7 @@ one locally.
 
 ### Create a project and run a suite
 
-Every suite needs a Catalyst project. `ci/setup-project.sh` creates a throwaway one
+Every suite needs a Diagrid project. `ci/setup-project.sh` creates a throwaway one
 and prints its name:
 
 ```bash
@@ -208,7 +208,7 @@ differ and are worth knowing before you touch one:
    replaced by dashes (`agents/spring-ai/event-planner` →
    `spring-ai-event-planner`), which makes it unique by construction. It is also
    the leg CI hands `ci/project-name.sh`, so the ephemeral project is
-   `qs-ci-agents-<name>-<run-id>`. Catalyst caps that at 55 characters, and the
+   `qs-ci-agents-<name>-<run-id>`. Diagrid caps that at 55 characters, and the
    binding run id is the *local* fallback (`local` plus a 10-digit epoch, 15
    characters — longer than a GitHub run id), which leaves exactly 26 for
    `name`. `suites.validate()` enforces it, so `ci/list-suites.py --validate`
@@ -227,10 +227,10 @@ differ and are worth knowing before you touch one:
    http://localhost:<port>` line. That an agent app emits that line at all was
    **confirmed** by the 2026-08-27 live run, so the appPort rule ("Readiness
    markers are not uniform per API" below) holds here too.
-6. **They need a Catalyst-attach gate that the canonical suites do not.** Every
+6. **They need a Diagrid-attach gate that the canonical suites do not.** Every
    readiness signal above — the connection line, the readiness marker, the
    health probe — is satisfied by the *local* process. None of them means
-   Catalyst has attached to the app, and a workflow call made before it has does
+   Diagrid has attached to the app, and a workflow call made before it has does
    not fail: it hangs, and it never recovers. Measured on `agents/langgraph`,
    2026-08-27: the documented POST fired 25 ms after the health probe went green
    hung for the full 120 s client timeout and never created a workflow instance,
@@ -238,12 +238,12 @@ differ and are worth knowing before you touch one:
    window poisons the app's workflow client for good. That is why the gate runs
    *before* the first request instead of wrapping it in a retry. Gated on
    `${qs}[catalyst_probe_markers]`, the same request answered 200 in ~1 s on
-   three consecutive runs. The marker is an *inbound* request from Catalyst in
+   three consecutive runs. The marker is an *inbound* request from Diagrid in
    the app's own captured output (`GET /dapr/config` for langgraph), so it is
    per-quickstart data like `READY_MARKERS`. Only `agents/langgraph` has a
    verified marker; the other two carry `CATALYST_PROBE_MARKERS = ()` and a note.
    Two active probes were tried first and are **vacuous** — see "The
-   Catalyst-attach gate" in the skill's `references/agent-quickstart.md`.
+   Diagrid-attach gate" in the skill's `references/agent-quickstart.md`.
 
 Nightly membership is per suite (`nightly` in the manifest), and CI reads it
 only for agent-family rows — canonical scheduling stays the business of the
@@ -273,13 +273,13 @@ mutation check below give up in seconds instead of waiting out a three-minute
 readiness timeout.
 
 **Do not shorten `${CONNECT_TIMEOUT}`.** It bounds `Wait Until Apps Connected`
-alone, which waits on Catalyst establishing the dev tunnel — measured at 32-36s
+alone, which waits on Diagrid establishing the dev tunnel — measured at 32-36s
 against a real project, where every other wait finishes in about five seconds.
 It is a separate variable precisely so the mutation check can shorten the others
 without starving it. When the two were one variable, the documented
 `--variable READINESS_TIMEOUT:20s` killed the connection gate at 20s and the run
 died before reaching the mutation; `check_mutation.py` rejected the result (the
-target keyword came back `NOT RUN`), but only after a Catalyst project had been
+target keyword came back `NOT RUN`), but only after a Diagrid project had been
 spent on a run that proved nothing.
 
 ```bash
@@ -367,7 +367,7 @@ requires `Log Should Not Contain` to fail naming it. It runs
 keep their own timeouts.
 
 ```bash
-# Premises only: no keys, no Catalyst. Run this first.
+# Premises only: no keys, no Diagrid. Run this first.
 bash tools/qs-tester/ci/verify-replay-mutation.sh --dry-run \
   crewai adk openai-agents pydantic-ai strands deepagents mastra
 
@@ -380,7 +380,7 @@ It covers the seven crash suites that call OpenAI. `claude-agents` needs
 `ANTHROPIC_API_KEY`, and `langgraph` and `microsoft-dotnet` use a canned model, so
 pass those to `verify-live.sh` directly with the same mutation if you want them covered.
 
-### Checks that need no Catalyst project
+### Checks that need no Diagrid project
 
 ```bash
 cd tools/qs-tester
@@ -403,7 +403,7 @@ uv run python docsync/check_skill_docs.py
 # unit-test the doc-sync checkers and the manifest itself
 uv run pytest -q
 
-# the harness's own keyword tests, no Catalyst project or credentials needed
+# the harness's own keyword tests, no Diagrid project or credentials needed
 uv run robot resources/tests
 ```
 
@@ -445,7 +445,7 @@ Two failure shapes worth recognising:
   marker table records which markers are language-invariant and which are not;
   see the per-marker comments in the "Log markers" section of
   `variables/quickstarts.py` for why each is truncated where it is.
-- **A 500 on the invocation request** means Catalyst could not reach the server app
+- **A 500 on the invocation request** means Diagrid could not reach the server app
   through the dev tunnel. Curl the API directly to see the error the client app
   discards (`client/main.py` logs only `result.reason`):
 
@@ -484,9 +484,9 @@ config, not a typo.
 
 ## Limitations
 
-- **Only the invocation suite has been run against a real Catalyst project**, and
+- **Only the invocation suite has been run against a real Diagrid project**, and
   only its `python` and `csharp` legs (2026-08-24). python failed first — the client
-  returned 500 because Catalyst could not yet route to the server app — which is
+  returned 500 because Diagrid could not yet route to the server app — which is
   what `Wait Until Not Server Error` was added for; it then passed, and a repeat run
   logged the gate absorbing two real 500s over 6.5s before the documented 200. The
   race is not python-specific: a hand-run csharp session answered 500 on the first
@@ -529,10 +529,10 @@ config, not a typo.
       documented port, and answers both documented routes 401
       `{"error":"oauth.missing_token"}`. See their own bullet below.
   The bullets that follow are what the missing halves cost.
-- **`agents/langgraph` has run against real Catalyst three times and not yet
+- **`agents/langgraph` has run against real Diagrid three times and not yet
   passed**, but each run has failed further along than the last. 2026-08-27:
   - Runs 1 and 2 died 120s into the documented POST, which hung and never created
-    a workflow instance — the suite was firing inside Catalyst's attach window
+    a workflow instance — the suite was firing inside Diagrid's attach window
     (the sixth bullet of "Two kinds of quickstart"). Run 2 also proved the *first*
     gate written for this, an active probe of the app's own
     `GET /agent/run/{workflow_id}`, was **vacuous**: it passed in 76ms and the
@@ -570,7 +570,7 @@ config, not a typo.
     `REQUESTS[0]["field"]` is `"status"` — a key the response envelope carries
     only on the completed path.
   - Run 4, with all of the above in place, **passed end to end** against a real
-    Catalyst project (2026-08-28).
+    Diagrid project (2026-08-28).
   - The mutation check then passed on 2026-08-28, but only on the second attempt,
     and the first attempt is the more useful record. It failed with
     `Wait Until Apps Connected` timing out at 20.07s, because the documented
@@ -641,7 +641,7 @@ config, not a typo.
   the rejection path only.** Each asserts its two documented requests — the
   unauthenticated `GET /whoami` and `POST /agent/run` — at 401 with the exact
   body `{"error": "oauth.missing_token"}`. That much was measured offline before
-  registration, with no Catalyst and no network, along with the malformed-token
+  registration, with no Diagrid and no network, along with the malformed-token
   outcome none of them asserts: **401 `oauth.decode_error`** for go and
   typescript, and a **500** for python.
   - **The authenticated calls are unreachable from this harness.** Both documented
@@ -650,8 +650,8 @@ config, not a typo.
     verified identity reaches the app's handler. Each README documents the 200 and
     the 403 too, and reaches them through an opt-in offline issuer, which is the
     basis for the test beside each quickstart rather than for these suites: it
-    replaces Catalyst entirely and binds the same port as `dev run`. Those tests
-    prove nothing about Catalyst, and these suites prove nothing about a
+    replaces Diagrid entirely and binds the same port as `dev run`. Those tests
+    prove nothing about Diagrid, and these suites prove nothing about a
     credential, so neither stands in for the other.
   - **The reason none of them should be read as identity coverage: the 401 is
     returned *before* the verifier is built.** An unauthenticated request answers
@@ -736,6 +736,6 @@ config, not a typo.
 - **The mutation procedure itself has never been executed end to end.**
   `ci/check_mutation.py`'s verdict is unit-tested and was checked against two
   real `output.xml` files, and `verify-live.sh` parses correctly and refuses
-  canonical suites (both checked), but neither script has run against Catalyst,
+  canonical suites (both checked), but neither script has run against Diagrid,
   so "the mutated run reaches its assertion because it gets its own project" is
   reasoning about `Run Documented Commands`, not an observation.

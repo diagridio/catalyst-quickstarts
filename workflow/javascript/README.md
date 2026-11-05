@@ -1,18 +1,18 @@
 # Quickstart: Workflow (JavaScript)
 
-In this quickstart, you'll run an order processing workflow on [Catalyst Cloud](https://docs.diagrid.io/operate/hosting/catalyst-cloud). You will learn how to:
+In this quickstart, you'll run an order processing workflow on [Diagrid Cloud](https://docs.diagrid.io/operate/hosting/catalyst-cloud). You will learn how to:
 
-- Provision a Catalyst project with a managed workflow engine using the Diagrid CLI.
+- Provision a Diagrid project with a managed workflow engine using the Diagrid CLI.
 - Run a stateful, multi-step order workflow that chains inventory checking, payment processing, and notification activities.
-- Start, monitor, and inspect workflow executions using both the API and the Catalyst web console.
+- Start, monitor, and inspect workflow executions using both the API and the Diagrid web console.
 
 ```mermaid
 ---
-title: Order Workflow App connected to Catalyst
+title: Order Workflow App connected to Diagrid
 ---
 flowchart LR
   APP(Order Workflow App)
-  subgraph Catalyst
+  subgraph Diagrid
     APPID(ID: durable-workflow)
     WF(Workflow Engine)
     STATE[(State Store)]
@@ -27,20 +27,20 @@ flowchart LR
 
 Before you proceed, ensure you have the following prerequisites installed.
 
-- [Diagrid Catalyst account](https://catalyst.diagrid.io/)
+- [Diagrid account](https://catalyst.diagrid.io/)
 - [Diagrid CLI](https://docs.diagrid.io/getting-started/install-cli)
 - [Git](https://git-scm.com/downloads)
 - [Node.JS LTS](https://nodejs.org/en/)
 
-## 2. Log in to Catalyst
+## 2. Log in to Diagrid
 
-Authenticate to Diagrid Catalyst using the following command:
+Authenticate to Diagrid using the following command:
 
 ```bash
 diagrid login
 ```
 
-This command opens a new browser window where you'll be shown a confirmation code that should match the code in your terminal. Confirm the code, and if you're not logged into Catalyst, you'll be redirected to login.
+This command opens a new browser window where you'll be shown a confirmation code that should match the code in your terminal. Confirm the code, and if you're not logged into Diagrid, you'll be redirected to login.
 
 Confirm your user details are correct using the following command:
 
@@ -48,7 +48,7 @@ Confirm your user details are correct using the following command:
 diagrid whoami
 ```
 
-The expected output contains the name of the organization, your user name, and the Catalyst API endpoint.
+The expected output contains the name of the organization, your user name, and the Diagrid API endpoint.
 
 ## 3. Clone Quickstart Code
 
@@ -80,15 +80,15 @@ Install the dependencies for the workflow application.
 npm install
 ```
 
-## 5. Run the application with Catalyst Cloud
+## 5. Run the application with Diagrid Cloud
 
-The `diagrid dev run` command creates your Catalyst project, provisions resources (apps, workflow engine, managed state store), configures environment variables, and launches your application connected to Catalyst Cloud.
+The `diagrid dev run` command creates your Diagrid project, provisions resources (apps, workflow engine, managed state store), configures environment variables, and launches your application connected to Diagrid Cloud.
 
 ```bash
 diagrid dev run -f workflow-quickstart.yaml --project workflow-quickstart --approve
 ```
 
-> **Tip:** Wait a few seconds until you see application logs in the terminal to ensure the application is up and running and connected to Catalyst.
+> **Tip:** Wait a few seconds until you see application logs in the terminal to ensure the application is up and running and connected to Diagrid.
 
 ## 6. Start and inspect a workflow instance
 
@@ -190,13 +190,13 @@ Invoke-RestMethod -Method Get -Uri "http://localhost:5001/workflow/status/$env:I
 
 The response is the Dapr SDK's `WorkflowState` object for the instance, including its runtime status and creation and last-updated timestamps. Once the workflow has finished, the runtime status reads as completed.
 
-### 6.3 View in the Catalyst web console
+### 6.3 View in the Diagrid web console
 
-Open the [Workflow viewer](https://catalyst.diagrid.io/workflows/executions) in the Catalyst Cloud web console and select the workflow instance you just started to see a visual execution trace. The viewer displays each activity in sequence, its completion status, and the total workflow duration — useful for debugging long-running or failed executions.
+Open the [Workflow viewer](https://catalyst.diagrid.io/workflows/executions) in the Diagrid Cloud web console and select the workflow instance you just started to see a visual execution trace. The viewer displays each activity in sequence, its completion status, and the total workflow duration — useful for debugging long-running or failed executions.
 
 ## 7. Clean Up
 
-Press CTRL+C in the terminal that runs `diagrid dev run` to stop the application and disconnect from Catalyst Cloud.
+Press CTRL+C in the terminal that runs `diagrid dev run` to stop the application and disconnect from Diagrid Cloud.
 
 To delete the entire project and all provisioned resources:
 
@@ -208,15 +208,15 @@ diagrid project delete workflow-quickstart
 
 In this quickstart you:
 
-- Logged in to Catalyst and provisioned a managed workflow project with a single CLI command (`diagrid dev run`).
+- Logged in to Diagrid and provisioned a managed workflow project with a single CLI command (`diagrid dev run`).
 - Ran an order processing workflow that's using task chaining.
-- Inspected workflow execution state using the `status` endpoint and the Catalyst web console.
+- Inspected workflow execution state using the `status` endpoint and the Diagrid web console.
 
-Catalyst handled workflow state durability, activity orchestration, and retries automatically — no infrastructure to manage.
+Diagrid handled workflow state durability, activity orchestration, and retries automatically — no infrastructure to manage.
 
 ## Next steps
 
 - Explore the [Workflow SDK guides](https://docs.diagrid.io/develop/workflows) for building workflows from scratch, understanding workflow patterns, and resiliency.
 - Try the [Workflow Composer](https://docs.diagrid.io/develop/workflows/workflow-composer) to scaffold workflow projects based on diagrams, or try the [Claude skills for Dapr](https://github.com/diagrid-labs/dapr-skills) to build entire Dapr workflow applications.
 - Read the full [Workflow quickstart docs](https://docs.diagrid.io/getting-started/quickstarts/workflow).
-- Browse all [Catalyst quickstarts](../../README.md) in this repository.
+- Browse all [Diagrid quickstarts](../../README.md) in this repository.

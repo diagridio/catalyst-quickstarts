@@ -21,13 +21,13 @@ FAMILY = "agents"
 NAME = "langgraph"
 LANGUAGE = "python"
 
-# README "## Run with Catalyst", step 2. Replaced by an ephemeral qs-ci-* name at
+# README "## Run with Diagrid", step 2. Replaced by an ephemeral qs-ci-* name at
 # run time; also what doc-sync maps onto `{project}` when comparing.
 DOCUMENTED_PROJECT = "langgraph-quickstart"
 
 QUICKSTART_DIR = str(REPO_ROOT / "agents" / "langgraph")
 
-# README "## Run with Catalyst", steps 2 and 3. `--enable-agent-infrastructure`
+# README "## Run with Diagrid", steps 2 and 3. `--enable-agent-infrastructure`
 # was replaced by the three managed-service flags; the agent is now named for its
 # role in the shared event-planning scenario rather than for its framework.
 SETUP = (
@@ -39,7 +39,7 @@ SETUP = (
 # working directory instead of a command.
 INSTALL = "uv sync"
 
-# README "## Run with Catalyst", step 4. Bare on purpose: see the module docstring.
+# README "## Run with Diagrid", step 4. Bare on purpose: see the module docstring.
 RUN = "uv run diagrid dev run -f dev-python-langgraph.yaml --approve"
 
 # Empty on purpose: this README documents no cleanup command. It has no
@@ -80,7 +80,7 @@ READY_MARKERS = ("Uvicorn running on",)
 # fastapi==0.136.1 (the version this quickstart's uv.lock pins) and requesting
 # each path: `/` -> 404, `/dapr/subscribe` -> 200.
 #
-# It proves the app's own server is up and NOTHING about Catalyst — see
+# It proves the app's own server is up and NOTHING about Diagrid — see
 # CATALYST_PROBE_MARKERS below, which is the gate that closes that gap.
 #
 # Applies to every entry: one path per port, so an agent quickstart whose apps
@@ -102,14 +102,14 @@ HEALTH_PROBES = ((8005, "/dapr/subscribe"),)
 # `Connected App ID "schedule-planner" to http://localhost:8005` for an agent app,
 # confirming the harness README's appPort rule holds here. `Wait Until Apps
 # Connected` passed on it in 36s. Note what that does NOT prove: the line means
-# the local dev tunnel is up, not that Catalyst can route the app's workflow
+# the local dev tunnel is up, not that Diagrid can route the app's workflow
 # calls. See CATALYST_PROBE_MARKERS.
 CONNECTED_APPS = (("schedule-planner", 8005),)
 
-# Strings that appear in the captured `diagrid dev run` output once Catalyst has
+# Strings that appear in the captured `diagrid dev run` output once Diagrid has
 # attached to the app and started probing it back through the dev tunnel. This is
 # the last gate `Wait Until Catalyst Attached` waits on, and the only readiness
-# signal in this module that says anything about Catalyst rather than about the
+# signal in this module that says anything about Diagrid rather than about the
 # local process.
 #
 # Why it exists, measured 2026-08-27 against a real project: the documented POST
@@ -120,7 +120,7 @@ CONNECTED_APPS = (("schedule-planner", 8005),)
 # Gated on this marker, the same request answered 200 in ~1s on three consecutive
 # runs, with the marker arriving at t+1s, t+3s and t+3s.
 #
-# `GET /dapr/config` is Catalyst fetching the app's Dapr configuration through the
+# `GET /dapr/config` is Diagrid fetching the app's Dapr configuration through the
 # tunnel. The app has no such route and answers 404 — irrelevant, because the
 # REQUEST ARRIVING is the signal, not the response. uvicorn's access log is what
 # makes it visible, which is why this is per-quickstart data and not a constant.
@@ -128,7 +128,7 @@ CONNECTED_APPS = (("schedule-planner", 8005),)
 # Do NOT replace this with an active probe. Two obvious ones were tried and are
 # VACUOUS: the app's own `GET /agent/run/{workflow_id}` answers 404 in 71ms at
 # readiness+0 while the POST beside it hangs (different RPCs — `GetInstance` is
-# live, `StartInstance` is not), and Catalyst's workflow HTTP API answers 202 in
+# live, `StartInstance` is not), and Diagrid's workflow HTTP API answers 202 in
 # the same window while its worker executes work items one second in. Neither
 # distinguishes the window at all.
 CATALYST_PROBE_MARKERS = ("GET /dapr/config",)
@@ -194,7 +194,7 @@ REQUESTS = (
 )
 
 # ---------------------------------------------------------------------------
-# Crash-recovery flow. README "## Crash Recovery Test With Catalyst".
+# Crash-recovery flow. README "## Crash Recovery Test With Diagrid".
 #
 # This is a second run file (dev-crash-test.yaml, crash_test.py) on a different
 # port, so it gets its own constants rather than overloading RUN,
@@ -292,7 +292,7 @@ def get_quickstart():
 
     `catalyst_probe_markers` is agent-only despite being read by a keyword in
     the shared `catalyst.resource`: `Wait Until Catalyst Attached` guards a
-    window only the agent suites enter, because only they start Catalyst
+    window only the agent suites enter, because only they start Diagrid
     workflows. The canonical dict does not carry the key and the canonical
     suites never call the keyword, so nothing there breaks.
     """

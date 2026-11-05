@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Compute the ephemeral Catalyst project name for one leg. No CLI calls, so it
+# Compute the ephemeral Diagrid project name for one leg. No CLI calls, so it
 # cannot fail partway and leave the name unknown.
 #
 # Agent-family suites provision themselves from their README's documented

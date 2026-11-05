@@ -1,7 +1,7 @@
 *** Comments ***
 End-to-end test for the agents/strands quickstart, crash-recovery flow.
 
-Mirrors agents/strands/README.md "## Crash Recovery Test With Catalyst": "### 4"
+Mirrors agents/strands/README.md "## Crash Recovery Test With Diagrid": "### 4"
 starts the crash app, "### 5" runs under an id you own with kill_after_seconds,
 "### 7" restarts, "### 8" collects the answer. The README's main flow
 (dev-python-strands.yaml, POST /agent/run) and the two-terminal POST /crash/kill
@@ -35,7 +35,7 @@ Variables       ../../../tools/qs-tester/variables/agents_strands.py
 Library         ../../../tools/qs-tester/variables/agents_strands.py
 Library         Collections
 Suite Setup     Should Not Be Empty    ${PROJECT}
-...             msg=Pass --variable PROJECT:<catalyst-project-name>
+...             msg=Pass --variable PROJECT:<diagrid-project-name>
 Test Teardown   Clean Up Quickstart
 
 *** Variables ***
@@ -63,7 +63,7 @@ Python Strands Crash Recovery Quickstart
     END
     Wait Until Apps Healthy     ${qs}
 
-    # A workflow call made before Catalyst has attached hangs for good.
+    # A workflow call made before Diagrid has attached hangs for good.
     FOR    ${marker}    IN    @{qs}[catalyst_probe_markers]
         Wait Until Catalyst Attached    ${log}    ${marker}
     END
@@ -113,7 +113,7 @@ Python Strands Crash Recovery Quickstart
     Wait Until Apps Connected   ${qs}    ${log_again}
     Wait Until Apps Healthy     ${qs}
 
-    # "You do not have to send anything": Catalyst hands the run back on reconnect
+    # "You do not have to send anything": Diagrid hands the run back on reconnect
     # and the interrupted tool finishes on its own, about 10s after it restarts.
     Wait Until Log Contains     ${log_again}    ${STEP2_DONE_MARKER}    timeout=240s
 

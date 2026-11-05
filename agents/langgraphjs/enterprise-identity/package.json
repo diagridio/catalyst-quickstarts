@@ -2,7 +2,7 @@
   "name": "enterprise-identity-agent",
   "version": "1.0.0",
   "private": true,
-  "description": "LangGraph.js agent that knows who is calling it, on Diagrid Catalyst",
+  "description": "LangGraph.js agent that knows who is calling it, on Diagrid",
   "type": "module",
   "scripts": {
     "start": "tsx main.ts",

@@ -1,7 +1,7 @@
 *** Comments ***
 End-to-end test for the agents/goose quickstart, crash-recovery flow.
 
-Mirrors agents/goose/README.md "## Crash Recovery Test With Catalyst": "### 3"
+Mirrors agents/goose/README.md "## Crash Recovery Test With Diagrid": "### 3"
 starts the crash app, "### 4" runs under an id you own with kill_after_seconds,
 "### 5" restarts, "### 6" collects the answer. The README's main flow
 (dev-goose.yaml, one conversation of main.rs) and the "Optional: crash the app
@@ -12,7 +12,7 @@ prints and on framework-generated fields, never on model prose.
 
 Not yet run live by Robot: the org's project quota blocked the two ephemeral
 projects verify-live.sh needs. The README flow it mirrors passed when run by hand
-against Catalyst on 2026-10-20, with a local stand-in for the model, so the suite
+against Diagrid on 2026-10-20, with a local stand-in for the model, so the suite
 stays nightly False.
 
 Run it:
@@ -35,7 +35,7 @@ Variables       ../../../tools/qs-tester/variables/agents_goose.py
 Library         ../../../tools/qs-tester/variables/agents_goose.py
 Library         Collections
 Suite Setup     Should Not Be Empty    ${PROJECT}
-...             msg=Pass --variable PROJECT:<catalyst-project-name>
+...             msg=Pass --variable PROJECT:<diagrid-project-name>
 Test Teardown   Clean Up Quickstart
 
 *** Variables ***
@@ -63,7 +63,7 @@ Rust Goose Crash Recovery Quickstart
     END
     Wait Until Apps Healthy     ${qs}
 
-    # A workflow call made before Catalyst has attached hangs for good.
+    # A workflow call made before Diagrid has attached hangs for good.
     FOR    ${marker}    IN    @{qs}[catalyst_probe_markers]
         Wait Until Catalyst Attached    ${log}    ${marker}
     END
@@ -115,7 +115,7 @@ Rust Goose Crash Recovery Quickstart
     Wait Until Apps Connected   ${qs}    ${log_again}
     Wait Until Apps Healthy     ${qs}
 
-    # "You do not have to send anything": Catalyst hands the run back on reconnect
+    # "You do not have to send anything": Diagrid hands the run back on reconnect
     # and the interrupted turn finishes on its own, about 10s after it restarts.
     Wait Until Log Contains     ${log_again}    ${STEP2_DONE_MARKER}    timeout=240s
 

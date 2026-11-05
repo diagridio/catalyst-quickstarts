@@ -1,7 +1,7 @@
 /**
  * Crash Recovery Test: proves the agent survives its process being killed
  * mid-turn. This is the whole point of running an agent on Dapr Workflows via
- * Catalyst, so it is worth demonstrating rather than taking on faith.
+ * Diagrid, so it is worth demonstrating rather than taking on faith.
  *
  * Start it with:
  *
@@ -22,10 +22,10 @@
  *      This is the window the crash lands in.
  *   3. Model call 2 turns the tool's result into the answer.
  *
- * Restart with the same command after the crash and Catalyst hands the run
+ * Restart with the same command after the crash and Diagrid hands the run
  * back: the interrupted tool runs again, then model call 2. Model call 1 does
  * not, and that absence is the proof that its recorded result was replayed from
- * Catalyst's workflow history instead of being paid for twice. See README.md
+ * Diagrid's workflow history instead of being paid for twice. See README.md
  * for the full walkthrough.
  */
 
@@ -94,7 +94,7 @@ function noteSelfKill(runId: string, seconds: number | null): void {
  *
  * `process.exit`, the same call the earlier version of this demo crashed with:
  * it runs no `finally`, no `runner.shutdown()` and no pending I/O, so the
- * activity in flight never completes and Catalyst has to recover the instance
+ * activity in flight never completes and Diagrid has to recover the instance
  * rather than retry a failure. The line goes out through a synchronous write
  * because stdout is a pipe under `diagrid dev run`, and on macOS a pipe write
  * from `console.log` is asynchronous, so it could be lost to the exit right
@@ -129,7 +129,7 @@ function armSelfKill(seconds: number): void {
 }
 
 // Step 2. The tool is the slow step ON PURPOSE. Model call 1 finishes and
-// Catalyst records it before this starts, so the crash lands between two known
+// Diagrid records it before this starts, so the crash lands between two known
 // points. After the restart, `>>> Model call 1` must NOT appear again: that
 // absence is what proves the replay used the recorded result. Make model call 1
 // the slow part instead and the crash lands before anything has completed, the
@@ -193,8 +193,8 @@ const agent = new Agent({
 });
 
 // Same runner `name` as main.ts. That is what the workflow name and the
-// Catalyst agent registry entry are keyed on, so this demo's crash-recovery run
-// and its happy-path run show up under the one "sre-agent" agent in Catalyst
+// Diagrid agent registry entry are keyed on, so this demo's crash-recovery run
+// and its happy-path run show up under the one "sre-agent" agent in Diagrid
 // rather than two unrelated identities.
 //
 // invokeTimeoutSeconds is the budget runner.waitFor() uses, so CRASH_WAIT_SECONDS
@@ -285,7 +285,7 @@ async function crashRun(req: IncomingMessage, res: ServerResponse): Promise<void
 
   let reachedTerminalState = false;
   try {
-    // getWorkflowStatus answers undefined for an ID Catalyst has never seen, so it
+    // getWorkflowStatus answers undefined for an ID Diagrid has never seen, so it
     // is the existence check. Payloads are not needed to tell "exists" apart.
     const existing = await runner.getWorkflowStatus(id, false);
     if (existing === undefined) {
@@ -322,7 +322,7 @@ async function crashRun(req: IncomingMessage, res: ServerResponse): Promise<void
     }
     // `result` carries the agent's final answer text, matching the `result`
     // field of the other crash demos. The transcript and iteration count stay
-    // in the workflow's recorded output in Catalyst.
+    // in the workflow's recorded output in Diagrid.
     crashResponse(res, 200, { id, result: output.text, message: null });
   } catch (error) {
     if (error instanceof WorkflowTimeoutError) {
@@ -359,7 +359,7 @@ function crashKill(): void {
 
 const server = createServer((req, res) => {
   // One access-log line per request, the way uvicorn prints them for the Python
-  // demos. It is also how Catalyst's first probe through the dev tunnel
+  // demos. It is also how Diagrid's first probe through the dev tunnel
   // (GET /dapr/config) becomes visible in the app log.
   res.on('finish', () => console.log(`${req.method} ${req.url} ${res.statusCode}`));
 
@@ -378,7 +378,7 @@ const server = createServer((req, res) => {
 });
 
 await runner.start();
-// The runtime connects to Catalyst in the background. Give it a moment before
+// The runtime connects to Diagrid in the background. Give it a moment before
 // accepting requests, so the first one cannot arrive at an unregistered worker.
 await sleep(1000);
 console.log('Runner started, ready to accept requests');

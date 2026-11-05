@@ -4,7 +4,7 @@ End-to-end test for the agents/langgraphjs/enterprise-identity quickstart
 agents/langgraph/enterprise-identity has its own suite and its own data module.
 
 Mirrors agents/langgraphjs/enterprise-identity/README.md: "## Setup" installs,
-"## Run with Catalyst" provisions and runs, "### 4. See It Fail Closed" is the
+"## Run with Diagrid" provisions and runs, "### 4. See It Fail Closed" is the
 pair of documented requests this suite asserts. This README documents no cleanup
 command, so deleting the project is infrastructure here.
 
@@ -37,7 +37,7 @@ Variables       ../../../../tools/qs-tester/variables/agents_enterprise_identity
 Library         ../../../../tools/qs-tester/variables/agents_enterprise_identity_javascript.py
 Library         Collections
 Suite Setup     Should Not Be Empty    ${PROJECT}
-...             msg=Pass --variable PROJECT:<catalyst-project-name>
+...             msg=Pass --variable PROJECT:<diagrid-project-name>
 Test Teardown   Clean Up Quickstart
 
 *** Variables ***
@@ -57,7 +57,7 @@ Javascript Langgraph Identity Quickstart
     END
 
     Build Quickstart            ${qs}
-    # README "## Run with Catalyst" step 1, run verbatim.
+    # README "## Run with Diagrid" step 1, run verbatim.
     Run Documented Commands     ${qs}[setup]    ${PROJECT}    cwd=${qs}[dir]
     Start Quickstart            ${qs}    ${PROJECT}    ${log}
 

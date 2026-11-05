@@ -67,7 +67,7 @@ times before it surfaces, as a `500` whose `message` carries the provider's erro
 
 ### 1. Deploy and Run
 
-Log in, create the Catalyst project with managed workflow enabled (and set it as the default for this session), register the agent, then run:
+Log in, create the Diagrid project with managed workflow enabled (and set it as the default for this session), register the agent, then run:
 
 ```bash
 diagrid login
@@ -150,7 +150,7 @@ curl -X POST "http://localhost:8080/crash/kill"
 Invoke-RestMethod -Method Post -Uri 'http://localhost:8080/crash/kill'
 ```
 
-The app process dies (Terminal A's `curl` sees a reset). The workflow `trip-42` keeps living in Catalyst.
+The app process dies (Terminal A's `curl` sees a reset). The workflow `trip-42` keeps living in Diagrid.
 
 ## Recovery: restart the app
 
@@ -161,7 +161,7 @@ diagrid dev run -f dev-spring-ai-crash-recovery.yaml --approve
 ```
 
 **That is the whole recovery. You do not have to send anything.** The run is not waiting on you:
-Catalyst has been retrying the interrupted tool call the entire time the app was down, and it hands the
+Diagrid has been retrying the interrupted tool call the entire time the app was down, and it hands the
 pending work back the moment the restarted app's worker reconnects. The durable runtime resumes instance
 `trip-42` on its own, and the pre-crash LLM turn is not re-executed. Watch the app log: it is usually
 scrolling before Spring Boot has finished starting Tomcat, and always before you could send anything.
@@ -248,7 +248,7 @@ budget, set to 2m in the same file) so the first `/crash/run` is still blocked w
 
 ## Clean Up
 
-Stop the running application with `Ctrl+C`, then delete the Catalyst project:
+Stop the running application with `Ctrl+C`, then delete the Diagrid project:
 
 ```bash
 diagrid project delete spring-ai-crash-recovery

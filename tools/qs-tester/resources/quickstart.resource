@@ -77,11 +77,11 @@ Wait Until Not Server Error
     [Documentation]    Poll POST ${path} until it answers with anything other than
     ...    5xx, then return without asserting the body.
     ...
-    ...    Neither readiness signal the harness can observe proves Catalyst can
+    ...    Neither readiness signal the harness can observe proves Diagrid can
     ...    route INTO an app. `diagrid dev run` prints
     ...    `Connected App ID "<id>" to http://localhost:<port>` when the tunnel is
     ...    established, and `GET /` answers 200 as soon as the app's own server is
-    ...    up, but Catalyst marks the app channel healthy only after it has probed
+    ...    up, but Diagrid marks the app channel healthy only after it has probed
     ...    the app through that tunnel itself. Measured against a real project:
     ...    invocation answered 500 `ERR_DIRECT_INVOKE ... app is not in a healthy
     ...    state` at the instant both signals were satisfied, and 200 sixteen

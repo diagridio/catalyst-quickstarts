@@ -13,7 +13,7 @@ This quickstart demonstrates how to run a LangGraph graph as a durable Dapr Work
 
 ## Prerequisites
 
-1. A [Diagrid Catalyst account](https://catalyst.diagrid.io/)
+1. A [Diagrid account](https://catalyst.diagrid.io/)
 2. [Diagrid CLI](https://docs.diagrid.io/getting-started/install-cli) installed
 3. [Python 3.11–3.13](https://www.python.org/downloads/)
 4. [uv](https://docs.astral.sh/uv/getting-started/installation/) installed
@@ -27,7 +27,7 @@ cd agents/langgraph
 uv sync
 ```
 
-<!-- The Catalyst console deep-links to this heading's anchor (#using-a-real-llm-provider).
+<!-- The Diagrid Console deep-links to this heading's anchor (#using-a-real-llm-provider).
      Renaming this heading breaks that link silently. -->
 
 ### Using a real LLM provider
@@ -48,17 +48,17 @@ $env:DIAGRID_QUICKSTART_MODEL = "openai"
 $env:OPENAI_API_KEY = "your-key-here"
 ```
 
-## Run with Catalyst
+## Run with Diagrid
 
 ### 1. Login and Run
 
-1. Login to Catalyst using the Diagrid CLI:
+1. Login to Diagrid using the Diagrid CLI:
 
 ```bash
 diagrid login
 ```
 
-2. Create a new Catalyst project for the quickstart and use it as the default project for the current session:
+2. Create a new Diagrid project for the quickstart and use it as the default project for the current session:
 
 ```bash
 diagrid project create langgraph-quickstart --deploy-managed-kv --deploy-managed-pubsub --wait --use
@@ -70,7 +70,7 @@ diagrid project create langgraph-quickstart --deploy-managed-kv --deploy-managed
 diagrid agent create schedule-planner --wait
 ```
 
-4. Run the graph with Catalyst:
+4. Run the graph with Diagrid:
 
 ```bash
 uv run diagrid dev run -f dev-python-langgraph.yaml --approve
@@ -139,11 +139,11 @@ its exact contents vary with the model:
 }
 ```
 
-### 3. Inspecting the Results in Catalyst
+### 3. Inspecting the Results in Diagrid
 
-Open the [Catalyst dashboard](https://catalyst.diagrid.io/agents) in your browser and navigate to Agents > schedule-planner. Then select the most recent agent workflow run to view output.
+Open the [Diagrid dashboard](https://catalyst.diagrid.io/agents) in your browser and navigate to Agents > schedule-planner. Then select the most recent agent workflow run to view output.
 
-## Crash Recovery Test With Catalyst
+## Crash Recovery Test With Diagrid
 
 The `crash_test.py` file demonstrates durable crash recovery, a capability not offered by LangGraph natively. It defines a 3-node graph whose middle node deliberately takes about 10 seconds, and a `POST /crash/kill` endpoint that kills the process outright. Nothing is armed: the crash is a request you make, so there is no source edit, no environment variable to unset, and no second run file.
 
@@ -151,9 +151,9 @@ The `crash_test.py` file demonstrates durable crash recovery, a capability not o
 2. **compare_options**: compares options over ~10 seconds. Kill the app during this
 3. **confirm_booking**: confirms the booking. Instant
 
-The node order is the point. `check_venues` completes and Catalyst records its result before `compare_options` starts, so the crash lands between two known points and the restart can show that only the interrupted node ran again. Each node logs itself as `STEP 1`, `STEP 2` and `STEP 3`, which is how you follow it in the app log.
+The node order is the point. `check_venues` completes and Diagrid records its result before `compare_options` starts, so the crash lands between two known points and the restart can show that only the interrupted node ran again. Each node logs itself as `STEP 1`, `STEP 2` and `STEP 3`, which is how you follow it in the app log.
 
-You also choose the workflow instance ID, so you can find the same run again from a second request or in the Catalyst console.
+You also choose the workflow instance ID, so you can find the same run again from a second request or in the Diagrid Console.
 
 ### 4. Start the app
 
@@ -255,7 +255,7 @@ The endpoint calls `os._exit(1)`, so the process is gone before it can answer an
 ❌ App process "schedule-planner" exited with error code: exit status 1
 ```
 
-The workflow instance `gala-42` is unaffected. It lives in Catalyst, not in the process you just killed.
+The workflow instance `gala-42` is unaffected. It lives in Diagrid, not in the process you just killed.
 
 ### 7. Restart the app
 
@@ -265,7 +265,7 @@ Restart with the same command as step 4:
 uv run diagrid dev run -f dev-crash-test.yaml --approve
 ```
 
-**That is the whole recovery. You do not have to send anything.** The run resumes by itself, and no HTTP request is involved: as soon as the restarted app's worker reconnects, Catalyst hands `gala-42` back to it, `compare_options` starts over from the beginning, and about 10 seconds later the graph finishes. Watch the app log, where all of this happens before you send anything:
+**That is the whole recovery. You do not have to send anything.** The run resumes by itself, and no HTTP request is involved: as soon as the restarted app's worker reconnects, Diagrid hands `gala-42` back to it, `compare_options` starts over from the beginning, and about 10 seconds later the graph finishes. Watch the app log, where all of this happens before you send anything:
 
 ```text
 == APP - schedule-planner == >>> STEP 2: Comparing venue options over ~10s. KILL THE APP NOW to test crash recovery (POST /crash/kill, or kill -9). It resumes on restart.
@@ -274,7 +274,7 @@ uv run diagrid dev run -f dev-crash-test.yaml --approve
 == APP - schedule-planner == >>> STEP 3 COMPLETE: Booking confirmed: Grand Ballroom, March 15, 6PM-11PM
 ```
 
-`check_venues` is **not** re-executed: its `STEP 1` lines do not appear a second time. That node had completed and Catalyst had recorded its result, so the Dapr workflow engine replayed the saved value instead of running the node again. Only the node that was interrupted runs twice.
+`check_venues` is **not** re-executed: its `STEP 1` lines do not appear a second time. That node had completed and Diagrid had recorded its result, so the Dapr workflow engine replayed the saved value instead of running the node again. Only the node that was interrupted runs twice.
 
 ### 8. Collect the answer
 

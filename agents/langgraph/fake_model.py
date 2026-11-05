@@ -23,7 +23,7 @@ class CannedToolCallingChatModel(BaseChatModel):
     replayed history is the only reliable state. A call counter resets with the
     process and would ask for the tool a second time.
 
-    Both the class name and `model_name` are load-bearing for the Catalyst
+    Both the class name and `model_name` are load-bearing for the Diagrid
     console. The agent registry finds the model by scanning the node's globals
     for a type whose name contains "chat" and which exposes `model_name` or
     `model`, so without either the console reports this agent's model as

@@ -1,6 +1,6 @@
 """Suite data for the agents/goose quickstart, crash-recovery flow.
 
-Mirrors agents/goose/README.md, section "## Crash Recovery Test With Catalyst".
+Mirrors agents/goose/README.md, section "## Crash Recovery Test With Diagrid".
 Commands are transcribed verbatim from that README with the documented project
 name replaced by `{project}`. Log markers are read out of src/bin/crash_test.rs,
 because the README quotes them only as sample output.
@@ -60,9 +60,9 @@ APP_PORT = 8001
 # appID from dev-crash-test.yaml; the app (src/bin/crash_test.rs) listens on APP_PORT.
 CONNECTED_APPS = (("release-manager", APP_PORT),)
 
-# Catalyst fetching the app's Dapr config through the tunnel. crash_test.rs logs
+# Diagrid fetching the app's Dapr config through the tunnel. crash_test.rs logs
 # one access line per request (`GET /dapr/config 404`), the way uvicorn does for
-# the Python siblings, so the probe is visible. Seen in the 2026-10-20 Catalyst
+# the Python siblings, so the probe is visible. Seen in the 2026-10-20 Diagrid
 # runs after `Crash demo listening on`. See variables/agents_langgraph.py for the
 # measurement behind this gate.
 CATALYST_PROBE_MARKERS = ("GET /dapr/config",)

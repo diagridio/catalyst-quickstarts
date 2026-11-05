@@ -33,7 +33,7 @@ Library         String
 # the app's delay down through the environment it inherits from this process.
 Library         OperatingSystem
 Suite Setup     Should Not Be Empty    ${PROJECT}
-...             msg=Pass --variable PROJECT:<catalyst-project-name>
+...             msg=Pass --variable PROJECT:<diagrid-project-name>
 Test Teardown   Stop Quickstart    ${PROJECT}
 
 *** Variables ***
@@ -243,7 +243,7 @@ Run Workflow Crash Recovery
     # them apart. This marker is the discriminator: only the attach branch logs it.
     Wait Until Log Contains     ${log_again}    ${attaching}    timeout=30s
 
-    # The whole proof. The fast activity completed and Catalyst recorded its result
+    # The whole proof. The fast activity completed and Diagrid recorded its result
     # before the crash, so the replay must not have run it a second time. If this marker
     # is in the restarted app's log, the crash landed before the first persisted
     # completion and the demo demonstrates nothing.
@@ -268,7 +268,7 @@ Run Workflow Self Kill
     ...    It is a real assertion rather than a smoke test because the fuse is armed INSIDE
     ...    CommitReservationActivity, microseconds before its sleep. If it were armed at the
     ...    request instead, the 8s budget would have to cover the schedule round-trip and the
-    ...    whole fast activity, this case would be measuring Catalyst's dispatch latency, and
+    ...    whole fast activity, this case would be measuring Diagrid's dispatch latency, and
     ...    a red run would mean "the cloud was slow" as often as "the code is wrong".
     [Arguments]    ${language}
     Should Contain    ${CRASH_LANGUAGES}    ${language}

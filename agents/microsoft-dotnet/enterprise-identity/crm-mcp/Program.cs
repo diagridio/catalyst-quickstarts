@@ -14,7 +14,7 @@ builder.Services
 builder.Services.AddHttpContextAccessor();
 
 var app = builder.Build();
-// "/mcp" explicitly, which is where resources/crm-mcp.yaml registers this server with Catalyst.
+// "/mcp" explicitly, which is where resources/crm-mcp.yaml registers this server with Diagrid.
 app.MapMcp("/mcp");
 
 await app.RunAsync();
@@ -26,7 +26,7 @@ await app.RunAsync();
 [McpServerToolType]
 internal sealed class CrmTools(IHttpContextAccessor httpContextAccessor, ILogger<CrmTools> logger)
 {
-    /// <summary>The header Catalyst mints for one call and forwards to this server.</summary>
+    /// <summary>The header Diagrid mints for one call and forwards to this server.</summary>
     private const string UserTokenHeader = "X-Diagrid-User-Token";
 
     private const string BearerPrefix = "Bearer ";
@@ -56,7 +56,7 @@ internal sealed class CrmTools(IHttpContextAccessor httpContextAccessor, ILogger
     }
 
     /// <summary>
-    /// Reads the calling user from the credential Catalyst minted for this request. Catalyst has
+    /// Reads the calling user from the credential Diagrid minted for this request. Diagrid has
     /// verified it already, so this only decodes the claims to show them: a server that decided
     /// anything on them would have to verify for itself.
     /// </summary>

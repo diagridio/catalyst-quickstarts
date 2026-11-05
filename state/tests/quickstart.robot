@@ -20,7 +20,7 @@ Variables       ../../tools/qs-tester/variables/quickstarts.py
 Library         ../../tools/qs-tester/variables/quickstarts.py
 Library         Collections
 Suite Setup     Should Not Be Empty    ${PROJECT}
-...             msg=Pass --variable PROJECT:<catalyst-project-name>
+...             msg=Pass --variable PROJECT:<diagrid-project-name>
 Test Teardown   Stop Quickstart    ${PROJECT}
 
 *** Variables ***

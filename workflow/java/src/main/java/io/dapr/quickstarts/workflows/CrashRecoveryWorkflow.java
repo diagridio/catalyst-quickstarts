@@ -14,7 +14,7 @@ import org.springframework.stereotype.Component;
  * seconds is not a window a human can aim a second terminal at. This workflow runs one instant
  * activity and then one that takes about 10 seconds, so a kill lands between two known points.
  *
- * <p>The activity ORDER is the whole design. The fast notification completes first, so Catalyst has
+ * <p>The activity ORDER is the whole design. The fast notification completes first, so Diagrid has
  * persisted its result before the slow activity starts. After a restart that notification is
  * replayed from the recorded result rather than re-executed, and its absence from the log is what
  * proves durable execution did something. Reverse the two and the crash lands before anything has

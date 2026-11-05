@@ -19,7 +19,7 @@ from diagrid.agent.strands import DaprWorkflowAgentRunner
 
 # ── Tools (each becomes a Dapr workflow activity) ────────────
 # The tool ORDER is the design, not an accident. Step 1 finishes in milliseconds, so
-# Catalyst has persisted its result before step 2 starts, and the crash therefore lands
+# Diagrid has persisted its result before step 2 starts, and the crash therefore lands
 # between two known points. After the restart, step 1's lines must NOT appear again:
 # that absence is what proves the replay used the recorded result instead of re-running
 # the tool. Put the slow tool first and the crash lands before anything has completed,
@@ -144,7 +144,7 @@ CRASH_WAIT_SECONDS = int(os.environ.get("CRASH_WAIT_SECONDS", "120"))
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     runner.start()
-    # The runner registers with Catalyst on a background thread. Give it a moment before
+    # The runner registers with Diagrid on a background thread. Give it a moment before
     # announcing readiness, so the first request cannot arrive at an unregistered worker.
     await asyncio.sleep(1)
     print("Runner started, ready to accept requests", flush=True)
@@ -160,7 +160,7 @@ app = FastAPI(lifespan=lifespan)
 # Returns: { "message": "Health check passed. Everything is running smoothly!" }
 #
 # It answers only once the lifespan above has run, so a 200 here means the
-# workflow runner registered with Catalyst, not merely that the port is open.
+# workflow runner registered with Diagrid, not merely that the port is open.
 @app.get("/")
 async def read_root():
     return {"message": "Health check passed. Everything is running smoothly!"}

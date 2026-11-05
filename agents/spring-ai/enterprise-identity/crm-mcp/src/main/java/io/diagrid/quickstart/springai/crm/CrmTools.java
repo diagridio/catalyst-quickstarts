@@ -18,14 +18,14 @@ import tools.jackson.databind.ObjectMapper;
 /**
  * The CRM's one tool: summarise an account, and report who the CRM is answering.
  *
- * <p>This application has no identity dependency and verifies nothing. Catalyst verified the caller
+ * <p>This application has no identity dependency and verifies nothing. Diagrid verified the caller
  * before this process was reached, so all that is left is to decode the claims in order to show
  * them.
  */
 @Component
 public class CrmTools {
 
-  /** The header Catalyst puts the on-behalf-of token in. Lower-cased, as HTTP delivers it. */
+  /** The header Diagrid puts the on-behalf-of token in. Lower-cased, as HTTP delivers it. */
   static final String USER_TOKEN_HEADER = "x-diagrid-user-token";
 
   static final String USER_TOKEN_CONTEXT_KEY = "diagrid.userToken";
@@ -63,7 +63,7 @@ public class CrmTools {
   }
 
   /**
-   * The calling user, decoded from Catalyst's credential and <b>never verified here</b>: Catalyst
+   * The calling user, decoded from Diagrid's credential and <b>never verified here</b>: Diagrid
    * checked the signature before the request arrived, and nothing in the response is an
    * authorization decision. A CRM that made one would verify.
    */

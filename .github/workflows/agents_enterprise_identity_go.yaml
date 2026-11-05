@@ -50,7 +50,7 @@ jobs:
       # mint a credential the app accepts. The shipped image is built WITHOUT the
       # tag, which is what keeps the throwaway issuer out of it.
       #
-      # No credentials and no network off loopback: the tests stand the Catalyst
+      # No credentials and no network off loopback: the tests stand the Diagrid
       # identity plane up in-process (buildLocalIssuer) and drive the app's own
       # handlers, so the 200 and 403 paths the Robot suite cannot reach are
       # covered here instead. The outbound leg is exercised against a stand-in

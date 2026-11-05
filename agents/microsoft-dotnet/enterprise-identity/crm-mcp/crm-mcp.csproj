@@ -9,7 +9,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- No Diagrid dependency, and that is the point: Catalyst has already verified the signature
+    <!-- No Diagrid dependency, and that is the point: Diagrid has already verified the signature
          by the time the call arrives, so this server only decodes the claims to show them. -->
     <PackageReference Include="ModelContextProtocol.AspNetCore" Version="2.2.0" />
   </ItemGroup>

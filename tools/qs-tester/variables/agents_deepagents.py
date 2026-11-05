@@ -1,6 +1,6 @@
 """Suite data for the agents/deepagents quickstart, crash-recovery flow.
 
-Mirrors agents/deepagents/README.md, section "## Crash Recovery Test With Catalyst".
+Mirrors agents/deepagents/README.md, section "## Crash Recovery Test With Diagrid".
 Commands are transcribed verbatim from that README with the documented project
 name replaced by `{project}`. Log markers are read out of crash_test.py, because
 the README quotes them only in part.
@@ -55,7 +55,7 @@ APP_PORT = 8001
 # appID from dev-crash-test.yaml; the app (crash_test.py) listens on APP_PORT.
 CONNECTED_APPS = (("transportation-planner", APP_PORT),)
 
-# Catalyst fetching the app's Dapr config through the tunnel. The request arriving
+# Diagrid fetching the app's Dapr config through the tunnel. The request arriving
 # is the signal; a workflow call made before it hangs for good. See
 # variables/agents_langgraph.py for the measurement behind this gate.
 CATALYST_PROBE_MARKERS = ("GET /dapr/config",)

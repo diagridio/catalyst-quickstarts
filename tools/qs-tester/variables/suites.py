@@ -79,7 +79,7 @@ SUITES = (
         "language": "python",
         "runtime": "python",
         # True as of 2026-08-28: this suite has had a green live run against a real
-        # Catalyst project AND a mutation check that `ci/check_mutation.py`
+        # Diagrid project AND a mutation check that `ci/check_mutation.py`
         # accepted — READY_MARKERS overridden to "__mutation_check__" made
         # `Wait Until Ready Marker` FAIL, naming the sentinel, with the enclosing
         # test failing too. That is the bar; the other agent suites have not met
@@ -260,7 +260,7 @@ SUITES = (
         # False: the suite has not had a live Robot run or a mutation check. The
         # org's project quota blocked the two ephemeral projects verify-live.sh
         # needs. The README flow it mirrors passed when run by hand against
-        # Catalyst on 2026-10-20, with a local stand-in for the model, on
+        # Diagrid on 2026-10-20, with a local stand-in for the model, on
         # diagrid-goose 0.1.0 and again on 0.1.1.
         "nightly": False,
         # goose calls a real model through OpenAI. Keep in step with SECRETS in
@@ -400,7 +400,7 @@ SUITES = (
         "language": "csharp",
         "runtime": "dotnet",
         # Half the bar is met. First green live run on 2026-09-02, against a real
-        # Catalyst project with no model key, after a readiness fix: the suite was
+        # Diagrid project with no model key, after a readiness fix: the suite was
         # gating the documented POST on the Dapr-connectivity marker the README
         # names, which Kestrel logs BEFORE it binds the HTTP port. The request hit
         # a closed port, and the teardown's SIGTERM then cancelled BindAsync, which
@@ -423,7 +423,7 @@ SUITES = (
         "data": "agents_spring_ai_crash_recovery",
         "language": "java",
         "runtime": "java",
-        # Half the bar is met. A live run against a real Catalyst project passed on
+        # Half the bar is met. A live run against a real Diagrid project passed on
         # 2026-09-02: the booking started, the app halted itself via
         # kill_after_seconds, App Port Is Closed confirmed the crash landed, the
         # restarted app resumed the interrupted tool call and committed, and the
@@ -516,7 +516,7 @@ _REQUIRED = {
     "agent": ("suite", "family", "name", "data", "language", "runtime", "nightly", "secrets"),
 }
 
-# The ephemeral project name must fit Catalyst's limit. `ci/project-name.sh`
+# The ephemeral project name must fit Diagrid's limit. `ci/project-name.sh`
 # builds `qs-ci-<leg>-<run-id>`, and agent legs use `agents-<name>`.
 MAX_PROJECT_NAME = 55
 

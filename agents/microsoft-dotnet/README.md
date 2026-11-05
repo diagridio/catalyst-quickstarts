@@ -8,12 +8,12 @@ This quickstart demonstrates how to run a Microsoft Agent Framework agent as a d
 - **No model account needed**: the app ships an offline model, so the whole walkthrough runs without an API key
 - **A real provider one variable away**: set `DIAGRID_QUICKSTART_MODEL=openai` and it calls OpenAI directly through the `Microsoft.Extensions.AI.OpenAI` IChatClient
 - **Caller-owned instance ID**: Schedule the agent run under an ID you choose, so you can find the same execution again
-- **Crash Recovery**: Kill the app mid-tool with a request; on restart, Catalyst resumes the run without redoing the tools that had already completed
+- **Crash Recovery**: Kill the app mid-tool with a request; on restart, Diagrid resumes the run without redoing the tools that had already completed
 - **REST API**: Trigger the agent via an HTTP endpoint
 
 ## Prerequisites
 
-1. A [Diagrid Catalyst account](https://catalyst.diagrid.io/)
+1. A [Diagrid account](https://catalyst.diagrid.io/)
 2. [Diagrid CLI](https://docs.diagrid.io/getting-started/install-cli) installed
 3. [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
 4. *(Optional)* An [OpenAI API key](https://platform.openai.com/api-keys), only if you want to run
@@ -59,17 +59,17 @@ $env:DIAGRID_QUICKSTART_MODEL = "openai"
 $env:OPENAI_API_KEY = "your-key-here"
 ```
 
-## Run with Catalyst
+## Run with Diagrid
 
 ### 1. Login and Run
 
-1. Login to Catalyst using the Diagrid CLI:
+1. Login to Diagrid using the Diagrid CLI:
 
 ```bash
 diagrid login
 ```
 
-2. Create a new Catalyst project for the quickstart and use it as the default project for the current session:
+2. Create a new Diagrid project for the quickstart and use it as the default project for the current session:
 
 ```bash
 diagrid project create dotnet-quickstart --deploy-managed-kv --deploy-managed-pubsub --wait --use
@@ -81,7 +81,7 @@ diagrid project create dotnet-quickstart --deploy-managed-kv --deploy-managed-pu
 diagrid agent create event-planner --wait
 ```
 
-4. Run the agent with Catalyst:
+4. Run the agent with Diagrid:
 
 ```bash
 diagrid dev run -f dev-dotnet-agent.yaml --approve
@@ -127,11 +127,11 @@ So this request takes on the order of fifteen seconds, and longer on a live mode
 == APP - event-planner == >>> TOOL 3 COMPLETE: Booking confirmed for Grand Ballroom
 ```
 
-### 3. Crash Recovery with Catalyst
+### 3. Crash Recovery with Diagrid
 
 Every LLM call and every tool call is a separate Dapr workflow activity, so an activity that has already completed is not re-run after a crash. To see that, kill the app while tool 2 is comparing venues.
 
-Two things make the demo legible. You choose the workflow instance ID, so you can find the same execution again. And killing during tool 2, rather than tool 1, means the crash lands *after* a completion Catalyst has already recorded. If tool 1's lines reappeared after the restart, the run would have started over and there would be nothing to see.
+Two things make the demo legible. You choose the workflow instance ID, so you can find the same execution again. And killing during tool 2, rather than tool 1, means the crash lands *after* a completion Diagrid has already recorded. If tool 1's lines reappeared after the restart, the run would have started over and there would be nothing to see.
 
 Leave the application from step 1 running.
 
@@ -197,7 +197,7 @@ Invoke-RestMethod -Method Post -Uri 'http://localhost:5050/crash/kill'
 
 The endpoint calls `Process.GetCurrentProcess().Kill()`, which is `SIGKILL` on macOS and Linux and `TerminateProcess` on Windows, so the process is gone before it can answer and this request itself reports a connection reset rather than a status code. That is expected: a process that answers politely has not crashed. The blocked request sees a reset too.
 
-The workflow instance `gala-42` is unaffected. It lives in Catalyst, not in the process you just killed.
+The workflow instance `gala-42` is unaffected. It lives in Diagrid, not in the process you just killed.
 
 **Restart the app.** Start the application again with the same `diagrid dev run` command you used in step 1. The project and the agent already exist, so this is the only command you need:
 
@@ -205,7 +205,7 @@ The workflow instance `gala-42` is unaffected. It lives in Catalyst, not in the 
 diagrid dev run -f dev-dotnet-agent.yaml --approve
 ```
 
-**That is the whole recovery. You do not have to send anything.** The run is not waiting on you: Catalyst has been retrying the interrupted tool call the entire time the app was down, and it hands the pending work back within a second of the restarted app's worker reconnecting. The log below is usually scrolling before you can type:
+**That is the whole recovery. You do not have to send anything.** The run is not waiting on you: Diagrid has been retrying the interrupted tool call the entire time the app was down, and it hands the pending work back within a second of the restarted app's worker reconnecting. The log below is usually scrolling before you can type:
 
 ```text
 == APP - event-planner == >>> TOOL 2: Comparing venues over ~10s. KILL THE APP NOW to test crash recovery (POST /crash/kill, or kill -9). It resumes on restart.
@@ -214,7 +214,7 @@ diagrid dev run -f dev-dotnet-agent.yaml --approve
 == APP - event-planner == >>> TOOL 3 COMPLETE: Booking confirmed for Grand Ballroom
 ```
 
-`>>> TOOL 1: Searching venues in 'Austin'...` does **not** appear again, and neither does the LLM call that chose it. Those activities had completed and Catalyst had recorded their results, so the replay took the recorded values. Only the activity that was interrupted runs a second time.
+`>>> TOOL 1: Searching venues in 'Austin'...` does **not** appear again, and neither does the LLM call that chose it. Those activities had completed and Diagrid had recorded their results, so the replay took the recorded values. Only the activity that was interrupted runs a second time.
 
 **Collect the answer.** The run recovered on its own, but the crash took the connection that was waiting for its result: the `/crash/run` request you sent before the kill died with the process, and its answer had nowhere to go. Send the **identical** request once more to open a new connection to the run that already finished:
 
@@ -240,15 +240,15 @@ Because the instance already exists, this call attaches to the run you started b
 
 The length of tool 2 is configurable through the `CRASH_DELAY_SECONDS` environment variable, which defaults to 10. Set it lower to shorten the window, or higher if you need more time to aim.
 
-### 4. Inspecting the Results in Catalyst
+### 4. Inspecting the Results in Diagrid
 
-Open the [Catalyst dashboard](https://catalyst.diagrid.io/agents) in your browser and navigate to Agents > event-planner. Then select the most recent agent workflow run to view output.
+Open the [Diagrid dashboard](https://catalyst.diagrid.io/agents) in your browser and navigate to Agents > event-planner. Then select the most recent agent workflow run to view output.
 
 For a crash-recovery run you do not have to guess which one is yours: it is the execution named `gala-42`, or whatever ID you passed. The trace shows one execution, not two, with the interrupted tool attempted twice and every earlier activity once.
 
 ## Clean Up
 
-Stop the running application with `Ctrl+C`, then delete the Catalyst project:
+Stop the running application with `Ctrl+C`, then delete the Diagrid project:
 
 ```bash
 diagrid project delete dotnet-quickstart

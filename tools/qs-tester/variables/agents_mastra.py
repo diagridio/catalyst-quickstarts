@@ -1,6 +1,6 @@
 """Suite data for the agents/mastra quickstart, crash-recovery flow.
 
-Mirrors agents/mastra/README.md, section "## Crash Recovery Test With Catalyst".
+Mirrors agents/mastra/README.md, section "## Crash Recovery Test With Diagrid".
 Commands are transcribed verbatim from that README with the documented project
 name replaced by `{project}`. Log markers are read out of crash_test.ts, because
 the README quotes them only as sample output.
@@ -59,7 +59,7 @@ APP_PORT = 8001
 # appID from dev-crash-test.yaml; the app (crash_test.ts) listens on APP_PORT.
 CONNECTED_APPS = (("sre-agent", APP_PORT),)
 
-# Catalyst fetching the app's Dapr config through the tunnel. crash_test.ts logs
+# Diagrid fetching the app's Dapr config through the tunnel. crash_test.ts logs
 # one access line per request (`GET /dapr/config 404`), the way uvicorn does for
 # the Python siblings, so the probe is visible. See variables/agents_langgraph.py
 # for the measurement behind this gate.

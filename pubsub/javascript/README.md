@@ -1,18 +1,18 @@
 # Quickstart: Publish/Subscribe (JavaScript)
 
-In this quickstart, you'll run a publisher and subscriber application on [Catalyst Cloud](https://docs.diagrid.io/operate/hosting/catalyst-cloud). You will learn how to:
+In this quickstart, you'll run a publisher and subscriber application on [Diagrid Cloud](https://docs.diagrid.io/operate/hosting/catalyst-cloud). You will learn how to:
 
-- Provision a Catalyst project with a managed message broker using the Diagrid CLI.
+- Provision a Diagrid project with a managed message broker using the Diagrid CLI.
 - Publish messages to a topic and receive them in a subscriber application using the Dapr Pub/Sub API.
-- Inspect published messages in the Catalyst web console.
+- Inspect published messages in the Diagrid web console.
 
 ```mermaid
 ---
-title: Publisher and Subscriber Apps connected to Catalyst via Pub/Sub
+title: Publisher and Subscriber Apps connected to Diagrid via Pub/Sub
 ---
 flowchart LR
   APP1(Publisher App)
-  subgraph Catalyst
+  subgraph Diagrid
     APPID1(ID: publisher)
     BROKER@{ shape: das, label: "Message broker" }
     APPID2(ID: subscriber)
@@ -28,20 +28,20 @@ flowchart LR
 
 Before you proceed, ensure you have the following prerequisites installed.
 
-- [Diagrid Catalyst account](https://catalyst.diagrid.io/)
+- [Diagrid account](https://catalyst.diagrid.io/)
 - [Diagrid CLI](https://docs.diagrid.io/getting-started/install-cli)
 - [Git](https://git-scm.com/downloads)
 - [Node.JS LTS](https://nodejs.org/en/)
 
-## 2. Log in to Catalyst
+## 2. Log in to Diagrid
 
-Authenticate to Diagrid Catalyst using the following command:
+Authenticate to Diagrid using the following command:
 
 ```bash
 diagrid login
 ```
 
-This command opens a new browser window where you'll be shown a confirmation code that should match the code in your terminal. Confirm the code, and if you're not logged into Catalyst, you'll be redirected to login.
+This command opens a new browser window where you'll be shown a confirmation code that should match the code in your terminal. Confirm the code, and if you're not logged into Diagrid, you'll be redirected to login.
 
 Confirm your user details are correct using the following command:
 
@@ -49,7 +49,7 @@ Confirm your user details are correct using the following command:
 diagrid whoami
 ```
 
-The expected output contains the name of the organization, your user name, and the Catalyst API endpoint.
+The expected output contains the name of the organization, your user name, and the Diagrid API endpoint.
 
 ## 3. Clone Quickstart Code
 
@@ -81,9 +81,9 @@ Install the dependencies for both the publisher and subscriber applications.
 npm install --prefix ./publisher && npm install --prefix ./subscriber
 ```
 
-## 5. Run the application with Catalyst Cloud
+## 5. Run the application with Diagrid Cloud
 
-The `diagrid dev run` command creates your Catalyst project, provisions resources (apps, Diagrid Pub/Sub service and topic), configures environment variables, and launches your application connected to Catalyst Cloud.
+The `diagrid dev run` command creates your Diagrid project, provisions resources (apps, Diagrid Pub/Sub service and topic), configures environment variables, and launches your application connected to Diagrid Cloud.
 
 ```bash
 diagrid dev run -f pubsub-quickstart.yaml --project pubsub-quickstart --approve
@@ -121,13 +121,13 @@ The expected response is `201 Created` with this body:
 
 In the `diagrid dev run` terminal, the publisher app logs should indicate a message was successfully published, and the subscriber app logs should show the message was received on its `/neworder` route.
 
-### 6.2 View in the Catalyst web console
+### 6.2 View in the Diagrid web console
 
-Open the [Catalyst Cloud web console](https://catalyst.diagrid.io/pub-sub/pubsub) and navigate to the Pub/Sub topic explorer (Resources > Managed Pub/Sub). When the `Pending Message Count` for the `orders` topic reaches 0, the subscriber app has successfully processed all messages.
+Open the [Diagrid Cloud web console](https://catalyst.diagrid.io/pub-sub/pubsub) and navigate to the Pub/Sub topic explorer (Resources > Managed Pub/Sub). When the `Pending Message Count` for the `orders` topic reaches 0, the subscriber app has successfully processed all messages.
 
 ## 7. Clean Up
 
-Press CTRL+C in the terminal that runs `diagrid dev run` to stop the application and disconnect from Catalyst Cloud.
+Press CTRL+C in the terminal that runs `diagrid dev run` to stop the application and disconnect from Diagrid Cloud.
 
 To delete the entire project and all provisioned resources:
 
@@ -139,15 +139,15 @@ diagrid project delete pubsub-quickstart
 
 In this quickstart you:
 
-- Logged in to Catalyst and provisioned a managed Pub/Sub project with a single CLI command (`diagrid dev run`).
+- Logged in to Diagrid and provisioned a managed Pub/Sub project with a single CLI command (`diagrid dev run`).
 - Published a message to a topic and verified it was received by a subscriber application.
-- Inspected message delivery status using the Catalyst Pub/Sub topic explorer.
+- Inspected message delivery status using the Diagrid Pub/Sub topic explorer.
 
-Catalyst handled message brokering, topic management, and delivery guarantees automatically — no infrastructure to manage.
+Diagrid handled message brokering, topic management, and delivery guarantees automatically — no infrastructure to manage.
 
 ## Next steps
 
 - Explore the [Dapr API SDK guides](https://docs.diagrid.io/develop/dapr-apis) to integrate Pub/Sub messaging into your own applications.
 - Try the [State Management quickstart](https://docs.diagrid.io/getting-started/quickstarts/dapr-apis/state) to add persistent storage to your application.
 - Read the full [Publish/Subscribe quickstart docs](https://docs.diagrid.io/getting-started/quickstarts/dapr-apis/pubsub).
-- Browse all [Catalyst quickstarts](../../README.md) in this repository.
+- Browse all [Diagrid quickstarts](../../README.md) in this repository.

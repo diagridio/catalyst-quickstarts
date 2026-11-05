@@ -1,10 +1,10 @@
-# Quickstart: Migrate from Dapr OSS to Catalyst
+# Quickstart: Migrate from Dapr OSS to Diagrid
 
-In this quickstart, you run a Go application on Dapr open source in a local Kubernetes cluster, then move it to [Catalyst](https://docs.diagrid.io/dapr-open-source/migrate-to-catalyst) with the Catalyst Kubernetes operator. You will learn how to:
+In this quickstart, you run a Go application on Dapr open source in a local Kubernetes cluster, then move it to [Diagrid](https://docs.diagrid.io/dapr-open-source/migrate-to-catalyst) with the Diagrid Kubernetes operator. You will learn how to:
 
-- Check a Dapr OSS namespace for Catalyst compatibility.
-- Install the Catalyst Kubernetes operator and migrate the namespace with one command.
-- Confirm that service invocation, pub/sub, state, jobs, actors and workflows keep working on Catalyst.
+- Check a Dapr OSS namespace for Diagrid compatibility.
+- Install the Diagrid Kubernetes operator and migrate the namespace with one command.
+- Confirm that service invocation, pub/sub, state, jobs, actors and workflows keep working on Diagrid.
 - Cut over and remove Dapr OSS from the cluster.
 
 The application has two roles built from one image:
@@ -27,7 +27,7 @@ flowchart LR
       I2(inventory)
     end
   end
-  subgraph Catalyst
+  subgraph Diagrid
     P(Project: migration-quickstart)
   end
   R[(Redis)]
@@ -40,16 +40,16 @@ flowchart LR
 
 ## 1. Prerequisites
 
-- [Diagrid Catalyst account](https://catalyst.diagrid.io/)
+- [Diagrid account](https://catalyst.diagrid.io/)
 - [Diagrid CLI](https://docs.diagrid.io/getting-started/install-cli) v1.105.0 or later
 - [Docker](https://docs.docker.com/get-docker/), [kind](https://kind.sigs.k8s.io/docs/user/quick-start/#installation) and [kubectl](https://kubernetes.io/docs/tasks/tools/)
 - [Dapr CLI](https://docs.dapr.io/getting-started/install-dapr-cli/)
 - [Git](https://git-scm.com/downloads) and `envsubst` (part of GNU gettext)
 - A Redis database reachable from the internet, with a password. A free [Redis Cloud](https://redis.io/try-free/) database works.
 
-The Redis has to be reachable from the internet. After the migration the Dapr server runs in Catalyst, and Catalyst cannot resolve an address that exists only inside your cluster, such as `redis.default.svc.cluster.local`.
+The Redis has to be reachable from the internet. After the migration the Dapr server runs in Diagrid, and Diagrid cannot resolve an address that exists only inside your cluster, such as `redis.default.svc.cluster.local`.
 
-## 2. Log in to Catalyst
+## 2. Log in to Diagrid
 
 ```bash
 diagrid login
@@ -130,7 +130,7 @@ diagrid k8s-operator install --wait
 
 ## 7. Migrate
 
-Copy the namespace to `catalyst-demo` and register it in a new Catalyst project:
+Copy the namespace to `catalyst-demo` and register it in a new Diagrid project:
 
 ```bash
 diagrid region list
@@ -144,7 +144,7 @@ Let `migrate` create the project. Do not create `migration-quickstart` beforehan
 
 `--region` is needed only when your organization has more than one region. `diagrid region list` shows them.
 
-## 8. Verify on Catalyst
+## 8. Verify on Diagrid
 
 Scale down the original Dapr OSS apps so only the migrated apps consume from Redis:
 
@@ -153,7 +153,7 @@ kubectl -n dapr-oss-demo scale deploy --all --replicas=0
 kubectl -n catalyst-demo rollout status deploy/checkout deploy/inventory
 ```
 
-`checkout` can restart once or twice while Catalyst accepts the state store. It runs once the store is ready.
+`checkout` can restart once or twice while Diagrid accepts the state store. It runs once the store is ready.
 
 In the second terminal, stop the port-forward from step 4 with `Ctrl+C` and forward the migrated `checkout` instead:
 
@@ -169,7 +169,7 @@ kubectl -n catalyst-demo logs deploy/checkout -c checkout
 kubectl -n catalyst-demo logs deploy/inventory -c inventory
 ```
 
-You see the same log lines as in step 4. Open the `migration-quickstart` project in the [Catalyst web console](https://catalyst.diagrid.io/) to see the two App IDs, the components and the workflow run.
+You see the same log lines as in step 4. Open the `migration-quickstart` project in the [Diagrid web console](https://catalyst.diagrid.io/) to see the two App IDs, the components and the workflow run.
 
 ## 9. Cut over
 
@@ -192,6 +192,6 @@ Deleting the `catalyst-demo` namespace while the operator runs also deletes the 
 
 ## Next steps
 
-- [Use Catalyst with your existing Dapr setup](https://docs.diagrid.io/dapr-open-source/migrate-to-catalyst)
-- [Migrate with the Catalyst Kubernetes operator](https://docs.diagrid.io/dapr-open-source/migrate-to-catalyst/kubernetes-operator)
+- [Use Diagrid with your existing Dapr setup](https://docs.diagrid.io/dapr-open-source/migrate-to-catalyst)
+- [Migrate with the Diagrid Kubernetes operator](https://docs.diagrid.io/dapr-open-source/migrate-to-catalyst/kubernetes-operator)
 - [Cut over and decommission Dapr OSS](https://docs.diagrid.io/dapr-open-source/migrate-to-catalyst/cut-over)

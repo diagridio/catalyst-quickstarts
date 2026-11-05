@@ -2,8 +2,8 @@
  * Tests for the inbound-identity behaviour this quickstart demonstrates: the
  * 401, the 403, the 200, and the verified subject reaching the tool.
  *
- * Run with `npm test`. `buildLocalIssuer` stands in for the Catalyst identity
- * plane, so no Catalyst project, network or API key is needed.
+ * Run with `npm test`. `buildLocalIssuer` stands in for the Diagrid identity
+ * plane, so no Diagrid project, network or API key is needed.
  */
 
 import assert from 'node:assert/strict';
@@ -48,7 +48,7 @@ after(() => {
   server.close();
 });
 
-/** The header Catalyst sets on an inbound request, as the middleware reads it. */
+/** The header Diagrid sets on an inbound request, as the middleware reads it. */
 function auth(token: string): Record<string, string> {
   return { 'X-Diagrid-User-Token': `Bearer ${token}` };
 }

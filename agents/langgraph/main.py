@@ -28,7 +28,7 @@ def build_model():
 model = build_model().bind_tools(tools)
 
 # Module level, not inlined into call_model, and that placement is load-bearing for
-# the Catalyst console. The agent registry has no LangGraph API for a system prompt —
+# the Diagrid Console. The agent registry has no LangGraph API for a system prompt —
 # DaprWorkflowGraphRunner takes name/role/goal and nothing else — so it recovers one by
 # scanning the node function's globals for a SystemMessage, the same introspection
 # fake_model.py documents for model_name. Build this inside call_model and the agent
