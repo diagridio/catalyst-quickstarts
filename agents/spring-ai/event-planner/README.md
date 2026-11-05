@@ -71,7 +71,7 @@ Log in, create the Catalyst project with managed workflow enabled (and set it as
 
 ```bash
 diagrid login
-diagrid project create spring-ai-quickstart --enable-managed-workflow --deploy-managed-kv --wait --use
+diagrid project create spring-ai-quickstart --deploy-managed-kv --wait --use
 diagrid agent create spring-ai-event-planner --wait
 diagrid dev run -f dev-spring-ai-event-planner.yaml --approve
 ```

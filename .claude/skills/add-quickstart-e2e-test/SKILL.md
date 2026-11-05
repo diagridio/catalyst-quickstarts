@@ -91,9 +91,10 @@ That script's flags were chosen for the canonical APIs, though
 (`--deploy-managed-kv --deploy-managed-pubsub --enable-managed-workflow`), and
 the flags an agent quickstart's own README documents are not a constant either:
 `agents/langgraph` and `agents/microsoft-dotnet` both document
-`--enable-managed-workflow --deploy-managed-kv --deploy-managed-pubsub`, while
-`agents/spring-ai/event-planner` documents `--enable-managed-workflow
---deploy-managed-kv` only, with no `--deploy-managed-pubsub`. Deciding which
+`--deploy-managed-kv --deploy-managed-pubsub`, while
+`agents/spring-ai/event-planner` documents `--deploy-managed-kv` only, with no
+`--deploy-managed-pubsub`. (None documents `--enable-managed-workflow` any
+more: new projects get the managed workflow store by default.) Deciding which
 set an undocumented case like orchestrator's nine apps actually needs, from
 nothing, is guessing, which is the one thing this skill must not do.
 

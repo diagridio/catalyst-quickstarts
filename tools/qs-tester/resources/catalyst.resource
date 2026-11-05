@@ -98,7 +98,7 @@ Run Documented Commands
     ...
     ...    Agent-family READMEs document their own provisioning (`project create`
     ...    with per-quickstart managed-service flags such as
-    ...    `--enable-managed-workflow --deploy-managed-kv --deploy-managed-pubsub`,
+    ...    `--deploy-managed-kv --deploy-managed-pubsub`,
     ...    plus `--wait --use`, then `agent create`, and sometimes `app create` and
     ...    `apply -f`), so the suite runs those commands verbatim instead of an
     ...    invented equivalent. The flags are per-quickstart data — see the
