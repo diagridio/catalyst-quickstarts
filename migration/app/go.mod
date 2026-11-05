@@ -1,6 +1,6 @@
 module github.com/diagridio/catalyst-quickstarts/migration
 
-go 1.25.0
+go 1.25.9
 
 // Pinned to v1.13.0 deliberately: the go-sdk dropped the `workflow` package in
 // v1.14, and this app needs workflow authoring and the jobs API together.
@@ -12,8 +12,8 @@ require (
 require (
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
-	github.com/dapr/dapr v1.16.0 // indirect
-	github.com/dapr/durabletask-go v0.10.0 // indirect
+	github.com/dapr/dapr v1.16.14 // indirect
+	github.com/dapr/durabletask-go v0.10.2 // indirect
 	github.com/dapr/kit v0.16.1 // indirect
 	github.com/go-chi/chi/v5 v5.2.2 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect
