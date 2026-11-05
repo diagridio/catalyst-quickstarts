@@ -75,7 +75,7 @@ diagrid login
 2. Create a new Catalyst project for the quickstart and use it as the default project for the current session:
 
 ```bash
-diagrid project create mastra-quickstart --enable-managed-workflow --deploy-managed-kv --wait --use
+diagrid project create mastra-quickstart --deploy-managed-kv --wait --use
 ```
 
 3. Create an agent for the project:

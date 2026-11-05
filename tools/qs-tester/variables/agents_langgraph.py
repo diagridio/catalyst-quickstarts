@@ -31,7 +31,7 @@ QUICKSTART_DIR = str(REPO_ROOT / "agents" / "langgraph")
 # was replaced by the three managed-service flags; the agent is now named for its
 # role in the shared event-planning scenario rather than for its framework.
 SETUP = (
-    "diagrid project create {project} --enable-managed-workflow --deploy-managed-kv --deploy-managed-pubsub --wait --use",
+    "diagrid project create {project} --deploy-managed-kv --deploy-managed-pubsub --wait --use",
     "diagrid agent create schedule-planner --wait",
 )
 

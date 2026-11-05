@@ -88,12 +88,12 @@ Under the guiding principle, provisioning is then infrastructure, and
 `ci/setup-project.sh` owns it, exactly as for the canonical APIs.
 
 That script's flags were chosen for the canonical APIs, though
-(`--deploy-managed-kv --deploy-managed-pubsub --enable-managed-workflow`), and
+(`--deploy-managed-kv --deploy-managed-pubsub`), and
 the flags an agent quickstart's own README documents are not a constant either:
 `agents/langgraph` and `agents/microsoft-dotnet` both document
-`--enable-managed-workflow --deploy-managed-kv --deploy-managed-pubsub`, while
-`agents/spring-ai/event-planner` documents `--enable-managed-workflow
---deploy-managed-kv` only, with no `--deploy-managed-pubsub`. Deciding which
+`--deploy-managed-kv --deploy-managed-pubsub`, while
+`agents/spring-ai/event-planner` documents `--deploy-managed-kv` only, with no
+`--deploy-managed-pubsub`. Deciding which
 set an undocumented case like orchestrator's nine apps actually needs, from
 nothing, is guessing, which is the one thing this skill must not do.
 

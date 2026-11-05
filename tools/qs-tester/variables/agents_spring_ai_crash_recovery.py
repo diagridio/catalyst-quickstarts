@@ -26,7 +26,7 @@ QUICKSTART_DIR = str(REPO_ROOT / "agents" / "spring-ai" / "crash-recovery")
 # run in ONE fenced block. Same reduced flag set as the event-planner sibling:
 # no --deploy-managed-pubsub. The flags are per-quickstart data, not a constant.
 SETUP = (
-    "diagrid project create {project} --enable-managed-workflow --deploy-managed-kv --wait --use",
+    "diagrid project create {project} --deploy-managed-kv --wait --use",
     "diagrid agent create spring-ai-crash-recovery --wait",
 )
 

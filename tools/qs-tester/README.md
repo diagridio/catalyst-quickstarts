@@ -175,8 +175,7 @@ differ and are worth knowing before you touch one:
    create`, and sometimes `app create` and `apply -f`, so the suite runs those
    documented commands through `Run Documented Commands`. The flags are transcribed data,
    not a constant: `agents/langgraph` and `agents/microsoft-dotnet` both
-   document `--enable-managed-workflow --deploy-managed-kv
-   --deploy-managed-pubsub --wait --use`, while `agents/spring-ai/event-planner`
+   document `--deploy-managed-kv --deploy-managed-pubsub --wait --use`, while `agents/spring-ai/event-planner`
    documents the same set without `--deploy-managed-pubsub`. (The older
    `--enable-agent-infrastructure` was replaced by these flags and appears in no
    README any more — a document that still states it as current is stale.)

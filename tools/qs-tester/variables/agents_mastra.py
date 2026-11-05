@@ -28,7 +28,7 @@ QUICKSTART_DIR = str(REPO_ROOT / "agents" / "mastra")
 
 # README "### 1. Login and Run", steps 2 and 3, verbatim.
 SETUP = (
-    "diagrid project create {project} --enable-managed-workflow --deploy-managed-kv --wait --use",
+    "diagrid project create {project} --deploy-managed-kv --wait --use",
     "diagrid agent create sre-agent --wait",
 )
 

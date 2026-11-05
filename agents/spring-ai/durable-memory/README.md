@@ -36,7 +36,7 @@ export OPENAI_API_KEY="your-key-here"   # PowerShell: $env:OPENAI_API_KEY = "you
 
 ```bash
 diagrid login
-diagrid project create spring-ai-durable-memory --enable-managed-workflow --deploy-managed-kv --wait --use
+diagrid project create spring-ai-durable-memory --deploy-managed-kv --wait --use
 diagrid agent create spring-ai-durable-memory --wait
 diagrid dev run -f dev-spring-ai-durable-memory.yaml --approve
 ```

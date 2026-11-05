@@ -61,7 +61,7 @@ diagrid login
 2. Create a new Catalyst project for the quickstart and use it as the default project for the current session:
 
 ```bash
-diagrid project create langgraph-quickstart --enable-managed-workflow --deploy-managed-kv --deploy-managed-pubsub --wait --use
+diagrid project create langgraph-quickstart --deploy-managed-kv --deploy-managed-pubsub --wait --use
 ```
 
 3. Create an agent for the project:

@@ -29,7 +29,7 @@ QUICKSTART_DIR = str(REPO_ROOT / "agents" / "goose")
 # README "### 1. Login and Run", steps 2 and 3, verbatim. No --deploy-managed-kv:
 # the quickstart uses workflows and nothing else, and its README documents none.
 SETUP = (
-    "diagrid project create {project} --enable-managed-workflow --wait --use",
+    "diagrid project create {project} --wait --use",
     "diagrid agent create release-manager --wait",
 )
 

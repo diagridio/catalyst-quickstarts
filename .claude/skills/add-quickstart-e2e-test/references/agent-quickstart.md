@@ -327,14 +327,13 @@ them.
 
 - **`agents/*`** (`agents/langgraph`, `agents/microsoft-dotnet`,
   `agents/dapr-agents/durable-agent`): `diagrid project create <name>
-  --enable-managed-workflow --deploy-managed-kv --deploy-managed-pubsub --wait
-  --use`, then `diagrid agent create <agent-name> --wait`, then a **bare** `dev
+  --deploy-managed-kv --deploy-managed-pubsub --wait --use`, then `diagrid agent create <agent-name> --wait`, then a **bare** `dev
   run` (no `--project`). The bare form works because `--use` on the documented
   `project create` made it the CLI's default project, and reproducing that
   dependency is deliberate — a regression in `--use` should break this suite,
   not be silently worked around by adding an explicit `--project` the README
   never shows. `agents/spring-ai/event-planner` follows the same shape one flag
-  lighter: `--enable-managed-workflow --deploy-managed-kv`, no
+  lighter: `--deploy-managed-kv`, no
   `--deploy-managed-pubsub` — a reminder that these flags are per-quickstart
   data transcribed from each README, not a constant this skill can assume.
 - **`agents/dapr-agents/orchestrator`**: no `project create` anywhere in the
@@ -360,10 +359,10 @@ infrastructure the harness must supply, the same as `ci/setup-project.sh`
 already does for the four canonical APIs.
 
 But `ci/setup-project.sh`'s flags (`--deploy-managed-kv
---deploy-managed-pubsub --enable-managed-workflow`) were chosen for the
+--deploy-managed-pubsub`) were chosen for the
 canonical APIs, and an agent quickstart's project may need different ones.
 Every agent quickstart that *does* document its own provisioning agrees on
-`--enable-managed-workflow --deploy-managed-kv`, and all but `spring-ai` add
+`--deploy-managed-kv`, and all but `spring-ai` add
 `--deploy-managed-pubsub` on top — but orchestrator brings up nine apps across
 eight frameworks with no documented `project create` of its own, and assuming
 its needs match either set is guessing — the one thing this skill must not do,
@@ -384,7 +383,7 @@ answers 200, and it is the last gate before the suite starts asserting. A probe
 path the app does not route is the worst kind of mistake this skill can make:
 the quickstart is healthy, the readiness marker has already arrived, and the
 suite still burns the full `${READINESS_TIMEOUT}` on a 404 and then fails —
-*after* paying for `project create --enable-managed-workflow
+*after* paying for `project create
 --deploy-managed-kv --deploy-managed-pubsub --wait` and `agent create --wait`.
 Nothing static catches it. Confirm it yourself:
 

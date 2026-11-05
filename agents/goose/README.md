@@ -100,7 +100,7 @@ diagrid login
 2. Create a new Catalyst project for the quickstart and use it as the default project for the current session:
 
 ```bash
-diagrid project create goose-quickstart --enable-managed-workflow --wait --use
+diagrid project create goose-quickstart --wait --use
 ```
 
 3. Create an agent for the project:
