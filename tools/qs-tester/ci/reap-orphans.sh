@@ -33,8 +33,12 @@ fi
 # and .timestamp() would read it as local time. The API reports UTC, so stamp
 # it as UTC explicitly; without that the cutoff is off by the runner's offset
 # (harmless on UTC CI runners, wrong when a human runs this locally).
-# --yes confirmed via `diagrid project delete --help` (CLI 1.36.0).
-printf '%s' "$project_json" \
+# --yes confirmed via `diagrid project delete --help` (CLI 1.36.0 and 1.119.0).
+#
+# The stale names are collected into a variable rather than piped into the
+# delete loop: a `while` at the end of a pipe runs in a subshell, so a failure
+# counter set inside it would be lost and the script would exit 0 regardless.
+if ! stale_names="$(printf '%s' "$project_json" \
   | python3 -c '
 import json, sys, datetime
 cutoff = int(sys.argv[1])
@@ -69,9 +73,50 @@ for p in data.get("items", []):
         created = created.replace(tzinfo=datetime.timezone.utc)
     if created.timestamp() < cutoff:
         print(name)
-' "$CUTOFF" \
-  | while read -r stale; do
-      echo "Reaping stale project: $stale"
-      diagrid project delete "$stale" --yes || \
-        echo "::warning::Could not delete $stale"
-    done
+' "$CUTOFF")"; then
+  exit 1
+fi
+
+if [ -z "$stale_names" ]; then
+  echo "No stale qs-ci-* projects."
+  exit 0
+fi
+
+# Do not trust the exit code of `diagrid project delete`: CLI 1.67.0 and 1.119.0
+# both print "Failed to delete project ...: forbidden request" and exit 0. This
+# loop used to rely on it, so for weeks it "reaped" the same projects every
+# night without deleting any. Check that each project is actually gone instead.
+deleted=0
+leaked=()
+while read -r stale; do
+  [ -n "$stale" ] || continue
+  echo "Reaping stale project: $stale"
+  out="$(diagrid project delete "$stale" --yes 2>&1)" || true
+  printf '%s\n' "$out"
+  gone=0
+  # A reported failure is final; only a reported success is worth waiting on
+  # (deletion can be asynchronous). Polling after a "forbidden" would cost two
+  # minutes per project, and the backlog this reaps can be hundreds deep.
+  tries=24
+  case "$out" in *"Failed to delete"*) tries=1 ;; esac
+  for _ in $(seq 1 "$tries"); do
+    if ! diagrid project get "$stale" >/dev/null 2>&1; then
+      gone=1
+      break
+    fi
+    sleep 5
+  done
+  if [ "$gone" -eq 1 ]; then
+    deleted=$((deleted + 1))
+  else
+    leaked+=("$stale")
+  fi
+done <<<"$stale_names"
+
+echo "Deleted $deleted stale project(s)."
+if [ "${#leaked[@]}" -gt 0 ]; then
+  echo "::error::${#leaked[@]} stale project(s) still exist after delete:" \
+    "${leaked[*]}. If the deletes said 'forbidden request', the DIAGRID_API_KEY" \
+    "used by CI lacks permission to delete projects." >&2
+  exit 1
+fi

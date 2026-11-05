@@ -425,7 +425,7 @@ The `diagrid` CLI installer (`https://downloads.diagrid.io/cli/install.sh`) does
 environment variable and requires the leading `v` (its GCS layout depends on it):
 
 ```bash
-curl -sL https://downloads.diagrid.io/cli/install.sh | RELEASE_VERSION="v1.67.0" bash
+curl -sL https://downloads.diagrid.io/cli/install.sh | RELEASE_VERSION="v1.119.0" bash
 ```
 
 CI pins `DIAGRID_CLI_VERSION` in `.github/workflows/e2e-quickstarts.yml`; use the

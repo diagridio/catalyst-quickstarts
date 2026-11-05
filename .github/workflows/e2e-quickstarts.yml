@@ -59,7 +59,7 @@ permissions:
 env:
   # The install.sh installer reads this as an env var (RELEASE_VERSION), not a
   # positional argument, and its GCS layout requires the leading "v".
-  DIAGRID_CLI_VERSION: 'v1.67.0'
+  DIAGRID_CLI_VERSION: 'v1.119.0'
 
 jobs:
   lint:
@@ -89,8 +89,14 @@ jobs:
       - name: Test the harness keywords
         run: (cd tools/qs-tester && uv run robot --outputdir results/harness resources/tests)
 
+  # Also on a manual dispatch, so a key or reaper change can be checked without
+  # waiting for the nightly. Safe to run any time: it only deletes qs-ci-*
+  # projects older than 6h, and the concurrency group above keeps it from
+  # overlapping a run whose projects are still in use.
   reap:
-    if: github.event_name == 'schedule' && github.repository_owner == 'diagridio'
+    if: >-
+      (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+      && github.repository_owner == 'diagridio'
     runs-on: ubuntu-latest
     environment: shared-production
     env:
