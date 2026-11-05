@@ -4,7 +4,7 @@ In this quickstart, you'll run a client and server application on [Diagrid Cloud
 
 - Provision a Diagrid project with apps for two applications using the Diagrid CLI.
 - Invoke a remote service method from a client application using the Dapr Service Invocation API.
-- Verify successful service-to-service communication in the application logs and the Diagrid web console.
+- Verify successful service-to-service communication in the application logs and the Diagrid Console.
 
 ```mermaid
 ---
@@ -120,9 +120,9 @@ The expected response is `200 OK` with this body:
 
 In the `diagrid dev run` terminal, the server app logs should indicate the request was successfully received, and the client app logs should show the invocation was successful.
 
-### 6.2 View in the Diagrid web console
+### 6.2 View in the Diagrid Console
 
-Open the [Diagrid Cloud web console](https://catalyst.diagrid.io/call-graph) and navigate to the Topology section, which visualizes the communication between the `client` and `server` applications.
+Open the [Diagrid Console](https://catalyst.diagrid.io/call-graph) and navigate to the Topology section, which visualizes the communication between the `client` and `server` applications.
 
 ## 7. Clean Up
 
@@ -140,7 +140,7 @@ In this quickstart you:
 
 - Logged in to Diagrid and provisioned a managed service invocation project with a single CLI command (`diagrid dev run`).
 - Invoked a remote server method from a client application using the Dapr Service Invocation API.
-- Verified service-to-service communication through application logs and the Diagrid web console.
+- Verified service-to-service communication through application logs and the Diagrid Console.
 
 Diagrid handled service discovery, routing, and secure communication automatically — no infrastructure to manage.
 

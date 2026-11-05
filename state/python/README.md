@@ -4,7 +4,7 @@ In this quickstart, you'll run a stateful order application on [Diagrid Cloud](h
 
 - Provision a Diagrid project with a managed KV store using the Diagrid CLI.
 - Save and retrieve state items using the Dapr State API.
-- Inspect stored data in the Diagrid web console.
+- Inspect stored data in the Diagrid Console.
 
 ```mermaid
 ---
@@ -144,9 +144,9 @@ The expected response body is:
 
 This application stores the order as the string form of its model, so the retrieved value reads `orderId=1` rather than a nested JSON object.
 
-### 6.3 View in the Diagrid web console
+### 6.3 View in the Diagrid Console
 
-Open the [KV Store data explorer](https://catalyst.diagrid.io/kv-store/kvstore) in the Diagrid Cloud web console (Resources > Managed KV store) and confirm the key-value pair saved by your application appears.
+Open the [KV Store data explorer](https://catalyst.diagrid.io/kv-store/kvstore) in the Diagrid Console (Resources > Managed KV store) and confirm the key-value pair saved by your application appears.
 
 ## 7. Clean Up
 

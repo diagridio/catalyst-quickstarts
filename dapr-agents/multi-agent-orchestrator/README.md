@@ -124,7 +124,7 @@ In the **multi-agent workflow** example, the sequence (triage then expert) is ha
 
 ### Check Workflow Execution
 
-* Navigate to Diagrid dashboard → **Workflows**
+* Navigate to Diagrid Console → **Workflows**
 * View real-time execution progress and detailed logs
 * Inspect how the orchestrator delegates to child agents
 
@@ -137,7 +137,7 @@ The agents use shared state stores:
 
 ### View Application Architecture
 
-* In Diagrid dashboard → **Application Map**
+* In Diagrid Console → **Application Map**
 * See the `support-multi-agent-orchestrator`, `triage-agent`, and `expert-agent` services
 * Observe pub/sub connections and state store dependencies
 

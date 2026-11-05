@@ -24,7 +24,7 @@ class CannedToolCallingChatModel(BaseChatModel):
     process and would ask for the tool a second time.
 
     Both the class name and `model_name` are load-bearing for the Diagrid
-    console. The agent registry finds the model by scanning the node's globals
+    Console. The agent registry finds the model by scanning the node's globals
     for a type whose name contains "chat" and which exposes `model_name` or
     `model`, so without either the console reports this agent's model as
     "unknown".

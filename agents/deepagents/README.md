@@ -108,7 +108,7 @@ Invoke-RestMethod -Method Post -Uri 'http://localhost:8009/agent/run' -ContentTy
 
 ### 3. Inspecting the Results in Diagrid
 
-Open the [Diagrid dashboard](https://catalyst.diagrid.io/agents) in your browser and navigate to Agents > transportation-planner. Then select the most recent agent workflow run to view output.
+Open the [Diagrid Console](https://catalyst.diagrid.io/agents) in your browser and navigate to Agents > transportation-planner. Then select the most recent agent workflow run to view output.
 
 ## Crash Recovery Test With Diagrid
 

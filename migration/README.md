@@ -169,7 +169,7 @@ kubectl -n catalyst-demo logs deploy/checkout -c checkout
 kubectl -n catalyst-demo logs deploy/inventory -c inventory
 ```
 
-You see the same log lines as in step 4. Open the `migration-quickstart` project in the [Diagrid web console](https://catalyst.diagrid.io/) to see the two App IDs, the components and the workflow run.
+You see the same log lines as in step 4. Open the `migration-quickstart` project in the [Diagrid Console](https://catalyst.diagrid.io/) to see the two App IDs, the components and the workflow run.
 
 ## 9. Cut over
 

@@ -8,7 +8,7 @@ This quickstart demonstrates how to run a [Mastra](https://mastra.ai) agent as a
 - **Direct LLM Integration**: Calls OpenAI directly through Mastra's own model config (a local Ollama model works too — see [Using a local model instead](#using-a-local-model-instead)); no Dapr conversation component needed
 - **Tool Integration**: `checkServiceHealth` and `calculateErrorRate` tools, each executed as its own durable activity
 - **Durable Crash Recovery**: Resume a workflow from the last completed activity after a crash — a capability not offered by Mastra natively (see [Crash Recovery Test With Diagrid](#crash-recovery-test-with-diagrid))
-- **Agent Registry**: Registers as `sre-agent` in Diagrid's agent registry, viewable from the dashboard
+- **Agent Registry**: Registers as `sre-agent` in Diagrid's agent registry, viewable from the Diagrid Console
 
 ### Role
 
@@ -111,7 +111,7 @@ Runtime shut down.
 
 ### 2. Inspecting the Results in Diagrid
 
-Open the [Diagrid dashboard](https://catalyst.diagrid.io/agents) in your browser and navigate to Agents > sre-agent. Then select the most recent agent workflow run to view output.
+Open the [Diagrid Console](https://catalyst.diagrid.io/agents) in your browser and navigate to Agents > sre-agent. Then select the most recent agent workflow run to view output.
 
 ## Crash Recovery Test With Diagrid
 

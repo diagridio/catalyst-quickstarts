@@ -117,7 +117,7 @@ The workflow will:
 
 ### Check Workflow Execution
 
-* Navigate to Diagrid dashboard → **Workflows**
+* Navigate to Diagrid Console → **Workflows**
 * View real-time execution progress and detailed logs
 * Inspect the sequential flow from triage to expert resolution
 
@@ -137,7 +137,7 @@ The workflow uses multiple state stores:
 
 ### View Application Architecture
 
-* In Diagrid dashboard → **Application Map**
+* In Diagrid Console → **Application Map**
 * See the `customer-support-system` service and its dependencies
 * Observe connections to state stores and OpenAI component
 

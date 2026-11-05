@@ -4,7 +4,7 @@ In this quickstart, you'll run a publisher and subscriber application on [Diagri
 
 - Provision a Diagrid project with a managed message broker using the Diagrid CLI.
 - Publish messages to a topic and receive them in a subscriber application using the Dapr Pub/Sub API.
-- Inspect published messages in the Diagrid web console.
+- Inspect published messages in the Diagrid Console.
 
 ```mermaid
 ---
@@ -121,9 +121,9 @@ The expected response is `201 Created` with this body:
 
 In the `diagrid dev run` terminal, the publisher app logs should indicate a message was successfully published, and the subscriber app logs should show the message was received on its `/neworder` route.
 
-### 6.2 View in the Diagrid web console
+### 6.2 View in the Diagrid Console
 
-Open the [Diagrid Cloud web console](https://catalyst.diagrid.io/pub-sub/pubsub) and navigate to the Pub/Sub topic explorer (Resources > Managed Pub/Sub). When the `Pending Message Count` for the `orders` topic reaches 0, the subscriber app has successfully processed all messages.
+Open the [Diagrid Console](https://catalyst.diagrid.io/pub-sub/pubsub) and navigate to the Pub/Sub topic explorer (Resources > Managed Pub/Sub). When the `Pending Message Count` for the `orders` topic reaches 0, the subscriber app has successfully processed all messages.
 
 ## 7. Clean Up
 

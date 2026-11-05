@@ -158,7 +158,7 @@ Invoke-RestMethod -Method Post -Uri 'http://localhost:8001/agent/run' -ContentTy
 
 ### Check Workflow Execution
 
-- Navigate to Diagrid dashboard → Workflows
+- Navigate to Diagrid Console → Workflows
 - View real-time execution progress and detailed logs
 - Inspect individual workflow steps and timing
 
@@ -180,7 +180,7 @@ The agent uses three separate state stores:
 
 ### View Application Architecture
 
-- In Diagrid dashboard → Application Map
+- In Diagrid Console → Application Map
 - See the `travel-assistant-agent` service and its dependencies
 - Observe state store connections and workflow execution
 

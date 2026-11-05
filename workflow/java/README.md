@@ -4,7 +4,7 @@ In this quickstart, you'll run an order processing workflow on [Diagrid Cloud](h
 
 - Provision a Diagrid project with a managed workflow engine using the Diagrid CLI.
 - Run a stateful, multi-step order workflow that chains inventory checking, payment processing, and notification activities.
-- Start, monitor, and inspect workflow executions using both the API and the Diagrid web console.
+- Start, monitor, and inspect workflow executions using both the API and the Diagrid Console.
 - Recover a workflow after the process is killed mid-run, resuming the same instance under an ID you choose.
 
 ```mermaid
@@ -192,9 +192,9 @@ Invoke-RestMethod -Method Get -Uri "http://localhost:5001/workflow/status/$env:I
 
 The response is the serialized Dapr `WorkflowInstanceStatus` for the instance, including its runtime status, creation and last-updated timestamps, and the workflow's serialized input and output. Once the workflow has finished, the runtime status reads as completed.
 
-### 6.3 View in the Diagrid web console
+### 6.3 View in the Diagrid Console
 
-Open the [Workflow viewer](https://catalyst.diagrid.io/workflows/executions) in the Diagrid Cloud web console and select the workflow instance you just started to see a visual execution trace. The viewer displays each activity in sequence, its completion status, and the total workflow duration — useful for debugging long-running or failed executions.
+Open the [Workflow viewer](https://catalyst.diagrid.io/workflows/executions) in the Diagrid Console and select the workflow instance you just started to see a visual execution trace. The viewer displays each activity in sequence, its completion status, and the total workflow duration — useful for debugging long-running or failed executions.
 
 ## 7. Recover from a crash
 
@@ -335,7 +335,7 @@ Because the instance already exists, this call **attaches** to it instead of res
 
 Send it while the slow activity is still re-running and it simply blocks until the run finishes. If the wait budget elapses first, the response is a `202` carrying the instance ID. That is not a failure either: send the same request again to attach again.
 
-### 7.5 View in the Diagrid web console
+### 7.5 View in the Diagrid Console
 
 Open the [Workflow viewer](https://catalyst.diagrid.io/workflows/executions) and select the instance named `trip-42`. The trace shows one execution, not two, with the interrupted activity attempted twice and every other activity once.
 
@@ -359,7 +359,7 @@ In this quickstart you:
 
 - Logged in to Diagrid and provisioned a managed workflow project with a single CLI command (`diagrid dev run`).
 - Ran an order processing workflow that's using task chaining.
-- Inspected workflow execution state using the `status` endpoint and the Diagrid web console.
+- Inspected workflow execution state using the `status` endpoint and the Diagrid Console.
 - Recovered a workflow after killing the app mid-run, resuming the same instance under an ID you chose.
 
 Diagrid handled workflow state durability, activity orchestration, and retries automatically — no infrastructure to manage.

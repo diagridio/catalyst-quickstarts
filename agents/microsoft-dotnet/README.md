@@ -242,7 +242,7 @@ The length of tool 2 is configurable through the `CRASH_DELAY_SECONDS` environme
 
 ### 4. Inspecting the Results in Diagrid
 
-Open the [Diagrid dashboard](https://catalyst.diagrid.io/agents) in your browser and navigate to Agents > event-planner. Then select the most recent agent workflow run to view output.
+Open the [Diagrid Console](https://catalyst.diagrid.io/agents) in your browser and navigate to Agents > event-planner. Then select the most recent agent workflow run to view output.
 
 For a crash-recovery run you do not have to guess which one is yours: it is the execution named `gala-42`, or whatever ID you passed. The trace shows one execution, not two, with the interrupted tool attempted twice and every earlier activity once.
 

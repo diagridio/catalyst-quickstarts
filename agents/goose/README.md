@@ -154,7 +154,7 @@ Goose did real work, too: `RELEASE_NOTES.md` is in the `Workspace` directory, an
 
 ### 2. Inspecting the Results in Diagrid
 
-Open the [Diagrid dashboard](https://catalyst.diagrid.io/agents) in your browser and navigate to Agents > release-manager. Then select the most recent workflow run (`GooseAgentExecution`) to view each turn's input and output.
+Open the [Diagrid Console](https://catalyst.diagrid.io/agents) in your browser and navigate to Agents > release-manager. Then select the most recent workflow run (`GooseAgentExecution`) to view each turn's input and output.
 
 ## Crash Recovery Test With Diagrid
 

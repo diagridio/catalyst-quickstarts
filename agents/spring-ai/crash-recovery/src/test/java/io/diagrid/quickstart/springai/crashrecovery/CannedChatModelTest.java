@@ -21,7 +21,7 @@ import org.springframework.ai.model.tool.ToolCallingChatOptions;
  *
  * <p>Every case here stands for something outside this file that would otherwise break silently:
  * the agent's tool name, the durability layer's tool-callback wiring, and the string the Diagrid
- * console displays as this agent's model.
+ * Console displays as this agent's model.
  */
 class CannedChatModelTest {
 
