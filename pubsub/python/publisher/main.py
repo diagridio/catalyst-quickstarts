@@ -5,6 +5,8 @@ from pydantic import BaseModel
 import logging
 import os
 
+import grpc
+
 app = FastAPI()
 
 logging.basicConfig(level=logging.INFO)
