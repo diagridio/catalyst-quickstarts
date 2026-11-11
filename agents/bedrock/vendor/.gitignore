@@ -1,0 +1,3 @@
+# setuptools writes these into a package source directory when uv builds it.
+build/
+*.egg-info/
