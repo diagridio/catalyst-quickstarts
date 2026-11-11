@@ -1,5 +1,6 @@
 import logging
 import os
+import time
 
 # Imported first: it loads the secrets the Dapr SDK reads when it is imported.
 from bedrock_runner import BedrockRunner
@@ -39,6 +40,9 @@ def calculate_budget(items: str) -> str:
     lines.append(f"Total: ${total:,}")
     lines.append(f"Recommended buffer (15%): ${buffer:,}")
     lines.append(f"Grand Total: ${total + buffer:,}")
+
+    time.sleep(5)
+
     return "\n".join(lines)
 
 
