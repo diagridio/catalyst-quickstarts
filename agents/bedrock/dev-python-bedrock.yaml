@@ -6,8 +6,6 @@ common:
 apps:
   - appID: budget-planner
     appDirPath: ./
-    appPort: 8080
-    appProtocol: http
     command: ["python", "main.py"]
     env:
-      APP_PORT: "8080"
+      GRPC_DEFAULT_SSL_ROOTS_FILE_PATH: "/home/pablo/.onebox/tls/ca.crt"
