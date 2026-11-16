@@ -45,7 +45,6 @@ def calculate_budget(items: str) -> str:
 
     return "\n".join(lines)
 
-
 # Any OpenAI-compatible provider works: set OPENAI_BASE_URL to its endpoint and
 # OPENAI_MODEL to a model it serves. Empty values fall back to OpenAI's defaults.
 model = OpenAIModel(
@@ -59,7 +58,7 @@ system_prompt ="""
     Allowed items are {0}.
     Correct spelling of items in user request if needed.
     Return the full budget breakdown with line items, totals, and recommended buffer.
-    Always call the tool before responding.
+    Always call the tool when you need to calculate the price for item.
     """.format(",".join(PRICES.keys()))
 
 agent = Agent(
