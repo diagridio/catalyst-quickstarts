@@ -73,6 +73,8 @@ uv run diagrid dev run -f dev-python-adk.yaml --approve
 
 Wait until the output shows `Uvicorn running on <localhost:port>`.
 
+> **Tip:** Wait until you see the log `Connected App ID "entertainment-planner" to http://localhost:8003` in the terminal before proceeding, to ensure the application is connected to Catalyst. Catalyst takes a few seconds after connection to attach and initialize the workflow worker: if the request in step 2 returns HTTP 500 (`failed to create workflow instance: context canceled`), wait a few seconds and send it again.
+
 ### 2. Trigger a Workflow
 
 From another terminal:
@@ -125,6 +127,8 @@ uv run diagrid dev run -f dev-crash-test.yaml --approve
 ```
 
 Wait for `Uvicorn running on http://0.0.0.0:8001`. The port is pinned in `dev-crash-test.yaml`, so the `localhost:8001` requests below always work as written.
+
+> **Tip:** Wait until you see the log `Connected App ID "entertainment-planner" to http://localhost:8001` in the terminal before sending the request. If the first request returns an error while Catalyst attaches, wait a few seconds and retry.
 
 ### 5. Run under an ID you own
 
