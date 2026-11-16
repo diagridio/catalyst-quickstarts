@@ -47,6 +47,9 @@ from diagrid.agent.strands import DaprWorkflowAgentRunner as StrandsRunner
 # AgentCore sends its runtime session ID in this header.
 SESSION_HEADER = "x-amzn-bedrock-agentcore-runtime-session-id"
 
+# The workflow states of a run that has not ended.
+UNFINISHED = ("RUNNING", "PENDING")
+
 # The transcript passed to the model keeps its most recent characters up to this size.
 MAX_HISTORY_CHARS = 20000
 
@@ -120,10 +123,11 @@ class BedrockRunner:
     """Serves a diagrid workflow agent runner on the AgentCore Runtime HTTP contract.
 
     Each session runs one task at a time, as the workflow instance named after the
-    session ID. Dapr refuses to start an instance whose ID is still running, which
-    is what makes a second task busy, and it keeps a finished instance until the
-    next task with that ID replaces it. with_history builds the next task from
-    that stored run, so the conversation survives a restart of this process.
+    session ID. A request that arrives while the session's run is unfinished
+    waits for that run and answers with its result, so a request after a restart
+    resumes the interrupted run. Dapr keeps a finished instance until the next
+    task with that ID replaces it. with_history builds the next task from that
+    stored run, so the conversation survives a restart of this process.
     """
 
     def __init__(self, runner: BaseWorkflowRunner) -> None:
@@ -194,14 +198,20 @@ class BedrockRunner:
         if self._session_id:
             try:
                 state = await asyncio.to_thread(self._client.get_workflow_state, self._session_id)
-                if state is not None and state.runtime_status.name in ("RUNNING", "PENDING"):
+                if state is not None and state.runtime_status.name in UNFINISHED:
                     return {"status": "HealthyBusy"}
             except Exception:
                 logging.exception("ping: could not read the workflow state of %s", self._session_id)
         return {"status": "Healthy"}
 
     async def invocations(self, request: Request):
-        """Run the payload as the agent's task and wait for the run to end."""
+        """Run the payload as the agent's task and wait for the run to end.
+
+        If the session's run is unfinished, the payload is not run: the request
+        waits for that run and answers with its result. An empty payload starts
+        nothing: it answers with the result of the session's last run, waiting
+        for it if it is unfinished, so a client that reconnects can collect it.
+        """
         payload = (await request.body()).decode().strip()
         session_id = request.headers.get(SESSION_HEADER)
         if not session_id:
@@ -213,17 +223,21 @@ class BedrockRunner:
         await self._start_worker(session_id)
 
         previous = await asyncio.to_thread(self._client.get_workflow_state, session_id)
-        task = with_history(self._adapter, previous, payload)
-        try:
-            # The run is scheduled on the stream's first step. The wait below
-            # follows it to the end.
-            stream = self._adapter.start(self._runner, task, session_id)
-            await anext(stream)
-            await stream.aclose()
-        except grpc.RpcError as e:
-            if e.code() == grpc.StatusCode.ALREADY_EXISTS:
-                return reply(session_id, 409, message="busy: a task is still running in this session")
-            raise
+        if not payload and previous is None:
+            return reply(session_id, 400, message="a task is required: this session has no run yet")
+        if payload and (previous is None or previous.runtime_status.name not in UNFINISHED):
+            task = with_history(self._adapter, previous, payload)
+            try:
+                # The run is scheduled on the stream's first step. The wait below
+                # follows it to the end.
+                stream = self._adapter.start(self._runner, task, session_id)
+                await anext(stream)
+                await stream.aclose()
+            except grpc.RpcError as e:
+                # Another request started a run in this session after the read
+                # above. The wait below follows that run instead.
+                if e.code() != grpc.StatusCode.ALREADY_EXISTS:
+                    raise
 
         state = await asyncio.to_thread(self._client.wait_for_workflow_completion, session_id)
 
