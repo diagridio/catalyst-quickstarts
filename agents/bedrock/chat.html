@@ -1,0 +1,528 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Budget Planner Chat</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Page reset. */
+body { margin: 0; }
+[hidden] { display: none !important; }
+
+/* Layout: one-screen app. Header, session tab strip, scrolling conversation, status line + suggestions + composer pinned at the bottom. */
+:root {
+  --bg: #f5f6f4;
+  --surface: #ffffff;
+  --fg: #1d2421;
+  --muted: #5f6b66;
+  --line: #d9ded9;
+  --accent: #1f6f5c;
+  --accent-fg: #ffffff;
+  --user: #e3efe9;
+  --warn: #9a5b00;
+  --warn-bg: #fbf1df;
+  --err: #a8322d;
+  --err-bg: #fbe7e5;
+  --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #131816; --surface: #1b2220; --fg: #e4ebe7; --muted: #95a39d; --line: #2c3633;
+    --accent: #4fb397; --accent-fg: #0d1513; --user: #1f3a32;
+    --warn: #e9b25c; --warn-bg: #33291a; --err: #f08a83; --err-bg: #3a1f1d;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #131816; --surface: #1b2220; --fg: #e4ebe7; --muted: #95a39d; --line: #2c3633;
+  --accent: #4fb397; --accent-fg: #0d1513; --user: #1f3a32;
+  --warn: #e9b25c; --warn-bg: #33291a; --err: #f08a83; --err-bg: #3a1f1d;
+  color-scheme: dark;
+}
+html, body { height: 100%; }
+body {
+  background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 15px; line-height: 1.5;
+  display: flex; flex-direction: column;
+}
+button, input, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.gutter { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.wrap { max-width: 820px; margin: 0 auto; width: 100%; }
+
+header { background: var(--surface); padding-block: 10px 0; }
+header .top { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.brand { font-weight: 600; font-size: 16px; margin-right: auto; }
+.brand small { display: block; font-weight: 400; font-size: 12px; color: var(--muted); }
+.chip {
+  font-family: var(--font-mono); font-size: 12px; border: 1px solid var(--line); border-radius: 4px;
+  padding: 3px 8px; background: var(--bg); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.btn {
+  border: 1px solid var(--line); background: var(--surface); border-radius: 6px; padding: 6px 12px; font-size: 14px;
+}
+.btn:hover { border-color: var(--muted); }
+.btn.primary { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); font-weight: 500; }
+.btn.primary:disabled { opacity: .45; cursor: not-allowed; }
+
+/* Session tabs */
+/* The bottom line is an inset shadow on the bar, so the active tab's
+   background covers it without overhanging the scroll box. */
+.tabbar { display: flex; align-items: flex-end; gap: 4px; margin-top: 10px; box-shadow: inset 0 -1px 0 var(--line); }
+#tabs { display: flex; gap: 4px; overflow-x: auto; overflow-y: hidden; min-width: 0; scrollbar-width: thin; }
+.tab {
+  display: flex; align-items: center; gap: 8px; flex: none; border: 1px solid transparent; border-bottom: none;
+  border-radius: 6px 6px 0 0; padding: 6px 6px 6px 12px; font-size: 13px; color: var(--muted); background: transparent;
+}
+.tab:hover { color: var(--fg); }
+.tab[aria-selected="true"] { background: var(--bg); border-color: var(--line); color: var(--fg); font-weight: 500; }
+.tab .name { max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tab .rename {
+  width: 140px; border: 1px solid var(--accent); border-radius: 4px; padding: 0 4px; background: var(--surface); font-size: 13px;
+}
+.tab .close, .tab .settings { border: none; background: none; color: var(--muted); padding: 0 4px; border-radius: 4px; line-height: 1; font-size: 15px; }
+.tab .settings { display: inline-flex; padding: 2px; }
+.tab .settings svg { width: 14px; height: 14px; }
+.tab .close:hover, .tab .settings:hover, .tab .settings[aria-expanded="true"] { background: var(--line); color: var(--fg); }
+.add-tab { flex: none; border: none; background: none; color: var(--accent); font-size: 13px; font-weight: 500; padding: 6px 10px; white-space: nowrap; }
+.add-tab:hover { text-decoration: underline; }
+
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); opacity: .5; flex: none; }
+.pending .dot { opacity: 1; animation: pulse 1.2s infinite; }
+.cancelled .dot { background: var(--warn); opacity: 1; }
+.error .dot { background: var(--err); opacity: 1; }
+@keyframes pulse { 50% { opacity: .3 } }
+
+/* Session panel: settings of the active session */
+#session-panel { background: var(--surface); border-bottom: 1px solid var(--line); padding-block: 12px; }
+#session-panel .wrap { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+#session-panel label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); min-width: 0; }
+#session-panel input { border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; background: var(--bg); font-size: 13px; min-width: 0; }
+#session-panel #session-url { font-family: var(--font-mono); }
+#session-panel #session-url:disabled { opacity: .5; }
+#session-panel label.check { grid-column: 1 / -1; flex-direction: row; align-items: center; gap: 8px; color: var(--fg); cursor: pointer; }
+#session-panel label.check input { margin: 0; accent-color: var(--accent); }
+#session-panel .sid { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); min-width: 0; }
+#session-panel .sid .chip { cursor: pointer; }
+#session-panel p { grid-column: 1 / -1; margin: 0; font-size: 13px; color: var(--muted); }
+
+main { flex: 1; overflow-y: auto; padding-block: 20px; }
+.log { display: flex; flex-direction: column; gap: 16px; }
+
+.msg { display: flex; flex-direction: column; gap: 4px; max-width: 88%; min-width: 0; }
+.msg.user { align-self: flex-end; align-items: flex-end; }
+.bubble { padding: 10px 14px; border-radius: 10px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.user .bubble { background: var(--user); border-bottom-right-radius: 3px; }
+.agent .bubble { background: var(--surface); border: 1px solid var(--line); border-bottom-left-radius: 3px; }
+.agent.error .bubble { background: var(--err-bg); border-color: transparent; color: var(--err); }
+.agent.note .bubble { background: transparent; border: 1px dashed var(--line); color: var(--muted); font-size: 14px; }
+.meta { font-family: var(--font-mono); font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.typing { display: inline-flex; gap: 4px; }
+.typing i { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); animation: blink 1.2s infinite; }
+.typing i:nth-child(2) { animation-delay: .2s; } .typing i:nth-child(3) { animation-delay: .4s; }
+@keyframes blink { 0%, 80%, 100% { opacity: .25 } 40% { opacity: 1 } }
+@media (prefers-reduced-motion: reduce) { .typing i, .pending .dot { animation: none; } }
+
+footer { background: var(--surface); border-top: 1px solid var(--line); padding-block: 10px calc(10px + env(safe-area-inset-bottom, 0px)); }
+footer .wrap { display: flex; flex-direction: column; gap: 8px; }
+#status { display: flex; align-items: center; gap: 10px; font-size: 13px; min-height: 32px; flex-wrap: wrap; }
+#status .text { margin-right: auto; color: var(--muted); font-variant-numeric: tabular-nums; }
+#status.cancelled .text { color: var(--warn); }
+#status.error .text { color: var(--err); }
+/* Each suggestion takes at most a third of the row and wraps its text. */
+.suggest { display: flex; flex-wrap: wrap; gap: 6px; align-items: flex-start; }
+.suggest button {
+  flex: 0 1 auto; max-width: calc((100% - 12px) / 3); min-width: 0;
+  border: 1px solid var(--line); background: var(--bg); border-radius: 10px; padding: 3px 10px; font-size: 13px;
+  line-height: 1.35; text-align: left; white-space: normal; overflow-wrap: anywhere;
+}
+.suggest button:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+.suggest button:disabled { opacity: .5; cursor: not-allowed; }
+form { display: flex; gap: 8px; align-items: flex-end; }
+textarea {
+  flex: 1; min-width: 0; resize: none; border: 1px solid var(--line); border-radius: 8px; padding: 9px 12px;
+  background: var(--bg); max-height: 160px; line-height: 1.4;
+}
+textarea:disabled { opacity: .6; }
+</style>
+</head>
+<body>
+
+<header class="gutter">
+  <div class="wrap">
+    <div class="top">
+      <div class="brand">Plan an event budget<small>Messages in a session share one conversation. Other sessions do not see it.</small></div>
+    </div>
+    <div class="tabbar">
+      <div id="tabs" role="tablist" aria-label="Sessions"></div>
+      <button class="add-tab" id="new-session" type="button">+ New session</button>
+    </div>
+  </div>
+</header>
+
+<section id="session-panel" class="gutter" hidden>
+  <div class="wrap">
+    <label for="session-name">Name
+      <input id="session-name" autocomplete="off">
+    </label>
+    <label for="session-url">Agent URL
+      <input id="session-url" placeholder="http://localhost:8080" autocomplete="off">
+    </label>
+    <label class="check" for="session-mock">
+      <input id="session-mock" type="checkbox">
+      Use a mock agent, to test this page without running the agent
+    </label>
+    <div class="sid">Session ID <span class="chip" id="sid" title="Sent as X-Amzn-Bedrock-AgentCore-Runtime-Session-Id. Click to copy."></span></div>
+    <p>Each message is a <code>POST {Agent URL}/invocations</code> with the session ID header and <code>{"task": …}</code> as the body. Reconnect sends an empty body. An empty Agent URL means <code>http://localhost:8080</code>. The agent must allow CORS from this page.</p>
+  </div>
+</section>
+
+<main class="gutter" id="scroller">
+  <div class="wrap" id="logs"></div>
+</main>
+
+<footer class="gutter">
+  <div class="wrap">
+    <div id="status" class="idle">
+      <span class="dot"></span>
+      <span class="text" id="status-text"></span>
+      <button class="btn" id="cancel" type="button" hidden>Cancel</button>
+      <button class="btn" id="reconnect" type="button" hidden>Reconnect</button>
+    </div>
+    <div class="suggest" id="suggest" aria-label="Suggested prompts">
+      <button type="button">Budget for a corporate event with venue, catering and entertainment</button>
+      <button type="button">Recalculate without entertainment</button>
+      <button type="button">Add decorations</button>
+      <button type="button">Add miscellaneous costs</button>
+    </div>
+    <form id="composer">
+      <textarea id="input" rows="1" placeholder="Ask for a budget, e.g. venue, catering and entertainment"></textarea>
+      <button class="btn primary" id="send" type="submit">Send</button>
+    </form>
+  </div>
+</footer>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+
+  // ---------- sessions ----------
+  // Each tab is one session: its own ID, name, agent URL, conversation,
+  // request state and draft. AgentCore requires a runtime session ID of at
+  // least 33 characters.
+  const newSessionId = () => "budget-planner-" + (crypto.randomUUID ? crypto.randomUUID()
+    : Array.from(crypto.getRandomValues(new Uint8Array(16)), b => b.toString(16).padStart(2, "0")).join(""));
+
+  // The port `diagrid dev run` and the container serve the agent on.
+  const DEFAULT_URL = "http://localhost:8080";
+
+  const sessions = [];
+  let active = null;
+  let counter = 0;
+
+  function createSession() {
+    const s = {
+      id: newSessionId(),
+      name: `Session ${++counter}`,
+      // A new session starts with the current session's agent URL and mock choice.
+      url: active ? active.url : DEFAULT_URL,
+      mock: active ? active.mock : false,
+      state: "idle",                   // idle | pending | cancelled | error
+      statusText: "New session. Send a task to start.",
+      controller: null,
+      started: 0,
+      timer: null,
+      draft: "",
+      log: document.createElement("div"),
+      tab: document.createElement("div"),
+    };
+    s.log.className = "log";
+    s.log.hidden = true;
+    $("logs").appendChild(s.log);
+
+    s.tab.className = "tab idle";
+    s.tab.setAttribute("role", "tab");
+    s.tab.tabIndex = 0;
+    s.tab.title = "Double-click to rename";
+    s.tab.innerHTML = `<span class="dot"></span><span class="name"></span>
+      <button class="settings" type="button" aria-label="Session settings" aria-expanded="false" aria-controls="session-panel">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>
+      </button>
+      <button class="close" type="button" aria-label="Close session">×</button>`;
+    s.tab.addEventListener("click", (e) => { if (!e.target.closest(".close, .rename, .settings")) activate(s); });
+    s.tab.addEventListener("dblclick", (e) => { if (!e.target.closest(".close, .settings")) startRename(s); });
+    s.tab.querySelector(".settings").addEventListener("click", () => toggleSettings(s));
+    s.tab.addEventListener("keydown", (e) => {
+      if (e.target !== s.tab) return;
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); activate(s); }
+      if (e.key === "F2") { e.preventDefault(); startRename(s); }
+    });
+    s.tab.querySelector(".close").addEventListener("click", () => closeSession(s));
+    $("tabs").appendChild(s.tab);
+    renderName(s);
+
+    sessions.push(s);
+    activate(s);
+    s.tab.scrollIntoView({ inline: "nearest", block: "nearest" });
+    return s;
+  }
+
+  function renderName(s) {
+    s.tab.querySelector(".name").textContent = s.name;
+    s.tab.querySelector(".close").setAttribute("aria-label", `Close ${s.name}`);
+    if (s === active && document.activeElement !== $("session-name")) $("session-name").value = s.name;
+  }
+
+  function setName(s, name) {
+    s.name = name.trim() || s.name;
+    renderName(s);
+  }
+
+  // Inline rename on the tab: Enter or blur saves, Escape cancels.
+  function startRename(s) {
+    const label = s.tab.querySelector(".name");
+    if (label.hidden) return;
+    const input = document.createElement("input");
+    input.className = "rename";
+    input.value = s.name;
+    input.setAttribute("aria-label", "Session name");
+    label.hidden = true;
+    label.after(input);
+    input.focus(); input.select();
+    let done = false;
+    const finish = (save) => {
+      if (done) return; done = true;
+      if (save) setName(s, input.value);
+      input.remove(); label.hidden = false;
+    };
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") { e.preventDefault(); finish(true); s.tab.focus(); }
+      if (e.key === "Escape") { e.preventDefault(); finish(false); s.tab.focus(); }
+    });
+    input.addEventListener("blur", () => finish(true));
+  }
+
+  function closeSession(s) {
+    if (s.controller) s.controller.abort();
+    clearInterval(s.timer);
+    s.log.remove(); s.tab.remove();
+    const i = sessions.indexOf(s);
+    sessions.splice(i, 1);
+    if (!sessions.length) { active = null; createSession(); return; }
+    if (active === s) { active = null; activate(sessions[Math.max(0, i - 1)]); }
+  }
+
+  function activate(s) {
+    if (active) { active.draft = $("input").value; active.log.hidden = true; active.tab.setAttribute("aria-selected", "false"); }
+    active = s;
+    s.log.hidden = false;
+    s.tab.setAttribute("aria-selected", "true");
+    $("sid").textContent = s.id;
+    $("session-name").value = s.name;
+    $("session-url").value = s.url;
+    $("session-mock").checked = s.mock;
+    $("session-url").disabled = s.mock;
+    renderSettingsButtons();
+    $("input").value = s.draft; autosize();
+    renderStatus();
+    $("scroller").scrollTop = $("scroller").scrollHeight;
+  }
+
+  // The settings panel always shows the active session. A tab's settings
+  // button selects that tab and opens the panel, or closes it if it is
+  // already open for that tab.
+  function toggleSettings(s) {
+    const open = !$("session-panel").hidden && active === s;
+    if (active !== s) activate(s);
+    $("session-panel").hidden = open;
+    renderSettingsButtons();
+    if (!open) $("session-url").focus();
+  }
+
+  function renderSettingsButtons() {
+    const open = !$("session-panel").hidden;
+    sessions.forEach(x => x.tab.querySelector(".settings").setAttribute("aria-expanded", String(open && x === active)));
+  }
+
+  function setState(s, state, text) {
+    s.state = state;
+    s.statusText = text;
+    s.tab.className = "tab " + state;
+    if (s === active) renderStatus();
+  }
+
+  function renderStatus() {
+    const s = active;
+    $("status").className = s.state;
+    $("status-text").textContent = s.statusText;
+    $("cancel").hidden = s.state !== "pending";
+    $("reconnect").hidden = s.state !== "cancelled";
+    $("send").disabled = s.state === "pending";
+    $("input").disabled = s.state === "pending";
+    $("suggest").querySelectorAll("button").forEach(b => { b.disabled = s.state === "pending"; });
+  }
+
+  // ---------- session panel ----------
+  $("session-name").addEventListener("input", () => {
+    if ($("session-name").value.trim()) setName(active, $("session-name").value);
+  });
+  $("session-name").addEventListener("blur", () => { $("session-name").value = active.name; });
+  $("session-url").addEventListener("input", () => {
+    active.url = $("session-url").value.trim().replace(/\/+$/, "");
+  });
+  $("session-mock").addEventListener("change", () => {
+    active.mock = $("session-mock").checked;
+    $("session-url").disabled = active.mock;
+  });
+  $("sid").addEventListener("click", async () => {
+    try { await navigator.clipboard.writeText(active.id); flash("Session ID copied."); }
+    catch { const r = document.createRange(); r.selectNodeContents($("sid")); getSelection().removeAllRanges(); getSelection().addRange(r); }
+  });
+
+  // ---------- transport ----------
+  // The URL and the mock choice are read when the request starts, so changing
+  // them does not affect a request that is already waiting.
+  async function invoke(s, body, signal) {
+    if (s.mock) return mockInvoke(s.id, body, signal);
+    const res = await fetch((s.url || DEFAULT_URL) + "/invocations", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Amzn-Bedrock-AgentCore-Runtime-Session-Id": s.id },
+      body,
+      signal,
+    });
+    let data = {};
+    try { data = await res.json(); } catch {}
+    return { status: res.status, data };
+  }
+
+  // ---------- mock agent ----------
+  // Mirrors bedrock_runner.py, keyed by session ID: one run per session; a
+  // request while the session's run is unfinished waits for it; an empty body
+  // returns the session's last result. Sessions do not share runs or history.
+  const MOCK_RUN_MS = 8000;
+  const PRICES = { venue: 3500, catering: 2250, entertainment: 1500, decorations: 800, miscellaneous: 500 };
+  const mockRuns = new Map(); // sessionId -> { finishAt, items, result }
+
+  function mockAnswer(task, prevItems) {
+    const t = task.toLowerCase();
+    let items = Object.keys(PRICES).filter(k => t.includes(k) || t.includes(k.slice(0, -1)));
+    if (/without|remove|drop/.test(t) && prevItems) items = prevItems.filter(k => !t.includes(k));
+    else if (/add|also|plus/.test(t) && prevItems) items = [...new Set([...prevItems, ...items])];
+    if (!items.length) {
+      return { items: prevItems || [], result: "I can price these items: venue, catering, entertainment, decorations and miscellaneous. Which ones should the budget include?" };
+    }
+    const total = items.reduce((sum, k) => sum + PRICES[k], 0);
+    const buffer = Math.round(total * 0.15);
+    const fmt = n => "$" + n.toLocaleString("en-US");
+    const lines = items.map(k => `- **${k[0].toUpperCase() + k.slice(1)}**: ${fmt(PRICES[k])}`);
+    return {
+      items,
+      result: `Here's the budget breakdown for your event:\n\n${lines.join("\n")}\n\n**Total**: ${fmt(total)}\n**Recommended buffer (15%)**: ${fmt(buffer)}\n**Grand Total**: ${fmt(total + buffer)}`,
+    };
+  }
+
+  function mockInvoke(sid, body, signal) {
+    let task = "";
+    if (body) { try { task = JSON.parse(body).task || body; } catch { task = body; } }
+    let run = mockRuns.get(sid);
+    const now = Date.now();
+    if (!task && !run) return Promise.resolve({ status: 400, data: { instance_id: sid, message: "a task is required: this session has no run yet" } });
+    if (task && (!run || run.finishAt <= now)) {
+      run = { finishAt: now + MOCK_RUN_MS, ...mockAnswer(task, run && run.items) };
+      mockRuns.set(sid, run);
+    }
+    return new Promise((resolve, reject) => {
+      const t = setTimeout(() => resolve({ status: 200, data: { instance_id: sid, status: "COMPLETED", result: run.result } }), Math.max(0, run.finishAt - Date.now()));
+      signal.addEventListener("abort", () => { clearTimeout(t); reject(new DOMException("Aborted", "AbortError")); });
+    });
+  }
+
+  // ---------- rendering ----------
+  const md = (str) => str.replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]))
+                         .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+  const clock = () => new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+
+  function addMsg(s, role, html, meta, cls = "") {
+    const el = document.createElement("div");
+    el.className = `msg ${role} ${cls}`.trim();
+    el.innerHTML = `<div class="bubble">${html}</div><div class="meta">${meta || ""}</div>`;
+    s.log.appendChild(el);
+    if (s === active) $("scroller").scrollTop = $("scroller").scrollHeight;
+    return el;
+  }
+
+  function flash(text) {
+    $("status-text").textContent = text;
+    setTimeout(() => renderStatus(), 1500);
+  }
+
+  // ---------- request lifecycle ----------
+  // Requests run per session, so a session keeps waiting while another tab is open.
+  async function run(s, body, label) {
+    s.controller = new AbortController();
+    s.started = performance.now();
+    const pendingEl = addMsg(s, "agent", `<span class="typing"><i></i><i></i><i></i></span>`, label);
+    const elapsed = () => ((performance.now() - s.started) / 1000).toFixed(1);
+    const tick = () => setState(s, "pending", `Waiting for the agent… ${elapsed()}s`);
+    tick(); s.timer = setInterval(tick, 100);
+
+    try {
+      const { status, data } = await invoke(s, body, s.controller.signal);
+      pendingEl.remove();
+      if (status === 200 && data.result) {
+        addMsg(s, "agent", md(data.result), `${clock()} · ${status} ${data.status || ""} · ${elapsed()}s`);
+        setState(s, "idle", "Ready.");
+      } else {
+        addMsg(s, "agent", md(data.message || `The agent answered ${status}.`), `${clock()} · ${status} · ${elapsed()}s`, "error");
+        setState(s, "error", `The request failed with ${status}.`);
+      }
+    } catch (e) {
+      pendingEl.remove();
+      if (e.name === "AbortError") {
+        addMsg(s, "agent", "Request cancelled. The run keeps going in Catalyst. Reconnect to collect its result.", clock(), "note");
+        setState(s, "cancelled", "Cancelled. Reconnect to get the result of the last request.");
+      } else {
+        addMsg(s, "agent", md(`Could not reach the agent: ${e.message}`), clock(), "error");
+        setState(s, "cancelled", "Connection lost. Reconnect to get the result of the last request.");
+      }
+    } finally {
+      clearInterval(s.timer); s.controller = null;
+    }
+  }
+
+  $("composer").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const s = active;
+    const text = $("input").value.trim();
+    if (!text || s.state === "pending") return;
+    $("input").value = ""; s.draft = ""; autosize();
+    addMsg(s, "user", md(text), clock());
+    run(s, JSON.stringify({ task: text }), "POST /invocations");
+  });
+
+  $("cancel").addEventListener("click", () => active.controller && active.controller.abort());
+  $("reconnect").addEventListener("click", () => run(active, "", "POST /invocations (empty body)"));
+  $("new-session").addEventListener("click", () => { createSession(); $("input").focus(); });
+
+  $("suggest").querySelectorAll("button").forEach(b => b.addEventListener("click", () => {
+    $("input").value = b.textContent; autosize(); $("input").focus();
+  }));
+
+  // ---------- small UI bits ----------
+  function autosize() { const t = $("input"); t.style.height = "auto"; t.style.height = Math.min(t.scrollHeight, 160) + "px"; }
+  $("input").addEventListener("input", autosize);
+  $("input").addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); $("composer").requestSubmit(); }
+  });
+
+  createSession();
+})();
+</script>
+</body>
+</html>
