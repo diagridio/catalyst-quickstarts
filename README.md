@@ -1,4 +1,4 @@
-# Catalyst Quickstarts
+# Diagrid Quickstarts
 
 [![E2E quickstart tests](https://github.com/diagridio/catalyst-quickstarts/actions/workflows/e2e-quickstarts.yml/badge.svg)](https://github.com/diagridio/catalyst-quickstarts/actions/workflows/e2e-quickstarts.yml)
 
