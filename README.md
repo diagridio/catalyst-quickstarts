@@ -1,39 +1,28 @@
-# Catalyst Quickstarts
+# Diagrid Quickstarts
 
-Get started with [Diagrid Catalyst](https://diagrid.ws/catalyst-quickstarts) by following these step-by-step quickstarts. Choose a quickstart based on what you want to build.
+[![E2E quickstart tests](https://github.com/diagridio/catalyst-quickstarts/actions/workflows/e2e-quickstarts.yml/badge.svg)](https://github.com/diagridio/catalyst-quickstarts/actions/workflows/e2e-quickstarts.yml)
 
-## Agent Quickstarts
+[Diagrid](https://diagrid.ws/catalyst-quickstarts) is durable execution for AI agents and workflows, built on Dapr Workflow. An agent or workflow running on Diagrid keeps its state and picks up where it left off after a crash, restart or redeploy, instead of starting over.
 
-Learn how to build AI-powered durable agents using Catalyst. Create intelligent, stateful agents that maintain conversation memory and execution state across restarts.
+These step-by-step quickstarts show how. Choose one based on what you want to build.
 
-### Agent Frameworks
+## Prerequisites
 
-Catalyst works with the following agent frameworks:
+Each quickstart's README lists the language toolchain it needs. All of them need:
 
-| Framework | Description |
-|-----------|-------------|
-| [Dapr Agents](agents/dapr-agents/) | Native Dapr agent framework with built-in durability, state, and pub/sub for multi-agent orchestration |
-| [Mastra](agents/mastra/) | TypeScript agent framework with tool calling, made durable with Catalyst |
-| [CrewAI](agents/crewai/) | Multi-agent crews with role-based collaboration, made durable with Catalyst |
-| [LangGraph](agents/langgraph/) | Graph-based agent orchestration with conditional routing, made durable with Catalyst |
-| [LangGraph.js](agents/langgraphjs/) | Graph-based agent orchestration for TypeScript, with the end user's verified identity propagated to its tools by Catalyst |
-| [Strands](agents/strands/) | Model-driven agent framework from AWS with tool use, made durable with Catalyst |
-| [Microsoft Agent Framework](agents/microsoft-dotnet/) | Enterprise agent framework from Microsoft, made durable with Catalyst |
-| [Spring AI](agents/spring-ai/) | Spring's AI framework for Java, made durable with Catalyst |
-| [Google ADK](agents/adk/) | Google's Agent Development Kit, running on OpenAI through LiteLLM, made durable with Catalyst |
-| [OpenAI Agents](agents/openai-agents/) | Function tools and agent handoffs from OpenAI, made durable with Catalyst |
-| [Pydantic AI](agents/pydantic-ai/) | Type-safe agent framework with structured outputs, made durable with Catalyst |
-| [Deep Agents](agents/deepagents/) | Type-safe agent harness with conditional routing, made durable with Catalyst |
-| [Claude Agents](agents/claude-agents/) | Anthropic's Claude Agent SDK with tool calling, made durable with Catalyst |
-| [Goose](agents/goose/) | The open-source Goose agent with its built-in developer tools, run unmodified from Rust and made durable with Catalyst |
+1. **Install the Diagrid CLI.** Follow the [install guide](https://docs.diagrid.io/getting-started/install-cli), or on macOS and Linux run:
 
-## MCP Quickstarts
+   ```bash
+   curl -sL https://downloads.diagrid.io/cli/install.sh | bash
+   ```
 
-Learn how to register MCP (Model Context Protocol) servers with Catalyst and secure them.
+2. **Sign up for Diagrid** at [catalyst.diagrid.io](https://catalyst.diagrid.io/). Diagrid has a permanent free tier.
 
-| Quickstart | Description | Path |
-|------------|--------------|------|
-| MCP Authentication & Authorization | Register a local MCP server, authenticate Catalyst to it, and authorize specific tool calls | [mcp-auth/python](mcp-auth/python/) |
+3. **Log in** from your terminal:
+
+   ```bash
+   diagrid login
+   ```
 
 ## Workflow Quickstart
 
@@ -46,9 +35,45 @@ Learn how to build stateful, long-running, reliable workflows using the Dapr Wor
 | JavaScript | [workflow/javascript](workflow/javascript/) |
 | Python | [workflow/python](workflow/python/) |
 
+## Agent Quickstarts
+
+Learn how to build AI-powered durable agents using Diagrid. Create intelligent, stateful agents that maintain conversation memory and execution state across restarts.
+
+### Agent Frameworks
+
+Diagrid works with the following agent frameworks:
+
+| Framework | Language | Description | SDK |
+|-----------|----------|-------------|-----|
+| [Dapr Agents](agents/dapr-agents/) | Python | Native Dapr agent framework with built-in durability, state, and pub/sub for multi-agent orchestration | [dapr-agents](https://github.com/dapr/dapr-agents) |
+| [Mastra](agents/mastra/) | TypeScript | TypeScript agent framework with tool calling, made durable with Diagrid | [typescript-ai](https://github.com/diagridio/typescript-ai) |
+| [CrewAI](agents/crewai/) | Python | Multi-agent crews with role-based collaboration, made durable with Diagrid | [python-ai](https://github.com/diagridio/python-ai) |
+| [LangGraph](agents/langgraph/) | Python | Graph-based agent orchestration with conditional routing, made durable with Diagrid | [python-ai](https://github.com/diagridio/python-ai) |
+| [LangGraph.js](agents/langgraphjs/) | TypeScript | Graph-based agent orchestration for TypeScript, with the end user's verified identity propagated to its tools by Diagrid | [typescript-ai](https://github.com/diagridio/typescript-ai) |
+| [LangChainGo](agents/langchaingo/) | Go | LangChain for Go, with the end user's verified identity propagated to its tools by Diagrid | [go-ai](https://github.com/diagridio/go-ai) |
+| [Strands](agents/strands/) | Python | Model-driven agent framework from AWS with tool use, made durable with Diagrid | [python-ai](https://github.com/diagridio/python-ai) |
+| [Microsoft Agent Framework](agents/microsoft-dotnet/) | .NET | Enterprise agent framework from Microsoft, made durable with Diagrid | [dotnet-ai](https://github.com/diagridio/dotnet-ai) |
+| [Spring AI](agents/spring-ai/) | Java | Spring's AI framework for Java, made durable with Diagrid | [java-ai](https://github.com/diagridio/java-ai) |
+| [Google ADK](agents/adk/) | Python | Google's Agent Development Kit, running on OpenAI through LiteLLM, made durable with Diagrid | [python-ai](https://github.com/diagridio/python-ai) |
+| [OpenAI Agents](agents/openai-agents/) | Python | Function tools and agent handoffs from OpenAI, made durable with Diagrid | [python-ai](https://github.com/diagridio/python-ai) |
+| [Pydantic AI](agents/pydantic-ai/) | Python | Type-safe agent framework with structured outputs, made durable with Diagrid | [python-ai](https://github.com/diagridio/python-ai) |
+| [Deep Agents](agents/deepagents/) | Python | Type-safe agent harness with conditional routing, made durable with Diagrid | [python-ai](https://github.com/diagridio/python-ai) |
+| [Claude Agents](agents/claude-agents/) | Python | Anthropic's Claude Agent SDK with tool calling, made durable with Diagrid | [python-ai](https://github.com/diagridio/python-ai) |
+| [Goose](agents/goose/) | Rust | The open-source Goose agent with its built-in developer tools, run unmodified from Rust and made durable with Diagrid | [rust-ai](https://github.com/diagridio/rust-ai) |
+
+The top-level [dapr-agents](dapr-agents/) directory holds three more Dapr Agents quickstarts: a single [durable agent](dapr-agents/durable-agent/), a [multi-agent workflow](dapr-agents/multi-agent-workflow/) where a predefined workflow coordinates the agents, and a [multi-agent orchestrator](dapr-agents/multi-agent-orchestrator/) where an LLM decides which agent to delegate to.
+
+## MCP Quickstarts
+
+Learn how to register MCP (Model Context Protocol) servers with Diagrid and secure them.
+
+| Quickstart | Description | Path |
+|------------|--------------|------|
+| MCP Authentication & Authorization | Register a local MCP server, authenticate Diagrid to it, and authorize specific tool calls | [mcp-auth/python](mcp-auth/python/) |
+
 ## Dapr API Quickstarts
 
-Learn how to use Dapr's distributed application APIs with Catalyst. Choose an API and your preferred language to get started.
+Learn how to use Dapr's distributed application APIs with Diagrid. Choose an API and your preferred language to get started.
 
 ### Pub/Sub
 
@@ -83,6 +108,10 @@ Implement the request/reply pattern.
 | JavaScript | [invocation/javascript](invocation/javascript/) |
 | Python | [invocation/python](invocation/python/) |
 
+## Repository tools
+
+[tools/qs-tester](tools/qs-tester/) holds the end-to-end tests that run each quickstart's documented commands against Diagrid, and the checks that keep each README in sync with its code. You don't need it to run a quickstart.
+
 ## Documentation
 
-For full documentation, visit the [Catalyst Quickstarts docs](https://diagrid.ws/catalyst-quickstarts).
+For full documentation, visit the [Diagrid quickstarts docs](https://diagrid.ws/catalyst-quickstarts).
