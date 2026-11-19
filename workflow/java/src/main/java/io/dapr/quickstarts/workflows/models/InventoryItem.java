@@ -10,6 +10,9 @@ public class InventoryItem {
   @JsonProperty("quantity")
   private int quantity;
 
+  // Jackson needs this to read an InventoryItem back from an activity result.
+  public InventoryItem() {}
+
   public InventoryItem(String name, int quantity) {
     this.name = name;
     this.quantity = quantity;
