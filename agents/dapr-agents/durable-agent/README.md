@@ -68,6 +68,8 @@ uv run diagrid dev run -f dev-python-durable-agent.yaml --approve
 
 Wait until the output shows `Uvicorn running on <localhost:port>`.
 
+> **Tip:** Wait until you see the log `Connected App ID "invitations-manager" to http://localhost:8006` in the terminal before proceeding, to ensure the application is connected to Catalyst. Catalyst takes a few seconds after connection to attach and initialize the workflow worker: if the request in step 2 returns HTTP 500 (`failed to create workflow instance: context canceled`), wait a few seconds and send it again.
+
 ### 2. Trigger a Durable Agent run
 
 From a new terminal window:
