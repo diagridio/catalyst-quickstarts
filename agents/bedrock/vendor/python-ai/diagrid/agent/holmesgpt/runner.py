@@ -131,7 +131,7 @@ class DaprWorkflowHolmesRunner(BaseWorkflowRunner):
     # Lifecycle
     # ------------------------------------------------------------------
 
-    def start(self) -> None:
+    def start(self, worker_id: Optional[str] = None) -> None:
         """Build the HolmesGPT registry and start the workflow runtime."""
         if self._started:
             return
@@ -143,7 +143,7 @@ class DaprWorkflowHolmesRunner(BaseWorkflowRunner):
             enable_all_toolsets_possible=self._enable_all_toolsets_possible,
         )
         set_registry(self._registry)
-        super().start()
+        super().start(worker_id)
         logger.info(
             "DaprWorkflowHolmesRunner started: workflow=%s tools=%d",
             self.workflow_name,

@@ -199,6 +199,7 @@ version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
     { name = "boto3" },
+    { name = "dapr-ext-workflow" },
     { name = "diagrid", extra = ["strands"] },
     { name = "fastapi" },
     { name = "uvicorn", extra = ["standard"] },
@@ -207,6 +208,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "boto3", specifier = "==1.43.53" },
+    { name = "dapr-ext-workflow", directory = "vendor/dapr-ext-workflow" },
     { name = "diagrid", extras = ["strands"], directory = "vendor/python-ai" },
     { name = "fastapi", specifier = "==0.136.1" },
     { name = "uvicorn", extras = ["standard"], specifier = "==0.46.0" },
@@ -546,14 +548,16 @@ wheels = [
 [[package]]
 name = "dapr-ext-workflow"
 version = "1.17.3"
-source = { registry = "https://pypi.org/simple" }
+source = { directory = "vendor/dapr-ext-workflow" }
 dependencies = [
     { name = "dapr" },
     { name = "durabletask-dapr" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/a1/d8/98225c65774fcfcf095405c49796144062de1d5bf3b5e18d61c914e23e46/dapr_ext_workflow-1.17.3.tar.gz", hash = "sha256:2d488f69139de9ec4f7d8c39ae0402398858f24ffa3bad0a5dfcbf9cabe7b58d", size = 24426, upload-time = "2026-03-19T19:26:26.73Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/a4/ce/864a3d199a107125c158a199c4bd6967273c3127688895e67458b0dd3588/dapr_ext_workflow-1.17.3-py3-none-any.whl", hash = "sha256:879a3ac6c0c61fd4e07db62d3f37b80232dc6c649be8e5ca61f51b19b7e1cb3a", size = 29231, upload-time = "2026-03-19T19:26:25.607Z" },
+
+[package.metadata]
+requires-dist = [
+    { name = "dapr", specifier = ">=1.17.3" },
+    { name = "durabletask-dapr", specifier = ">=0.17.4" },
 ]
 
 [[package]]

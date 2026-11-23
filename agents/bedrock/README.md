@@ -28,6 +28,7 @@ The agent reads these variables. Locally, you set them in your shell:
 | `OPENAI_BASE_URL` | The provider's OpenAI-compatible endpoint. Defaults to `https://api.openai.com/v1` | Runtime environment variable. It is not a secret |
 | `OPENAI_MODEL` | A model the provider serves. Defaults to `gpt-4o-mini` | Runtime environment variable. It is not a secret |
 | `AGENT_WORKER` | `false` or `0` makes the container start runs without executing them. Any other value, or unset, makes it execute runs too. The container serves `/invocations` and `/ping` either way. See [Front End and Worker](#front-end-and-worker) | Runtime environment variable. It is not a secret |
+| `WORKFLOW_AFFINITY_KEY` | The ID of this container's workflow worker. Defaults to the AgentCore session ID. Set it only to run the agent outside AgentCore. See [Workflow Worker Affinity](#workflow-worker-affinity) | Not set |
 
 To use another OpenAI-compatible provider, set `OPENAI_BASE_URL` to its endpoint, `OPENAI_MODEL` to one of its models, and `OPENAI_API_KEY` to its key. The model must support tool calling, because the agent calls `calculate_budget`.
 
@@ -444,23 +445,56 @@ On AgentCore, a worker that serves no users can be stopped in the middle of a ru
 
 `AGENT_WORKER` is read by the diagrid runner's `BaseWorkflowRunner`, so it works the same for every framework's runner. It is not in a diagrid release yet. The source of the diagrid package with it is in `vendor/python-ai`, and `[tool.uv.sources]` in `pyproject.toml` installs it in place of the PyPI release. It is `diagridio/python-ai` `main` with the `AGENT_WORKER` change in `diagrid/agent/core/workflow/runner.py` and `diagrid/agent/langgraph/runner.py`. A build writes `build/` and `*.egg-info/` into it; git and Docker ignore them.
 
-To copy `main` again, from this directory, and then apply the `AGENT_WORKER` change to the copy:
-
-```bash
-rsync -a --delete --exclude=__pycache__ --exclude=/diagrid/core/ --exclude=/diagrid/cli/ \
-  --exclude=/build/ --exclude='/*.egg-info/' \
-  <python-ai checkout>/{pyproject.toml,README.md,LICENSE.md,diagrid} vendor/python-ai/
-sed -i '/^\[tool.uv.workspace\]/,$d' vendor/python-ai/pyproject.toml
-uv lock
-uv sync --reinstall-package diagrid
-```
+This branch also carries the workflow worker affinity changes in the same copy. [Workflow Worker Affinity](#workflow-worker-affinity) says how to copy it again.
 
 ## Good to Know
 
-- **The workflow worker runs only while an AgentCore session is running**, when the container is also the worker. Each session runs in its own microVM, and each microVM's container connects to Catalyst as a worker for `budget-planner`. Catalyst gives a run to any connected worker of the App ID, so a session's run can execute in another session's container. AgentCore [stops a session](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/runtime-sessions.html#session-lifecycle) after 15 minutes without activity, or 8 hours after it started. Both are defaults that the runtime's lifecycle configuration can change. While the session's own run is in progress, `/ping` answers [`HealthyBusy`](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/runtime-http-protocol-contract.html#ping-endpoint), which keeps the session alive, so the idle timeout does not stop it even when no request is waiting. A front end with `AGENT_WORKER=false` always answers `Healthy`: it has no run to protect. `/ping` knows only its own session's run, so a container that executes another session's run can still be stopped for being idle. A run that is interrupted keeps its state in Catalyst. It resumes as soon as any container of the runtime is connected, or, if none is, when the next invocation starts one. Until the run ends, a request in its session is not started as a new task: it waits for the run and gets its result.
+- **The workflow worker runs only while an AgentCore session is running**, when the container is also the worker. Each session runs in its own microVM, and each microVM's container connects to Catalyst as a worker for `budget-planner`. Catalyst gives a run to any connected worker of the App ID, so a session's run can execute in another session's container. With [workflow worker affinity](#workflow-worker-affinity) on, it executes only in a container of the session that started it. AgentCore [stops a session](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/runtime-sessions.html#session-lifecycle) after 15 minutes without activity, or 8 hours after it started. Both are defaults that the runtime's lifecycle configuration can change. While the session's own run is in progress, `/ping` answers [`HealthyBusy`](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/runtime-http-protocol-contract.html#ping-endpoint), which keeps the session alive, so the idle timeout does not stop it even when no request is waiting. A front end with `AGENT_WORKER=false` always answers `Healthy`: it has no run to protect. `/ping` knows only its own session's run, so a container that executes another session's run can still be stopped for being idle. A run that is interrupted keeps its state in Catalyst. It resumes as soon as any container of the runtime is connected, or, if none is, when the next invocation starts one. With workflow worker affinity on, it resumes only in a container of its own session. Until the run ends, a request in its session is not started as a new task: it waits for the run and gets its result.
 - **`/invocations` waits for the run to finish.** AgentCore [allows a synchronous request 15 minutes](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/bedrock-agentcore-limits.html#invocation-limits), and the limit cannot be raised. A run that takes longer keeps running in Catalyst, but the request fails. The result is in the run's output in Catalyst, and the session's next task includes it in the conversation.
 - **Tasks sent with the same session ID share one conversation.** The agent carries it in the task text. Before starting a task, it reads the session's last run from Catalyst, which is the workflow instance named after the session ID. That run's task is already the conversation up to that run, written as lines starting with `User:` and `Assistant:`. The agent adds that run's answer and the new request to it, and starts the new run with the result. The system prompt tells the model to answer the last `User:` line. Because Catalyst stores each run's task, the history survives a crash or a new container without a separate store. The model sees the history as one block of text, not as separate turns, without the tool calls and tool results of earlier tasks, and at most its newest 20,000 characters (`MAX_HISTORY_CHARS` in `bedrock_runner.py`).
 - **The diagrid SDK sends one anonymous usage event per process.** On AgentCore that is one event for each session's container. It holds versions, the platform and the agent framework, and no prompts, app IDs or hostnames. To turn it off, add `DO_NOT_TRACK: "1"` to the runtime's environment variables. The [diagrid package description](https://pypi.org/project/diagrid/0.5.3/) lists what is sent and the other opt-out variables.
+
+## Workflow Worker Affinity
+
+> **Experimental.** Workflow worker affinity is not released. The `diagrid` CLI flag that turns it on, `--workflow-worker-affinity`, is hidden: `diagrid agent create --help` does not list it.
+
+This branch runs each workflow in a container of the session that started it, instead of in any connected worker. It needs an agent created with workflow worker affinity on, which only a Catalyst region running the workflow worker router supports. Today that is a OneBox environment built from the cloudgrid branch `workflow-affinity-routing`, with the `diagrid` CLI built from the same branch.
+
+Create the agent with the flag in place of step 3 of [Create the Catalyst Resources](#1-create-the-catalyst-resources):
+
+```bash
+diagrid agent create budget-planner --workflow-worker-affinity --wait
+```
+
+The setting cannot be changed after the agent is created. To turn it on for an existing `budget-planner` agent, delete the agent and create it again with the flag.
+
+- On AgentCore, the container connects its workflow worker on the first `/invocations` request, not when it starts. With `WORKFLOW_AFFINITY_KEY` set, it connects at startup, so a restarted container takes over its unfinished runs without a new request. AgentCore starts a session's microVM from a snapshot taken before any session existed, and the session ID first reaches the container in that request's `X-Amzn-Bedrock-AgentCore-Runtime-Session-Id` header.
+- The worker ID is the session ID, unless `WORKFLOW_AFFINITY_KEY` is set. The diagrid runner sends the ID in the `workflow-affinity-key` header when it connects for work and when it starts a run.
+- A container serves one session: the one in its first `/invocations` request. It answers a request with any other session ID with a 400. To try another session locally, restart the agent.
+- Catalyst refuses a second worker with an ID that is already connected, after 3 seconds.
+- A run whose container stops waits until a worker with the same ID connects. When AgentCore stops a session and its next invocation starts a new microVM, that container connects with the same session ID and resumes the session's unfinished runs.
+
+The source of the two packages with these changes is in `vendor/`, and `[tool.uv.sources]` in `pyproject.toml` installs them in place of the PyPI releases. uv builds them when it installs the agent, locally and in the container image.
+
+| Directory | Copied from | Change |
+|-----------|-------------|--------|
+| `vendor/python-ai` | `diagridio/python-ai` `main` | `BaseWorkflowRunner` reads `AGENT_WORKER` (see [Front End and Worker](#front-end-and-worker)) and sends `workflow-affinity-key` |
+| `vendor/dapr-ext-workflow` | `dapr/python-sdk` `v1.17.3`, `ext/dapr-ext-workflow` | `DaprWorkflowClient` accepts `interceptors` |
+
+Each directory holds only the files the package build reads. A build writes `build/` and `*.egg-info/` into it; they are ignored by git and Docker, and deleted before each copy so a module removed upstream does not reach the next build. `vendor/python-ai/pyproject.toml` has no `[tool.uv.workspace]` or `[tool.uv.sources]` table: they name the python-ai workspace members, which are not copied, and uv refuses them in a dependency.
+
+To copy them again, from this directory, and then apply the `AGENT_WORKER` and affinity changes to `vendor/python-ai`:
+
+```bash
+rsync -a --delete --exclude=__pycache__ --exclude=/diagrid/core/ --exclude=/diagrid/cli/ \
+  <python-ai checkout>/{pyproject.toml,README.md,LICENSE.md,diagrid} vendor/python-ai/
+sed -i '/^\[tool.uv.workspace\]/,$d' vendor/python-ai/pyproject.toml
+rsync -a --delete --exclude=__pycache__ \
+  <python-sdk checkout>/ext/dapr-ext-workflow/{setup.py,setup.cfg,README.rst,LICENSE,dapr} vendor/dapr-ext-workflow/
+rm -rf vendor/*/build vendor/*/*.egg-info
+uv lock
+uv sync --reinstall-package diagrid --reinstall-package dapr-ext-workflow
+```
 
 ## Clean Up
 

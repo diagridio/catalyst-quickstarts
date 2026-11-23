@@ -15,6 +15,10 @@ from typing import Any, AsyncIterator, Optional
 
 from dapr.ext.workflow import DaprWorkflowClient, WorkflowRuntime, WorkflowStatus
 from dapr_agents.utils.signal.mixin import SignalMixin
+from durabletask.internal.grpc_interceptor import (  # type: ignore[import-untyped]
+    DefaultClientInterceptorImpl,
+    _ClientCallDetails,
+)
 
 from diagrid.agent.core.discovery import discover_components
 from diagrid.agent.core.metadata.mixins import AgentRegistryMixin
@@ -44,6 +48,41 @@ WORKER_ENV = "AGENT_WORKER"
 
 def _is_worker_from_env() -> bool:
     return os.environ.get(WORKER_ENV, "").strip().lower() not in ("false", "0")
+
+
+# The environment variable that names this process's workflow worker, when
+# ``start`` is not given one. Catalyst App IDs with workflow worker affinity run
+# each workflow on the worker that started it, and need every worker to have a
+# unique ID.
+AFFINITY_KEY_ENV = "WORKFLOW_AFFINITY_KEY"
+
+# The gRPC header that carries the worker ID, on the work stream and on the
+# start of a workflow the runner owns.
+AFFINITY_KEY_HEADER = "workflow-affinity-key"
+
+
+class _WorkerIDInterceptor(DefaultClientInterceptorImpl):  # type: ignore[misc]
+    """Adds the ``workflow-affinity-key`` header to every call of the workflow runtime.
+
+    The runtime is built before the worker ID is known, so the ID is read when
+    each call is made.
+    """
+
+    def __init__(self, runner: "BaseWorkflowRunner") -> None:
+        super().__init__([])
+        self._runner = runner
+
+    def _intercept_call(self, details: Any) -> Any:
+        metadata = list(details.metadata or [])
+        metadata.append((AFFINITY_KEY_HEADER, self._runner.worker_id))
+        return _ClientCallDetails(
+            details.method,
+            details.timeout,
+            metadata,
+            details.credentials,
+            details.wait_for_ready,
+            details.compression,
+        )
 
 
 # The distribution that carries each framework, keyed by the lower-cased
@@ -124,10 +163,18 @@ class BaseWorkflowRunner(SignalMixin, AgentRegistryMixin, ABC):
         self._max_iterations = max_iterations
         self._state_store = state_store
         self._worker = _is_worker_from_env()
+        # The worker sends its ID on its work item stream, and names itself as
+        # the owner of the workflows it starts, so Catalyst runs them on it.
+        # ``start`` sets the ID.
+        self._worker_id: Optional[str] = None
         # Subclasses register their workflow and activities on the runtime
         # whether or not this process is a worker: registering opens no
         # connection, and it sets the workflow name the client schedules by.
-        self._workflow_runtime = WorkflowRuntime(host=host, port=port)
+        self._workflow_runtime = WorkflowRuntime(
+            host=host,
+            port=port,
+            interceptors=[_WorkerIDInterceptor(self)],
+        )
         self._workflow_client: Optional[DaprWorkflowClient] = None
         self._started = False
 
@@ -161,17 +208,35 @@ class BaseWorkflowRunner(SignalMixin, AgentRegistryMixin, ABC):
         """Whether this process executes workflows: false only for ``AGENT_WORKER=false`` or ``0``."""
         return self._worker
 
-    def start(self) -> None:
+    @property
+    def worker_id(self) -> Optional[str]:
+        """The ID the worker connects with, set by ``start``."""
+        return self._worker_id
+
+    def start(self, worker_id: Optional[str] = None) -> None:
         """Create the workflow client and, in a worker, start the workflow runtime.
 
         Must be called before running any workflows.
+
+        Args:
+            worker_id: The ID of this process's workflow worker. Defaults to
+                ``WORKFLOW_AFFINITY_KEY``, or to a random ID when that is unset.
         """
         if self._started:
             return
 
+        self._worker_id = worker_id or os.environ.get(AFFINITY_KEY_ENV) or uuid.uuid4().hex
         if self._worker:
             self._workflow_runtime.start()
-        self._workflow_client = DaprWorkflowClient(host=self._host, port=self._port)
+        # DaprWorkflowClient takes interceptors only in the dapr-ext-workflow
+        # build with that change; the released 1.17.3 does not.
+        self._workflow_client = DaprWorkflowClient(  # type: ignore[call-arg]
+            host=self._host,
+            port=self._port,
+            interceptors=[
+                DefaultClientInterceptorImpl([(AFFINITY_KEY_HEADER, self._worker_id)])
+            ],
+        )
         self._started = True
         logger.info(
             "Dapr Workflow %s started",

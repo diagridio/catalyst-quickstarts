@@ -4,6 +4,7 @@ version = "0.1.0"
 requires-python = ">=3.11,<3.14"
 dependencies = [
     "boto3==1.43.53",
+    "dapr-ext-workflow==1.17.3",
     "diagrid[strands]==0.5.3",
     "fastapi==0.136.1",
     "uvicorn[standard]==0.46.0",
@@ -13,7 +14,11 @@ dependencies = [
 package = false
 
 # The diagrid runner in vendor/ adds WORKFLOW_WORKER, which lets a process start
-# workflows without executing them. See "Front End and Worker" in the README for
-# how to copy it again.
+# workflows without executing them, and names its worker from
+# WORKFLOW_AFFINITY_KEY for workflow worker affinity (Catalyst RFC 0039).
+# dapr-ext-workflow's client in vendor/ accepts the interceptor that sends the
+# worker ID. See "Front End and Worker" and "Workflow Worker Affinity" in the
+# README for how to copy them again.
 [tool.uv.sources]
 diagrid = { path = "vendor/python-ai" }
+dapr-ext-workflow = { path = "vendor/dapr-ext-workflow" }

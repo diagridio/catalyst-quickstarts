@@ -41,7 +41,7 @@ import grpc
 import uvicorn
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
-from diagrid.agent.core.workflow.runner import BaseWorkflowRunner
+from diagrid.agent.core.workflow.runner import AFFINITY_KEY_ENV, BaseWorkflowRunner
 from diagrid.agent.strands import DaprWorkflowAgentRunner as StrandsRunner
 
 # AgentCore sends its runtime session ID in this header.
@@ -134,9 +134,12 @@ class BedrockRunner:
             raise TypeError(f"BedrockRunner has no adapter for {type(runner).__module__}.{type(runner).__name__}")
         self._runner = runner
         self._adapter = adapter()
-        # The session this container serves, from the last /invocations request.
-        # AgentCore runs each session in its own microVM, so there is only one.
+        # The session this container serves, from the first /invocations
+        # request. AgentCore runs each session in its own microVM, so a request
+        # for any other session is refused.
         self._session_id = None
+        # Held while the first request connects the workflow worker.
+        self._start_lock = asyncio.Lock()
 
     def serve(self, port: int | None = None) -> None:
         """Serve POST /invocations and GET /ping on 0.0.0.0, as AgentCore Runtime calls them.
@@ -148,10 +151,13 @@ class BedrockRunner:
     def app(self) -> FastAPI:
         @asynccontextmanager
         async def lifespan(_app: FastAPI):
-            # Connects to Catalyst for as long as the server runs: the workflow
-            # client always, and the workflow runtime unless AGENT_WORKER=false,
-            # when workers in other processes execute the workflows.
-            self._runner.start()
+            # With WORKFLOW_AFFINITY_KEY set, the worker's ID is known now, so it
+            # connects at startup and takes over its unfinished runs without
+            # waiting for a request. Otherwise the first /invocations request
+            # connects it, in _start_worker. The worker stays connected until
+            # the server stops.
+            if os.environ.get(AFFINITY_KEY_ENV):
+                await self._start_worker(None)
             try:
                 yield
             finally:
@@ -161,6 +167,21 @@ class BedrockRunner:
         app.get("/ping")(self.ping)
         app.post("/invocations")(self.invocations)
         return app
+
+    async def _start_worker(self, session_id: str | None) -> None:
+        """Connect the workflow worker to Catalyst, named after the session.
+
+        AgentCore starts a session's microVM from a snapshot taken before any
+        session existed, and the session ID first reaches the container in this
+        request's header. Naming the worker after the session lets a later
+        microVM of the same session take over the session's unfinished runs.
+        WORKFLOW_AFFINITY_KEY overrides the name, for running outside AgentCore.
+        """
+        async with self._start_lock:
+            if self._runner.is_running:
+                return
+            worker_id = os.environ.get(AFFINITY_KEY_ENV) or session_id
+            await asyncio.to_thread(self._runner.start, worker_id)
 
     @property
     def _client(self):
@@ -199,7 +220,11 @@ class BedrockRunner:
         session_id = request.headers.get(SESSION_HEADER)
         if not session_id:
             return reply(session_id, 400, message="a session ID is required")
-        self._session_id = session_id
+        if self._session_id is None:
+            self._session_id = session_id
+        elif session_id != self._session_id:
+            return reply(session_id, 400, message=f"this container serves session {self._session_id}")
+        await self._start_worker(session_id)
 
         previous = await asyncio.to_thread(self._client.get_workflow_state, session_id)
         if not payload and previous is None:
