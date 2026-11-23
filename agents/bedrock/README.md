@@ -7,7 +7,7 @@ This quickstart deploys the [Strands Budget Analyst](../strands/) to [Amazon Bed
 - **Strands on AgentCore**: The agent serves the AgentCore Runtime HTTP contract, `POST /invocations` and `GET /ping` on port 8080
 - **Durable runs from a serverless host**: The container connects to Catalyst over the internet. There is no Dapr sidecar to run
 - **Credentials kept out of the runtime definition**: The Catalyst App ID token and the OpenAI key live in AWS Secrets Manager. Only the container's execution role can read them
-- **Same code locally and on AWS**: `diagrid dev run` runs the same `main.py` before you deploy it
+- **Same code locally and on AWS**: `uv run python main.py` runs the same `main.py` before you deploy it
 - **Conversation across invocations**: Invocations with the same session ID share one conversation, stored in Catalyst
 
 ## How the Code Is Organized
@@ -17,7 +17,7 @@ This quickstart deploys the [Strands Budget Analyst](../strands/) to [Amazon Bed
 
 ## How the Agent Connects to Catalyst
 
-The agent reads these variables. Locally, `diagrid dev run` sets the three Catalyst ones and you set the model ones:
+The agent reads these variables. Locally, you set them in your shell:
 
 | Variable | What it is | Where it is kept on AgentCore |
 |----------|------------|-------------------------------|
@@ -96,12 +96,20 @@ diagrid project create bedrock-quickstart --enable-managed-workflow --deploy-man
 diagrid agent create budget-planner --wait
 ```
 
-## 2. Run Locally
-
-Run the same code with Catalyst before you deploy it:
+## 2. Read the Catalyst Connection Values
 
 ```bash
-uv run diagrid dev run -f dev-python-bedrock.yaml --approve
+export DAPR_GRPC_ENDPOINT="$(diagrid project get bedrock-quickstart -o json | jq -r .status.endpoints.grpc.url)"
+export DAPR_HTTP_ENDPOINT="$(diagrid project get bedrock-quickstart -o json | jq -r .status.endpoints.http.url)"
+export DAPR_API_TOKEN="$(diagrid appid get budget-planner -o json | jq -r .status.apiToken)"
+```
+
+## 3. Run Locally
+
+Run the same code with Catalyst before you deploy it. It reads the Catalyst values from step 2 and the model values from [Setup](#setup):
+
+```bash
+uv run python main.py
 ```
 
 Wait until the output shows `Uvicorn running on http://0.0.0.0:8080`. From another terminal, send the request AgentCore will send:
@@ -115,12 +123,11 @@ curl -i -X POST http://localhost:8080/invocations \
 
 Or open [`test.http`](./test.http) in VS Code with the [REST Client](https://marketplace.visualstudio.com/items?itemName=humao.rest-client) extension. Stop the app with `Ctrl+C` before you go on.
 
-## 3. Read the Catalyst Connection Values
+To run the front end and the worker as separate processes, run each in its own terminal with the same variables. See [Front End and Worker](#front-end-and-worker):
 
 ```bash
-export DAPR_GRPC_ENDPOINT="$(diagrid project get bedrock-quickstart -o json | jq -r .status.endpoints.grpc.url)"
-export DAPR_HTTP_ENDPOINT="$(diagrid project get bedrock-quickstart -o json | jq -r .status.endpoints.http.url)"
-export DAPR_API_TOKEN="$(diagrid appid get budget-planner -o json | jq -r .status.apiToken)"
+WORKFLOW_WORKER=false uv run python main.py
+uv run python main.py worker
 ```
 
 ## 4. Build and Push the Image
@@ -146,7 +153,7 @@ docker buildx create --use
 docker buildx build --platform linux/arm64 -t "$ECR_REPO:$IMAGE_TAG" --push .
 ```
 
-To check the image before you deploy it, run it with the values from step 3. `-e NAME` with no value copies the variable from your shell, so the secrets do not appear on the command line:
+To check the image before you deploy it, run it with the values from step 2. `-e NAME` with no value copies the variable from your shell, so the secrets do not appear on the command line:
 
 ```bash
 docker run --rm --platform linux/arm64 -p 8080:8080 \
@@ -155,7 +162,7 @@ docker run --rm --platform linux/arm64 -p 8080:8080 \
   "$ECR_REPO:$IMAGE_TAG"
 ```
 
-Then send the `curl` request from step 2.
+Then send the `curl` request from step 3.
 
 ## 5. Store the Secrets
 

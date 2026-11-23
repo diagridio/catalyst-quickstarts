@@ -13,7 +13,7 @@ def load_secrets() -> None:
 
     On AgentCore the Catalyst App ID token and the model provider's key live in AWS
     Secrets Manager, and the runtime's execution role is allowed to read that one
-    secret. Values already in the environment win, so `diagrid dev run` and
+    secret. Values already in the environment win, so `uv run python main.py` and
     `docker run -e` work without a secret.
     """
     secret_arn = os.environ.get("AGENT_SECRET_ARN")
