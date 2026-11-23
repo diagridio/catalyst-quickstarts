@@ -12,7 +12,7 @@ This quickstart deploys the [Strands Budget Analyst](../strands/) to [Amazon Bed
 
 ## How the Code Is Organized
 
-- `main.py` holds what is specific to this agent: its tool, its model and its prompt. It builds the Strands `DaprWorkflowAgentRunner` as any Catalyst agent does. `python main.py` passes it to `BedrockRunner` and calls `serve()`. `python main.py worker` calls the runner's `work()` instead, which executes workflows with no HTTP server. See [Front End and Worker](#front-end-and-worker).
+- `main.py` holds what is specific to this agent: its tool, its model and its prompt. It builds the Strands `DaprWorkflowAgentRunner` as any Catalyst agent does. It passes it to `BedrockRunner` and calls `serve()`, unless `WORKFLOW_WORKER=true`: then it calls the runner's `work()`, which executes workflows with no HTTP server. See [Front End and Worker](#front-end-and-worker).
 - `bedrock_runner.py` holds what AgentCore needs. `BedrockRunner` takes the agent's workflow runner and serves it on `POST /invocations` and `GET /ping`, port 8080. What it needs to know about the framework, such as where a run stores its task and its answer, is in an adapter for that runner type. Only Strands has one (`StrandsAdapter`). Another framework's runner, such as LangGraph's, needs its own adapter in `ADAPTERS`. Importing the module loads the secrets, so `main.py` imports it before anything that imports the Dapr SDK.
 
 ## How the Agent Connects to Catalyst
@@ -27,7 +27,7 @@ The agent reads these variables. Locally, you set them in your shell:
 | `OPENAI_API_KEY` | The API key of your model provider | Secrets Manager |
 | `OPENAI_BASE_URL` | The provider's OpenAI-compatible endpoint. Defaults to `https://api.openai.com/v1` | Runtime environment variable. It is not a secret |
 | `OPENAI_MODEL` | A model the provider serves. Defaults to `gpt-4o-mini` | Runtime environment variable. It is not a secret |
-| `WORKFLOW_WORKER` | `false` makes the container start runs without executing them. Unset, it executes them too. See [Front End and Worker](#front-end-and-worker) | Runtime environment variable. It is not a secret |
+| `WORKFLOW_WORKER` | `false` makes the container start runs without executing them. `true` makes it only execute runs, with no HTTP server. Unset, it does both. See [Front End and Worker](#front-end-and-worker) | Runtime environment variable. It is not a secret |
 
 To use another OpenAI-compatible provider, set `OPENAI_BASE_URL` to its endpoint, `OPENAI_MODEL` to one of its models, and `OPENAI_API_KEY` to its key. The model must support tool calling, because the agent calls `calculate_budget`.
 
@@ -127,7 +127,7 @@ To run the front end and the worker as separate processes, run each in its own t
 
 ```bash
 WORKFLOW_WORKER=false uv run python main.py
-uv run python main.py worker
+WORKFLOW_WORKER=true uv run python main.py
 ```
 
 ## 4. Build and Push the Image
@@ -432,7 +432,7 @@ By default one container does both jobs: it serves `/invocations` and `/ping`, a
 | Deployment | Command | `WORKFLOW_WORKER` | What it does |
 |------------|---------|-------------------|--------------|
 | Front end | `python main.py` | `false` | Serves `/invocations` and `/ping`. Starts runs and reads their state in Catalyst. Executes nothing |
-| Worker | `python main.py worker` | unset | Executes runs: the model calls and the tool calls. No HTTP server |
+| Worker | `python main.py` | `true` | Executes runs: the model calls and the tool calls. No HTTP server |
 
 Both use the `budget-planner` App ID token, because a run belongs to the App ID that started it. Catalyst gives each run to any connected worker of the App ID. A front end with no worker connected starts runs that wait until a worker connects.
 

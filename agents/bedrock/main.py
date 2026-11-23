@@ -1,6 +1,5 @@
 import logging
 import os
-import sys
 import time
 
 # Imported first: it loads the secrets the Dapr SDK reads when it is imported.
@@ -75,10 +74,10 @@ runner = DaprWorkflowAgentRunner(
 )
 
 if __name__ == "__main__":
-    # "python main.py worker" only executes workflows, with no HTTP server.
+    # WORKFLOW_WORKER=true only executes workflows, with no HTTP server.
     # Otherwise the container serves AgentCore's HTTP contract, and executes
     # workflows too unless WORKFLOW_WORKER=false.
-    if sys.argv[1:] == ["worker"]:
+    if os.environ.get("WORKFLOW_WORKER", "").strip().lower() in ("true", "1", "yes"):
         runner.work()
     else:
         BedrockRunner(runner).serve()
