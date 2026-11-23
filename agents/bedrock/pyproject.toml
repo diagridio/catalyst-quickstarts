@@ -11,3 +11,9 @@ dependencies = [
 
 [tool.uv]
 package = false
+
+# The diagrid runner in vendor/ adds WORKFLOW_WORKER, which lets a process start
+# workflows without executing them. See "Front End and Worker" in the README for
+# how to copy it again.
+[tool.uv.sources]
+diagrid = { path = "vendor/python-ai" }

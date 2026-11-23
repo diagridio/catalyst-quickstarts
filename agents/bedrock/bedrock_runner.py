@@ -51,7 +51,9 @@ SESSION_HEADER = "x-amzn-bedrock-agentcore-runtime-session-id"
 MAX_HISTORY_CHARS = 20000
 
 # Tells the model how to read the task with_history builds: the whole conversation
-# in one message, of which only the last request is to be answered.
+# in one message, of which only the last request is to be answered. The workflow
+# reads the agent's system prompt in the worker, so the agent definition adds this
+# to it, in every process.
 TRANSCRIPT_INSTRUCTION = (
     "The user message is the conversation so far, as lines starting with 'User:' "
     "and 'Assistant:'. Answer the last 'User:' request."
@@ -66,10 +68,6 @@ class StrandsAdapter:
     workflow input, and stores the agent's answer as {"result": ...} in its output.
     """
 
-    def prepare(self, runner) -> None:
-        # Tells the model how to read the transcript with_history builds.
-        runner.agent.system_prompt = f"{runner.agent.system_prompt or ''} {TRANSCRIPT_INSTRUCTION}".strip()
-
     def start(self, runner, task: str, session_id: str):
         return runner.run_async(task, session_id, workflow_id=session_id)
 
@@ -81,7 +79,7 @@ class StrandsAdapter:
 
 
 # The runner types BedrockRunner can serve. Supporting another framework means
-# adding an adapter with the same four methods for its runner type.
+# adding an adapter with the same three methods for its runner type.
 ADAPTERS = {StrandsRunner: StrandsAdapter}
 
 
@@ -132,7 +130,6 @@ class BedrockRunner:
             raise TypeError(f"BedrockRunner has no adapter for {type(runner).__module__}.{type(runner).__name__}")
         self._runner = runner
         self._adapter = adapter()
-        self._adapter.prepare(runner)
         # The session this container serves, from the last /invocations request.
         # AgentCore runs each session in its own microVM, so there is only one.
         self._session_id = None
@@ -147,7 +144,9 @@ class BedrockRunner:
     def app(self) -> FastAPI:
         @asynccontextmanager
         async def lifespan(_app: FastAPI):
-            # Connects the workflow worker to Catalyst for as long as the server runs.
+            # Connects to Catalyst for as long as the server runs: the workflow
+            # client always, and the workflow worker unless WORKFLOW_WORKER
+            # turns it off, when workers in other processes run the workflows.
             self._runner.start()
             try:
                 yield
@@ -167,8 +166,9 @@ class BedrockRunner:
     async def ping(self) -> dict:
         # HealthyBusy keeps the AgentCore session alive while its workflow runs, even
         # when no request is waiting for it, so the idle timeout cannot stop the
-        # worker in the middle of a run.
-        if self._session_id:
+        # worker in the middle of a run. A container that is not a worker has no
+        # run to protect.
+        if self._session_id and self._runner.is_worker:
             try:
                 state = await asyncio.to_thread(self._client.get_workflow_state, self._session_id)
                 if state is not None and state.runtime_status.name in ("RUNNING", "PENDING"):

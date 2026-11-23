@@ -1,8 +1,9 @@
 import logging
 import os
+import sys
 
 # Imported first: it loads the secrets the Dapr SDK reads when it is imported.
-from bedrock_runner import BedrockRunner
+from bedrock_runner import TRANSCRIPT_INSTRUCTION, BedrockRunner
 
 from strands import Agent, tool
 from strands.models.openai import OpenAIModel
@@ -56,7 +57,7 @@ system_prompt ="""
     Correct spelling of items in user request if needed.
     Return the full budget breakdown with line items, totals, and recommended buffer.
     Always call the tool before responding.
-    """.format(",".join(PRICES.keys()))
+    """.format(",".join(PRICES.keys())) + TRANSCRIPT_INSTRUCTION
 
 agent = Agent(
     model=model,
@@ -64,13 +65,17 @@ agent = Agent(
     system_prompt=system_prompt
 )
 
-runner = BedrockRunner(
-    DaprWorkflowAgentRunner(
-        name="budget-planner",
-        agent=agent,
-        state_store=DaprStateStore(store_name="kvstore"),
-    )
+runner = DaprWorkflowAgentRunner(
+    name="budget-planner",
+    agent=agent,
+    state_store=DaprStateStore(store_name="kvstore"),
 )
 
 if __name__ == "__main__":
-    runner.serve()
+    # "python main.py worker" only executes workflows, with no HTTP server.
+    # Otherwise the container serves AgentCore's HTTP contract, and executes
+    # workflows too unless WORKFLOW_WORKER=false.
+    if sys.argv[1:] == ["worker"]:
+        runner.work()
+    else:
+        BedrockRunner(runner).serve()
