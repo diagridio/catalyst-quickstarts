@@ -12,7 +12,7 @@ This quickstart deploys the [Strands Budget Analyst](../strands/) to [Amazon Bed
 
 ## How the Code Is Organized
 
-- `main.py` holds what is specific to this agent: its tool, its model and its prompt. It builds the Strands `DaprWorkflowAgentRunner` as any Catalyst agent does. It passes it to `BedrockRunner` and calls `serve()`, unless `WORKFLOW_WORKER=true`: then it calls the runner's `work()`, which executes workflows with no HTTP server. See [Front End and Worker](#front-end-and-worker).
+- `main.py` holds what is specific to this agent: its tool, its model and its prompt. It builds the Strands `DaprWorkflowAgentRunner` as any Catalyst agent does. It passes it to `BedrockRunner` and calls `serve()`. `AGENT_WORKER` decides whether the process also executes runs. See [Front End and Worker](#front-end-and-worker).
 - `bedrock_runner.py` holds what AgentCore needs. `BedrockRunner` takes the agent's workflow runner and serves it on `POST /invocations` and `GET /ping`, port 8080. What it needs to know about the framework, such as where a run stores its task and its answer, is in an adapter for that runner type. Only Strands has one (`StrandsAdapter`). Another framework's runner, such as LangGraph's, needs its own adapter in `ADAPTERS`. Importing the module loads the secrets, so `main.py` imports it before anything that imports the Dapr SDK.
 
 ## How the Agent Connects to Catalyst
@@ -27,7 +27,7 @@ The agent reads these variables. Locally, you set them in your shell:
 | `OPENAI_API_KEY` | The API key of your model provider | Secrets Manager |
 | `OPENAI_BASE_URL` | The provider's OpenAI-compatible endpoint. Defaults to `https://api.openai.com/v1` | Runtime environment variable. It is not a secret |
 | `OPENAI_MODEL` | A model the provider serves. Defaults to `gpt-4o-mini` | Runtime environment variable. It is not a secret |
-| `WORKFLOW_WORKER` | `false` makes the container start runs without executing them. `true` makes it only execute runs, with no HTTP server. Unset, it does both. See [Front End and Worker](#front-end-and-worker) | Runtime environment variable. It is not a secret |
+| `AGENT_WORKER` | `false` or `0` makes the container start runs without executing them. Any other value, or unset, makes it execute runs too. The container serves `/invocations` and `/ping` either way. See [Front End and Worker](#front-end-and-worker) | Runtime environment variable. It is not a secret |
 
 To use another OpenAI-compatible provider, set `OPENAI_BASE_URL` to its endpoint, `OPENAI_MODEL` to one of its models, and `OPENAI_API_KEY` to its key. The model must support tool calling, because the agent calls `calculate_budget`.
 
@@ -123,11 +123,11 @@ curl -i -X POST http://localhost:8080/invocations \
 
 Or open [`test.http`](./test.http) in VS Code with the [REST Client](https://marketplace.visualstudio.com/items?itemName=humao.rest-client) extension. Stop the app with `Ctrl+C` before you go on.
 
-To run the front end and the worker as separate processes, run each in its own terminal with the same variables. See [Front End and Worker](#front-end-and-worker):
+To run the front end and the worker as separate processes, run each in its own terminal with the same variables. Both serve HTTP, so the worker listens on another port. See [Front End and Worker](#front-end-and-worker):
 
 ```bash
-WORKFLOW_WORKER=false uv run python main.py
-WORKFLOW_WORKER=true uv run python main.py
+AGENT_WORKER=false uv run python main.py
+APP_PORT=8081 uv run python main.py
 ```
 
 ## 4. Build and Push the Image
@@ -429,18 +429,22 @@ shred -u secret.json
 
 By default one container does both jobs: it serves `/invocations` and `/ping`, and it executes the runs as a workflow worker of `budget-planner`. The two can run as separate deployments of the same image:
 
-| Deployment | Command | `WORKFLOW_WORKER` | What it does |
-|------------|---------|-------------------|--------------|
+| Deployment | Command | `AGENT_WORKER` | What it does |
+|------------|---------|----------------|--------------|
 | Front end | `python main.py` | `false` | Serves `/invocations` and `/ping`. Starts runs and reads their state in Catalyst. Executes nothing |
-| Worker | `python main.py` | `true` | Executes runs: the model calls and the tool calls. No HTTP server |
+| Worker | `python main.py` | unset | Serves `/invocations` and `/ping` too, and executes runs: the model calls and the tool calls |
+
+`AGENT_WORKER` only decides whether the process executes runs. Both deployments serve the same routes, because both can start runs and read their state. Give users the front end's endpoint.
 
 Both use the `budget-planner` App ID token, because a run belongs to the App ID that started it. Catalyst gives each run to any connected worker of the App ID. A front end with no worker connected starts runs that wait until a worker connects.
 
 The worker reads the agent's system prompt, its model and its tools, so both deployments must run the same `main.py`. The front end builds the same agent but never calls the model.
 
-`WORKFLOW_WORKER` is in the diagrid runner's `BaseWorkflowRunner`, so it works the same for every framework's runner. It is not in a diagrid release yet. The source of the diagrid package with it is in `vendor/python-ai`, and `[tool.uv.sources]` in `pyproject.toml` installs it in place of the PyPI release. It is `diagridio/python-ai` `main` with the `WORKFLOW_WORKER` change in `diagrid/agent/core/workflow/runner.py` and `diagrid/agent/langgraph/runner.py`. A build writes `build/` and `*.egg-info/` into it; git and Docker ignore them.
+On AgentCore, a worker that serves no users can be stopped in the middle of a run. `/ping` answers `HealthyBusy` only while the container's own session has a run in progress. A worker executes runs of any session, and the Dapr workflow runtime exposes no count of the work it is executing, so this worker always answers `Healthy`. AgentCore stops its session after the idle timeout, and always at its maximum lifetime. AgentCore also starts the worker's container only when something invokes its runtime. An interrupted run keeps its state in Catalyst and resumes when a worker connects.
 
-To copy `main` again, from this directory, and then apply the `WORKFLOW_WORKER` change to the copy:
+`AGENT_WORKER` is read by the diagrid runner's `BaseWorkflowRunner`, so it works the same for every framework's runner. It is not in a diagrid release yet. The source of the diagrid package with it is in `vendor/python-ai`, and `[tool.uv.sources]` in `pyproject.toml` installs it in place of the PyPI release. It is `diagridio/python-ai` `main` with the `AGENT_WORKER` change in `diagrid/agent/core/workflow/runner.py` and `diagrid/agent/langgraph/runner.py`. A build writes `build/` and `*.egg-info/` into it; git and Docker ignore them.
+
+To copy `main` again, from this directory, and then apply the `AGENT_WORKER` change to the copy:
 
 ```bash
 rsync -a --delete --exclude=__pycache__ --exclude=/diagrid/core/ --exclude=/diagrid/cli/ \
@@ -453,7 +457,7 @@ uv sync --reinstall-package diagrid
 
 ## Good to Know
 
-- **The workflow worker runs only while an AgentCore session is running**, when the container is also the worker. Each session runs in its own microVM, and each microVM's container connects to Catalyst as a worker for `budget-planner`. Catalyst gives a run to any connected worker of the App ID, so a session's run can execute in another session's container. AgentCore [stops a session](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/runtime-sessions.html#session-lifecycle) after 15 minutes without activity, or 8 hours after it started. Both are defaults that the runtime's lifecycle configuration can change. While the session's own run is in progress, `/ping` answers [`HealthyBusy`](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/runtime-http-protocol-contract.html#ping-endpoint), which keeps the session alive, so the idle timeout does not stop it even when no request is waiting. A front end with `WORKFLOW_WORKER=false` always answers `Healthy`: it has no run to protect. `/ping` knows only its own session's run, so a container that executes another session's run can still be stopped for being idle. A run that is interrupted keeps its state in Catalyst. It resumes as soon as any container of the runtime is connected, or, if none is, when the next invocation starts one. Until the run ends, a request in its session is not started as a new task: it waits for the run and gets its result.
+- **The workflow worker runs only while an AgentCore session is running**, when the container is also the worker. Each session runs in its own microVM, and each microVM's container connects to Catalyst as a worker for `budget-planner`. Catalyst gives a run to any connected worker of the App ID, so a session's run can execute in another session's container. AgentCore [stops a session](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/runtime-sessions.html#session-lifecycle) after 15 minutes without activity, or 8 hours after it started. Both are defaults that the runtime's lifecycle configuration can change. While the session's own run is in progress, `/ping` answers [`HealthyBusy`](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/runtime-http-protocol-contract.html#ping-endpoint), which keeps the session alive, so the idle timeout does not stop it even when no request is waiting. A front end with `AGENT_WORKER=false` always answers `Healthy`: it has no run to protect. `/ping` knows only its own session's run, so a container that executes another session's run can still be stopped for being idle. A run that is interrupted keeps its state in Catalyst. It resumes as soon as any container of the runtime is connected, or, if none is, when the next invocation starts one. Until the run ends, a request in its session is not started as a new task: it waits for the run and gets its result.
 - **`/invocations` waits for the run to finish.** AgentCore [allows a synchronous request 15 minutes](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/bedrock-agentcore-limits.html#invocation-limits), and the limit cannot be raised. A run that takes longer keeps running in Catalyst, but the request fails. The result is in the run's output in Catalyst, and the session's next task includes it in the conversation.
 - **Tasks sent with the same session ID share one conversation.** The agent carries it in the task text. Before starting a task, it reads the session's last run from Catalyst, which is the workflow instance named after the session ID. That run's task is already the conversation up to that run, written as lines starting with `User:` and `Assistant:`. The agent adds that run's answer and the new request to it, and starts the new run with the result. The system prompt tells the model to answer the last `User:` line. Because Catalyst stores each run's task, the history survives a crash or a new container without a separate store. The model sees the history as one block of text, not as separate turns, without the tool calls and tool results of earlier tasks, and at most its newest 20,000 characters (`MAX_HISTORY_CHARS` in `bedrock_runner.py`).
 - **The diagrid SDK sends one anonymous usage event per process.** On AgentCore that is one event for each session's container. It holds versions, the platform and the agent framework, and no prompts, app IDs or hostnames. To turn it off, add `DO_NOT_TRACK: "1"` to the runtime's environment variables. The [diagrid package description](https://pypi.org/project/diagrid/0.5.3/) lists what is sent and the other opt-out variables.

@@ -74,10 +74,4 @@ runner = DaprWorkflowAgentRunner(
 )
 
 if __name__ == "__main__":
-    # WORKFLOW_WORKER=true only executes workflows, with no HTTP server.
-    # Otherwise the container serves AgentCore's HTTP contract, and executes
-    # workflows too unless WORKFLOW_WORKER=false.
-    if os.environ.get("WORKFLOW_WORKER", "").strip().lower() in ("true", "1", "yes"):
-        runner.work()
-    else:
-        BedrockRunner(runner).serve()
+    BedrockRunner(runner).serve()

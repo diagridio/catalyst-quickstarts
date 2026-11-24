@@ -34,16 +34,16 @@ except ImportError:  # pragma: no cover - older diagrid-core
 
 logger = logging.getLogger(__name__)
 
-# The environment variable that sets whether this process is a workflow worker.
-# A worker connects to Dapr to execute the runner's workflow and activities. A
-# process that is not a worker only starts workflows and reads their state, for
-# workers that run in other processes. "false", "0" and "no" turn it off; it is
-# on when unset.
-WORKER_ENV = "WORKFLOW_WORKER"
+# The environment variable that sets whether this process executes workflows.
+# "false" or "0" creates only the workflow client: the process starts workflows
+# and reads their state, and workers in other processes execute them. Any other
+# value, or none, also starts the workflow runtime, which executes the runner's
+# workflow and activities.
+WORKER_ENV = "AGENT_WORKER"
 
 
-def _worker_from_env() -> bool:
-    return os.environ.get(WORKER_ENV, "").strip().lower() not in ("false", "0", "no")
+def _is_worker_from_env() -> bool:
+    return os.environ.get(WORKER_ENV, "").strip().lower() not in ("false", "0")
 
 
 # The distribution that carries each framework, keyed by the lower-cased
@@ -123,7 +123,7 @@ class BaseWorkflowRunner(SignalMixin, AgentRegistryMixin, ABC):
         self._port = port
         self._max_iterations = max_iterations
         self._state_store = state_store
-        self._worker = _worker_from_env()
+        self._worker = _is_worker_from_env()
         # Subclasses register their workflow and activities on the runtime
         # whether or not this process is a worker: registering opens no
         # connection, and it sets the workflow name the client schedules by.
@@ -158,7 +158,7 @@ class BaseWorkflowRunner(SignalMixin, AgentRegistryMixin, ABC):
 
     @property
     def is_worker(self) -> bool:
-        """Whether this process executes the workflow, from ``WORKFLOW_WORKER``."""
+        """Whether this process executes workflows: false only for ``AGENT_WORKER=false`` or ``0``."""
         return self._worker
 
     def start(self) -> None:
@@ -177,24 +177,6 @@ class BaseWorkflowRunner(SignalMixin, AgentRegistryMixin, ABC):
             "Dapr Workflow %s started",
             "runtime" if self._worker else "client (not a worker)",
         )
-
-    def work(self) -> None:
-        """Run as a workflow worker until SIGINT or SIGTERM.
-
-        For a process that only executes workflows, with no HTTP server.
-        """
-        if not self._worker:
-            raise RuntimeError(f"work() needs a worker, but {WORKER_ENV} turns it off")
-
-        async def _run() -> None:
-            self.install_signal_handlers()
-            self.start()
-            try:
-                await self.wait_for_shutdown()
-            finally:
-                await self.graceful_shutdown()
-
-        asyncio.run(_run())
 
     def shutdown(self) -> None:
         """Shutdown the workflow runtime and clean up resources."""

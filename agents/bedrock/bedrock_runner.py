@@ -149,8 +149,8 @@ class BedrockRunner:
         @asynccontextmanager
         async def lifespan(_app: FastAPI):
             # Connects to Catalyst for as long as the server runs: the workflow
-            # client always, and the workflow worker unless WORKFLOW_WORKER
-            # turns it off, when workers in other processes run the workflows.
+            # client always, and the workflow runtime unless AGENT_WORKER=false,
+            # when workers in other processes execute the workflows.
             self._runner.start()
             try:
                 yield
@@ -170,8 +170,14 @@ class BedrockRunner:
     async def ping(self) -> dict:
         # HealthyBusy keeps the AgentCore session alive while its workflow runs, even
         # when no request is waiting for it, so the idle timeout cannot stop the
-        # worker in the middle of a run. A container that is not a worker has no
-        # run to protect.
+        # worker in the middle of a run. A container with AGENT_WORKER=false executes
+        # no runs, so it has none to protect.
+        #
+        # LIMITATION: this sees only the run of this container's own session. A
+        # worker executes runs of any session of the App ID, and the Dapr workflow
+        # runtime exposes no count of the work it is executing. So a container that
+        # serves no users, deployed only to execute runs, always answers Healthy,
+        # and AgentCore can stop it for being idle in the middle of a run.
         if self._session_id and self._runner.is_worker:
             try:
                 state = await asyncio.to_thread(self._client.get_workflow_state, self._session_id)
