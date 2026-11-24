@@ -29,7 +29,7 @@ Before you proceed, ensure you have the following prerequisites installed.
 - [Diagrid Catalyst account](https://catalyst.diagrid.io/)
 - [Diagrid CLI](https://docs.diagrid.io/getting-started/install-cli)
 - [Git](https://git-scm.com/downloads)
-- [.NET 10.0](https://dotnet.microsoft.com/en-us/download)
+- [.NET 10 SDK](https://dotnet.microsoft.com/en-us/download/dotnet/10.0). The project targets `net10.0`. Run `dotnet --version` to check; it should print `10.x`.
 
 ## 2. Log in to Catalyst
 
