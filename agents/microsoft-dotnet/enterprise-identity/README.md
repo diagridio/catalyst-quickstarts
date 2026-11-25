@@ -29,7 +29,7 @@ With inbound alone, the agent knows you are Alice and then calls every tool as o
 ## Prerequisites
 
 1. [Diagrid CLI](https://docs.diagrid.io/references/catalyst/catalyst-cli-intro/) installed
-2. [.NET 10 SDK](https://dotnet.microsoft.com/download) installed
+2. [.NET 10 SDK](https://dotnet.microsoft.com/download) installed. The projects target `net10.0`. Run `dotnet --version` to check; it should print `10.x`.
 
 No LLM API key, and no identity provider of your own. The model is canned by default, and the last section runs the whole thing offline against a throwaway issuer.
 
