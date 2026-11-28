@@ -1,0 +1,212 @@
+# Copyright (c) 2026-Present Diagrid Inc.
+# SPDX-License-Identifier: BUSL-1.1
+
+import logging
+from datetime import datetime, timezone
+from typing import TYPE_CHECKING, Any, Dict, Optional
+
+from diagrid.agent.core.metadata.mapping.base import BaseAgentMapper
+from diagrid.agent.core.types import SupportedFrameworks
+from dapr_agents import (
+    AgentMetadata,
+    AgentMetadataSchema,
+    LLMMetadata,
+    MemoryMetadata,
+    PubSubMetadata,
+    RegistryMetadata,
+    ToolMetadata,
+)
+from dapr_agents.agents.configs import MemoryStoreMetadata
+from langgraph.pregel._read import PregelNode
+
+if TYPE_CHECKING:
+    from dapr.ext.langgraph import DaprCheckpointer
+
+logger = logging.getLogger(__name__)
+
+
+class LangGraphMapper(BaseAgentMapper):
+    def __init__(self) -> None:
+        pass
+
+    def map_agent_metadata(
+        self, agent: Any, schema_version: str, *, name: Optional[str] = None
+    ) -> AgentMetadataSchema:
+        introspected_vars: Dict[str, Any] = vars(agent)  # type: ignore
+
+        nodes: Dict[str, object] = introspected_vars.get("nodes", {})  # type: ignore
+
+        tools: list[Dict[str, Any]] = []
+        seen_tool_names: set[str] = set()
+        llm_metadata: Optional[Dict[str, Any]] = None
+        system_prompt: Optional[str] = None
+
+        for node_name, obj in nodes.items():  # type: ignore
+            if node_name == "__start__":
+                # We don't want to process the start node
+                continue
+
+            if isinstance(obj, PregelNode):
+                node_vars = vars(obj)
+                if "bound" in node_vars.keys():
+                    bound = node_vars["bound"]
+
+                    # Check if it's a ToolNode
+                    if hasattr(bound, "_tools_by_name"):
+                        tools_by_name = getattr(bound, "_tools_by_name", {})
+                        for tool_name, tool in tools_by_name.items():
+                            if tool_name not in seen_tool_names:
+                                seen_tool_names.add(tool_name)
+                                tools.append(
+                                    {
+                                        "name": tool_name,
+                                        "description": getattr(tool, "description", ""),
+                                        "args": str(getattr(tool, "args", {}) or {}),
+                                    }
+                                )
+
+                    # Check if it's an assistant RunnableCallable
+                    elif type(bound).__name__ == "RunnableCallable":
+                        func = getattr(bound, "func", None)
+                        if func and hasattr(func, "__globals__"):
+                            func_globals = func.__globals__
+
+                            for _, global_value in func_globals.items():
+                                var_type = type(global_value).__name__
+                                var_module = type(global_value).__module__
+
+                                if "chat" in var_type.lower():
+                                    model = getattr(
+                                        global_value, "model_name", None
+                                    ) or getattr(global_value, "model", None)
+
+                                    if model and not llm_metadata:
+                                        llm_metadata = {
+                                            "client": var_type,
+                                            "provider": self._extract_provider(
+                                                var_module
+                                            ),
+                                            "model": model,
+                                            "base_url": getattr(
+                                                global_value, "base_url", None
+                                            ),
+                                        }
+
+                                # Look for system message
+                                elif var_type == "SystemMessage":
+                                    content = getattr(global_value, "content", None)
+                                    if content and not system_prompt:
+                                        system_prompt = content
+
+                                # Fallback: look for lists of @tool-decorated functions
+                                elif (
+                                    isinstance(global_value, (list, tuple))
+                                    and global_value
+                                ):
+                                    self._collect_tools_from_list(
+                                        global_value, tools, seen_tool_names
+                                    )
+
+        checkpointer: Optional["DaprCheckpointer"] = introspected_vars.get(
+            "checkpointer", None
+        )  # type: ignore
+
+        # Check for metadata hints set by DaprWorkflowGraphRunner
+        custom_name = getattr(agent, "_diagrid_name", None)
+        custom_role = getattr(agent, "_diagrid_role", None)
+        custom_goal = getattr(agent, "_diagrid_goal", None)
+        system_prompt = getattr(agent, "_diagrid_instructions", None) or system_prompt
+
+        if name:
+            full_name = name
+        else:
+            raw_name = custom_name or (
+                agent.get_name() if hasattr(agent, "get_name") else ""
+            )
+            agent_id = raw_name.lower().replace(" ", "-") if raw_name else "graph"
+            full_name = f"langgraph-{agent_id}"
+        role = custom_role or "Assistant"
+        goal = custom_goal or system_prompt or ""
+
+        return AgentMetadataSchema(
+            version=schema_version,
+            agent=AgentMetadata(
+                appid="",
+                type=type(agent).__name__,
+                orchestrator=False,
+                role=role,
+                goal=goal,
+                instructions=[system_prompt] if system_prompt else [],
+                system_prompt=system_prompt or "",
+                framework=SupportedFrameworks.LANGGRAPH,
+                max_iterations=getattr(agent, "_diagrid_max_steps", 1),
+                tool_choice="auto",
+                metadata=None,
+            ),
+            name=full_name,
+            registered_at=datetime.now(timezone.utc).isoformat(),
+            pubsub=PubSubMetadata(
+                resource_name="",
+                broadcast_topic=None,
+                agent_topic=None,
+            ),
+            memory=MemoryMetadata(
+                short_term=MemoryStoreMetadata(
+                    type="DaprCheckpointer",
+                    resource_name=checkpointer.store_name if checkpointer else None,  # type: ignore
+                ),
+            ),
+            llm=LLMMetadata(
+                client=llm_metadata.get("client", "") if llm_metadata else "",
+                provider=llm_metadata.get("provider", "unknown")
+                if llm_metadata
+                else "unknown",
+                api="chat",
+                model=llm_metadata.get("model", "unknown")
+                if llm_metadata
+                else "unknown",
+                resource_name=None,
+                base_url=llm_metadata.get("base_url") if llm_metadata else None,
+                azure_endpoint=llm_metadata.get("azure_endpoint")
+                if llm_metadata
+                else None,
+                azure_deployment=llm_metadata.get("azure_deployment")
+                if llm_metadata
+                else None,
+                prompt_template=None,
+            ),
+            registry=RegistryMetadata(
+                resource_name=None,
+                name=None,
+            ),
+            tools=[
+                ToolMetadata(
+                    name=tool.get("name", ""),
+                    description=tool.get("description", ""),
+                    args=tool.get("args", ""),
+                )
+                for tool in tools
+            ],
+        )
+
+    @staticmethod
+    def _collect_tools_from_list(
+        candidates: Any,
+        tools: list[Dict[str, Any]],
+        seen: set[str],
+    ) -> None:
+        """Extract tool metadata from a list of langchain-style tool objects."""
+        first = candidates[0]
+        if not (hasattr(first, "name") and hasattr(first, "description")):
+            return
+        for tool_obj in candidates:
+            tool_name = getattr(tool_obj, "name", None)
+            if tool_name and tool_name not in seen:
+                seen.add(tool_name)
+                tools.append(
+                    {
+                        "name": tool_name,
+                        "description": getattr(tool_obj, "description", "") or "",
+                        "args": str(getattr(tool_obj, "args", {}) or {}),
+                    }
+                )

@@ -1,0 +1,19 @@
+[project]
+name = "bedrock-agent"
+version = "0.1.0"
+requires-python = ">=3.11,<3.14"
+dependencies = [
+    "boto3==1.43.53",
+    "diagrid[strands]==0.5.3",
+    "fastapi==0.136.1",
+    "uvicorn[standard]==0.46.0",
+]
+
+[tool.uv]
+package = false
+
+# The diagrid runner in vendor/ adds WORKFLOW_WORKER, which lets a process start
+# workflows without executing them. See "Front End and Worker" in the README for
+# how to copy it again.
+[tool.uv.sources]
+diagrid = { path = "vendor/python-ai" }

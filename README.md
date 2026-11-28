@@ -18,6 +18,7 @@ Catalyst works with the following agent frameworks:
 | [LangGraph](agents/langgraph/) | Graph-based agent orchestration with conditional routing, made durable with Catalyst |
 | [LangGraph.js](agents/langgraphjs/) | Graph-based agent orchestration for TypeScript, with the end user's verified identity propagated to its tools by Catalyst |
 | [Strands](agents/strands/) | Model-driven agent framework from AWS with tool use, made durable with Catalyst |
+| [Strands on Bedrock AgentCore](agents/bedrock/) | The Strands agent deployed to Amazon Bedrock AgentCore Runtime, made durable with Catalyst |
 | [Microsoft Agent Framework](agents/microsoft-dotnet/) | Enterprise agent framework from Microsoft, made durable with Catalyst |
 | [Spring AI](agents/spring-ai/) | Spring's AI framework for Java, made durable with Catalyst |
 | [Google ADK](agents/adk/) | Google's Agent Development Kit, running on OpenAI through LiteLLM, made durable with Catalyst |

@@ -1,0 +1,9 @@
+.venv
+__pycache__
+.env*
+secret.json
+response.json
+trust-policy.json
+permissions.json
+vendor/*/build
+vendor/*/*.egg-info

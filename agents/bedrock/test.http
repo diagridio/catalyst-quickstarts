@@ -1,0 +1,13 @@
+### Health check, as AgentCore Runtime calls it
+GET http://localhost:8080/ping
+
+### Trigger Budget Analyst agent, as AgentCore Runtime calls it
+### The whole body is the task. The session ID comes from this header, which
+### AgentCore sets.
+POST http://localhost:8080/invocations
+Content-Type: application/json
+X-Amzn-Bedrock-AgentCore-Runtime-Session-Id: local-session-0123456789abcdef0123
+
+{
+    "task": "Calculate the budget for a corporate event with venue, catering, and entertainment"
+}

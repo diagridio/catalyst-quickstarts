@@ -1,0 +1,457 @@
+# Copyright (c) 2026-Present Diagrid Inc.
+# SPDX-License-Identifier: BUSL-1.1
+
+from __future__ import annotations
+
+import logging
+import random
+import time
+from importlib.metadata import PackageNotFoundError, version
+from typing import Any, Callable, Dict, Optional
+
+from .introspection import (
+    detect_framework,
+    find_agent_in_stack,
+)
+from diagrid.agent.core.types import (
+    SupportedFrameworks,
+)
+
+from dapr_agents.storage.daprstores.stateservice import (
+    StateStoreError,
+    StateStoreService,
+)
+from dapr_agents.agents.configs import (
+    AgentMetadataSchema,
+    AgentRegistryConfig,
+)
+
+from dapr.clients.grpc._state import Concurrency, Consistency
+
+from diagrid.agent.core.discovery import discover_components
+
+logger = logging.getLogger(__name__)
+
+_REGISTRY_AGENTS_KEY = "agents"
+
+
+def _is_etag_conflict(exc: Exception) -> bool:
+    """Return True if *exc* was caused by an ETag / optimistic-concurrency conflict.
+
+    Dapr signals ETag mismatches with gRPC ``StatusCode.ABORTED``.
+    ``StateStoreService`` wraps the gRPC error as the ``__cause__`` of a
+    ``StateStoreError``, so we inspect the chain.
+    """
+    cause = exc.__cause__ if isinstance(exc, StateStoreError) else exc
+    try:
+        import grpc
+
+        if isinstance(cause, grpc.RpcError) and cause.code() == grpc.StatusCode.ABORTED:
+            return True
+    except ImportError:
+        pass
+    # Fallback: heuristic on the error message
+    msg = str(exc).lower()
+    return "etag" in msg or "aborted" in msg
+
+
+def apply_workflow_name(
+    metadata: AgentMetadataSchema, framework: str, name: str
+) -> None:
+    """Publish the canonical workflow name into ``metadata.agent.metadata``.
+
+    The orchestrator reads ``agent.metadata['workflow_name']`` verbatim when
+    invoking this agent, so it must equal the name the runner registered the
+    workflow under. Setting it here makes our registration the single source of
+    truth instead of relying on the orchestrator re-deriving the name with
+    potentially different casing rules.
+
+    Mutates ``metadata`` in place (consistent with the surrounding registration
+    code) and preserves any existing ``agent.metadata`` keys.
+    """
+    # Imported lazily: importing the ``workflow`` package at module load would
+    # form a cycle (workflow -> runner -> metadata.mixins -> metadata).
+    from diagrid.agent.core.workflow.naming import build_workflow_name
+
+    if metadata.agent.metadata is None:
+        metadata.agent.metadata = {}
+    metadata.agent.metadata["workflow_name"] = build_workflow_name(framework, name)
+
+
+class AgentRegistryAdapter:
+    @classmethod
+    def create_from_stack(
+        cls,
+        registry: Optional[AgentRegistryConfig] = None,
+        state_store_name: Optional[str] = None,
+    ) -> Optional["AgentRegistryAdapter"]:
+        """
+        Auto-detect and create an AgentRegistryAdapter by walking the call stack.
+
+        Args:
+            registry: Optional registry configuration. If None, will attempt auto-discovery.
+            state_store_name: Optional Dapr state store name resolved at runtime.
+
+        Returns:
+            AgentRegistryAdapter instance if agent found, None otherwise.
+        """
+        agent = find_agent_in_stack()
+        if not agent:
+            return None
+
+        framework = detect_framework(agent)
+        if not framework:
+            return None
+
+        return cls(
+            registry=registry,
+            framework=framework,
+            agent=agent,
+            state_store_name=state_store_name,
+        )
+
+    def __init__(
+        self,
+        registry: Optional[AgentRegistryConfig],
+        framework: str,
+        agent: Any,
+        state_store_name: Optional[str] = None,
+        name: Optional[str] = None,
+    ) -> None:
+        self._registry = registry
+        self._state_store_name = state_store_name
+        self._agent_name = name
+
+        try:
+            from dapr.clients import DaprClient
+
+            with DaprClient(http_timeout_seconds=10) as _client:
+                resp = _client.get_metadata()
+                self.appid = resp.application_id
+
+            if self._registry is None:
+                discovered = discover_components()
+                if discovered.registry_store_name:
+                    self._registry = AgentRegistryConfig(
+                        store=StateStoreService(
+                            store_name=discovered.registry_store_name
+                        ),
+                        team_name="default",
+                    )
+        except TimeoutError:
+            logger.warning(
+                "Dapr sidecar not responding; proceeding without auto-configuration."
+            )
+
+        if self._registry is None:
+            return
+
+        self.registry_state: StateStoreService = self._registry.store
+        self._registry_prefix: str = "agents:"
+        self._meta: Dict[str, str] = {"contentType": "application/json"}
+        self._max_etag_attempts: int = 10
+        self._save_options: Dict[str, Any] = {
+            "concurrency": Concurrency.first_write,
+            "consistency": Consistency.strong,
+        }
+
+        if not self._can_handle(framework):
+            raise ValueError(f"Adapter cannot handle framework '{framework}'")
+
+        _metadata = self._extract_metadata(agent)
+
+        # We need to handle some null values here to avoid issues during registration
+        if _metadata.agent.appid == "":
+            _metadata.agent.appid = self.appid or ""
+
+        if _metadata.registry:
+            if _metadata.registry.name is None:
+                _metadata.registry.name = self._registry.team_name
+            if _metadata.registry.resource_name is None:
+                _metadata.registry.resource_name = self.registry_state.store_name
+
+        # Patch memory/agent statestore from runner's state store
+        if self._state_store_name:
+            if (
+                _metadata.memory
+                and _metadata.memory.short_term
+                and not _metadata.memory.short_term.resource_name
+            ):
+                _metadata.memory.short_term.resource_name = self._state_store_name
+            if _metadata.agent.metadata is None:
+                _metadata.agent.metadata = {}
+            if not _metadata.agent.metadata.get("state_store"):
+                _metadata.agent.metadata["state_store"] = self._state_store_name
+
+        # Publish the canonical workflow name so the orchestrator invokes the
+        # exact name our runner registered, instead of re-deriving it.
+        apply_workflow_name(
+            _metadata,
+            self._framework,
+            self._agent_name or _metadata.name,
+        )
+
+        self._register(_metadata)
+
+    def _can_handle(self, framework: str) -> bool:
+        """Check if this adapter can handle the given Agent."""
+
+        def _normalize(s: str) -> str:
+            return s.lower().replace("_", "").replace("-", "").replace(" ", "")
+
+        for fw in SupportedFrameworks:
+            if _normalize(framework) == _normalize(fw.value):
+                self._framework = fw
+                return True
+        return False
+
+    def _effective_team(self, team: Optional[str] = None) -> str:
+        return team or (
+            self._registry.team_name
+            if self._registry and self._registry.team_name
+            else "default"
+        )
+
+    def _team_registry_index_key(self, team: Optional[str] = None) -> str:
+        return f"{self._registry_prefix}{self._effective_team(team)}:_index"
+
+    def _agent_registry_key(self, agent_name: str, team: Optional[str] = None) -> str:
+        return f"{self._registry_prefix}{self._effective_team(team)}:{agent_name}"
+
+    def _registry_partition_key(self, team: Optional[str] = None) -> Dict[str, str]:
+        meta = dict(self._meta)
+        meta["partitionKey"] = f"{self._registry_prefix}{self._effective_team(team)}"
+        return meta
+
+    def _extract_metadata(self, agent: Any) -> AgentMetadataSchema:
+        """Extract metadata from the given Agent."""
+
+        try:
+            schema_version = version("dapr-ext-agent_core")
+        except PackageNotFoundError:
+            schema_version = "edge"
+
+        # Lazy-import only the mapper for the active framework to avoid
+        # pulling in unrelated framework dependencies
+        _mapper_modules = {
+            SupportedFrameworks.LANGGRAPH: (
+                "diagrid.agent.core.metadata.mapping.langgraph",
+                "LangGraphMapper",
+            ),
+            SupportedFrameworks.STRANDS: (
+                "diagrid.agent.core.metadata.mapping.strands",
+                "StrandsMapper",
+            ),
+            SupportedFrameworks.CREWAI: (
+                "diagrid.agent.core.metadata.mapping.crewai",
+                "CrewAIMapper",
+            ),
+            SupportedFrameworks.ADK: (
+                "diagrid.agent.core.metadata.mapping.adk",
+                "ADKMapper",
+            ),
+            SupportedFrameworks.OPENAI: (
+                "diagrid.agent.core.metadata.mapping.openai",
+                "OpenAIAgentsMapper",
+            ),
+            SupportedFrameworks.PYDANTIC_AI: (
+                "diagrid.agent.core.metadata.mapping.pydantic_ai",
+                "PydanticAIMapper",
+            ),
+            SupportedFrameworks.CLAUDE_AGENTS: (
+                "diagrid.agent.core.metadata.mapping.claude_agents",
+                "ClaudeAgentsMapper",
+            ),
+            SupportedFrameworks.DEEPAGENTS: (
+                "diagrid.agent.core.metadata.mapping.deepagents",
+                "DeepAgentsMapper",
+            ),
+            SupportedFrameworks.LANGCHAIN: (
+                "diagrid.agent.core.metadata.mapping.langchain",
+                "LangChainMapper",
+            ),
+            SupportedFrameworks.SMOLAGENTS: (
+                "diagrid.agent.core.metadata.mapping.smolagents",
+                "SmolagentsMapper",
+            ),
+        }
+
+        entry = _mapper_modules.get(self._framework)
+        if not entry:
+            raise ValueError(f"Adapter cannot handle framework '{self._framework}'")
+
+        import importlib
+
+        module_path, class_name = entry
+        mod = importlib.import_module(module_path)
+        mapper_cls = getattr(mod, class_name)
+
+        return mapper_cls().map_agent_metadata(
+            agent=agent, schema_version=schema_version, name=self._agent_name
+        )
+
+    def _register(self, metadata: AgentMetadataSchema) -> None:
+        """
+        Register agent metadata in the team registry.
+
+        Two-step operation:
+        1. Save per-agent key (simple overwrite, no read-modify-write).
+        2. Update index with ETag-protected retry loop (add agent name to list).
+        """
+        if not metadata.registry:
+            raise ValueError("Registry metadata is required for registration")
+
+        team = metadata.registry.name
+        agent_name = metadata.name
+        partition_meta = self._registry_partition_key(team)
+
+        # Step 1: Save per-agent metadata key (contention-free overwrite)
+        agent_key = self._agent_registry_key(agent_name, team)
+        metadata_dict = metadata.model_dump(mode="json")
+        self.registry_state.save(
+            key=agent_key,
+            value=metadata_dict,
+            state_metadata=partition_meta,
+        )
+
+        # Step 2: Add agent name to index (ETag-protected)
+        index_key = self._team_registry_index_key(team)
+        self._ensure_registry_initialized(key=index_key, meta=partition_meta)
+
+        def _add_agent(agents_list: list[str]) -> bool:
+            if agent_name not in agents_list:
+                agents_list.append(agent_name)
+                return True
+            return False
+
+        self._update_index(
+            index_key=index_key,
+            partition_meta=partition_meta,
+            mutate=_add_agent,
+        )
+
+    def _remove_agent_entry(
+        self,
+        *,
+        team: Optional[str],
+        agent_name: str,
+    ) -> None:
+        """
+        Delete a single agent record from the team registry.
+
+        Two-step operation:
+        1. Delete per-agent key (simple delete).
+        2. Update index with ETag-protected retry loop (remove agent name from list).
+
+        Args:
+            team: Team identifier.
+            agent_name: Agent name (key).
+        """
+        partition_meta = self._registry_partition_key(team)
+
+        # Step 1: Delete per-agent metadata key
+        agent_key = self._agent_registry_key(agent_name, team)
+        try:
+            self.registry_state.delete(key=agent_key, state_metadata=partition_meta)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("Failed to delete per-agent key '%s': %s", agent_key, exc)
+
+        # Step 2: Remove agent name from index (ETag-protected)
+        index_key = self._team_registry_index_key(team)
+
+        def _remove_agent(agents_list: list[str]) -> bool:
+            if agent_name in agents_list:
+                agents_list.remove(agent_name)
+                return True
+            return False
+
+        self._update_index(
+            index_key=index_key,
+            partition_meta=partition_meta,
+            mutate=_remove_agent,
+        )
+
+    def _update_index(
+        self,
+        *,
+        index_key: str,
+        partition_meta: Dict[str, str],
+        mutate: Callable[[list[str]], bool],
+    ) -> None:
+        """Read-modify-write the registry index with ETag-protected retries.
+
+        Only retries on ETag/concurrency conflicts (``StatusCode.ABORTED``).
+        Transient infrastructure errors are already retried by
+        ``StateStoreService._with_retries``; re-raising them here avoids
+        wasteful double-retry loops.
+
+        Args:
+            index_key: The state store key for the team index.
+            partition_meta: Dapr state metadata (partition key, content type).
+            mutate: A function that receives the agents list and returns
+                    ``True`` if the list was modified and needs saving.
+        """
+        for attempt in range(1, self._max_etag_attempts + 1):
+            try:
+                current_index, etag = self.registry_state.load_with_etag(
+                    key=index_key,
+                    default={_REGISTRY_AGENTS_KEY: []},
+                    state_metadata=partition_meta,
+                )
+                agents_list = current_index.get(_REGISTRY_AGENTS_KEY, [])  # type: ignore[union-attr]
+                if mutate(agents_list):
+                    self.registry_state.save(
+                        key=index_key,
+                        value={_REGISTRY_AGENTS_KEY: agents_list},
+                        etag=etag,
+                        state_metadata=partition_meta,
+                        state_options=self._save_options,
+                    )
+                return  # success (or no mutation needed)
+            except Exception as exc:  # noqa: BLE001
+                if not _is_etag_conflict(exc):
+                    # Infrastructure error already retried by StateStoreService;
+                    # do not double-retry.
+                    logger.warning(
+                        "Registry index update failed for '%s': %s",
+                        index_key,
+                        exc,
+                    )
+                    return
+
+                logger.debug(
+                    "ETag conflict updating registry index (attempt %d/%d) for '%s'",
+                    attempt,
+                    self._max_etag_attempts,
+                    index_key,
+                )
+                if attempt == self._max_etag_attempts:
+                    logger.warning(
+                        "Failed to update registry index after %d ETag retries for '%s'.",
+                        self._max_etag_attempts,
+                        index_key,
+                    )
+                    return
+                time.sleep(min(0.25 * attempt, 1.0) * (1 + random.uniform(0, 0.25)))
+
+    def _ensure_registry_initialized(self, *, key: str, meta: Dict[str, str]) -> None:
+        """
+        Ensure a registry document exists to create an ETag for concurrency control.
+
+        Args:
+            key: Registry document key.
+            meta: Dapr state metadata to use for the operation.
+        """
+        _, etag = self.registry_state.load_with_etag(  # type: ignore[union-attr]
+            key=key,
+            default={},
+            state_metadata=meta,
+        )
+        if etag is None:
+            self.registry_state.save(  # type: ignore[union-attr]
+                key=key,
+                value={},
+                etag=None,
+                state_metadata=meta,
+                state_options=self._save_options,
+            )
